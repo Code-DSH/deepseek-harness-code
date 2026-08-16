@@ -1,4 +1,4 @@
-import { execFileSync } from "node:child_process";
+import { spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { join } from "node:path";
@@ -139,11 +139,13 @@ describe("desktop plugin package contract", () => {
   });
 
   it("builds a deterministic official bundle manifest and client module", () => {
-    execFileSync(
+    const build = spawnSync(
       process.execPath,
       [join(pluginRoot, "scripts", "build-client.mjs")],
-      { cwd: repositoryRoot },
+      { cwd: repositoryRoot, encoding: "utf8" },
     );
+    expect(build.status, build.stderr).toBe(0);
+    expect(build.stderr).toBe("");
 
     const manifest = JSON.parse(
       readFileSync(join(pluginRoot, "package.json"), "utf8"),
@@ -154,7 +156,9 @@ describe("desktop plugin package contract", () => {
       };
       exports?: Record<string, { default?: string }>;
       dependencies?: Record<string, string>;
+      devDependencies?: Record<string, string>;
       peerDependencies?: Record<string, string>;
+      files?: string[];
     };
     const patch = readFileSync(join(pluginRoot, "cordis.patch.yml"), "utf8");
     const { module, registration } = loadClientExports();
@@ -172,6 +176,9 @@ describe("desktop plugin package contract", () => {
     });
     expect(manifest.exports?.["./client"]?.default).toBe("./client.js");
     expect(manifest.exports?.["./package.json"]).toBe("./package.json");
+    expect(manifest.dependencies?.["thinking-orbs"]).toBe("0.3.1");
+    expect(manifest.devDependencies?.esbuild).toBe("0.25.12");
+    expect(manifest.files).toContain("THIRD_PARTY_NOTICES.md");
     expect(patch).toMatch(new RegExp(`name: ["']${packageName}["']`));
     expect(registration.id).toBe(packageName);
     expect(Object.keys(module).sort()).toEqual([
@@ -643,6 +650,34 @@ describe("desktop plugin package contract", () => {
     } as unknown as Document;
     fallback(fallbackDocument, window);
     expect(root.dataset.dshDesktopTransition).toBe("css");
+  });
+
+  it("installs the conversation effect stylesheet with the existing desktop styles", () => {
+    const dom = new JSDOM(
+      "<!doctype html><html><head></head><body></body></html>",
+      {
+        url: "https://harness.test/session",
+      },
+    );
+    const { module } = loadClientExports(
+      dom.window as unknown as Record<string, unknown>,
+      dom.window.document,
+    );
+    const installTransitions = module.installTransitions as (
+      document: Document,
+      window: Window,
+    ) => () => void;
+
+    const dispose = installTransitions(
+      dom.window.document,
+      dom.window as unknown as Window,
+    );
+    const style = dom.window.document.querySelector(
+      "#deepseek-harness-desktop-transitions",
+    );
+
+    expect(style?.textContent).toContain("[data-dsh-stream-overlay]");
+    dispose();
   });
 
   it("restarts the page animation only after an SPA history update commits DOM changes", async () => {

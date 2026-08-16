@@ -209,7 +209,7 @@ function installTransitions(doc = document, win = window) {
   if (doc.getElementById(styleId) === null) {
     const style = doc.createElement("style");
     style.id = styleId;
-    style.textContent = TRANSITION_STYLES;
+    style.textContent = `${TRANSITION_STYLES}\n${CONVERSATION_EFFECT_STYLES}`;
     doc.head.appendChild(style);
   }
   const update = () => {

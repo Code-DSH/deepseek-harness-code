@@ -78,7 +78,7 @@ tags: [execplan, tdd, plugin, animation]
 - Consumes: current CommonJS-shaped `client-runtime.js`, `TRANSITION_STYLES`, and Harness ModuleLoader factory.
 - Produces: deterministic `client.js`; compile-time `TRANSITION_STYLES` and `CONVERSATION_EFFECT_STYLES` string constants; exact `thinking-orbs@0.3.1`; exact development bundler `esbuild@0.25.12`.
 
-- [ ] **Step 1: Write the failing package and bundle test**
+- [x] **Step 1: Write the failing package and bundle test**
 
 Add assertions to the deterministic bundle test:
 
@@ -92,7 +92,7 @@ expect(source).not.toContain('require("./stream-output-');
 expect(source).toContain("deepseek-harness-desktop-plugin");
 ```
 
-- [ ] **Step 2: Run the test to verify it fails**
+- [x] **Step 2: Run the test to verify it fails**
 
 Run:
 
@@ -102,7 +102,7 @@ npm exec --yes --package=pnpm@11.19.0 -- pnpm vitest run --config tests/e2e/plug
 
 Expected: FAIL because the exact dependencies, notice, and bundled module pipeline do not exist.
 
-- [ ] **Step 3: Add exact dependencies with the workspace package manager**
+- [x] **Step 3: Add exact dependencies with the workspace package manager**
 
 Run:
 
@@ -113,7 +113,7 @@ npm exec --yes --package=pnpm@11.19.0 -- pnpm --filter deepseek-harness-desktop-
 
 Add `THIRD_PARTY_NOTICES.md` to the plugin `files` list. Record the MIT copyright/license notices and official URLs for `thinking-orbs` and `generative-loaders`; do not copy response data or upstream source bodies into the notice.
 
-- [ ] **Step 4: Replace string-only assembly with deterministic esbuild output**
+- [x] **Step 4: Replace string-only assembly with deterministic esbuild output**
 
 Use `build()` from `esbuild` in `build-client.mjs`:
 
@@ -140,7 +140,7 @@ const result = await build({
 
 Wrap `result.outputFiles[0].text` in the existing `window.__ModuleLoader__.load({ id, factory })` envelope. Keep the factory-local `module`, `exports`, and Harness `require`; throw if esbuild produces other than one JavaScript output file. Create an initially namespaced `conversation-effects.css` with the fixed root contract so the compile-time constant is always defined.
 
-- [ ] **Step 5: Build and run the focused contract test**
+- [x] **Step 5: Build and run the focused contract test**
 
 Run:
 
@@ -151,7 +151,7 @@ npm exec --yes --package=pnpm@11.19.0 -- pnpm vitest run --config tests/e2e/plug
 
 Expected: PASS; the generated client resolves only the three declared Harness externals and contains bundled `thinking-orbs` code.
 
-- [ ] **Step 6: Commit the bundle foundation**
+- [x] **Step 6: Commit the bundle foundation**
 
 ```bash
 git add packages/desktop-plugin/package.json packages/desktop-plugin/scripts/build-client.mjs packages/desktop-plugin/src/conversation-effects.css packages/desktop-plugin/THIRD_PARTY_NOTICES.md packages/desktop-plugin/client.js pnpm-lock.yaml tests/e2e/plugin-contract.test.ts
@@ -602,3 +602,4 @@ Expected: the feature worktree is clean; all implementation commits are visible;
 ## Progress
 
 - 2026-08-16 — User approved the written design and requested implementation; TDD execution plan created.
+- 2026-08-16 — Task 1 complete: exact dependencies, MIT notices, warning-free esbuild client bundling, stylesheet composition, and plugin contract are green.
