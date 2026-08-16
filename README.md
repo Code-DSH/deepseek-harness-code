@@ -172,20 +172,20 @@ These are implemented controls, not a synthetic “X% less memory” claim. A re
 
 ## Feature matrix
 
-| Area             | Included                                                                                    |
-| ---------------- | ------------------------------------------------------------------------------------------- |
-| Desktop host     | Hardened Electron window, startup page, native menus, tray, close preferences               |
-| Harness runtime  | Pinned `@deepseek-ai/dsh` rc.6, loopback-only Web service, official single Harness Home     |
-| V4 models        | Official V4 Pro/Flash catalog and `off` / `high` / `max` reasoning controls                 |
-| Integrated stack | Skills, tools, Goal, Plan, Workflow, Todo, Jobs, questions, approvals, and subagents        |
+| Area             | Included                                                                                              |
+| ---------------- | ----------------------------------------------------------------------------------------------------- |
+| Desktop host     | Hardened Electron window, startup page, native menus, tray, close preferences                         |
+| Harness runtime  | Pinned `@deepseek-ai/dsh` rc.6, loopback-only Web service, official single Harness Home               |
+| V4 models        | Official V4 Pro/Flash catalog and `off` / `high` / `max` reasoning controls                           |
+| Integrated stack | Skills, tools, Goal, Plan, Workflow, Todo, Jobs, questions, approvals, and subagents                  |
 | Bundled Skills   | Superpowers 6.2.0 collection installed into the official Harness Home without overwriting user skills |
-| Agent Presets    | Standard remains default; optional `anchored-standard` plus managed `router-standard`/`router-spec` |
-| Recovery         | Health probes, process restart, renderer replacement, port retry, session restoration       |
-| Watchdog         | Independent IPC process, bounded restart policy, persistent crash-loop marker               |
-| Plugins          | Desktop settings/transition bundle, Anchored Standard bundle, and auto-loaded Routing suite |
-| Diagnostics      | Startup evidence, runtime state, redacted rotating logs, open-logs action                   |
-| Security         | Sandboxed renderer, no Node integration, validated IPC, navigation policy                   |
-| Packaging        | macOS Universal DMG; Windows NSIS and Linux AppImage/deb definitions                        |
+| Agent Presets    | Standard remains default; optional `anchored-standard` plus managed `router-standard`/`router-spec`   |
+| Recovery         | Health probes, process restart, renderer replacement, port retry, session restoration                 |
+| Watchdog         | Independent IPC process, bounded restart policy, persistent crash-loop marker                         |
+| Plugins          | Desktop settings/transition bundle, Anchored Standard bundle, and auto-loaded Routing suite           |
+| Diagnostics      | Startup evidence, runtime state, redacted rotating logs, open-logs action                             |
+| Security         | Sandboxed renderer, no Node integration, validated IPC, navigation policy                             |
+| Packaging        | macOS Universal DMG; Windows NSIS and Linux AppImage/deb definitions                                  |
 
 ## Routing suite
 

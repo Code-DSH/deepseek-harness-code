@@ -165,20 +165,20 @@ DeepSeek Harness Code 使用明确的生命周期控制覆盖这些已知失效�
 
 ## 功能矩阵
 
-| 领域           | 已包含能力                                                            |
-| -------------- | --------------------------------------------------------------------- |
-| 桌面宿主       | 强化 Electron 窗口、启动页、原生菜单、托盘、关闭偏好                  |
-| Harness 运行时 | 固定 `@deepseek-ai/dsh` rc.6、仅回环地址 Web 服务、官方单一 Harness Home |
-| V4 模型        | 官方 V4 Pro/Flash 目录与 `off` / `high` / `max` 推理控制              |
-| 一体化能力栈   | Skills、工具、Goal、Plan、Workflow、Todo、Jobs、提问、审批与 Subagent |
-| 内置 Skills     | Superpowers 6.2.0 合集安装进官方 Harness Home，不覆盖用户 Skills |
-| Agent Preset    | Standard 保持默认；可选 `anchored-standard` 与受管 `router-standard`/`router-spec` |
-| 恢复           | 健康探测、进程重启、渲染器替换、端口重试、会话恢复                    |
-| Watchdog       | 独立 IPC 进程、有界重启策略、持久化崩溃循环标记                       |
-| 插件           | 桌面设置/转场 Bundle、Anchored Standard Bundle 与自动装载的路由套件   |
-| 诊断           | 启动证据、运行状态、脱敏轮转日志、打开日志操作                        |
-| 安全           | 沙箱渲染器、禁用 Node 集成、验证 IPC、导航策略                        |
-| 打包           | macOS Universal DMG；Windows NSIS 与 Linux AppImage/deb 配置          |
+| 领域           | 已包含能力                                                                         |
+| -------------- | ---------------------------------------------------------------------------------- |
+| 桌面宿主       | 强化 Electron 窗口、启动页、原生菜单、托盘、关闭偏好                               |
+| Harness 运行时 | 固定 `@deepseek-ai/dsh` rc.6、仅回环地址 Web 服务、官方单一 Harness Home           |
+| V4 模型        | 官方 V4 Pro/Flash 目录与 `off` / `high` / `max` 推理控制                           |
+| 一体化能力栈   | Skills、工具、Goal、Plan、Workflow、Todo、Jobs、提问、审批与 Subagent              |
+| 内置 Skills    | Superpowers 6.2.0 合集安装进官方 Harness Home，不覆盖用户 Skills                   |
+| Agent Preset   | Standard 保持默认；可选 `anchored-standard` 与受管 `router-standard`/`router-spec` |
+| 恢复           | 健康探测、进程重启、渲染器替换、端口重试、会话恢复                                 |
+| Watchdog       | 独立 IPC 进程、有界重启策略、持久化崩溃循环标记                                    |
+| 插件           | 桌面设置/转场 Bundle、Anchored Standard Bundle 与自动装载的路由套件                |
+| 诊断           | 启动证据、运行状态、脱敏轮转日志、打开日志操作                                     |
+| 安全           | 沙箱渲染器、禁用 Node 集成、验证 IPC、导航策略                                     |
+| 打包           | macOS Universal DMG；Windows NSIS 与 Linux AppImage/deb 配置                       |
 
 ## 路由套件
 

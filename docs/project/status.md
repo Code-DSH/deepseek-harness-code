@@ -1,8 +1,10 @@
 # Project Status
 
-- Phase: 0.3.0 all-branch integration and Universal release verification complete
-- Current milestone: verified DMG is ready for user installation; `/Applications` was deliberately left unchanged
+- Phase: every local branch and worktree change is consolidated on `main`; official single-Home and public plugin-CLI APP integration is complete
+- Current milestone: APP main/preload, watchdog, icons, and pinned routing resources build successfully; plugin and installer packaging are intentionally deferred
 - Repository: `https://github.com/Open-Less/deepseek-harness-code` (public)
-- Verified deliverables: bilingual evidence-backed product README, self-contained sandbox preload, repaired Standard dependency closure, exact-version rc.6 long-stream turn-tail projection patch, checksum-pinned offline DSH Routing Suite integration, two-capability desktop plugin, progressive optional Agent Preset with official rc.6 discovery/session creation and atomic conflict-safe installation, official native streaming and Think rendering, localized General settings, native Edit/paste shortcuts, monochrome startup spinner, equal 16-point macOS traffic-light inset, independent Watchdog, Code icon, and accessible system SVG
-- Artifact: `release/DeepSeek-Harness-Code-0.3.0-mac-universal.dmg`; SHA-256 `c4d94cbe36b01152083f9eb5606fb85f2d5b80b155b4a5ecbe7946d37054314f`
-- External limits: native Windows/Linux visual gates remain; live-provider soak and paired V4 Pro capability validation remain blocked until a safe replacement credential is entered through official settings
+- Verified deliverables: official Harness Home resolution, copy-only legacy migration, application-bundled pnpm launcher, public `dsh plugin --profile web add` coordination, bare-package loader restoration, checksum-pinned Routing Suite resources, bilingual managed presets, Superpowers Skills, sandboxed desktop host, independent Watchdog, and current APP build outputs
+- APP build outputs: `dist/desktop/main.js`, `dist/desktop/preload.js`, `dist/watchdog/entry.js`, and generated macOS/Windows/Linux icon assets; 23 APP unit files / 90 tests and TypeScript type checking pass
+- Plugin snapshot: `archive/desktop-plugin-before-app-merge-20260816` at `6082773`; no new plugin package or installer is claimed in this milestone
+- Historical artifact: `release/DeepSeek-Harness-Code-0.3.0-mac-universal.dmg` predates the current official-Home merge and must not be presented as the new build
+- External limits: plugin/installer packaging, native Windows/Linux visual gates, live-provider soak, and paired V4 Pro capability validation remain pending

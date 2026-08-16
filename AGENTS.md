@@ -5,7 +5,7 @@
 - schema_version: 3
 - single_entry: true
 - repository_root: `/Users/trip/TRUE 开发/deepseek/deepseek-harness-desktop`
-- updated_at: `2026-08-16T19:00:00+08:00`
+- updated_at: `2026-08-16T19:39:00+08:00`
 - default_freshness: 10d
 - docs_entry: [docs/index.md](./docs/index.md)
 - project_entry: [docs/project/index.md](./docs/project/index.md)
@@ -16,7 +16,7 @@
 ## Current Project Snapshot
 
 - Goal: ship DeepSeek Harness Code with a cross-platform Electron shell, official-format integrated plugins, an immutable DSH Routing Suite, an optional progressive Anchored Standard Agent Preset, native Harness conversation rendering, and an independent watchdog.
-- Current phase: every local branch/worktree change is consolidated on `main`; official single-Home migration and public CLI plugin installation are implemented, and APP-only build verification is active before plugin packaging resumes.
+- Current phase: every local branch/worktree change is consolidated on `main`; the APP-only TypeScript/Node build is verified, the current plugin is snapshotted, and plugin/installer packaging is deferred by user direction.
 - Primary constraints: macOS Universal local release plus native Windows/Linux CI, no global Node dependency at runtime, loopback-only Harness, unsigned macOS distribution with ad-hoc signing.
 - Active branch/worktree: `main` in `.worktrees/release-routing-suite`; the plugin snapshot is retained at `archive/desktop-plugin-before-app-merge-20260816`.
 - Build/test entry: `pnpm test`; release entry: `pnpm dist:mac` then `pnpm verify:mac release/DeepSeek-Harness-Code-0.3.2-mac-universal.dmg --universal`.
