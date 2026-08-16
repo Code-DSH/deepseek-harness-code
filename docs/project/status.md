@@ -15,8 +15,8 @@
   host, and independent Watchdog
 - Built-in modes: Standard (default), progressive `anchored-standard`, managed `router-standard` and
   `router-spec` presets; plus native two-level model selector and UI-motion integration
-- Release artifact: `release/DeepSeek-Harness-Code-0.1.0-BETA1-mac-universal.dmg` (SHA-256 recorded in
-  the release notes and changelog after verification)
+- Release artifact: `release/DeepSeek-Harness-Code-0.1.0-BETA1-mac-universal.dmg`
+  (297,288,831 bytes; SHA-256 `7bc3744d786d589a4b64322f00c9f56ce4483e103bc000933b2a6122ccb5f97d`)
 - Build evidence: `pnpm dist:mac` exited 0; `pnpm verify:mac release/DeepSeek-Harness-Code-0.1.0-BETA1-mac-universal.dmg --universal`
   exited 0 after mounted-image plugin/runtime/signature/architecture checks; Windows NSIS installers
   built on native Windows runners through the tag-triggered packaging workflow
