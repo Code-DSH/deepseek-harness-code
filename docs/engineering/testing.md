@@ -23,4 +23,4 @@ Live acceptance is separate: credentials are entered in the Harness UI by the us
 
 Detailed evidence and unexecuted external checks are in the [acceptance report](./acceptance-report.md).
 
-The feature files pass targeted Prettier checks. The repository-wide Prettier gate currently reports two pre-existing product-story documents that are also being edited in the local main worktree; this feature branch intentionally does not rewrite them.
+The feature files and the repository-wide Prettier gate pass after the latest local `main` documentation changes were merged into the feature branch.
