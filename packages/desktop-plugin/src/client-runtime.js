@@ -1,5 +1,9 @@
 const React = require("react");
 const {
+  createStreamOutputEffectController,
+  installStreamOutputEffects,
+} = require("./stream-output-controller.js");
+const {
   Button,
   IconChevronDownOutline14,
   Menu,
@@ -502,3 +506,5 @@ exports.DesktopSettingsRow = DesktopSettingsRow;
 exports.DESKTOP_LOCALES = DESKTOP_LOCALES;
 exports.createDesktopSettingsModel = createDesktopSettingsModel;
 exports.installTransitions = installTransitions;
+exports.createStreamOutputEffectController = createStreamOutputEffectController;
+exports.installStreamOutputEffects = installStreamOutputEffects;

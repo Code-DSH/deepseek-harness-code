@@ -271,7 +271,7 @@ git commit -m "feat: classify appended assistant graphemes"
 - Consumes: Task 2 exports plus `document`, `window`, `CSS.highlights`, `Highlight`, `MutationObserver`, `Range`, and requestAnimationFrame.
 - Produces: `createStreamOutputEffectController({ document, window })` returning `{ start(), dispose() }`, and `installStreamOutputEffects(document, window)` returning one idempotent disposer.
 
-- [ ] **Step 1: Write the failing controller tests**
+- [x] **Step 1: Write the failing controller tests**
 
 Use JSDOM plus injected/fake `CSS.highlights`, `Highlight`, range rectangles, animation frames, and timers. Assert:
 
@@ -289,11 +289,11 @@ expect(document.querySelector("[data-dsh-stream-overlay]")).toBeNull();
 
 Also assert no effect without CSS Highlight support, no replay of the baseline, cleanup after rewrite/completion/scroll/resize, exact copied `color` and font shorthand, no response text in diagnostics, and idempotent disposal.
 
-- [ ] **Step 2: Add the failing Playwright browser contract**
+- [x] **Step 2: Add the failing Playwright browser contract**
 
 Create a streaming assistant fixture with ordinary prose, gray reasoning, a link, inline code, a code block, and a user row. Load the built client, call exported `installStreamOutputEffects`, append text, and assert native Chromium creates only eligible overlay glyphs, preserves source/container bounding boxes, retains link/code DOM, and clears every overlay when `data-streaming` is removed.
 
-- [ ] **Step 3: Run both focused tests to verify failure**
+- [x] **Step 3: Run both focused tests to verify failure**
 
 ```bash
 npm exec --yes --package=pnpm@11.19.0 -- pnpm vitest run packages/desktop-plugin/test/stream-output-controller.test.ts
@@ -302,7 +302,7 @@ npm exec --yes --package=pnpm@11.19.0 -- pnpm exec playwright test tests/playwri
 
 Expected: FAIL because the controller and generated client export do not exist.
 
-- [ ] **Step 4: Implement observation, masks, overlays, and cleanup**
+- [x] **Step 4: Implement observation, masks, overlays, and cleanup**
 
 On `start()`, baseline all existing eligible text nodes, create one fixed `aria-hidden`/`pointer-events:none` overlay root, create `new Highlight()`, register it as `dsh-desktop-stream-mask`, and attach a scoped body observer with `{ subtree: true, childList: true, characterData: true, characterDataOldValue: true }`.
 
@@ -317,7 +317,7 @@ For each accepted append:
 
 Use one cancellation path for rewrite, root completion, scroll, resize, navigation, node removal, and disposal. It must clear masks before removing overlays. Do not wrap or replace a React-owned text node.
 
-- [ ] **Step 5: Add namespaced dissolve paint styles**
+- [x] **Step 5: Add namespaced dissolve paint styles**
 
 Define only plugin-owned selectors and paint properties:
 
@@ -344,11 +344,11 @@ Define only plugin-owned selectors and paint properties:
 
 Use opacity, blur, clip-path, and `currentColor` particles. Under reduced motion, disable glyph/particle animation and let the controller skip masking entirely.
 
-- [ ] **Step 6: Export and build the controller**
+- [x] **Step 6: Export and build the controller**
 
 Require the local controller from `client-runtime.js`, export `createStreamOutputEffectController` and `installStreamOutputEffects` for deterministic tests, and keep local requires bundled by esbuild.
 
-- [ ] **Step 7: Run focused unit and browser tests**
+- [x] **Step 7: Run focused unit and browser tests**
 
 ```bash
 npm exec --yes --package=pnpm@11.19.0 -- pnpm --dir packages/desktop-plugin build:client
@@ -358,7 +358,7 @@ npm exec --yes --package=pnpm@11.19.0 -- pnpm exec playwright test tests/playwri
 
 Expected: PASS with no geometry movement, no code/user animation, correct gray/primary sampled colors, and complete cleanup.
 
-- [ ] **Step 8: Commit the dissolve controller**
+- [x] **Step 8: Commit the dissolve controller**
 
 ```bash
 git add packages/desktop-plugin/src/stream-output-controller.js packages/desktop-plugin/src/conversation-effects.css packages/desktop-plugin/src/client-runtime.js packages/desktop-plugin/test/stream-output-controller.test.ts tests/playwright/stream-output-animation.spec.ts packages/desktop-plugin/client.js
@@ -604,3 +604,4 @@ Expected: the feature worktree is clean; all implementation commits are visible;
 - 2026-08-16 — User approved the written design and requested implementation; TDD execution plan created.
 - 2026-08-16 — Task 1 complete: exact dependencies, MIT notices, warning-free esbuild client bundling, stylesheet composition, and plugin contract are green.
 - 2026-08-16 — Task 2 complete: strict appended-grapheme ranges and the semantic prose/reasoning classifier are green for CJK, emoji, combining marks, history, code, tool, status, and user exclusions.
+- 2026-08-16 — Task 3 complete: CSS Highlight masking and the fixed dissolve overlay preserve canonical Markdown geometry while copying primary/reasoning typography and clearing on every tested lifecycle boundary.

@@ -186,7 +186,9 @@ describe("desktop plugin package contract", () => {
       "DesktopSettingsRow",
       "apply",
       "createDesktopSettingsModel",
+      "createStreamOutputEffectController",
       "inject",
+      "installStreamOutputEffects",
       "installTransitions",
     ]);
     expect(module.inject).toEqual(["slots", "locale"]);
