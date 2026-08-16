@@ -6,5 +6,6 @@ playwright-report/
 coverage/
 .cache/
 .mimosa/
+.worktrees/
 *.log
 .DS_Store
