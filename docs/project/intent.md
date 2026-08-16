@@ -35,7 +35,7 @@ Deliver an all-in-one, modernized DeepSeek Harness Code desktop distribution tha
 
 - `DeepSeek Harness Code.app` and DMG for x64 and arm64 as one verified Universal artifact.
 - Native Windows NSIS and Linux AppImage/deb build definitions with platform-native CI production.
-- Chromium UI, Harness, Node runtime, plugin, and watchdog inside the app bundle.
+- Chromium UI, Harness, plugin, and watchdog inside the app bundle, running on the system-installed official Node.js.
 - Safe close behavior, menu recovery, health checks, crash recovery, log rotation, and official session restoration.
 - Official question UI/protocol compatibility across macOS, Linux, and Windows Web environments.
 - System light/dark monochrome startup UI with one centered spinner, underlay title bar, real tray, page transitions without forced layout, official-component desktop settings integration, tests, operations guidance, and an accessible SVG system diagram.
@@ -44,7 +44,7 @@ Deliver an all-in-one, modernized DeepSeek Harness Code desktop distribution tha
 - First-class official V4 Pro/Flash model selection and reasoning controls, with the literal `We need` intent trigger tracked as the next public-seam implementation requirement.
 - One packaged Harness toolchain covering Skills, tools, Goal, Plan, Workflow, Todo, Jobs, user questions/approval, and subagents.
 - One official Harness Home resolved by the pinned upstream helper, with first-launch copy-only migration from the retired app-specific Home.
-- Official `dsh plugin --profile web add` reconciliation for every bundled Web plugin through a portable Node.js runtime (downloaded on first launch, SHA-256-pinned) and its bundled pnpm runtime.
+- Official `dsh plugin --profile web add` reconciliation for every bundled Web plugin through the auto-detected system official Node.js (>=22.13, no upper bound; PATH, common install locations, and version-manager directories on macOS, Windows, and Linux) and its bundled pnpm runtime.
 - Installed local Web plugin snapshots `dsh-ui-motion@1.0.0` and `dsh-model2-selector@1.0.0`, with their compiled client closures and official bare-name patches, in every `0.3.3` installer.
 
 ## Non-goals
@@ -60,7 +60,7 @@ Deliver an all-in-one, modernized DeepSeek Harness Code desktop distribution tha
 ## Constraints
 
 - App and product display name `DeepSeek Harness Code`; package name `deepseek-harness-code`; integration release version `0.3.3` with the checksum-pinned Routing Suite retained.
-- Baseline versions: `@deepseek-ai/dsh@0.1.0-rc.6`, Electron `43.4.0`, electron-builder `26.15.3`, Node build baseline `24.18.0`, pnpm `11.19.0`.
+- Baseline versions: `@deepseek-ai/dsh@0.1.0-rc.6`, Electron `43.4.0`, electron-builder `26.15.3`, Node runtime requirement `>=22.13` (system official Node.js, auto-detected; no portable download), pnpm `11.19.0`.
 - macOS 12-27 x64/arm64, Windows and Linux x64 native CI; fail closed rather than mislabel an architecture.
 - Harness binds only to `127.0.0.1`; user data remains outside `.app`.
 - Existing Harness data and unrelated plugins are preserved; migration never deletes the legacy Home or overwrites target conflicts.
@@ -78,6 +78,8 @@ Code, tests, package artifacts, signatures, architecture SVG, installation guide
 Architecture A remains approved. The user explicitly approved the progressive preset plan. rc.6 session hooks (`system-prompt/assemble`, `session/event`, and `agent/pre-step`) can shape the visible tool schema within one preset without using `AgentPresets.recompose()` or private request interception. The implementation does not treat historical reasoning as transferable model state and does not promise the community benchmark score.
 
 On 2026-08-16 the user additionally confirmed architecture A for official installation: embed the Harness and pnpm runtimes in the desktop application, reconcile bundled plugins through the public CLI on first launch, use the official single Home, and preserve all existing data and unrelated plugins.
+
+On 2026-08-17 the user redirected the Node.js strategy: the app must use the system-installed official Node.js on macOS, Windows, and Linux instead of downloading a portable runtime, auto-detecting common install locations (including GUI launches whose PATH excludes them) and accepting any version >=22.13. The first-launch download flow, its dialogs, and the nodejs.org archive pinning were removed accordingly.
 
 The same day, the user confirmed that every plugin currently installed in the local Harness Web profile must ship in the integrated installer. The release freezes only public plugin code and package metadata; credentials, sessions, settings, logs, prompts, and private profile state remain outside the application.
 

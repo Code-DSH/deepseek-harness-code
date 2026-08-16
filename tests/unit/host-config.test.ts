@@ -38,11 +38,11 @@ describe("Electron host configuration", () => {
     });
   });
 
-  it("launches the official dsh web entry through the managed Node runtime on loopback", () => {
+  it("launches the official dsh web entry through the system Node runtime on loopback", () => {
     expect(
       createHarnessLaunchSpec({
         nodeExecutable:
-          "/Users/test/Library/Application Support/deepseek-harness-desktop/node-runtime/node-v24.18.0-darwin-arm64/bin/node",
+          "/opt/homebrew/bin/node",
         dshEntry:
           "/Users/test/Library/Application Support/deepseek-harness-desktop/node-runtime/packages/node_modules/@deepseek-ai/dsh/lib/bin.js",
         dshHome:
@@ -51,7 +51,7 @@ describe("Electron host configuration", () => {
       }),
     ).toEqual({
       command:
-        "/Users/test/Library/Application Support/deepseek-harness-desktop/node-runtime/node-v24.18.0-darwin-arm64/bin/node",
+        "/opt/homebrew/bin/node",
       args: [
         "--expose-internals",
         "/Users/test/Library/Application Support/deepseek-harness-desktop/node-runtime/packages/node_modules/@deepseek-ai/dsh/lib/bin.js",

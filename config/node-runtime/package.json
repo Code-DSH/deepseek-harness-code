@@ -2,7 +2,7 @@
   "name": "deepseek-harness-code-node-runtime",
   "version": "1.0.0",
   "private": true,
-  "description": "Pinned runtime packages installed after the portable Node download",
+  "description": "Pinned runtime packages installed on first launch with the detected system Node.js",
   "dependencies": {
     "@deepseek-ai/dsh": "0.1.0-rc.6",
     "dsh-find-plugin": "0.3.6"

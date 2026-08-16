@@ -1,96 +1,23 @@
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { createReadStream, createWriteStream } from "node:fs";
+import { createReadStream } from "node:fs";
 import {
   access,
-  chmod,
   copyFile,
   cp,
   mkdir,
   readFile,
-  rename,
+  readdir,
   rm,
   writeFile,
 } from "node:fs/promises";
-import { get as httpsGet } from "node:https";
-import type { IncomingMessage } from "node:http";
-import { dirname, join } from "node:path";
-import { pipeline } from "node:stream/promises";
+import { delimiter, dirname, join } from "node:path";
+import type { ResolvedSystemNode } from "./system-node.js";
 
-export const NODE_RUNTIME_VERSION = "24.18.0";
-const NODE_DIST_BASE_URL = `https://nodejs.org/dist/v${NODE_RUNTIME_VERSION}`;
-const MARKER_SCHEMA_VERSION = 1;
-
-export interface PortableNodeArchive {
-  platform: NodeJS.Platform;
-  arch: string;
-  fileName: string;
-  url: string;
-  sha256: string;
-}
-
-const PORTABLE_NODE_ARCHIVES: Record<string, PortableNodeArchive> = {
-  "darwin-x64": {
-    platform: "darwin",
-    arch: "x64",
-    fileName: "node-v24.18.0-darwin-x64.tar.gz",
-    url: `${NODE_DIST_BASE_URL}/node-v24.18.0-darwin-x64.tar.gz`,
-    sha256: "dfd0dbd3e721503434df7b7205e719f61b3a3a31b2bcf9729b8b91fea240f080",
-  },
-  "darwin-arm64": {
-    platform: "darwin",
-    arch: "arm64",
-    fileName: "node-v24.18.0-darwin-arm64.tar.gz",
-    url: `${NODE_DIST_BASE_URL}/node-v24.18.0-darwin-arm64.tar.gz`,
-    sha256: "e1a97e14c99c803e96c7339403282ea05a499c32f8d83defe9ef5ec66f979ed1",
-  },
-  "linux-x64": {
-    platform: "linux",
-    arch: "x64",
-    fileName: "node-v24.18.0-linux-x64.tar.gz",
-    url: `${NODE_DIST_BASE_URL}/node-v24.18.0-linux-x64.tar.gz`,
-    sha256: "783130984963db7ba9cbd01089eaf2c2efb055c7c1693c943174b967b3050cb8",
-  },
-  "linux-arm64": {
-    platform: "linux",
-    arch: "arm64",
-    fileName: "node-v24.18.0-linux-arm64.tar.gz",
-    url: `${NODE_DIST_BASE_URL}/node-v24.18.0-linux-arm64.tar.gz`,
-    sha256: "6b4484c2190274175df9aa8f28e2d758a819cb1c1fe6ab481e2f95b463ab8508",
-  },
-  "win32-x64": {
-    platform: "win32",
-    arch: "x64",
-    fileName: "node-v24.18.0-win-x64.zip",
-    url: `${NODE_DIST_BASE_URL}/node-v24.18.0-win-x64.zip`,
-    sha256: "0ae68406b42d7725661da979b1403ec9926da205c6770827f33aac9d8f26e821",
-  },
-  "win32-arm64": {
-    platform: "win32",
-    arch: "arm64",
-    fileName: "node-v24.18.0-win-arm64.zip",
-    url: `${NODE_DIST_BASE_URL}/node-v24.18.0-win-arm64.zip`,
-    sha256: "f274669adb93b1fd0fbf8f21fd078609e9dcc84333d4f2718d2dde3f9a161a01",
-  },
-};
-
-export function getPortableNodeArchive(
-  platform: NodeJS.Platform = process.platform,
-  arch: string = process.arch,
-): PortableNodeArchive {
-  const archive = PORTABLE_NODE_ARCHIVES[`${platform}-${arch}`];
-  if (archive === undefined) {
-    throw new Error(
-      `No managed Node.js ${NODE_RUNTIME_VERSION} archive for ${platform}/${arch}`,
-    );
-  }
-  return archive;
-}
+const MARKER_SCHEMA_VERSION = 2;
 
 export interface NodeRuntimePaths {
   rootDir: string;
-  archivePath: string;
-  nodeExecutable: string;
   packagesDir: string;
   dshEntry: string;
   dshFindPluginRoot: string;
@@ -98,22 +25,10 @@ export interface NodeRuntimePaths {
   markerPath: string;
 }
 
-export function resolveNodeRuntimePaths(
-  userDataPath: string,
-  platform: NodeJS.Platform = process.platform,
-  arch: string = process.arch,
-): NodeRuntimePaths {
-  const archive = getPortableNodeArchive(platform, arch);
+export function resolveNodeRuntimePaths(userDataPath: string): NodeRuntimePaths {
   const rootDir = join(userDataPath, "node-runtime");
-  const extractedRoot = archive.fileName.replace(/\.(?:tar\.gz|zip)$/u, "");
-  const extractedDir = join(rootDir, extractedRoot);
   return {
     rootDir,
-    archivePath: join(rootDir, archive.fileName),
-    nodeExecutable:
-      platform === "win32"
-        ? join(extractedDir, "node.exe")
-        : join(extractedDir, "bin", "node"),
     packagesDir: join(rootDir, "packages"),
     dshEntry: join(
       rootDir,
@@ -152,11 +67,13 @@ export async function sha256File(path: string): Promise<string> {
 
 interface RuntimeMarker {
   schemaVersion: number;
-  nodeVersion: string;
   lockSha256: string;
   platform: string;
   arch: string;
   installedAt: string;
+  nodePath?: string;
+  nodeVersion?: string | null;
+  nodeMajor?: number | null;
 }
 
 async function readRuntimeMarker(
@@ -168,11 +85,13 @@ async function readRuntimeMarker(
     const marker = parsed as Partial<RuntimeMarker>;
     if (
       marker.schemaVersion !== MARKER_SCHEMA_VERSION ||
-      marker.nodeVersion !== NODE_RUNTIME_VERSION ||
       typeof marker.lockSha256 !== "string" ||
       marker.lockSha256.length !== 64 ||
       typeof marker.platform !== "string" ||
-      typeof marker.arch !== "string"
+      typeof marker.arch !== "string" ||
+      (marker.nodeMajor !== undefined &&
+        marker.nodeMajor !== null &&
+        typeof marker.nodeMajor !== "number")
     ) {
       return undefined;
     }
@@ -185,18 +104,25 @@ async function readRuntimeMarker(
 export interface NodeRuntimeReadiness {
   ready: boolean;
   lockSha256?: string;
-  reason?: "node-missing" | "packages-missing" | "marker-missing";
+  reason?: "marker-missing" | "packages-missing" | "node-changed";
+}
+
+export interface InspectNodeRuntimeInput {
+  userDataPath: string;
+  runtimeResourcePath: string;
+  systemNode: ResolvedSystemNode;
+  platform?: NodeJS.Platform;
+  arch?: string;
 }
 
 export async function inspectNodeRuntime(
-  userDataPath: string,
-  runtimeResourcePath: string,
-  platform: NodeJS.Platform = process.platform,
-  arch: string = process.arch,
+  input: InspectNodeRuntimeInput,
 ): Promise<NodeRuntimeReadiness> {
-  const paths = resolveNodeRuntimePaths(userDataPath, platform, arch);
+  const platform = input.platform ?? process.platform;
+  const arch = input.arch ?? process.arch;
+  const paths = resolveNodeRuntimePaths(input.userDataPath);
   const lockSha256 = await sha256File(
-    join(runtimeResourcePath, "pnpm-lock.yaml"),
+    join(input.runtimeResourcePath, "pnpm-lock.yaml"),
   );
   const marker = await readRuntimeMarker(paths.markerPath);
   if (
@@ -207,8 +133,15 @@ export async function inspectNodeRuntime(
   ) {
     return { ready: false, lockSha256, reason: "marker-missing" };
   }
-  if (!(await pathExists(paths.nodeExecutable))) {
-    return { ready: false, lockSha256, reason: "node-missing" };
+  // A different Node major version can invalidate native modules installed by
+  // the previous major; reinstall to stay on the safe side.
+  if (
+    marker.nodeMajor !== undefined &&
+    marker.nodeMajor !== null &&
+    input.systemNode.major !== null &&
+    marker.nodeMajor !== input.systemNode.major
+  ) {
+    return { ready: false, lockSha256, reason: "node-changed" };
   }
   if (
     !(await pathExists(paths.dshEntry)) ||
@@ -219,117 +152,19 @@ export async function inspectNodeRuntime(
   return { ready: true, lockSha256 };
 }
 
-export type DownloadFile = (
-  url: string,
-  destination: string,
-  expectedSha256: string,
-) => Promise<void>;
-
-function requestDownload(
-  url: string,
-  redirectsRemaining: number,
-): Promise<IncomingMessage> {
-  return new Promise((resolve, reject) => {
-    const request = httpsGet(
-      url,
-      {
-        headers: {
-          "User-Agent": `DeepSeek-Harness-Code/${NODE_RUNTIME_VERSION}`,
-        },
-      },
-      (response) => {
-        const status = response.statusCode ?? 0;
-        const location = response.headers.location;
-        if (
-          status >= 300 &&
-          status < 400 &&
-          location !== undefined &&
-          redirectsRemaining > 0
-        ) {
-          response.resume();
-          resolve(
-            requestDownload(
-              new URL(location, url).toString(),
-              redirectsRemaining - 1,
-            ),
-          );
-          return;
-        }
-        if (status !== 200) {
-          response.resume();
-          reject(
-            new Error(
-              `Node.js download returned HTTP ${status || "unknown"} for ${url}`,
-            ),
-          );
-          return;
-        }
-        resolve(response);
-      },
-    );
-    request.on("error", reject);
-    request.setTimeout(30_000, () => {
-      request.destroy(new Error(`Node.js download timed out: ${url}`));
-    });
-  });
+// Native-module postinstall scripts (koffi, node-pty) invoke `node` by name.
+// A GUI launch inherits a minimal PATH without the system Node, so expose the
+// resolved Node's directory to install children explicitly.
+function childEnvWithNodeOnPath(nodeExecutable: string): NodeJS.ProcessEnv {
+  const nodeBinDir = dirname(nodeExecutable);
+  const existingPath = process.env.PATH ?? process.env.Path ?? "";
+  return {
+    ...process.env,
+    PATH: [nodeBinDir, existingPath]
+      .filter((entry) => entry !== "")
+      .join(delimiter),
+  };
 }
-
-export const downloadFile: DownloadFile = async (
-  url,
-  destination,
-  expectedSha256,
-) => {
-  await mkdir(dirname(destination), { recursive: true, mode: 0o700 });
-  const partialPath = `${destination}.part`;
-  await rm(partialPath, { force: true });
-  const response = await requestDownload(url, 5);
-  try {
-    await pipeline(response, createWriteStream(partialPath, { mode: 0o600 }));
-  } finally {
-    response.destroy();
-  }
-  const actualSha256 = await sha256File(partialPath);
-  if (actualSha256 !== expectedSha256) {
-    await rm(partialPath, { force: true });
-    throw new Error(
-      `Node.js archive checksum mismatch: expected ${expectedSha256}, received ${actualSha256}`,
-    );
-  }
-  await rm(destination, { force: true });
-  await rename(partialPath, destination);
-};
-
-export type ExtractArchive = (
-  archivePath: string,
-  destinationDir: string,
-) => Promise<void>;
-
-export const extractArchive: ExtractArchive = async (
-  archivePath,
-  destinationDir,
-) => {
-  await mkdir(destinationDir, { recursive: true, mode: 0o700 });
-  const result = spawnSync(
-    "tar",
-    [
-      archivePath.endsWith(".zip") ? "-xf" : "-xzf",
-      archivePath,
-      "-C",
-      destinationDir,
-    ],
-    {
-      encoding: "utf8",
-      shell: false,
-      windowsHide: true,
-      timeout: 5 * 60_000,
-    },
-  );
-  if (result.error !== undefined || result.status !== 0) {
-    const diagnostic =
-      result.error?.message ?? String(result.stderr ?? "").slice(0, 2_000);
-    throw new Error(`Node.js archive extraction failed: ${diagnostic}`);
-  }
-};
 
 export type InstallRuntimePackages = (input: {
   nodeExecutable: string;
@@ -380,7 +215,7 @@ export const installRuntimePackages: InstallRuntimePackages = async ({
     ],
     {
       encoding: "utf8",
-      env: process.env,
+      env: childEnvWithNodeOnPath(nodeExecutable),
       shell: false,
       windowsHide: true,
       timeout: 15 * 60_000,
@@ -395,68 +230,66 @@ export const installRuntimePackages: InstallRuntimePackages = async ({
   }
 };
 
-export interface EnsureNodeRuntimeInput {
+export interface EnsureRuntimePackagesInput {
   userDataPath: string;
   runtimeResourcePath: string;
+  systemNode: ResolvedSystemNode;
   platform?: NodeJS.Platform;
   arch?: string;
-  downloadFile?: DownloadFile;
-  extractArchive?: ExtractArchive;
   installRuntimePackages?: InstallRuntimePackages;
 }
 
-export interface EnsureNodeRuntimeResult {
+export interface EnsureRuntimePackagesResult {
   paths: NodeRuntimePaths;
-  archive: PortableNodeArchive;
   installed: boolean;
 }
 
-export async function ensureNodeRuntime(
-  input: EnsureNodeRuntimeInput,
-): Promise<EnsureNodeRuntimeResult> {
+// Remove leftovers from the retired portable-runtime design: extracted
+// `node-v<version>-<platform>-<arch>` directories and downloaded archives.
+async function cleanupLegacyPortableNode(rootDir: string): Promise<void> {
+  try {
+    const entries = await readdir(rootDir);
+    for (const entry of entries) {
+      if (
+        !/^node-v\d+\.\d+\.\d+-/u.test(entry) &&
+        !/\.(?:tar\.gz|zip)$/u.test(entry)
+      ) {
+        continue;
+      }
+      await rm(join(rootDir, entry), { recursive: true, force: true }).catch(
+        () => undefined,
+      );
+    }
+  } catch {
+    // Best effort: a failed cleanup never blocks startup.
+  }
+}
+
+export async function ensureRuntimePackages(
+  input: EnsureRuntimePackagesInput,
+): Promise<EnsureRuntimePackagesResult> {
   const platform = input.platform ?? process.platform;
   const arch = input.arch ?? process.arch;
-  const archive = getPortableNodeArchive(platform, arch);
-  const paths = resolveNodeRuntimePaths(input.userDataPath, platform, arch);
-  const lockPath = join(input.runtimeResourcePath, "pnpm-lock.yaml");
-  const lockSha256 = await sha256File(lockPath);
+  const paths = resolveNodeRuntimePaths(input.userDataPath);
+  const lockSha256 = await sha256File(
+    join(input.runtimeResourcePath, "pnpm-lock.yaml"),
+  );
 
-  const readiness = await inspectNodeRuntime(
-    input.userDataPath,
-    input.runtimeResourcePath,
+  const readiness = await inspectNodeRuntime({
+    userDataPath: input.userDataPath,
+    runtimeResourcePath: input.runtimeResourcePath,
+    systemNode: input.systemNode,
     platform,
     arch,
-  );
+  });
   if (readiness.ready) {
-    return { paths, archive, installed: false };
+    return { paths, installed: false };
   }
 
   await mkdir(paths.rootDir, { recursive: true, mode: 0o700 });
-  const download = input.downloadFile ?? downloadFile;
-  const extract = input.extractArchive ?? extractArchive;
   const install = input.installRuntimePackages ?? installRuntimePackages;
-
-  let archiveReady = false;
-  if (await pathExists(paths.archivePath)) {
-    archiveReady = (await sha256File(paths.archivePath)) === archive.sha256;
-  }
-  if (!archiveReady) {
-    await rm(paths.archivePath, { force: true });
-    await download(archive.url, paths.archivePath, archive.sha256);
-  }
-  if (!(await pathExists(paths.nodeExecutable))) {
-    await extract(paths.archivePath, paths.rootDir);
-  }
-  if (!(await pathExists(paths.nodeExecutable))) {
-    throw new Error(
-      `Downloaded Node.js archive did not contain ${paths.nodeExecutable}`,
-    );
-  }
-  if (platform !== "win32") {
-    await chmod(paths.nodeExecutable, 0o755).catch(() => undefined);
-  }
   await install({
-    nodeExecutable: paths.nodeExecutable,
+    nodeExecutable: input.systemNode.executable,
     pnpmEntry: join(input.runtimeResourcePath, "pnpm.mjs"),
     paths,
   });
@@ -465,19 +298,19 @@ export async function ensureNodeRuntime(
     `${JSON.stringify(
       {
         schemaVersion: MARKER_SCHEMA_VERSION,
-        nodeVersion: NODE_RUNTIME_VERSION,
         lockSha256,
         platform,
         arch,
         installedAt: new Date().toISOString(),
+        nodePath: input.systemNode.executable,
+        nodeVersion: input.systemNode.version,
+        nodeMajor: input.systemNode.major,
       },
       undefined,
       2,
     )}\n`,
     { encoding: "utf8", mode: 0o600 },
   );
-  // The extracted Node directory is the runtime of record. Removing the
-  // verified archive keeps the per-user footprint smaller after install.
-  await rm(paths.archivePath, { force: true });
-  return { paths, archive, installed: true };
+  await cleanupLegacyPortableNode(paths.rootDir);
+  return { paths, installed: true };
 }

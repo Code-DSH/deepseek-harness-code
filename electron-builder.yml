@@ -12,9 +12,9 @@ files:
   - dist/desktop/**/*
   - apps/desktop/src/startup.html
   - package.json
-  # The packaged app carries no node_modules. The first launch offers to
-  # download the portable Node.js runtime and installs the pinned Harness
-  # packages into the user-data directory.
+  # The packaged app carries no node_modules. The first launch runs on the
+  # auto-detected system official Node.js (>=22.13) and installs the pinned
+  # Harness packages into the user-data directory.
   - "!node_modules/**/*"
   - "!**/node_modules/**/*"
 extraResources:

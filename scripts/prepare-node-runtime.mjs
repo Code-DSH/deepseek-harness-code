@@ -1,4 +1,4 @@
-import { copyFile, cp, mkdir, readFile } from "node:fs/promises";
+import { chmod, copyFile, cp, mkdir, readFile } from "node:fs/promises";
 import { createRequire } from "node:module";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -56,6 +56,11 @@ await cp(join(sourceRoot, "patches"), join(targetRoot, "patches"), {
 // vendor assets from the same directory. Copy the whole dist tree so the
 // portable runtime installs packages exactly like the development tree.
 await cp(pnpmStandaloneRoot, targetRoot, { recursive: true });
+// fs.cp does not preserve the executable bit on script shims; native-module
+// fallback builds execute node-gyp directly, so restore the mode explicitly.
+await chmod(join(targetRoot, "node-gyp-bin", "node-gyp"), 0o755).catch(
+  () => undefined,
+);
 
 process.stdout.write(
   `${JSON.stringify({

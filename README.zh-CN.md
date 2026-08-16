@@ -108,7 +108,7 @@ DeepSeek Harness Code 选择了另一条路线：
 
 | 能力         | 普通网页套壳             | DeepSeek Harness Code                                                                               |
 | ------------ | ------------------------ | --------------------------------------------------------------------------------------------------- |
-| 运行时       | 加载已有远程页面         | 内置 Chromium、官方 Harness 运行时与集成插件；首次启动自动下载固定的便携 Node.js 24                 |
+| 运行时       | 加载已有远程页面         | 内置 Chromium、官方 Harness 运行时与集成插件；运行于系统官方 Node.js（自动探测）                   |
 | 模型集成     | 继承网页当时提供的模型   | 一等 V4 Pro/Flash 目录与官方推理强度控制                                                            |
 | Agent 工具链 | 没有集成式工具链         | Harness 插件、Skills、工具、Goal、Plan、Workflow、提问与 Subagent                                   |
 | 进程所有权   | 页面本身就是产品         | 桌面宿主管理 Harness 启动、就绪、重启与退出                                                         |
@@ -120,7 +120,7 @@ DeepSeek Harness Code 选择了另一条路线：
 | 诊断         | 最多只有浏览器控制台     | 经脱敏的 Electron、Harness、Watchdog 日志，可在应用内打开                                           |
 | 桌面集成     | 只有窗口外壳             | 原生托盘/菜单、关闭策略、系统主题、快捷键与会话感知恢复                                             |
 | 安全边界     | 常见宽权限 preload       | 仅回环地址 Harness 与两组经过验证的 preload 能力                                                    |
-| 分发         | 依赖外部网站或运行环境   | 自包含应用，运行时不要求全局安装 Node：首次启动自动下载固定的便携 Node.js（自动下载或提供下载链接） |
+| 分发         | 依赖外部网站或运行环境   | 自包含应用，运行于系统官方 Node.js：自动探测常见安装位置（nodejs.org 安装器、Homebrew、nvm、Volta、fnm、mise、nvm-windows、Scoop） |
 
 我们尊重轻量套壳的价值：它们解决的是“像应用一样打开这个网页”。DeepSeek Harness Code 解决的是另一个问题：**把 Harness 作为一个有韧性的桌面编码系统来运行。**
 
@@ -152,7 +152,7 @@ DeepSeek Harness Code 使用明确的生命周期控制覆盖这些已知失效�
 
 ## 现代化桌面体验
 
-- **自包含宿主、小体积安装包**——Chromium、Harness、插件和 Watchdog 放在应用包内。为减小安装包体积，Node.js 不再随包携带：首次启动会下载 SHA-256 固定的便携 Node.js 24（自动下载或提供浏览器下载链接），并把固定的 Harness 依赖安装到应用自有用户数据目录。
+- **自包含宿主、系统 Node.js**——Chromium、Harness、插件和 Watchdog 放在应用包内。应用直接使用系统安装的官方 Node.js（22.13 及以上，无上限），首次启动把固定的 Harness 依赖安装到应用自有用户数据目录；自动探测常见安装位置，包括 GUI 启动时 PATH 不含 Node 的场景。
 - **官方 Harness 体验**——会话、Profile、Provider、工作区行为与提问流程继续使用官方 Harness 模型。
 - **集成设置**——运行状态、重启、日志、关闭行为和实验模式使用官方 Harness UI 原语集成到“通用”设置。
 - **原生生命周期**——通过常驻托盘/菜单打开应用、重启 Harness、打开日志或退出；可选择关闭到托盘或直接退出。
@@ -234,7 +234,7 @@ xattr -dr com.apple.quarantine "/Applications/DeepSeek Harness Code.app"
 
 ### 环境要求
 
-- Node.js 24
+- Node.js 22.13 及以上（构建工具链与应用运行时要求）
 - pnpm 11.19.0（通过下方固定命令调用）
 - 目标操作系统对应的原生打包工具
 

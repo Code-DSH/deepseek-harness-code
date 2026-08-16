@@ -121,6 +121,51 @@ function defaultOfficialCommandRunner(
   };
 }
 
+// A dsh profile directory may have been linked against a foreign pnpm store
+// (for example by running dsh from a terminal with a user-level pnpm). pnpm
+// refuses to mix stores (ERR_PNPM_UNEXPECTED_STORE), so drop the derived
+// node_modules tree and let the official install relink it against the
+// managed store. node_modules is package-manager output only; settings,
+// sessions, and presets live elsewhere in the dsh home.
+async function reconcileForeignPnpmStore(input: {
+  profileRoot: string;
+  expectedStoreDir: string;
+}): Promise<void> {
+  const modulesYamlPath = join(
+    input.profileRoot,
+    "node_modules",
+    ".modules.yaml",
+  );
+  let content: string;
+  try {
+    content = await readFile(modulesYamlPath, "utf8");
+  } catch {
+    return;
+  }
+  // pnpm writes this manifest as JSON (layoutVersion 5) or legacy YAML.
+  let storeDir: string | undefined;
+  if (content.trimStart().startsWith("{")) {
+    try {
+      const parsed = JSON.parse(content) as { storeDir?: unknown };
+      if (typeof parsed.storeDir === "string") storeDir = parsed.storeDir;
+    } catch {
+      return;
+    }
+  } else {
+    storeDir = content.match(/^storeDir:\s*(\S+)\s*$/m)?.[1];
+  }
+  if (storeDir === undefined) return;
+  // pnpm appends a version directory (for example `/v11`) to the configured
+  // store root; strip it on both sides so a healthy install is left alone.
+  const normalize = (value: string): string =>
+    resolve(value).replace(/\/v\d+$/u, "");
+  if (normalize(storeDir) === normalize(input.expectedStoreDir)) return;
+  await rm(join(input.profileRoot, "node_modules"), {
+    recursive: true,
+    force: true,
+  });
+}
+
 /** Install integrated packages through the public dsh plugin command. */
 export async function ensureOfficialHarnessInstall(
   input: OfficialHarnessInstallInput,
@@ -163,6 +208,10 @@ export async function ensureOfficialHarnessInstall(
   ];
 
   await writePnpmLaunchers(input.runtimeBinRoot);
+  await reconcileForeignPnpmStore({
+    profileRoot: join(input.dshHome, "profiles", "web"),
+    expectedStoreDir: input.pnpmStoreDir,
+  });
   const inheritedEnv = input.env ?? process.env;
   const existingPath = inheritedEnv.PATH;
   const env: Record<string, string | undefined> = {
@@ -171,10 +220,16 @@ export async function ensureOfficialHarnessInstall(
     DHC_NODE_EXECUTABLE: input.nodeExecutable,
     DHC_PNPM_ENTRY: input.pnpmEntry,
     DHC_PNPM_STORE_DIR: input.pnpmStoreDir,
-    PATH:
-      existingPath === undefined || existingPath === ""
-        ? input.runtimeBinRoot
-        : `${input.runtimeBinRoot}${delimiter}${existingPath}`,
+    // The pnpm launchers resolve Node through DHC_NODE_EXECUTABLE, but the
+    // plugin installs they run may execute native-module postinstall scripts
+    // that invoke `node` by name, and a GUI launch inherits a minimal PATH.
+    PATH: [
+      input.runtimeBinRoot,
+      dirname(input.nodeExecutable),
+      existingPath,
+    ]
+      .filter((entry) => entry !== undefined && entry !== "")
+      .join(delimiter),
   };
   const runCommand = input.runCommand ?? defaultOfficialCommandRunner;
   for (const request of installRequests) {
@@ -197,8 +252,10 @@ export async function ensureOfficialHarnessInstall(
     );
     if (result.error !== undefined || result.status !== 0) {
       const exit = result.status === null ? "spawn" : String(result.status);
+      const diagnostic =
+        result.error?.message ?? String(result.stderr ?? "").slice(0, 2_000);
       throw new Error(
-        `official plugin installation failed for ${request.packageName} (exit ${exit})`,
+        `official plugin installation failed for ${request.packageName} (exit ${exit}): ${diagnostic}`,
       );
     }
   }

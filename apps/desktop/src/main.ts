@@ -42,12 +42,15 @@ import {
 } from "./lifecycle/startup-diagnostics.js";
 import { WatchdogHost } from "./lifecycle/watchdog-host.js";
 import {
-  ensureNodeRuntime,
-  getPortableNodeArchive,
-  inspectNodeRuntime,
-  resolveNodeRuntimePaths,
+  ensureRuntimePackages,
   type NodeRuntimePaths,
 } from "./lifecycle/node-runtime.js";
+import {
+  MINIMUM_NODE_VERSION,
+  NODE_DOWNLOAD_PAGE_URL,
+  resolveSystemNode,
+  type ResolvedSystemNode,
+} from "./lifecycle/system-node.js";
 import { replaceWindowKeepingHostAlive } from "./lifecycle/window-recovery.js";
 import {
   ensureOfficialHarnessInstall,
@@ -85,6 +88,7 @@ let preferences: DesktopPreferencesState = { ...DEFAULT_DESKTOP_PREFERENCES };
 let anchoredPresetNotice: RuntimeNotice | undefined;
 let routingSuiteNotice: RuntimeNotice | undefined;
 let nodeRuntimePaths: NodeRuntimePaths | undefined;
+let systemNodeRuntime: ResolvedSystemNode | undefined;
 
 // Preserve sessions and credentials across the product rename. This is an
 // intentional compatibility path; no user data is copied into the app bundle.
@@ -294,80 +298,79 @@ async function retireFailedStartupChild(child: HarnessChild): Promise<void> {
 function nodeRuntimeResourcePath(): string {
   return app.isPackaged
     ? join(process.resourcesPath, "node-runtime")
-    : join(app.getAppPath(), "config", "node-runtime");
+    : join(app.getAppPath(), "build", "node-runtime");
 }
 
-async function showNodeRuntimeChoice(
-  archive: ReturnType<typeof getPortableNodeArchive>,
+async function showNodeRequiredDialog(
   failedError?: Error,
-): Promise<"download" | "open-link" | "quit"> {
+): Promise<"retry" | "open-page" | "quit"> {
   const options: Electron.MessageBoxOptions = {
     type: failedError === undefined ? "question" : "error",
-    buttons:
-      failedError === undefined
-        ? ["Download Node.js automatically", "Open download page", "Quit"]
-        : ["Retry automatic download", "Open download page", "Quit"],
+    buttons: ["Retry detection", "Open nodejs.org download page", "Quit"],
     defaultId: 0,
     cancelId: 2,
-    title: "Node.js runtime required",
+    title: "Node.js required",
     message:
       failedError === undefined
-        ? "DeepSeek Harness Code needs Node.js 24 to run the local Harness."
-        : "The portable Node.js runtime could not be installed.",
+        ? "DeepSeek Harness Code needs an official Node.js installation to run the local Harness."
+        : "The pinned Harness packages could not be installed.",
     detail:
       failedError === undefined
-        ? `The installer no longer bundles Node.js to keep its size small. You can download it now or open ${archive.url} in your browser.`
-        : `${failedError.message.slice(0, 2_000)}\n\nAutomatic download: ${archive.url}`,
+        ? `No usable Node.js installation was detected. Install the official Node.js ${MINIMUM_NODE_VERSION} or newer from ${NODE_DOWNLOAD_PAGE_URL}, then choose "Retry detection". Common install locations (nodejs.org installer, Homebrew, nvm, Volta, fnm, mise, nvm-windows, Scoop) are detected automatically.`
+        : `${failedError.message.slice(0, 2_000)}\n\nOfficial Node.js download: ${NODE_DOWNLOAD_PAGE_URL}`,
   };
   const result =
     mainWindow === undefined || mainWindow.isDestroyed()
       ? await dialog.showMessageBox(options)
       : await dialog.showMessageBox(mainWindow, options);
   return (
-    (["download", "open-link", "quit"] as const)[result.response] ?? "quit"
+    (["retry", "open-page", "quit"] as const)[result.response] ?? "quit"
   );
 }
 
-async function prepareManagedNodeRuntime(): Promise<NodeRuntimePaths> {
+async function prepareSystemNodeRuntime(): Promise<void> {
   const userDataPath = app.getPath("userData");
   const runtimeResourcePath = nodeRuntimeResourcePath();
-  const archive = getPortableNodeArchive();
-  const readiness = await inspectNodeRuntime(userDataPath, runtimeResourcePath);
-  if (readiness.ready) {
-    nodeRuntimePaths = resolveNodeRuntimePaths(userDataPath);
-    return nodeRuntimePaths;
-  }
-
-  const initialChoice = await showNodeRuntimeChoice(archive);
-  if (initialChoice === "open-link") {
-    await shell.openExternal(archive.url);
-    throw new Error(
-      `Node.js ${archive.fileName} was not downloaded. Open ${archive.url}, install Node.js, or relaunch and choose automatic download.`,
-    );
-  }
-  if (initialChoice === "quit") {
-    throw new Error("Node.js runtime is required for the local Harness.");
-  }
-
   for (;;) {
-    try {
-      const installed = await ensureNodeRuntime({
-        userDataPath,
-        runtimeResourcePath,
-      });
-      nodeRuntimePaths = installed.paths;
-      if (installed.installed) {
-        process.stderr.write(
-          `Installed portable Node.js runtime and pinned Harness packages under ${userDataPath}/node-runtime.\n`,
+    const node = resolveSystemNode();
+    if (node === undefined) {
+      const choice = await showNodeRequiredDialog();
+      if (choice === "open-page") {
+        await shell.openExternal(NODE_DOWNLOAD_PAGE_URL);
+        throw new Error(
+          `No usable Node.js installation was detected. Install the official Node.js ${MINIMUM_NODE_VERSION} or newer from ${NODE_DOWNLOAD_PAGE_URL} and relaunch.`,
         );
       }
-      return nodeRuntimePaths;
+      if (choice === "quit") {
+        throw new Error(
+          "An official Node.js installation is required for the local Harness.",
+        );
+      }
+      continue;
+    }
+    process.stderr.write(
+      `Using system Node.js ${node.version === null ? "(unknown version)" : `v${node.version}`} from ${node.executable} (${node.source}).\n`,
+    );
+    try {
+      const ensured = await ensureRuntimePackages({
+        userDataPath,
+        runtimeResourcePath,
+        systemNode: node,
+      });
+      nodeRuntimePaths = ensured.paths;
+      systemNodeRuntime = node;
+      if (ensured.installed) {
+        process.stderr.write(
+          `Installed pinned Harness packages under ${userDataPath}/node-runtime.\n`,
+        );
+      }
+      return;
     } catch (error) {
       const failedError =
         error instanceof Error ? error : new Error("Unknown runtime error");
-      const choice = await showNodeRuntimeChoice(archive, failedError);
-      if (choice === "open-link") {
-        await shell.openExternal(archive.url);
+      const choice = await showNodeRequiredDialog(failedError);
+      if (choice === "open-page") {
+        await shell.openExternal(NODE_DOWNLOAD_PAGE_URL);
         throw failedError;
       }
       if (choice === "quit") throw failedError;
@@ -380,6 +383,13 @@ function managedNodeRuntimePaths(): NodeRuntimePaths {
     throw new Error("Managed Node.js runtime is not prepared");
   }
   return nodeRuntimePaths;
+}
+
+function systemNodeExecutable(): string {
+  if (systemNodeRuntime === undefined) {
+    throw new Error("System Node.js runtime is not prepared");
+  }
+  return systemNodeRuntime.executable;
 }
 
 async function startHarness(): Promise<HarnessChild> {
@@ -420,7 +430,7 @@ async function startHarness(): Promise<HarnessChild> {
   await ensureOfficialHarnessInstall({
     dshEntry,
     dshHome,
-    nodeExecutable: runtime.nodeExecutable,
+    nodeExecutable: systemNodeExecutable(),
     pnpmEntry: join(nodeRuntimeResourcePath(), "pnpm.mjs"),
     pnpmStoreDir: runtime.pnpmStoreDir,
     runtimeBinRoot: join(app.getPath("userData"), "runtime-bin"),
@@ -507,7 +517,7 @@ async function startHarness(): Promise<HarnessChild> {
   return startWithPortRetries(reserveLoopbackPort, async (port) => {
     harnessOrigin = `http://127.0.0.1:${port}`;
     const spec = createHarnessLaunchSpec({
-      nodeExecutable: runtime.nodeExecutable,
+      nodeExecutable: systemNodeExecutable(),
       dshEntry,
       dshHome,
       port,
@@ -617,7 +627,7 @@ async function launch(): Promise<void> {
     );
   }
   createWindow();
-  await prepareManagedNodeRuntime();
+  await prepareSystemNodeRuntime();
   controller = new HarnessRuntimeController({
     origin: () => harnessOrigin,
     startHarness,
@@ -674,7 +684,8 @@ function reportRuntimeFailure(error: unknown): void {
     error instanceof Error
       ? error.message.slice(0, 2_000)
       : "Desktop host operation failed";
-  console.error(`[DeepSeek Harness Code] ${message}`);
+  const stack = error instanceof Error ? `\n${error.stack ?? ""}` : "";
+  console.error(`[DeepSeek Harness Code] ${message}${stack}`);
 }
 
 function reportLaunchFailure(error: unknown): void {
