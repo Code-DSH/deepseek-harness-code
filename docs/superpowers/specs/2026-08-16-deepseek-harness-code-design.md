@@ -16,7 +16,11 @@ owners: [primary-agent]
 source_of_truth: [user request, ../../../apps, ../../../packages]
 related:
   prerequisites: [../../project/intent.md]
-  next: [../plans/2026-08-16-deepseek-harness-code.md]
+  next:
+    [
+      ./2026-08-16-macos-traffic-light-inset-design.md,
+      ../plans/2026-08-16-deepseek-harness-code.md,
+    ]
 supersedes: []
 tags: [design, electron, harness-plugin]
 ---
@@ -29,7 +33,7 @@ The product and application display name become **DeepSeek Harness Code**. The e
 
 ## User experience
 
-- macOS uses an underlay title bar with only the three native traffic-light controls visible. Harness content starts at the window top; the controls are placed above the pinned rc.6 wordmark so its position remains unchanged and never overlaps them.
+- macOS uses an underlay title bar with only the three native traffic-light controls visible. Harness content starts at the window top; the controls use the equal native inset defined by the [macOS traffic-light design](./2026-08-16-macos-traffic-light-inset-design.md), without adding a Web title bar or moving renderer content.
 - Windows and Linux use native window controls and the same Web plugin styling without macOS-only offsets.
 - The startup surface contains only a pure white or pure black system-matched background and one centered monochrome spinner; it has no card, wordmark, copy, gradient, or accent color.
 - The official General settings page contains the close behavior setting built from official Harness Button/Menu primitives. Closing may quit or keep the host alive in the tray/menu bar; the first close retains the one-time choice dialog.
