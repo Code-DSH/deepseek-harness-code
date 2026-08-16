@@ -8,6 +8,10 @@ import { describe, expect, test } from "vitest";
 const projectRoot = process.cwd();
 const execFileAsync = promisify(execFile);
 
+// Windows CI cold-starts sharp's native rasterizer; the 5 s vitest default
+// is too tight for the icon regeneration step.
+const ICON_BUILD_TIMEOUT_MS = 60_000;
+
 async function readProjectFile(relativePath: string): Promise<string> {
   return readFile(join(projectRoot, relativePath), "utf8");
 }
@@ -65,35 +69,39 @@ describe("DeepSeek Harness Code distribution contract", () => {
     expect(ciWorkflow).toContain("check:memory");
   });
 
-  test("generates a self-contained SVG, ICNS, ICO, and PNG product icon", async () => {
-    await execFileAsync(process.execPath, ["scripts/build-icon.mjs"], {
-      cwd: projectRoot,
-    });
+  test(
+    "generates a self-contained SVG, ICNS, ICO, and PNG product icon",
+    async () => {
+      await execFileAsync(process.execPath, ["scripts/build-icon.mjs"], {
+        cwd: projectRoot,
+      });
 
-    const svg = await readProjectFile("build/deepseek-harness-code.svg");
-    const icoHeader = await readFile(
-      join(projectRoot, "build/deepseek-harness-code.ico"),
-    );
-    const pngHeader = await readFile(
-      join(projectRoot, "build/deepseek-harness-code.png"),
-    );
-    const icnsHeader = await readFile(
-      join(projectRoot, "build/deepseek-harness-code.icns"),
-    );
-    const trayHeader = await readFile(
-      join(projectRoot, "build/deepseek-harness-code-tray.png"),
-    );
+      const svg = await readProjectFile("build/deepseek-harness-code.svg");
+      const icoHeader = await readFile(
+        join(projectRoot, "build/deepseek-harness-code.ico"),
+      );
+      const pngHeader = await readFile(
+        join(projectRoot, "build/deepseek-harness-code.png"),
+      );
+      const icnsHeader = await readFile(
+        join(projectRoot, "build/deepseek-harness-code.icns"),
+      );
+      const trayHeader = await readFile(
+        join(projectRoot, "build/deepseek-harness-code-tray.png"),
+      );
 
-    expect(svg).toContain("Official DeepSeek Harness black graphic");
-    expect(svg).toContain('fill="#F4F6FA"');
-    expect(svg).toContain('transform="translate(58 42) scale(2.8)"');
-    expect(svg).toContain('<text x="128" y="218"');
-    expect(svg).toContain(">Code<");
-    expect(icnsHeader.subarray(0, 4).toString("ascii")).toBe("icns");
-    expect(icoHeader.subarray(0, 4).toString("hex")).toBe("00000100");
-    expect(pngHeader.subarray(1, 4).toString("hex")).toBe("504e47");
-    expect(trayHeader.subarray(1, 4).toString("hex")).toBe("504e47");
-  });
+      expect(svg).toContain("Official DeepSeek Harness black graphic");
+      expect(svg).toContain('fill="#F4F6FA"');
+      expect(svg).toContain('transform="translate(58 42) scale(2.8)"');
+      expect(svg).toContain('<text x="128" y="218"');
+      expect(svg).toContain(">Code<");
+      expect(icnsHeader.subarray(0, 4).toString("ascii")).toBe("icns");
+      expect(icoHeader.subarray(0, 4).toString("hex")).toBe("00000100");
+      expect(pngHeader.subarray(1, 4).toString("hex")).toBe("504e47");
+      expect(trayHeader.subarray(1, 4).toString("hex")).toBe("504e47");
+    },
+    ICON_BUILD_TIMEOUT_MS,
+  );
 
   test("includes every local runtime component and a safe renamed installer handoff", async () => {
     const manifest = JSON.parse(await readProjectFile("package.json")) as {
