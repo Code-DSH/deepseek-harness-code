@@ -15,6 +15,11 @@
  * Usage:
  *   node scripts/check-memory-bounds.mjs
  *
+ * The packaged runtime closure contract (package-runtime-closure.test.ts) is
+ * excluded: it asserts generated build artifacts instead of exercising
+ * module-loading/lifecycle memory, and keeping it out lets this gate run on a
+ * fresh checkout without a preceding build.
+ *
  * Environment overrides:
  *   DHC_MEMORY_HEAP_MB   old-space heap cap for the test child (default 1024)
  *   DHC_MEMORY_RSS_MB    peak-RSS tripwire in MB (default 3072)
@@ -45,6 +50,8 @@ const child = spawn(
     "tests/unit",
     "packages/desktop-plugin/test",
     "packages/watchdog/test",
+    "--exclude",
+    "tests/unit/package-runtime-closure.test.ts",
   ],
   { cwd: projectRoot, stdio: "inherit" },
 );

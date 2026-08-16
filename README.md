@@ -269,8 +269,18 @@ npm exec --yes --package=pnpm@11.19.0 -- pnpm dist:linux
 ## Verify
 
 ```bash
+# Build first: the unit closure contract and packaged-runtime suites exercise
+# generated outputs (dist/**, build/routing-suite)
+npm exec --yes --package=pnpm@11.19.0 -- pnpm build
+
 # Unit, plugin, package-contract, and browser tests
 npm exec --yes --package=pnpm@11.19.0 -- pnpm test
+
+# All structure gates in one command (typecheck, lint, format, docs, security)
+npm exec --yes --package=pnpm@11.19.0 -- pnpm check
+
+# Memory gate: unit suites under a bounded heap with a peak-RSS tripwire
+npm exec --yes --package=pnpm@11.19.0 -- pnpm check:memory
 
 # Type, lint, formatting, documentation, and security contracts
 npm exec --yes --package=pnpm@11.19.0 -- pnpm typecheck

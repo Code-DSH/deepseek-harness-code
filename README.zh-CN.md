@@ -262,8 +262,17 @@ npm exec --yes --package=pnpm@11.19.0 -- pnpm dist:linux
 ## 验证
 
 ```bash
+# 先构建：单元闭包契约与打包运行时套件依赖生成产物（dist/**、build/routing-suite）
+npm exec --yes --package=pnpm@11.19.0 -- pnpm build
+
 # 单元、插件、打包契约和浏览器测试
 npm exec --yes --package=pnpm@11.19.0 -- pnpm test
+
+# 一条命令完成全部结构化门禁（类型、Lint、格式、文档、安全）
+npm exec --yes --package=pnpm@11.19.0 -- pnpm check
+
+# 内存门禁：受限堆运行单元套件并检查峰值 RSS
+npm exec --yes --package=pnpm@11.19.0 -- pnpm check:memory
 
 # 类型、Lint、格式、文档和安全契约
 npm exec --yes --package=pnpm@11.19.0 -- pnpm typecheck

@@ -76,6 +76,11 @@ jobs:
           node-version: 24.18.0
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - name: Build distribution artifacts
+        # The unit closure contract and the packaged runtime suites exercise
+        # generated outputs (dist/**, build/routing-suite), so tests run only
+        # after a clean build on every supported OS.
+        run: pnpm build
       - name: Install Playwright Chromium (with Linux system dependencies)
         if: runner.os == 'Linux'
         run: pnpm exec playwright install --with-deps chromium
