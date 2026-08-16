@@ -84,6 +84,14 @@ export function createStreamOutputEffectController({
     highlight?.clear();
   };
 
+  const releasePaintResources = () => {
+    highlight?.clear();
+    win.CSS?.highlights?.delete(HIGHLIGHT_NAME);
+    highlight = undefined;
+    overlay?.remove();
+    overlay = undefined;
+  };
+
   const copyTypography = (target, computed) => {
     const properties = [
       "font",
@@ -231,12 +239,19 @@ export function createStreamOutputEffectController({
         }
       }
     }
-    if (!doc.querySelector(STREAMING_ASSISTANT_SELECTOR)) cancelAll();
+    if (!doc.querySelector(STREAMING_ASSISTANT_SELECTOR)) {
+      cancelAll();
+      releasePaintResources();
+    }
   };
 
-  const onViewportChange = () => cancelAll();
+  const onViewportChange = () => {
+    cancelAll();
+    releasePaintResources();
+  };
   const onReducedMotionChange = () => {
     cancelAll();
+    releasePaintResources();
     snapshots = new WeakMap();
     baseline();
     if (!reducedMotion?.matches) ensurePaintResources();
@@ -268,10 +283,7 @@ export function createStreamOutputEffectController({
     disposed = true;
     observer?.disconnect();
     cancelAll();
-    win.CSS?.highlights?.delete(HIGHLIGHT_NAME);
-    highlight = undefined;
-    overlay?.remove();
-    overlay = undefined;
+    releasePaintResources();
     win.removeEventListener("scroll", onViewportChange, true);
     win.removeEventListener("resize", onViewportChange);
     win.removeEventListener("popstate", onViewportChange);

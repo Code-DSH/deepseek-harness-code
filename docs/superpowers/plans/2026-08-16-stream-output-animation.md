@@ -477,11 +477,11 @@ git commit -m "feat: show breathing orb while the model is active"
 - Consumes: final generated `client.js`, Electron package file list, plugin package manifest, and browser controllers from Tasks 3–4.
 - Produces: release-gating assertions for offline dependency closure, cleanup, and idle behavior.
 
-- [ ] **Step 1: Add failing release-closure assertions before changing the checker**
+- [x] **Step 1: Add failing release-closure assertions before changing the checker**
 
 Assert the plugin notice is a runtime artifact, `thinking-orbs@0.3.1` resolves from the workspace lock, the generated client contains no runtime request for `thinking-orbs` or local effect modules, and the package contract includes the notice.
 
-- [ ] **Step 2: Run package checks and capture the expected missing-artifact failure**
+- [x] **Step 2: Run package checks and capture the expected missing-artifact failure**
 
 ```bash
 npm exec --yes --package=pnpm@11.19.0 -- pnpm vitest run tests/unit/package-runtime-closure.test.ts
@@ -490,7 +490,7 @@ npm exec --yes --package=pnpm@11.19.0 -- pnpm vitest run --config tests/e2e/pack
 
 Expected: FAIL until the runtime closure and package assertions include the new notice/bundle contract.
 
-- [ ] **Step 3: Extend closure checks and idle browser evidence**
+- [x] **Step 3: Extend closure checks and idle browser evidence**
 
 Add `packages/desktop-plugin/THIRD_PARTY_NOTICES.md` to `runtimeArtifacts`. Read the generated client and reject these patterns:
 
@@ -507,7 +507,7 @@ for (const unresolved of [
 
 In Playwright, instrument requestAnimationFrame after stream completion, wait five seconds, and assert the plugin schedules no new frames, leaves no overlays/highlights/status markers, and does not change message geometry or heap through retained plugin DOM.
 
-- [ ] **Step 4: Run package, preflight, and browser gates**
+- [x] **Step 4: Run package, preflight, and browser gates**
 
 ```bash
 npm exec --yes --package=pnpm@11.19.0 -- pnpm build:plugin
@@ -519,7 +519,9 @@ npm exec --yes --package=pnpm@11.19.0 -- pnpm exec playwright test tests/playwri
 
 Expected: PASS with a self-contained plugin and zero post-generation animation activity.
 
-- [ ] **Step 5: Commit release gates**
+Verified with five runtime-closure unit tests, four package-contract tests, the preflight checker (12 artifacts, 32 production dependencies, five critical runtime packages, and one bundled plugin package), and three Chromium tests. The five-second idle observation retained no plugin paint DOM or CSS Highlight and scheduled no additional animation frame. Only ordinary compilation was performed; no distributable installer or version artifact was built.
+
+- [x] **Step 5: Commit release gates**
 
 ```bash
 git add tests/unit/package-runtime-closure.test.ts scripts/check-runtime-closure.mjs tests/e2e/package-contract.test.ts tests/playwright/stream-output-animation.spec.ts

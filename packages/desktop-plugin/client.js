@@ -27,9 +27,9 @@ var __copyProps = (to, from, except, desc) => {
 };
 var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
 
-// node_modules/.pnpm/thinking-orbs@0.3.1_react@18.3.1/node_modules/thinking-orbs/dist/engine.cjs
+// ../../node_modules/.pnpm/thinking-orbs@0.3.1_react@18.3.1/node_modules/thinking-orbs/dist/engine.cjs
 var require_engine = __commonJS({
-  "node_modules/.pnpm/thinking-orbs@0.3.1_react@18.3.1/node_modules/thinking-orbs/dist/engine.cjs"(exports2) {
+  "../../node_modules/.pnpm/thinking-orbs@0.3.1_react@18.3.1/node_modules/thinking-orbs/dist/engine.cjs"(exports2) {
     "use strict";
     Object.defineProperty(exports2, Symbol.toStringTag, { value: "Module" });
     function U(n, s, t) {
@@ -349,9 +349,9 @@ var require_engine = __commonJS({
   }
 });
 
-// node_modules/.pnpm/thinking-orbs@0.3.1_react@18.3.1/node_modules/thinking-orbs/dist/index.cjs
+// ../../node_modules/.pnpm/thinking-orbs@0.3.1_react@18.3.1/node_modules/thinking-orbs/dist/index.cjs
 var require_dist = __commonJS({
-  "node_modules/.pnpm/thinking-orbs@0.3.1_react@18.3.1/node_modules/thinking-orbs/dist/index.cjs"(exports2) {
+  "../../node_modules/.pnpm/thinking-orbs@0.3.1_react@18.3.1/node_modules/thinking-orbs/dist/index.cjs"(exports2) {
     "use strict";
     Object.defineProperty(exports2, Symbol.toStringTag, { value: "Module" });
     var _ = require("react/jsx-runtime");
@@ -452,7 +452,7 @@ var require_dist = __commonJS({
   }
 });
 
-// packages/desktop-plugin/src/stream-output-model.js
+// src/stream-output-model.js
 function findAppendedGraphemes(previous, next, segmenter = graphemeSegmenter) {
   if (!next.startsWith(previous)) return null;
   const suffix = next.slice(previous.length);
@@ -483,7 +483,7 @@ function eligibleTextNodes(root) {
 }
 var STREAMING_ASSISTANT_SELECTOR, EXCLUDED_OUTPUT_SELECTOR, graphemeSegmenter;
 var init_stream_output_model = __esm({
-  "packages/desktop-plugin/src/stream-output-model.js"() {
+  "src/stream-output-model.js"() {
     "use strict";
     STREAMING_ASSISTANT_SELECTOR = '[data-chat-flow-kind="assistant-step"] [data-streaming]';
     EXCLUDED_OUTPUT_SELECTOR = [
@@ -507,7 +507,7 @@ var init_stream_output_model = __esm({
   }
 });
 
-// packages/desktop-plugin/src/stream-output-controller.js
+// src/stream-output-controller.js
 var stream_output_controller_exports = {};
 __export(stream_output_controller_exports, {
   createStreamOutputEffectController: () => createStreamOutputEffectController,
@@ -573,6 +573,13 @@ function createStreamOutputEffectController({
     }
     for (const effect of [...activeEffects]) removeEffect(effect);
     highlight?.clear();
+  };
+  const releasePaintResources = () => {
+    highlight?.clear();
+    win.CSS?.highlights?.delete(HIGHLIGHT_NAME);
+    highlight = void 0;
+    overlay?.remove();
+    overlay = void 0;
   };
   const copyTypography = (target, computed) => {
     const properties = [
@@ -711,11 +718,18 @@ function createStreamOutputEffectController({
         }
       }
     }
-    if (!doc.querySelector(STREAMING_ASSISTANT_SELECTOR)) cancelAll();
+    if (!doc.querySelector(STREAMING_ASSISTANT_SELECTOR)) {
+      cancelAll();
+      releasePaintResources();
+    }
   };
-  const onViewportChange = () => cancelAll();
+  const onViewportChange = () => {
+    cancelAll();
+    releasePaintResources();
+  };
   const onReducedMotionChange = () => {
     cancelAll();
+    releasePaintResources();
     snapshots = /* @__PURE__ */ new WeakMap();
     baseline();
     if (!reducedMotion?.matches) ensurePaintResources();
@@ -745,10 +759,7 @@ function createStreamOutputEffectController({
     disposed = true;
     observer?.disconnect();
     cancelAll();
-    win.CSS?.highlights?.delete(HIGHLIGHT_NAME);
-    highlight = void 0;
-    overlay?.remove();
-    overlay = void 0;
+    releasePaintResources();
     win.removeEventListener("scroll", onViewportChange, true);
     win.removeEventListener("resize", onViewportChange);
     win.removeEventListener("popstate", onViewportChange);
@@ -767,7 +778,7 @@ function installStreamOutputEffects(doc = document, win = window) {
 }
 var HIGHLIGHT_NAME, DISSOLVE_DURATION_MS, MAX_STAGGER_MS, CLEANUP_DEADLINE_MS;
 var init_stream_output_controller = __esm({
-  "packages/desktop-plugin/src/stream-output-controller.js"() {
+  "src/stream-output-controller.js"() {
     "use strict";
     init_stream_output_model();
     HIGHLIGHT_NAME = "dsh-desktop-stream-mask";
@@ -777,7 +788,7 @@ var init_stream_output_controller = __esm({
   }
 });
 
-// packages/desktop-plugin/src/thinking-status.js
+// src/thinking-status.js
 var thinking_status_exports = {};
 __export(thinking_status_exports, {
   RUNNING_STATUS_SELECTOR: () => RUNNING_STATUS_SELECTOR,
@@ -889,14 +900,14 @@ function installThinkingStatus(doc, win, onSnapshot) {
 }
 var RUNNING_STATUS_SELECTOR, ORB_SIZE;
 var init_thinking_status = __esm({
-  "packages/desktop-plugin/src/thinking-status.js"() {
+  "src/thinking-status.js"() {
     "use strict";
     RUNNING_STATUS_SELECTOR = '[data-chat-flow] > [role="status"][aria-live="polite"]';
     ORB_SIZE = 20;
   }
 });
 
-// packages/desktop-plugin/src/client-runtime.cjs
+// src/client-runtime.cjs
 var React = require("react");
 var { ThinkingOrb } = require_dist();
 var {

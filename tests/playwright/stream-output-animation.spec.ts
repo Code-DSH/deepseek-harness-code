@@ -297,3 +297,154 @@ test("tracks only the localized direct running status and clears on completion",
     )
     .toBeNull();
 });
+
+test("becomes quiescent after generation completes", async ({ page }) => {
+  test.setTimeout(15_000);
+  await page.goto(origin);
+  await page.evaluate(() => {
+    const createElement = (
+      type: unknown,
+      props: Record<string, unknown>,
+      ...children: unknown[]
+    ) => ({ type, props, children });
+    Object.assign(window, {
+      __ModuleLoader__: {
+        load(definition: {
+          factory: (require: (id: string) => unknown) => unknown;
+        }) {
+          Object.assign(window, {
+            desktopPlugin: definition.factory((id) => {
+              if (id === "react") {
+                return {
+                  createElement,
+                  useEffect: () => undefined,
+                  useLayoutEffect: () => undefined,
+                  useRef: (value: unknown) => ({ current: value }),
+                  useState: (factory: () => unknown) => [
+                    factory(),
+                    () => undefined,
+                  ],
+                };
+              }
+              if (id === "react/jsx-runtime") {
+                return { jsx: createElement, jsxs: createElement };
+              }
+              if (id === "@deepseek-ai/dsh-client-ui-primitives") {
+                return {
+                  Button: () => null,
+                  Menu: () => null,
+                  IconChevronDownOutline14: () => null,
+                };
+              }
+              throw new Error(`unexpected client dependency: ${id}`);
+            }),
+          });
+        },
+      },
+    });
+  });
+  await page.addScriptTag({ path: pluginClient });
+  await page.evaluate(() => {
+    document.body.innerHTML = `
+      <div data-chat-flow style="width: 420px">
+        <div data-chat-flow-kind="assistant-step">
+          <div id="streaming" data-streaming>
+            <p id="answer" style="font: 16px/28px sans-serif">开始</p>
+          </div>
+        </div>
+        <div role="status" aria-live="polite" id="running">正在生成</div>
+      </div>`;
+    const target = window as typeof window & {
+      desktopPlugin: {
+        installStreamOutputEffects(
+          document: Document,
+          window: Window,
+        ): () => void;
+        installThinkingStatus(
+          document: Document,
+          window: Window,
+          onSnapshot: (snapshot: unknown) => void,
+        ): () => void;
+      };
+      streamDispose?: () => void;
+      statusDispose?: () => void;
+      statusSnapshots: unknown[];
+      animationFrameCount: number;
+    };
+    const nativeRequestAnimationFrame =
+      window.requestAnimationFrame.bind(window);
+    target.animationFrameCount = 0;
+    window.requestAnimationFrame = (callback) => {
+      target.animationFrameCount += 1;
+      return nativeRequestAnimationFrame(callback);
+    };
+    target.statusSnapshots = [];
+    target.streamDispose = target.desktopPlugin.installStreamOutputEffects(
+      document,
+      window,
+    );
+    target.statusDispose = target.desktopPlugin.installThinkingStatus(
+      document,
+      window,
+      (snapshot) => target.statusSnapshots.push(snapshot),
+    );
+    const answer = document.querySelector("#answer")?.firstChild as Text;
+    answer.data += "新";
+  });
+
+  const geometry = await page.locator("#answer").boundingBox();
+  await expect(page.locator("[data-dsh-stream-glyph]")).toHaveCount(1);
+  await page.evaluate(() => {
+    document.querySelector("#streaming")?.removeAttribute("data-streaming");
+    document.querySelector("#running")?.remove();
+  });
+  await expect(page.locator("[data-dsh-stream-glyph]")).toHaveCount(0);
+  await expect
+    .poll(() =>
+      page.evaluate(() =>
+        (
+          window as typeof window & { statusSnapshots: unknown[] }
+        ).statusSnapshots.at(-1),
+      ),
+    )
+    .toBeNull();
+
+  const framesAtCompletion = await page.evaluate(
+    () =>
+      (window as typeof window & { animationFrameCount: number })
+        .animationFrameCount,
+  );
+  await page.waitForTimeout(5_000);
+  const idle = await page.evaluate(() => {
+    const target = window as typeof window & {
+      streamDispose?: () => void;
+      statusDispose?: () => void;
+      animationFrameCount: number;
+    };
+    const result = {
+      frames: target.animationFrameCount,
+      overlayCount: document.querySelectorAll("[data-dsh-stream-overlay]")
+        .length,
+      orbCount: document.querySelectorAll("[data-dsh-desktop-thinking-orb]")
+        .length,
+      markerCount: document.querySelectorAll(
+        "[data-dsh-desktop-thinking-source]",
+      ).length,
+      highlight: Boolean(CSS.highlights?.has("dsh-desktop-stream-mask")),
+      text: document.querySelector("#answer")?.textContent,
+    };
+    target.statusDispose?.();
+    target.streamDispose?.();
+    return result;
+  });
+
+  expect(idle).toEqual({
+    frames: framesAtCompletion,
+    overlayCount: 0,
+    orbCount: 0,
+    markerCount: 0,
+    highlight: false,
+    text: "开始新",
+  });
+  expect(await page.locator("#answer").boundingBox()).toEqual(geometry);
+});

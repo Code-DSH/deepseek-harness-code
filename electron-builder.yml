@@ -25,6 +25,7 @@ extraResources:
       - index.d.ts
       - client.js
       - cordis.patch.yml
+      - THIRD_PARTY_NOTICES.md
   - from: packages/anchored-standard-plugin
     to: anchored-standard-plugin
     filter:

@@ -6,6 +6,8 @@ import { describe, expect, it } from "vitest";
 
 const projectRoot = process.cwd();
 const requireFromProject = createRequire(join(projectRoot, "package.json"));
+const pluginRoot = join(projectRoot, "packages", "desktop-plugin");
+const requireFromPlugin = createRequire(join(pluginRoot, "package.json"));
 
 describe("packaged runtime dependency closure", () => {
   it("ships the workflow seam required by the pinned Standard preset", () => {
@@ -51,5 +53,39 @@ describe("packaged runtime dependency closure", () => {
       "utf8",
     );
     expect(config).toContain('noExternal: ["zod"]');
+  });
+
+  it("bundles conversation effects without unresolved runtime modules", async () => {
+    const manifest = JSON.parse(
+      await readFile(join(pluginRoot, "package.json"), "utf8"),
+    ) as {
+      dependencies: Record<string, string>;
+      files: string[];
+    };
+    const client = await readFile(join(pluginRoot, "client.js"), "utf8");
+    const notices = await readFile(
+      join(pluginRoot, "THIRD_PARTY_NOTICES.md"),
+      "utf8",
+    );
+    const thinkingOrbsPackage = JSON.parse(
+      await readFile(
+        requireFromPlugin.resolve("thinking-orbs/package.json"),
+        "utf8",
+      ),
+    ) as { version: string };
+
+    expect(manifest.dependencies["thinking-orbs"]).toBe("0.3.1");
+    expect(thinkingOrbsPackage.version).toBe("0.3.1");
+    expect(manifest.files).toContain("THIRD_PARTY_NOTICES.md");
+    expect(notices).toContain("thinking-orbs 0.3.1");
+    expect(notices).toContain("generative-loaders 0.1.1");
+    for (const unresolved of [
+      'require("thinking-orbs")',
+      'require("./stream-output-model.js")',
+      'require("./stream-output-controller.js")',
+      'require("./thinking-status.js")',
+    ]) {
+      expect(client).not.toContain(unresolved);
+    }
   });
 });

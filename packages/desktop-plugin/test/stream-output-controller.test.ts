@@ -208,6 +208,10 @@ describe("stream output effect controller", () => {
     expect(
       window.document.querySelectorAll("[data-dsh-stream-glyph]"),
     ).toHaveLength(0);
+    expect(
+      window.document.querySelector("[data-dsh-stream-overlay]"),
+    ).toBeNull();
+    expect(window.CSS.highlights.has("dsh-desktop-stream-mask")).toBe(false);
 
     controller.dispose();
     expect(frames.size).toBe(0);
