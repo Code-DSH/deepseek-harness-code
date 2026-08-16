@@ -146,13 +146,21 @@ describe("desktop plugin package contract", () => {
   });
 
   it("builds a deterministic official bundle manifest and client module", () => {
-    const build = spawnSync(
-      process.execPath,
-      [join(pluginRoot, "scripts", "build-client.mjs")],
-      { cwd: repositoryRoot, encoding: "utf8" },
-    );
+    const buildScript = join(pluginRoot, "scripts", "build-client.mjs");
+    const build = spawnSync(process.execPath, [buildScript], {
+      cwd: repositoryRoot,
+      encoding: "utf8",
+    });
     expect(build.status, build.stderr).toBe(0);
     expect(build.stderr).toBe("");
+    const rootBuild = readFileSync(join(pluginRoot, "client.js"), "utf8");
+    const packageBuild = spawnSync(process.execPath, [buildScript], {
+      cwd: pluginRoot,
+      encoding: "utf8",
+    });
+    expect(packageBuild.status, packageBuild.stderr).toBe(0);
+    expect(packageBuild.stderr).toBe("");
+    expect(readFileSync(join(pluginRoot, "client.js"), "utf8")).toBe(rootBuild);
 
     const manifest = JSON.parse(
       readFileSync(join(pluginRoot, "package.json"), "utf8"),

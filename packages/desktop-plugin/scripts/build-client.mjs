@@ -16,6 +16,7 @@ const conversationEffects = await readFile(
   "utf8",
 );
 const result = await build({
+  absWorkingDir: packageRoot,
   stdin: {
     contents: runtimeSource,
     resolveDir: sourceRoot,
