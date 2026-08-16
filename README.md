@@ -150,8 +150,8 @@ DeepSeek Harness Code bundles the community [dsh-routing-suite](https://github.c
 
 - **Offline snapshot** - the installer ships a pinned snapshot of the suite's three components (the @dsh-external/dsh-super-injector bundle layer, the @dsh-external/dsh-mode-boost host-plane boost, and the router-standard + router-spec agent presets) inside the app resources.
 - **Auto-assembly** - on startup the desktop host registers the suite bundles in the app-owned Web profile, links them into the profile's node_modules, adds the mode-boost entry to the profile patch layer, and installs the router presets as managed agent presets. Nothing is downloaded at first launch.
-- **Auto-refresh** - in the background, once per day at most, the host downloads the latest router preset from the suite's main branch plus the pinned release tarballs, verifies and atomically swaps the user-level cache. Later launches prefer the refreshed cache over the bundled snapshot, so updates arrive without any manual step.
-- **Fault-tolerant** - every refresh or assembly failure is silent and non-fatal; startup never waits on the network, and the bundled snapshot is always the fallback.
+- **Reviewed updates** - routing components update only with a new reviewed app release. The build verifies the exact SHA-256 of every pinned archive before extraction; the installed app never downloads or executes mutable routing code in the background.
+- **Fault-tolerant** - every assembly failure is non-fatal; Standard Harness startup continues and reports a bounded diagnostic without touching user-owned presets.
 
 ## Architecture
 

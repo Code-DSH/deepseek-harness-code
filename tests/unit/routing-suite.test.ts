@@ -1,13 +1,10 @@
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
 import {
   mkdir,
   mkdtemp,
   readFile,
-  readdir,
   readlink,
   realpath,
-  rename,
-  rm,
   writeFile,
 } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -47,24 +44,6 @@ async function loadLinker(): Promise<LinkModule> {
   expect(module.ensureRoutingSuite).toBeTypeOf("function");
   expect(module.installRoutingSuiteForStartup).toBeTypeOf("function");
   return module as unknown as LinkModule;
-}
-
-type UpdateModule = {
-  refreshRoutingSuiteCache: (userDataPath: string) => Promise<void>;
-  resolveRoutingSuiteRoot: (
-    userDataPath: string,
-    bundledRoot: string,
-  ) => Promise<string>;
-  cacheIsComplete: (cacheRoot: string) => Promise<boolean>;
-};
-
-async function loadUpdater(): Promise<UpdateModule> {
-  const module = (await import(
-    "../../apps/desktop/src/lifecycle/routing-suite-update.js"
-  )) as Record<string, unknown>;
-  expect(module.refreshRoutingSuiteCache).toBeTypeOf("function");
-  expect(module.resolveRoutingSuiteRoot).toBeTypeOf("function");
-  return module as unknown as UpdateModule;
 }
 
 async function writeJson(path: string, value: unknown): Promise<void> {
@@ -258,114 +237,63 @@ describe("dsh-routing-suite auto-load pipeline", () => {
     expect(result.status).toBe("unavailable");
   });
 
-  it("prefers the refreshed user-level cache over the bundled snapshot", async () => {
-    const { resolveRoutingSuiteRoot, cacheIsComplete } = await loadUpdater();
-    const root = await mkdtemp(join(tmpdir(), "routing-suite-resolve-"));
-    const cacheRoot = join(root, "routing-suite-cache");
-    const bundledRoot = join(root, "bundled");
-    await mkdir(bundledRoot, { recursive: true });
-    await writeFile(join(bundledRoot, "versions.json"), "{}");
+  it("rejects untrusted cached archives before extracting executable code", async () => {
+    const root = await mkdtemp(join(tmpdir(), "routing-suite-checksum-"));
+    const cacheRoot = join(root, "cache");
+    const outputRoot = join(root, "output");
 
-    // Empty cache -> bundled snapshot.
-    expect(await resolveRoutingSuiteRoot(root, bundledRoot)).toBe(bundledRoot);
-
-    // Complete cache -> cache wins. The fixture builds at root/routing-suite,
-    // so move it to the user-level cache location the resolver checks.
-    await createRoutingSuiteSnapshot(root);
-    await rename(join(root, "routing-suite"), cacheRoot);
-    expect(await cacheIsComplete(cacheRoot)).toBe(true);
-    expect(await resolveRoutingSuiteRoot(root, bundledRoot)).toBe(cacheRoot);
-  });
-
-  it("refreshes the cache from GitHub tarballs and then respects the 24h cadence", async () => {
-    const { refreshRoutingSuiteCache, cacheIsComplete } = await loadUpdater();
-    const root = await mkdtemp(join(tmpdir(), "routing-suite-refresh-"));
-    const stagingRoot = join(root, "staging");
-    await mkdir(stagingRoot, { recursive: true });
-    const archives = new Map<string, Buffer>();
-
-    // Build the three release tarballs exactly as the updater expects them.
-    const injectorArchive = join(stagingRoot, "injector.tgz");
-    await buildTarball(injectorArchive, stagingRoot, "package", {
-      "package.json": JSON.stringify({
-        name: "@dsh-external/dsh-super-injector",
-        version: "0.3.3",
-        main: "lib/index.js",
-      }),
-      "lib/index.js": "export const injector = true\n",
-      "cordis.patch.yml": "# injector\n[]\n",
-    });
-    const boostArchive = join(stagingRoot, "boost.tgz");
-    await buildTarball(boostArchive, stagingRoot, "package", {
-      "package.json": JSON.stringify({
-        name: "@dsh-external/dsh-mode-boost",
-        version: "0.1.0",
-        main: "lib/index.js",
-      }),
-      "lib/index.js": "export const boost = true\n",
-    });
-    const presetArchive = join(stagingRoot, "preset.tgz");
-    await buildTarball(presetArchive, stagingRoot, "dsh-router-standard-main", {
-      "preset/router-standard/agent.cordis.yml":
-        "- id: bootstrap\n  name: ./router-core.mjs\n",
-      "preset/router-standard/preset.yml": "name: router-standard\n",
-      "preset/router-standard/router-core.mjs": "export const route = true\n",
-      "preset/router-spec/agent.cordis.yml":
-        "- id: bootstrap\n  name: ./router-core.mjs\n",
-      "preset/router-spec/preset.yml": "name: router-spec\n",
-      "preset/router-spec/router-core.mjs": "export const route = true\n",
-    });
-
-    archives.set(
-      "dsh-external-dsh-super-injector-0.3.3.tgz",
-      await readFile(injectorArchive),
+    await buildTarball(
+      join(cacheRoot, "dsh-external-dsh-super-injector-0.3.3.tgz"),
+      join(root, "injector-staging"),
+      "package",
+      {
+        "package.json": JSON.stringify({
+          name: "@dsh-external/dsh-super-injector",
+          version: "0.3.3",
+        }),
+        "lib/index.js": "throw new Error('untrusted injector executed')\n",
+      },
     );
-    archives.set(
-      "dsh-external-dsh-mode-boost-0.1.0.tgz",
-      await readFile(boostArchive),
+    await buildTarball(
+      join(cacheRoot, "dsh-external-dsh-mode-boost-0.1.0.tgz"),
+      join(root, "boost-staging"),
+      "package",
+      {
+        "package.json": JSON.stringify({
+          name: "@dsh-external/dsh-mode-boost",
+          version: "0.1.0",
+        }),
+        "lib/index.js": "throw new Error('untrusted boost executed')\n",
+      },
     );
-    archives.set(
-      "dsh-router-standard-main.tar.gz",
-      await readFile(presetArchive),
+    await buildTarball(
+      join(cacheRoot, "dsh-router-standard-eff787e.tar.gz"),
+      join(root, "preset-staging"),
+      "dsh-router-standard-eff787e95132d6c7104214542104a84d656b497e",
+      {
+        "preset/router-standard/agent.cordis.yml":
+          "- id: bootstrap\n  name: ./router-core.mjs\n",
+        "preset/router-standard/router-core.mjs":
+          "throw new Error('untrusted preset executed')\n",
+      },
     );
 
-    const fetchMock = vi.fn(async (input: string | URL | Request) => {
-      const url = String(input);
-      const fileName = url.slice(url.lastIndexOf("/") + 1);
-      const body = fileName.endsWith("main.tar.gz")
-        ? archives.get("dsh-router-standard-main.tar.gz")
-        : archives.get(fileName);
-      if (body === undefined) {
-        return new Response("not found", { status: 404 });
-      }
-      return new Response(new Uint8Array(body), { status: 200 });
-    });
-    vi.stubGlobal("fetch", fetchMock);
-
-    await refreshRoutingSuiteCache(root);
-
-    const cacheRoot = join(root, "routing-suite-cache");
-    expect(await cacheIsComplete(cacheRoot)).toBe(true);
-    expect(
-      await readFile(join(cacheRoot, "injector", "package.json"), "utf8"),
-    ).toContain("dsh-super-injector");
-    expect(
-      await readFile(join(cacheRoot, "mode-boost", "package.json"), "utf8"),
-    ).toContain("dsh-mode-boost");
-    expect((await readdir(join(cacheRoot, "preset"))).sort()).toEqual([
-      "router-spec",
-      "router-standard",
-    ]);
-    expect(await readFile(join(cacheRoot, "versions.json"), "utf8")).toContain(
-      "router-preset",
+    const result = spawnSync(
+      process.execPath,
+      [
+        join(process.cwd(), "scripts", "fetch-routing-suite.mjs"),
+        "--cache",
+        cacheRoot,
+        "--out",
+        outputRoot,
+      ],
+      { encoding: "utf8" },
     );
-    expect(fetchMock).toHaveBeenCalledTimes(3);
 
-    // A second refresh within the 24h window must not download again.
-    await refreshRoutingSuiteCache(root);
-    expect(fetchMock).toHaveBeenCalledTimes(3);
-
-    await rm(cacheRoot, { recursive: true, force: true });
-    vi.unstubAllGlobals();
+    expect(result.status).not.toBe(0);
+    expect(result.stderr).toContain("SHA-256 mismatch");
+    await expect(
+      readFile(join(outputRoot, "injector", "lib", "index.js"), "utf8"),
+    ).rejects.toThrow();
   });
 });

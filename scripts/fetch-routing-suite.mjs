@@ -14,9 +14,8 @@
  * build, so the snapshot always takes the prebuilt release tarball; the
  * mode-boost tarball ships prebuilt; the router preset is plain ESM + YAML
  * and is taken from the pinned commit archive the suite's submodule points
- * at. Versions are pinned here so the snapshot is deterministic; the desktop
- * app refreshes to the latest main at runtime (best effort, see
- * apps/desktop/src/lifecycle/routing-suite-update.ts).
+ * at. Versions, commits, and archive digests are pinned here so the snapshot
+ * is deterministic and executable bytes are verified before extraction.
  *
  * Usage:
  *   node scripts/fetch-routing-suite.mjs
@@ -44,6 +43,7 @@ const SOURCES = [
     version: "0.3.3",
     fileName: "dsh-external-dsh-super-injector-0.3.3.tgz",
     url: "https://github.com/yjh051108/dsh-super-injector/releases/download/v0.3.3/dsh-external-dsh-super-injector-0.3.3.tgz",
+    sha256: "355238fa8e51bc45c0801066af51e0e122f3b21411b193f601ee54e534391f48",
     target: "injector",
     strip: "package",
   },
@@ -53,6 +53,7 @@ const SOURCES = [
     version: "0.1.0",
     fileName: "dsh-external-dsh-mode-boost-0.1.0.tgz",
     url: "https://github.com/yjh051108/dsh-mode-boost/releases/download/v0.1.0/dsh-external-dsh-mode-boost-0.1.0.tgz",
+    sha256: "72836d64bc465bc7c915e1bbc810d15ae0825dd4448350bcbf42c6e76efca12b",
     target: "mode-boost",
     strip: "package",
   },
@@ -63,12 +64,23 @@ const SOURCES = [
     commit: "eff787e95132d6c7104214542104a84d656b497e",
     fileName: "dsh-router-standard-eff787e.tar.gz",
     url: "https://github.com/yjh051108/dsh-router-standard/archive/eff787e95132d6c7104214542104a84d656b497e.tar.gz",
+    sha256: "a8f3616fe4f5ed3951118dbc508239cf61dfcd5c763ed1ec9baafea886126676",
     target: "preset",
   },
 ];
 
 function sha256Of(buffer) {
   return createHash("sha256").update(buffer).digest("hex");
+}
+
+function verifyArchive(source, bytes) {
+  const actualSha256 = sha256Of(bytes);
+  if (actualSha256 !== source.sha256) {
+    throw new Error(
+      `fetch-routing-suite: SHA-256 mismatch for ${source.fileName}; expected ${source.sha256}, received ${actualSha256}`,
+    );
+  }
+  return actualSha256;
 }
 
 function parseArgs(argv) {
@@ -155,6 +167,7 @@ async function assembleFromTarball(source, cacheDir, outDir, components) {
   } else {
     bytes = await download(source.url, archive);
   }
+  const archiveSha256 = verifyArchive(source, bytes);
   const target = join(outDir, source.target);
   await rm(target, { recursive: true, force: true });
   await extractTarball(archive, target, source.strip);
@@ -166,7 +179,7 @@ async function assembleFromTarball(source, cacheDir, outDir, components) {
     packageName: source.packageName,
     version: source.version,
     ...(source.commit === undefined ? {} : { commit: source.commit }),
-    sha256: sha256Of(bytes),
+    sha256: archiveSha256,
     source: "github-release",
   });
 }
@@ -187,6 +200,7 @@ async function assembleRouterPreset(source, cacheDir, outDir, components) {
   } else {
     bytes = await download(source.url, archive);
   }
+  const archiveSha256 = verifyArchive(source, bytes);
   const staging = join(outDir, ".fetch", `${source.target}-staging`);
   await rm(staging, { recursive: true, force: true });
   await mkdir(staging, { recursive: true, mode: 0o700 });
@@ -233,7 +247,7 @@ async function assembleRouterPreset(source, cacheDir, outDir, components) {
     version: source.version,
     commit: source.commit,
     presets: presetIds,
-    sha256: sha256Of(bytes),
+    sha256: archiveSha256,
     source: "github-archive",
   });
 }

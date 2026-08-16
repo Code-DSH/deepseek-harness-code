@@ -51,10 +51,6 @@ import {
   installRoutingSuiteForStartup,
   type RoutingSuiteStartupResult,
 } from "./lifecycle/routing-suite-link.js";
-import {
-  refreshRoutingSuiteCache,
-  resolveRoutingSuiteRoot,
-} from "./lifecycle/routing-suite-update.js";
 import { classifyNavigation } from "./security/navigation-policy.js";
 import type {
   DesktopPreferences,
@@ -329,15 +325,10 @@ async function startHarness(): Promise<HarnessChild> {
       `Bundled Superpowers skills skipped user-owned directories: ${superpowersSkills.summary.conflicts.join(", ")}.\n`,
     );
   }
-  // Auto-assemble the dsh-routing-suite: prefer the refreshed user-level
-  // cache, fall back to the bundled snapshot, and never block on the network.
-  const routingSuiteRoot = await resolveRoutingSuiteRoot(
-    app.getPath("userData"),
-    bundledRoutingSuiteRoot,
-  );
-  void refreshRoutingSuiteCache(app.getPath("userData"));
+  // Assemble the reviewed, immutable dsh-routing-suite snapshot bundled with
+  // this app release. Startup never downloads or executes mutable code.
   const routingSuite: RoutingSuiteStartupResult =
-    await installRoutingSuiteForStartup(dshHome, routingSuiteRoot);
+    await installRoutingSuiteForStartup(dshHome, bundledRoutingSuiteRoot);
   if (routingSuite.status === "unavailable") {
     routingSuiteNotice = "routing-suite-unavailable";
     process.stderr.write(

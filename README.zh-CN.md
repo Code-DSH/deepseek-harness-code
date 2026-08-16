@@ -150,8 +150,8 @@ DeepSeek Harness Code 内置社区 [dsh-routing-suite](https://github.com/yjh051
 
 - **离线快照** —— 安装包内置套件三个组件的固定版本快照（@dsh-external/dsh-super-injector Bundle 层、@dsh-external/dsh-mode-boost 宿主增强、router-standard 与 router-spec 智能体预设），存放在应用资源目录中。
 - **自动装配** —— 启动时桌面宿主将套件 Bundle 注册进应用自有 Web Profile，链接到 Profile 的 node_modules，把 mode-boost 写入 Profile 补丁层，并将路由预设安装为受管智能体预设。首次启动无需联网下载。
-- **自动更新** —— 后台每天最多一次下载路由预设 main 分支的最新版及固定版本的发布包，校验后原子替换用户级缓存；后续启动优先使用刷新后的缓存，因此更新无需任何手动操作。
-- **容错** —— 任何刷新或装配失败都静默且不影响启动；启动从不等待网络，内置快照始终作为兜底。
+- **审核后更新** —— 路由组件只随经过审核的新 App 版本更新。构建在解压前校验每个固定归档的精确 SHA-256；安装后的 App 不会在后台下载或执行可变的路由代码。
+- **容错** —— 任何装配失败都不影响 Standard Harness 启动，并只报告有限诊断；用户自建的同名预设不会被覆盖。
 
 ## 架构
 
