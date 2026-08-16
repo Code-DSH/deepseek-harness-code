@@ -16,11 +16,11 @@
 ## Current Project Snapshot
 
 - Goal: ship DeepSeek Harness Code with a cross-platform Electron shell, official-format integrated plugins, an immutable DSH Routing Suite, an optional progressive Anchored Standard Agent Preset, native Harness conversation rendering, and an independent watchdog.
-- Current phase: 0.3.0 all-branch integration, clean-install verification, and Universal DMG validation are complete; the artifact is ready for user installation.
+- Current phase: all prior branches are consolidated; official single-Home migration and public CLI plugin installation are active on `feat/official-harness-install`.
 - Primary constraints: macOS Universal local release plus native Windows/Linux CI, no global Node dependency at runtime, loopback-only Harness, unsigned macOS distribution with ad-hoc signing.
-- Active branch/worktree: local `main` in `.worktrees/release-routing-suite`, fast-forwarded from `release/0.3.0-routing-suite`; remote main and every prior feature head are ancestors of this verified integration head.
+- Active branch/worktree: `feat/official-harness-install` in `.worktrees/official-harness-install`, created from consolidated `main@89c2b19`.
 - Build/test entry: `pnpm test`; release entry: `pnpm dist:mac` then `pnpm verify:mac release/DeepSeek-Harness-Code-0.3.0-mac-universal.dmg --universal`.
-- Current critical risk: the DMG is ad-hoc signed and not notarized; live-provider soak and any V4 Pro quality gain remain unverified without user-entered replacement credentials.
+- Current critical risk: the official CLI spawns literal `pnpm`; the packaged app must prove its bundled pnpm launcher and migration rollback on every supported runtime boundary.
 
 ## User Intent Status
 
@@ -63,6 +63,7 @@
 
 | Plan                            | Status     | Current milestone                                      | Updated    | Link                                                                                |
 | ------------------------------- | ---------- | ------------------------------------------------------ | ---------- | ----------------------------------------------------------------------------------- |
+| Official Harness installation   | active     | Official Home, public plugin CLI, and migration TDD    | 2026-08-16 | [Open](./docs/superpowers/plans/2026-08-16-official-harness-install.md)             |
 | DSH Routing Suite 0.3.0 release | complete   | Verified Universal DMG ready for user installation     | 2026-08-16 | [Open](./docs/superpowers/plans/2026-08-16-routing-suite-release.md)                |
 | Merge, release, and install     | superseded | Replaced by the 0.3.0 all-branch release plan          | 2026-08-16 | [Historical](./docs/plans/active/merge-all-branches-release-install.md)             |
 | DeepSeek Harness Code 0.2.0     | complete   | Superseded by the verified 0.3.0 artifact              | 2026-08-16 | [Historical](./docs/plans/active/deepseek-harness-desktop.md)                       |
