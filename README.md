@@ -173,7 +173,7 @@ These are implemented controls, not a synthetic “X% less memory” claim. A re
 | Area             | Included                                                                                    |
 | ---------------- | ------------------------------------------------------------------------------------------- |
 | Desktop host     | Hardened Electron window, startup page, native menus, tray, close preferences               |
-| Harness runtime  | Pinned `@deepseek-ai/dsh` rc.6, loopback-only Web service, app-owned profile                |
+| Harness runtime  | Pinned `@deepseek-ai/dsh` rc.6, loopback-only Web service, official single Harness Home     |
 | V4 models        | Official V4 Pro/Flash catalog and `off` / `high` / `max` reasoning controls                 |
 | Integrated stack | Skills, tools, Goal, Plan, Workflow, Todo, Jobs, questions, approvals, and subagents        |
 | Recovery         | Health probes, process restart, renderer replacement, port retry, session restoration       |
@@ -188,15 +188,15 @@ These are implemented controls, not a synthetic “X% less memory” claim. A re
 DeepSeek Harness Code bundles the community [dsh-routing-suite](https://github.com/yjh051108/dsh-routing-suite) and auto-loads it on every launch:
 
 - **Offline snapshot** - the installer ships a pinned snapshot of the suite's three components (the @dsh-external/dsh-super-injector bundle layer, the @dsh-external/dsh-mode-boost host-plane boost, and the router-standard + router-spec agent presets) inside the app resources.
-- **Auto-assembly** - on startup the desktop host registers the suite bundles in the app-owned Web profile, links them into the profile's node_modules, adds the mode-boost entry to the profile patch layer, and installs the router presets as managed agent presets. Nothing is downloaded at first launch.
+- **Official installation** - on startup the desktop host runs the public `dsh plugin --profile web add` flow with its bundled pnpm runtime for the desktop bundle, Super Injector, Mode Boost, and `dsh-find-plugin`. Harness owns the profile manifest, dependency location, bundle list, and patch loading; the desktop host only manages router presets and Skills outside that CLI.
 - **Reviewed updates** - routing components update only with a new reviewed app release. The build verifies the exact SHA-256 of every pinned archive before extraction; the installed app never downloads or executes mutable routing code in the background.
-- **Fault-tolerant** - every assembly failure is non-fatal; Standard Harness startup continues and reports a bounded diagnostic without touching user-owned presets.
+- **Ownership-safe** - existing unrelated plugins remain in the official profile, user-owned presets are never overwritten, and the retired app-specific Home remains intact after copy-only migration.
 
 ## Architecture
 
 ![DeepSeek Harness Code architecture](./docs/architecture/system.svg)
 
-The Electron main process owns the window, the local Harness child, readiness checks, and the narrow preload bridge. Harness binds only to `127.0.0.1` and stores official sessions under application user data. Official-format bundles extend the Web client without replacing its protocol. The independent Watchdog has no network listener and can relaunch only the validated application command.
+The Electron main process owns the window, the local Harness child, readiness checks, and the narrow preload bridge. Harness binds only to `127.0.0.1` and stores sessions in the official Home (`$DSH_HOME` or `~/.dsh`). Official-format bundles are reconciled by the public Harness plugin CLI and extend the Web client without replacing its protocol. The independent Watchdog has no network listener and can relaunch only the validated application command.
 
 Read the [system overview](./docs/architecture/overview.md) and [lifecycle design](./docs/architecture/lifecycle.md) for the complete boundaries.
 

@@ -20,6 +20,28 @@ const repositoryRoot = process.cwd();
 const require = createRequire(join(repositoryRoot, "package.json"));
 const dshEntry = require.resolve("@deepseek-ai/dsh/lib/bin.js");
 const pluginRoot = join(repositoryRoot, "packages", "desktop-plugin");
+const packagedAppPath = process.env.DHC_PACKAGED_APP_PATH;
+const packagedResourcesRoot =
+  packagedAppPath === undefined
+    ? undefined
+    : join(packagedAppPath, "Contents", "Resources");
+const bootRequire =
+  packagedResourcesRoot === undefined
+    ? require
+    : createRequire(join(packagedResourcesRoot, "app", "package.json"));
+const bootElectronExecutable =
+  packagedAppPath === undefined
+    ? (require("electron") as string)
+    : join(packagedAppPath, "Contents", "MacOS", "DeepSeek Harness Code");
+const bootDshEntry = bootRequire.resolve("@deepseek-ai/dsh/lib/bin.js");
+const bootPluginRoot =
+  packagedResourcesRoot === undefined
+    ? pluginRoot
+    : join(packagedResourcesRoot, "desktop-plugin");
+const bootRoutingSuiteRoot =
+  packagedResourcesRoot === undefined
+    ? join(repositoryRoot, "build", "routing-suite")
+    : join(packagedResourcesRoot, "routing-suite");
 const anchoredPluginRoot = join(
   repositoryRoot,
   "packages",
@@ -430,15 +452,29 @@ describe("desktop plugin with the real pinned Harness", () => {
     temporaryRoots.add(root);
     const dshHome = join(root, "home");
     await ensureOfficialHarnessInstall({
-      dshEntry,
+      dshEntry: bootDshEntry,
       dshHome,
-      electronExecutable: process.execPath,
-      pnpmEntry: join(dirname(require.resolve("pnpm")), "bin", "pnpm.mjs"),
+      electronExecutable: bootElectronExecutable,
+      pnpmEntry: join(dirname(bootRequire.resolve("pnpm")), "bin", "pnpm.mjs"),
       runtimeBinRoot: join(root, "runtime-bin"),
       integratedPlugins: [
         {
           packageName: "deepseek-harness-desktop-plugin",
-          packageRoot: pluginRoot,
+          packageRoot: bootPluginRoot,
+        },
+        {
+          packageName: "@dsh-external/dsh-super-injector",
+          packageRoot: join(bootRoutingSuiteRoot, "injector"),
+        },
+        {
+          packageName: "@dsh-external/dsh-mode-boost",
+          packageRoot: join(bootRoutingSuiteRoot, "mode-boost"),
+        },
+        {
+          packageName: "dsh-find-plugin",
+          packageRoot: dirname(
+            bootRequire.resolve("dsh-find-plugin/package.json"),
+          ),
         },
       ],
     });
@@ -446,10 +482,10 @@ describe("desktop plugin with the real pinned Harness", () => {
     const port = await reserveLoopbackPort();
     const origin = `http://127.0.0.1:${port}`;
     const child = spawn(
-      process.execPath,
+      bootElectronExecutable,
       [
         "--expose-internals",
-        dshEntry,
+        bootDshEntry,
         "web",
         "--host",
         "127.0.0.1",
@@ -458,7 +494,11 @@ describe("desktop plugin with the real pinned Harness", () => {
       ],
       {
         cwd: repositoryRoot,
-        env: { ...process.env, DSH_HOME: dshHome },
+        env: {
+          ...process.env,
+          DSH_HOME: dshHome,
+          ELECTRON_RUN_AS_NODE: "1",
+        },
         stdio: ["ignore", "pipe", "pipe"],
       },
     );

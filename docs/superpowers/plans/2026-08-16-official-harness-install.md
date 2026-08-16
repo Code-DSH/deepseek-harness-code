@@ -124,8 +124,8 @@
 - Packaging must contain pnpm, find-plugin, all integrated plugin roots, and bare-name patches.
 - Operations docs describe first-launch behavior, conflict handling, rollback through the intact legacy Home, and official target directories.
 
-- [ ] Add failing runtime/package contract assertions for bundled pnpm, pristine find-plugin patch, official mode-boost metadata, and absence of manual profile assembly text.
-- [ ] Update packaging and closure checks until the focused contracts pass.
+- [x] Add failing runtime/package contract assertions for bundled pnpm, pristine find-plugin patch, official mode-boost metadata, and absence of manual profile assembly text.
+- [x] Update packaging and closure checks until the focused contracts pass.
 - [ ] Update implementation-backed architecture, intent, knowledge evidence, operations runbook, indexes, and `AGENTS.md` status.
 - [ ] Run `pnpm typecheck`, `pnpm test`, `pnpm lint`, `pnpm format:check`, `pnpm verify:docs`, `pnpm verify:security`, and `pnpm preflight:runtime`.
 - [ ] Inspect the final diff, confirm all legacy source data remains untouched, and record any environment-only packaging limitation.

@@ -5,7 +5,7 @@
 - schema_version: 3
 - single_entry: true
 - repository_root: `/Users/trip/TRUE 开发/deepseek/deepseek-harness-desktop`
-- updated_at: `2026-08-16T16:38:10+08:00`
+- updated_at: `2026-08-16T19:00:00+08:00`
 - default_freshness: 10d
 - docs_entry: [docs/index.md](./docs/index.md)
 - project_entry: [docs/project/index.md](./docs/project/index.md)
@@ -16,11 +16,11 @@
 ## Current Project Snapshot
 
 - Goal: ship DeepSeek Harness Code with a cross-platform Electron shell, official-format integrated plugins, an immutable DSH Routing Suite, an optional progressive Anchored Standard Agent Preset, native Harness conversation rendering, and an independent watchdog.
-- Current phase: all prior branches are consolidated; official single-Home migration and public CLI plugin installation are active on `feat/official-harness-install`.
+- Current phase: all prior branches are consolidated; official single-Home migration and public CLI plugin installation are implemented on `feat/official-harness-install`, with final packaging verification active.
 - Primary constraints: macOS Universal local release plus native Windows/Linux CI, no global Node dependency at runtime, loopback-only Harness, unsigned macOS distribution with ad-hoc signing.
 - Active branch/worktree: `feat/official-harness-install` in `.worktrees/official-harness-install`, created from consolidated `main@89c2b19`.
-- Build/test entry: `pnpm test`; release entry: `pnpm dist:mac` then `pnpm verify:mac release/DeepSeek-Harness-Code-0.3.0-mac-universal.dmg --universal`.
-- Current critical risk: the official CLI spawns literal `pnpm`; the packaged app must prove its bundled pnpm launcher and migration rollback on every supported runtime boundary.
+- Build/test entry: `pnpm test`; release entry: `pnpm dist:mac` then `pnpm verify:mac release/DeepSeek-Harness-Code-0.3.2-mac-universal.dmg --universal`.
+- Current critical risk: migrated legacy registry plugins can require network access if they are absent from the official Home; the intact legacy Home remains the rollback source and installation is retried on the next launch.
 
 ## User Intent Status
 
@@ -63,7 +63,7 @@
 
 | Plan                            | Status     | Current milestone                                      | Updated    | Link                                                                                |
 | ------------------------------- | ---------- | ------------------------------------------------------ | ---------- | ----------------------------------------------------------------------------------- |
-| Official Harness installation   | active     | Official Home, public plugin CLI, and migration TDD    | 2026-08-16 | [Open](./docs/superpowers/plans/2026-08-16-official-harness-install.md)             |
+| Official Harness installation   | active     | Final package closure and documentation gates          | 2026-08-16 | [Open](./docs/superpowers/plans/2026-08-16-official-harness-install.md)             |
 | DSH Routing Suite 0.3.0 release | complete   | Verified Universal DMG ready for user installation     | 2026-08-16 | [Open](./docs/superpowers/plans/2026-08-16-routing-suite-release.md)                |
 | Merge, release, and install     | superseded | Replaced by the 0.3.0 all-branch release plan          | 2026-08-16 | [Historical](./docs/plans/active/merge-all-branches-release-install.md)             |
 | DeepSeek Harness Code 0.2.0     | complete   | Superseded by the verified 0.3.0 artifact              | 2026-08-16 | [Historical](./docs/plans/active/deepseek-harness-desktop.md)                       |
