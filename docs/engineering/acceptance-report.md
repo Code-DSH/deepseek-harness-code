@@ -1,17 +1,17 @@
 ---
 id: engineering.acceptance-report
-title: DeepSeek Harness Code 0.3.1 Acceptance Report
-summary: Final source, startup recovery, Routing Suite, rc.6 long-stream projection, and Universal macOS package evidence for the integrated 0.3.1 release.
+title: DeepSeek Harness Code Acceptance Report
+summary: Current 0.3.2 official-install evidence plus retained 0.3.1 startup recovery, Routing Suite, stream projection, and Universal release evidence.
 kind: engineering
 status: canonical
-content_stage: final-verified
+content_stage: implementation-backed
 scope: [desktop, watchdog, plugin, routing-suite, packaging]
 triggers: [release, acceptance, verification, DMG]
 read_when: [reviewing release readiness or reproducing validation]
 skip_when: [isolated source edits before release]
 priority: must
 freshness_class: project
-last_verified: 2026-08-16T17:35:00+08:00
+last_verified: 2026-08-16T19:20:00+08:00
 owners: [primary-agent]
 source_of_truth: [../../apps, ../../packages, ../../tests, ../../release]
 related:
@@ -21,7 +21,18 @@ supersedes: []
 tags: [acceptance, release, evidence]
 ---
 
-# DeepSeek Harness Code 0.3.1 Acceptance Report
+# DeepSeek Harness Code Acceptance Report
+
+## 0.3.2 official-install evidence
+
+- All pre-existing local branches and worktrees were consolidated into `main@89c2b19`; implementation continues in the isolated `feat/official-harness-install` worktree.
+- Harness Home resolution now uses `@deepseek-ai/dsh-home-paths@0.1.0-rc.6`. Migration from `<Electron userData>/dsh-home` is copy-only, target-wins, symlink-rejecting, permission-preserving, idempotent, and rollback-safe; it never removes the source or copies profile installation state.
+- The host installs the desktop bundle, Super Injector, Mode Boost, and `dsh-find-plugin` only through `dsh plugin --profile web add`. Its private `PATH` exposes `pnpm@11.19.0` from the app bundle, while the Harness child receives `--expose-internals` and all three audited plugin patches retain bare names.
+- The Universal app directory is 871 MB unpacked, ad-hoc signature verification passes, and its primary executable contains `x86_64 arm64`. Packaged Electron resolves its own `@deepseek-ai/dsh`, Home-paths, pnpm entry, and find-plugin package.
+- A packaged-runtime integration run used the Universal executable, packaged pnpm, packaged rc.6, and all four actual plugin roots against an isolated Home. Official reconciliation completed and the loopback boot graph served `deepseek-harness-desktop-plugin/client.js` successfully.
+- Current gates: 30 unit files / 118 tests, 108 Anchored tests, 24 plugin/real-Harness tests, four package tests, two Chromium tests, typecheck, lint, formatting, 42 documentation files, security contract, production audit, and runtime closure all pass. Runtime closure records 25 artifacts, 35 production dependencies, eight critical versions, and four integrated plugin packages.
+
+## 0.3.1 historical artifact
 
 ## Artifact
 

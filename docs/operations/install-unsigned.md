@@ -14,10 +14,6 @@ Do not disable Gatekeeper globally and do not use `spctl --master-disable`.
 
 Files downloaded or transferred by another application can receive quarantine again, which is why the targeted command remains part of the installation instructions.
 
-## Bundled Superpowers skills
+## First launch
 
-On its first successful startup, the app installs Superpowers 6.2.0 into its own Harness home under `dsh-home/skills`. This is local and offline. A same-named directory without the app's ownership marker is treated as user-owned and is never overwritten.
-
-## Bundled Routing Suite
-
-The app also assembles the offline dsh-routing-suite snapshot into its own Harness profile and may download a daily routing cache update in the background. First launch works without network access and never waits for the refresh. The bundled snapshot or an existing complete cache remains available when the network is unavailable.
+On its first successful startup, the app uses the official Harness Home (`$DSH_HOME` when explicitly set, otherwise `~/.dsh`). It copy-merges supported data from the retired Electron-specific Home, installs all bundled plugins through the official CLI using the pnpm runtime inside the app, and synchronizes Superpowers 6.2.0 under `<DSH_HOME>/skills`. Existing target files, unrelated plugins, and unmarked user-owned Skills or Agent Presets are never overwritten. See the [migration runbook](./harness-home-migration.md).

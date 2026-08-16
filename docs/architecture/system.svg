@@ -88,7 +88,7 @@
 
   <rect class="store box" x="520" y="675" width="455" height="135"/>
   <text class="label" x="545" y="710">系统用户数据目录（不写入 .app）</text>
-  <text class="small" x="545" y="740">dsh-home：设置 / 凭据 / 官方会话</text>
+  <text class="small" x="545" y="740">官方 Home（~/.dsh）：设置 / 凭据 / 会话 / 插件</text>
   <text class="small" x="545" y="764">logs：Electron / Harness / Watchdog</text>
   <text class="small" x="545" y="788">10 MB × 5 · 敏感信息脱敏</text>
 

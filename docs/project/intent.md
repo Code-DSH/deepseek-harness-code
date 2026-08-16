@@ -1,7 +1,7 @@
 ---
 id: project.intent
 title: DeepSeek Harness Code Intent
-summary: Confirmed scope and acceptance baseline for the desktop app, immutable DSH Routing Suite, and optional progressive Anchored Standard Agent Preset.
+summary: Confirmed scope and acceptance baseline for the desktop app, official single Harness Home, public plugin installation flow, immutable DSH Routing Suite, and progressive Agent Presets.
 kind: product
 status: canonical
 content_stage: implementation-backed
@@ -11,7 +11,7 @@ read_when: [starting or changing implementation]
 skip_when: [performing an isolated test with unchanged scope]
 priority: must
 freshness_class: project
-last_verified: 2026-08-16T17:35:00+08:00
+last_verified: 2026-08-16T19:00:00+08:00
 owners: [project]
 source_of_truth: [user-approved implementation plan]
 related:
@@ -43,6 +43,8 @@ Deliver an all-in-one, modernized DeepSeek Harness Code desktop distribution tha
 - Integrated DSH Routing Suite injector, mode boost, and router presets as a checksum-pinned offline app resource with ownership-safe startup assembly and no runtime code updater.
 - First-class official V4 Pro/Flash model selection and reasoning controls, with the literal `We need` intent trigger tracked as the next public-seam implementation requirement.
 - One packaged Harness toolchain covering Skills, tools, Goal, Plan, Workflow, Todo, Jobs, user questions/approval, and subagents.
+- One official Harness Home resolved by the pinned upstream helper, with first-launch copy-only migration from the retired app-specific Home.
+- Official `dsh plugin --profile web add` reconciliation for every bundled Web plugin through an application-bundled pnpm runtime.
 
 ## Non-goals
 
@@ -56,10 +58,11 @@ Deliver an all-in-one, modernized DeepSeek Harness Code desktop distribution tha
 
 ## Constraints
 
-- App and product display name `DeepSeek Harness Code`; package name `deepseek-harness-code`; startup-recovery release version `0.3.1` with the checksum-pinned Routing Suite retained.
+- App and product display name `DeepSeek Harness Code`; package name `deepseek-harness-code`; integration release version `0.3.2` with the checksum-pinned Routing Suite retained.
 - Baseline versions: `@deepseek-ai/dsh@0.1.0-rc.6`, Electron `43.4.0`, electron-builder `26.15.3`, Node build baseline `24.18.0`, pnpm `11.19.0`.
 - macOS 12-27 x64/arm64, Windows and Linux x64 native CI; fail closed rather than mislabel an architecture.
 - Harness binds only to `127.0.0.1`; user data remains outside `.app`.
+- Existing Harness data and unrelated plugins are preserved; migration never deletes the legacy Home or overwrites target conflicts.
 - No credential collection or logging by the desktop layer.
 - `anchored-standard` starts a new top-level session with exactly `bash` and `str_replace_editor`, promotes on the first durable tool call or assistant message, and then keeps only resident discovery plus explicitly unlocked tools.
 - Invalid preset configuration or missing required tools fails that selected preset; it never silently expands to Standard. Standard sessions stay operational.
@@ -72,6 +75,8 @@ Code, tests, package artifacts, signatures, architecture SVG, installation guide
 ## Confirmed Assumptions
 
 Architecture A remains approved. The user explicitly approved the progressive preset plan. rc.6 session hooks (`system-prompt/assemble`, `session/event`, and `agent/pre-step`) can shape the visible tool schema within one preset without using `AgentPresets.recompose()` or private request interception. The implementation does not treat historical reasoning as transferable model state and does not promise the community benchmark score.
+
+On 2026-08-16 the user additionally confirmed architecture A for official installation: embed the Harness and pnpm runtimes in the desktop application, reconcile bundled plugins through the public CLI on first launch, use the official single Home, and preserve all existing data and unrelated plugins.
 
 ## Related Documents
 

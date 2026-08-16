@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   createHarnessLaunchSpec,
+  resolveHarnessDataPaths,
   createStartupPagePath,
   createSecureWebPreferences,
   createTrayIconPath,
@@ -9,6 +10,21 @@ import {
 } from "../../apps/desktop/src/host-config.js";
 
 describe("Electron host configuration", () => {
+  it("uses the official Harness Home and keeps the previous app Home only as a migration source", () => {
+    expect(
+      resolveHarnessDataPaths(
+        "/Users/test/Library/Application Support/deepseek-harness-desktop",
+        {
+          DSH_HOME: "/Users/test/.official-dsh",
+        },
+      ),
+    ).toEqual({
+      dshHome: "/Users/test/.official-dsh",
+      legacyHome:
+        "/Users/test/Library/Application Support/deepseek-harness-desktop/dsh-home",
+    });
+  });
+
   it("creates a sandboxed, isolated renderer with no Node integration", () => {
     expect(createSecureWebPreferences("/app/preload.cjs")).toEqual({
       contextIsolation: true,
@@ -32,6 +48,7 @@ describe("Electron host configuration", () => {
       command:
         "/Applications/DeepSeek Harness.app/Contents/MacOS/DeepSeek Harness",
       args: [
+        "--expose-internals",
         "/app/node_modules/@deepseek-ai/dsh/lib/bin.js",
         "web",
         "--host",

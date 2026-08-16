@@ -20,6 +20,9 @@ const criticalRuntimeVersions = new Map([
   ["@deepseek-ai/dsh-invariants", "0.1.0-rc.6"],
   ["@deepseek-ai/dsh-workflow", "0.1.0-rc.6"],
   ["@deepseek-ai/dsh-client-ui-primitives", "0.1.0-rc.6"],
+  ["@deepseek-ai/dsh-home-paths", "0.1.0-rc.6"],
+  ["pnpm", "11.19.0"],
+  ["dsh-find-plugin", "0.3.6"],
 ]);
 
 const runtimeArtifacts = [
@@ -43,7 +46,9 @@ const runtimeArtifacts = [
   "apps/desktop/src/startup.html",
   "build/routing-suite/versions.json",
   "build/routing-suite/injector/package.json",
+  "build/routing-suite/injector/cordis.patch.yml",
   "build/routing-suite/mode-boost/package.json",
+  "build/routing-suite/mode-boost/cordis.patch.yml",
   "build/routing-suite/preset/router-standard/agent.cordis.yml",
   "build/routing-suite/preset/router-spec/agent.cordis.yml",
 ];
@@ -69,13 +74,31 @@ for (const [name, range] of Object.entries(manifest.dependencies ?? {})) {
 }
 
 for (const [name, expectedVersion] of criticalRuntimeVersions) {
-  const packagePath = requireFromProject.resolve(`${name}/package.json`);
+  const packagePath =
+    name === "pnpm"
+      ? requireFromProject.resolve("pnpm")
+      : requireFromProject.resolve(`${name}/package.json`);
   const installed = JSON.parse(await readFile(packagePath, "utf8"));
   if (installed.version !== expectedVersion) {
     throw new Error(
       `${name} runtime version ${installed.version} does not match ${expectedVersion}`,
     );
   }
+}
+
+const pnpmPackagePath = requireFromProject.resolve("pnpm");
+const pnpmEntry = join(dirname(pnpmPackagePath), "bin", "pnpm.mjs");
+await access(pnpmEntry); // bin/pnpm.mjs is invoked through the app-owned launcher.
+
+const findPluginManifestPath = requireFromProject.resolve(
+  "dsh-find-plugin/package.json",
+);
+const findPluginPatch = await readFile(
+  join(dirname(findPluginManifestPath), "cordis.patch.yml"),
+  "utf8",
+);
+if (!findPluginPatch.includes("name: 'dsh-find-plugin'")) {
+  throw new Error("dsh-find-plugin must retain its official bare-name patch");
 }
 
 if (pluginManifest.dependencies?.["thinking-orbs"] !== "0.3.1") {
@@ -117,6 +140,55 @@ for (const [component, expectedVersion] of routingSuitePins) {
   }
 }
 
+const injectorPatch = await readFile(
+  join(projectRoot, "build/routing-suite/injector/cordis.patch.yml"),
+  "utf8",
+);
+const modeBoostPatch = await readFile(
+  join(projectRoot, "build/routing-suite/mode-boost/cordis.patch.yml"),
+  "utf8",
+);
+const modeBoostManifest = JSON.parse(
+  await readFile(
+    join(projectRoot, "build/routing-suite/mode-boost/package.json"),
+    "utf8",
+  ),
+);
+if (!injectorPatch.includes("name: '@dsh-external/dsh-super-injector'")) {
+  throw new Error("routing injector must retain its official bare-name patch");
+}
+if (
+  modeBoostManifest.dsh?.bundle?.patch !== "./cordis.patch.yml" ||
+  !modeBoostPatch.includes("name: '@dsh-external/dsh-mode-boost'")
+) {
+  throw new Error("mode boost must expose an official bare-name dsh bundle");
+}
+for (const patch of [findPluginPatch, injectorPatch, modeBoostPatch]) {
+  if (patch.includes("./node_modules/")) {
+    throw new Error("integrated plugins must not use packaged-runtime paths");
+  }
+}
+
+const manualAssemblySources = await Promise.all(
+  [
+    "apps/desktop/src/lifecycle/desktop-plugin-link.ts",
+    "apps/desktop/src/lifecycle/routing-suite-link.ts",
+  ].map((path) => readFile(join(projectRoot, path), "utf8")),
+);
+for (const source of manualAssemblySources) {
+  for (const retiredName of [
+    "ensureDesktopPluginBundle",
+    "ensureDesktopPluginLink",
+    'profiles", "web", "node_modules',
+  ]) {
+    if (source.includes(retiredName)) {
+      throw new Error(
+        `retired manual profile assembly remains: ${retiredName}`,
+      );
+    }
+  }
+}
+
 const pluginClient = await readFile(
   join(projectRoot, "packages", "desktop-plugin", "client.js"),
   "utf8",
@@ -147,6 +219,6 @@ process.stdout.write(
     runtimeArtifacts: runtimeArtifacts.length,
     productionDependencies: resolvedDependencies.length,
     criticalRuntimePackages: criticalRuntimeVersions.size,
-    bundledPluginPackages: 1,
+    bundledPluginPackages: 4,
   })}\n`,
 );
