@@ -143,7 +143,7 @@ window.__ModuleLoader__.load({
       }
 
       slots.inject('shell.overlay', () => slots.register(
-        { name: 'shell.overlay', id: 'ui-motion-fade' },
+        { name: 'shell.overlay', id: 'ui-motion-fade', priority: -1 },
         () => React.createElement(FadeOverlay),
       ))
     }

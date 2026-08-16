@@ -445,12 +445,13 @@ window.__ModuleLoader__.load({
         )
       }
 
-      // ── 4) Take over the model seat with higher priority; the shipped entry resumes on stop ──
+      // ── 4) Take over the model seat: the slots service elects the LOWEST priority
+      //    (shipped registers 0; -1 shadows it). The shipped entry resumes on stop. ──
       ctx.inject(['slots', 'modelDirectories', 'sessions'], (scope) => {
         scope.slots.inject('conversation.input.model', () => scope.slots.register(
           {
             name: 'conversation.input.model',
-            priority: 1,
+            priority: -1,
             locale: 'model',
             inject: (sessionId) => {
               if (sessionId === undefined) return { available: false, directory: null, load: () => {}, select: () => Promise.resolve(false) }
