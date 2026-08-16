@@ -143,7 +143,7 @@ git add README.md README.zh-CN.md docs/index.md docs/project/status.md docs/supe
 git commit -m "docs: present DeepSeek Harness Code vision"
 ```
 
-- [ ] **Step 5: Push and verify the public repository**
+- [x] **Step 5: Push and verify the public repository**
 
 Run:
 
@@ -162,4 +162,4 @@ Expected: the repository is public, the default branch is `main`, and the local 
 - [x] State the current V4 Pro/Flash and reasoning-effort capabilities from the pinned adapter.
 - [x] Define literal `We need` automatic reasoning activation as the next core capability without representing it as shipped.
 - [x] Record the supporting pinned-package evidence in the upstream baseline and acceptance report.
-- [ ] Re-run publication verification, commit, push, and confirm the public branch state.
+- [x] Re-run publication verification, commit, push, and confirm the public branch state.
