@@ -30,6 +30,12 @@ DeepSeek 不应只是被困在浏览器页面里的一段对话。它应该成�
 
 **这个项目不是把网页塞进一个窗口，而是让 DeepSeek Harness 真正适合持续、真实、长期的工作。**
 
+## DHC 的整合哲学
+
+官方 DeepSeek Harness 提供的是积木，DeepSeek Harness Code（DHC）提供的是拼好的成品。用户不需要自己组装一套脆弱的工具链，才能获得一个可靠的工作环境。
+
+DHC 的职责，就是把官方 Harness 运行时、插件、Skills、工具、工作流和桌面可靠性整合成一个边界清晰、经过验证、能够从启动稳定运行到长期工作的完整发行版。DHC 是一个 **community project（社区项目）**，不是 DeepSeek 官方发行版，也**不是 DeepSeek Harness 的 fork**。它建立在官方 Harness 格式和运行时之上，把现有积木整合成完整的桌面体验。
+
 ## 一整套 DeepSeek Harness 发行版
 
 这是一套完整、连贯的 Harness 发行版，而不是模型启动器，也不是一堆互不相关的附加组件。官方 Harness Base 与 Web Bundle 已把 DeepSeek Agent 体系中真正有用的部分带进同一个应用：
