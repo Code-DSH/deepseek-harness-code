@@ -4,14 +4,25 @@ import { dirname, extname, join, resolve } from "node:path";
 const root = resolve(import.meta.dirname, "..");
 const documents = [
   join(root, "AGENTS.md"),
+  join(root, "README.md"),
+  join(root, "README.zh-CN.md"),
   ...walk(join(root, "docs")).filter((path) => extname(path) === ".md"),
 ];
 const missing = [];
 
 for (const document of documents) {
   const source = readFileSync(document, "utf8");
-  for (const match of source.matchAll(/!?(?:\[[^\]]*\])\(([^)]+)\)/g)) {
-    const rawTarget = match[1].trim().replace(/^<|>$/g, "");
+  const targets = [
+    ...[...source.matchAll(/!?(?:\[[^\]]*\])\(([^)]+)\)/g)].map(
+      (match) => match[1],
+    ),
+    ...[...source.matchAll(/\b(?:href|src)=["']([^"']+)["']/gi)].map(
+      (match) => match[1],
+    ),
+  ];
+
+  for (const raw of targets) {
+    const rawTarget = raw.trim().replace(/^<|>$/g, "");
     if (!rawTarget || /^(?:https?:|mailto:|#)/i.test(rawTarget)) continue;
 
     const target = decodeURIComponent(rawTarget.split("#", 1)[0]);

@@ -1,4 +1,4 @@
-import { execFileSync } from "node:child_process";
+import { spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { join } from "node:path";
@@ -63,6 +63,7 @@ type DesktopClientApply = (ctx: Parameters<ClientApply>[0]) => () => void;
 function loadClientExports(
   windowValue: Record<string, unknown> = {},
   documentValue: Document | undefined = undefined,
+  reactOverrides: Record<string, unknown> = {},
 ) {
   const source = readFileSync(join(pluginRoot, "client.js"), "utf8");
   let registration:
@@ -90,14 +91,20 @@ function loadClientExports(
       ...children: unknown[]
     ) => ({ type, props, children }),
     useEffect: () => undefined,
+    useLayoutEffect: () => undefined,
+    useRef: <T>(value: T) => ({ current: value }),
     useState: <T>(value: T | (() => T)) =>
       [
         typeof value === "function" ? (value as () => T)() : value,
         () => undefined,
       ] as const,
+    ...reactOverrides,
   };
   const module = registration!.factory((id) => {
     if (id === "react") return react;
+    if (id === "react/jsx-runtime") {
+      return { jsx: react.createElement, jsxs: react.createElement };
+    }
     if (id === "@deepseek-ai/dsh-client-ui-primitives") {
       return {
         Button: "HarnessButton",
@@ -139,11 +146,21 @@ describe("desktop plugin package contract", () => {
   });
 
   it("builds a deterministic official bundle manifest and client module", () => {
-    execFileSync(
-      process.execPath,
-      [join(pluginRoot, "scripts", "build-client.mjs")],
-      { cwd: repositoryRoot },
-    );
+    const buildScript = join(pluginRoot, "scripts", "build-client.mjs");
+    const build = spawnSync(process.execPath, [buildScript], {
+      cwd: repositoryRoot,
+      encoding: "utf8",
+    });
+    expect(build.status, build.stderr).toBe(0);
+    expect(build.stderr).toBe("");
+    const rootBuild = readFileSync(join(pluginRoot, "client.js"), "utf8");
+    const packageBuild = spawnSync(process.execPath, [buildScript], {
+      cwd: pluginRoot,
+      encoding: "utf8",
+    });
+    expect(packageBuild.status, packageBuild.stderr).toBe(0);
+    expect(packageBuild.stderr).toBe("");
+    expect(readFileSync(join(pluginRoot, "client.js"), "utf8")).toBe(rootBuild);
 
     const manifest = JSON.parse(
       readFileSync(join(pluginRoot, "package.json"), "utf8"),
@@ -154,9 +171,12 @@ describe("desktop plugin package contract", () => {
       };
       exports?: Record<string, { default?: string }>;
       dependencies?: Record<string, string>;
+      devDependencies?: Record<string, string>;
       peerDependencies?: Record<string, string>;
+      files?: string[];
     };
     const patch = readFileSync(join(pluginRoot, "cordis.patch.yml"), "utf8");
+    const client = readFileSync(join(pluginRoot, "client.js"), "utf8");
     const { module, registration } = loadClientExports();
 
     expect(manifest.dsh?.bundle?.patch).toBe("./cordis.patch.yml");
@@ -168,20 +188,36 @@ describe("desktop plugin package contract", () => {
         "@deepseek-ai/dsh-client-ui-primitives",
         "@deepseek-ai/dsh-client-ui-settings",
         "@deepseek-ai/dsh-client-ui-slots",
+        "@deepseek-ai/dsh-client-ui-layout",
       ],
     });
     expect(manifest.exports?.["./client"]?.default).toBe("./client.js");
     expect(manifest.exports?.["./package.json"]).toBe("./package.json");
+    expect(manifest.dependencies?.["thinking-orbs"]).toBe("0.3.1");
+    expect(manifest.devDependencies?.esbuild).toBe("0.25.12");
+    expect(manifest.files).toContain("THIRD_PARTY_NOTICES.md");
     expect(patch).toMatch(new RegExp(`name: ["']${packageName}["']`));
     expect(registration.id).toBe(packageName);
+    expect(client).not.toContain('require("thinking-orbs")');
     expect(Object.keys(module).sort()).toEqual([
+      "ConversationEffectsOverlay",
       "DESKTOP_LOCALES",
       "DesktopSettingsRow",
+      "THINKING_ORB_PROPS",
       "apply",
       "createDesktopSettingsModel",
+      "createStreamOutputEffectController",
+      "findRunningStatus",
       "inject",
+      "installStreamOutputEffects",
+      "installThinkingStatus",
       "installTransitions",
     ]);
+    expect(module.THINKING_ORB_PROPS).toEqual({
+      state: "breathing",
+      size: 20,
+      speed: 2,
+    });
     expect(module.inject).toEqual(["slots", "locale"]);
     expect(manifest.dsh?.client?.inject).toContain(
       "@deepseek-ai/dsh-client-locale",
@@ -191,6 +227,9 @@ describe("desktop plugin package contract", () => {
     );
     expect(
       manifest.peerDependencies?.["@deepseek-ai/dsh-client-ui-primitives"],
+    ).toBe("^0.1.0-rc.6");
+    expect(
+      manifest.peerDependencies?.["@deepseek-ai/dsh-client-ui-layout"],
     ).toBe("^0.1.0-rc.6");
   });
 
@@ -237,7 +276,7 @@ describe("desktop plugin package contract", () => {
     expect(questionClient).toContain("PendingQuestion = class");
   });
 
-  it("registers one General settings row only in the desktop shell", () => {
+  it("registers settings and conversation overlays only in the desktop shell", () => {
     const { module } = loadClientExports();
     const apply = module.apply as ClientApply;
     const injects: string[] = [];
@@ -261,7 +300,54 @@ describe("desktop plugin package contract", () => {
 
     const desktop = loadClientExports({ deepseekDesktop: {} });
     (desktop.module.apply as ClientApply)(ctx);
-    expect(injects).toEqual(["settings.general.item"]);
+    expect(injects).toEqual(["settings.general.item", "shell.overlay"]);
+  });
+
+  it("hides the native status only after the breathing orb commits", () => {
+    const dom = new JSDOM(
+      `<!doctype html><html><body><div data-chat-flow>
+        <div role="status" aria-live="polite" id="running">正在生成</div>
+      </div></body></html>`,
+      { url: "https://harness.test/session" },
+    );
+    const anchor = dom.window.document.querySelector("#running") as HTMLElement;
+    const layoutEffects: Array<() => void | (() => void)> = [];
+    const snapshot = { anchor, left: 42, top: 103 };
+    const { module } = loadClientExports(
+      dom.window as unknown as Record<string, unknown>,
+      dom.window.document,
+      {
+        useState: () => [snapshot, () => undefined],
+        useEffect: () => undefined,
+        useLayoutEffect: (effect: () => void | (() => void)) => {
+          layoutEffects.push(effect);
+        },
+      },
+    );
+
+    const rendered = (
+      module.ConversationEffectsOverlay as () => {
+        props: Record<string, unknown>;
+        children: Array<{ props: Record<string, unknown> }>;
+      }
+    )();
+    expect(anchor.hasAttribute("data-dsh-desktop-thinking-source")).toBe(false);
+    expect(rendered.props).toMatchObject({
+      "data-dsh-desktop-thinking-orb": "",
+      "aria-hidden": "true",
+      style: { left: 42, top: 103 },
+    });
+    expect(rendered.children[0]?.props).toMatchObject({
+      state: "breathing",
+      size: 20,
+      speed: 2,
+      "aria-hidden": "true",
+    });
+
+    const cleanup = layoutEffects[0]?.();
+    expect(anchor.hasAttribute("data-dsh-desktop-thinking-source")).toBe(true);
+    cleanup?.();
+    expect(anchor.hasAttribute("data-dsh-desktop-thinking-source")).toBe(false);
   });
 
   it("uses the official locale service for balanced Chinese and English settings copy", () => {
@@ -308,8 +394,13 @@ describe("desktop plugin package contract", () => {
           return () => undefined;
         },
         register(nextDefinition, nextComponent) {
-          definition = nextDefinition as Record<string, unknown>;
-          component = nextComponent as typeof component;
+          if (
+            (nextDefinition as Record<string, unknown>).name ===
+            "settings.general.item"
+          ) {
+            definition = nextDefinition as Record<string, unknown>;
+            component = nextComponent as typeof component;
+          }
           return undefined;
         },
       },
@@ -399,7 +490,7 @@ describe("desktop plugin package contract", () => {
     const wrappedPushState = desktopWindow.history.pushState;
     const second = apply(ctx);
 
-    expect(registrations).toBe(1);
+    expect(registrations).toBe(2);
     expect(desktopWindow.history.pushState).toBe(wrappedPushState);
     expect(listeners.get("popstate")?.size).toBe(1);
     first();
@@ -410,7 +501,7 @@ describe("desktop plugin package contract", () => {
     expect(desktopWindow.history.pushState).toBe(pushState);
     expect(desktopWindow.history.replaceState).toBe(replaceState);
     expect(listeners.get("popstate")?.size).toBe(0);
-    expect(slotDisposals).toBe(1);
+    expect(slotDisposals).toBe(2);
   });
 
   it("runs only the bridge actions and cleans up its runtime subscription", async () => {
@@ -649,6 +740,36 @@ describe("desktop plugin package contract", () => {
     } as unknown as Document;
     fallback(fallbackDocument, window);
     expect(root.dataset.dshDesktopTransition).toBe("css");
+  });
+
+  it("installs the conversation effect stylesheet with the existing desktop styles", () => {
+    const dom = new JSDOM(
+      "<!doctype html><html><head></head><body></body></html>",
+      {
+        url: "https://harness.test/session",
+      },
+    );
+    const { module } = loadClientExports(
+      dom.window as unknown as Record<string, unknown>,
+      dom.window.document,
+    );
+    const installTransitions = module.installTransitions as (
+      document: Document,
+      window: Window,
+    ) => () => void;
+
+    const dispose = installTransitions(
+      dom.window.document,
+      dom.window as unknown as Window,
+    );
+    const style = dom.window.document.querySelector(
+      "#deepseek-harness-desktop-transitions",
+    );
+
+    expect(style?.textContent).toContain("[data-dsh-stream-overlay]");
+    expect(style?.textContent).toContain("[data-dsh-desktop-thinking-source]");
+    expect(style?.textContent).toContain("[data-dsh-desktop-thinking-orb]");
+    dispose();
   });
 
   it("restarts the page animation only after an SPA history update commits DOM changes", async () => {

@@ -1,17 +1,17 @@
 ---
 id: engineering.acceptance-report
 title: DeepSeek Harness Code 0.2.0 Acceptance Report
-summary: Executed source, renderer, performance, and Universal macOS package evidence plus explicit external limits.
+summary: Executed all-branch source and renderer evidence; final clean Universal macOS package evidence is being refreshed.
 kind: engineering
 status: canonical
-content_stage: final-verified
+content_stage: partial-implementation
 scope: [desktop, watchdog, plugin, packaging]
 triggers: [release, acceptance, verification, DMG]
 read_when: [reviewing release readiness or reproducing validation]
 skip_when: [isolated source edits before release]
 priority: must
 freshness_class: project
-last_verified: 2026-08-16T13:42:00+08:00
+last_verified: 2026-08-16T14:26:00+08:00
 owners: [primary-agent]
 source_of_truth: [../../apps, ../../packages, ../../tests, ../../release]
 related:
@@ -27,9 +27,7 @@ tags: [acceptance, release, evidence]
 
 - DMG: `release/DeepSeek-Harness-Code-0.2.0-mac-universal.dmg`
 - App: `release/mac-universal/DeepSeek Harness Code.app`
-- Final SHA-256: `b651c04dfeb5d21de9a8d5dbb10e9f04ab3c07cc789566eb89bcd587ee92c4c9`.
-- Size: 283,643,665 bytes (271 MiB).
-- Signature, quarantine, preset-provenance, and architecture verification: passed for the current Universal rebuild. The app has no quarantine attribute, the nine required Anchored Standard resources carry the pinned upstream commit, and its main executable, Electron framework, helpers, and shared libraries contain both `x86_64` and `arm64` slices; architecture-specific optional modules are bundled as paired native variants.
+- The pre-integration artifact passed signature, quarantine, preset-provenance, and architecture verification. Its checksum is superseded and will be replaced only after the all-branch source gate produces and verifies a clean DMG.
 
 ## Root-cause and repair evidence
 
@@ -47,18 +45,18 @@ tags: [acceptance, release, evidence]
 
 ## Automated verification
 
-| Gate              | Result                                                                                       |
-| ----------------- | -------------------------------------------------------------------------------------------- |
-| Unit suite        | 22 files / 84 tests passed                                                                   |
-| Upstream preset   | 108 vendored upstream and local-patch tests passed                                           |
-| Official plugins  | 3 files / 20 tests passed, including pinned rc.6 roster, session creation, and boot          |
-| Package contract  | 1 file / 4 tests passed                                                                      |
-| Browser E2E       | 1 Playwright Chromium test passed                                                            |
-| TypeScript        | `tsc --noEmit` passed                                                                        |
-| Static gates      | ESLint, Prettier, 24 documentation files, and 7-control security contract passed             |
-| Dependency audit  | Production audit reported no known vulnerabilities at high severity or above                 |
-| Runtime preflight | 17 artifacts, 32 production dependencies, and 5 critical versions passed                     |
-| macOS package     | Current 271 MiB Universal DMG passed runtime, provenance, quarantine, and 49-file inspection |
+| Gate              | Result                                                                              |
+| ----------------- | ----------------------------------------------------------------------------------- |
+| Unit suite        | 25 files / 97 tests passed                                                          |
+| Upstream preset   | 108 vendored upstream and local-patch tests passed                                  |
+| Official plugins  | 3 files / 22 tests passed, including pinned rc.6 roster, session creation, and boot |
+| Package contract  | 1 file / 4 tests passed                                                             |
+| Browser E2E       | 5 Playwright Chromium tests passed                                                  |
+| TypeScript        | `tsc --noEmit` passed                                                               |
+| Static gates      | ESLint, Prettier, 31 documentation files, and 7-control security contract passed    |
+| Dependency audit  | Production audit reported no known vulnerabilities at high severity or above        |
+| Runtime preflight | Clean all-branch package rerun follows the verified source integration              |
+| macOS package     | Clean all-branch Universal DMG rerun follows the verified source integration        |
 
 ## Real renderer and performance evidence
 
@@ -85,7 +83,7 @@ The user-supplied community claim is experimental and is not a benchmark guarant
 
 - The equal 16-point traffic-light contract is verified in source, test, and the packaged main process. Native visual inspection on macOS 15 and macOS 26 remains an external gate; the local packaging host is macOS 27 and cannot substitute for those runs.
 - The key pasted in chat was not used, stored, printed, or forwarded. It must be revoked. A 45-minute live-provider soak is intentionally deferred until a replacement is entered by the user through official Harness settings.
-- The requested benchmark-score/“We need” outcome is not represented as a completed or measurable acceptance claim.
+- V4 Pro/Flash selection and the official `off` / `high` / `max` reasoning controls are available in the pinned adapter. The literal `We need` automatic reasoning trigger is documented as a next requirement and is not represented as shipped until its public per-request implementation and tests exist.
 
 ## Related documents
 

@@ -11,7 +11,7 @@ read_when: [integrating the 2026-08-16 release candidate]
 skip_when: [unrelated feature work]
 priority: must
 freshness_class: project
-last_verified: 2026-08-16T14:20:00+08:00
+last_verified: 2026-08-16T14:26:00+08:00
 owners: [primary-agent]
 source_of_truth:
   [../../../.git, ../../../package.json, ../../../electron-builder.yml]
@@ -75,10 +75,10 @@ tags: [execplan, release, installation]
 - Consumes: the complete dirty worktree state.
 - Produces: one traceable feature commit without secrets or whitespace errors.
 
-- [ ] Wait for the already-running artifact verifier to finish; do not mutate its inputs while active.
-- [ ] Run `git diff --check` and scan changed/untracked files for credential material.
-- [ ] Run `npm exec --yes --package=pnpm@11.19.0 -- pnpm test`, `typecheck`, `lint`, `format:check`, `verify:docs`, and `verify:security`.
-- [ ] Commit all intended Anchored Standard changes with a descriptive feature commit.
+- [x] Wait for the already-running artifact verifier to finish; do not mutate its inputs while active.
+- [x] Run `git diff --check` and scan changed/untracked files for credential material.
+- [x] Run `npm exec --yes --package=pnpm@11.19.0 -- pnpm test`, `typecheck`, `lint`, `format:check`, `verify:docs`, and `verify:security`.
+- [x] Commit all intended Anchored Standard changes with a descriptive feature commit.
 
 ### Task 3: Integrate main inside the feature worktree
 
@@ -92,9 +92,9 @@ tags: [execplan, release, installation]
 - Consumes: the feature commit and local `main` at `140eb212846064bd89b9e0e7113f5c0e15f09f47` or its verified successor.
 - Produces: one integration head containing every branch and dirty-worktree change.
 
-- [ ] Merge local `main` into `feat/anchored-standard-progressive` without rebasing or rewriting history.
-- [ ] Resolve conflicts by preserving both the already-verified streaming animation and Anchored Standard behavior.
-- [ ] Run the full tests, typecheck, lint, formatting, documentation-link, and security gates.
+- [x] Merge local `main` into `feat/anchored-standard-progressive` without rebasing or rewriting history.
+- [x] Resolve conflicts by preserving both the already-verified streaming animation and Anchored Standard behavior.
+- [x] Run the full tests, typecheck, lint, formatting, documentation-link, and security gates.
 - [ ] Verify `main`, `feature/stream-output-animation`, and fetched remote heads are ancestors of the integration head.
 - [ ] Fast-forward local `main` to the verified integration head.
 

@@ -108,6 +108,7 @@ describe("DeepSeek Harness Code distribution contract", () => {
       "dist/desktop",
       "dist/watchdog",
       "packages/desktop-plugin",
+      "THIRD_PARTY_NOTICES.md",
       "packages/anchored-standard-plugin",
       "apps/desktop/src/startup.html",
       "build/THIRD-PARTY-NOTICES.md",
@@ -124,6 +125,8 @@ describe("DeepSeek Harness Code distribution contract", () => {
     expect(installerReadme).not.toContain("spctl --master-disable");
     expect(installerReadme).toContain("community wrapper");
     expect(notices).toContain("DeepSeek Harness Code");
+    expect(notices).toContain("thinking-orbs 0.3.1");
+    expect(notices).toContain("desktop-plugin/THIRD_PARTY_NOTICES.md");
     expect(verifyScript).toContain("codesign --verify --deep --strict");
     expect(verifyScript).toContain("lipo -archs");
     expect(verifyScript).toContain("hdiutil attach");
@@ -159,5 +162,10 @@ describe("DeepSeek Harness Code distribution contract", () => {
     expect(anchoredManifest.commit).toBe(
       "db4527a2a70a9032d3a8525ce3c0ea6ef528d6fc",
     );
+    expect(preflightScript).toContain(
+      "packages/desktop-plugin/THIRD_PARTY_NOTICES.md",
+    );
+    expect(preflightScript).toContain('require("thinking-orbs")');
+    expect(preflightScript).toContain('require("./thinking-status.js")');
   });
 });

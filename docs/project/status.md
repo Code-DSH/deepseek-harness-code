@@ -1,9 +1,8 @@
 # Project Status
 
-- Phase: Anchored Standard progressive preset integrated and locally release-verified
-- Current milestone: final diff review and branch integration
+- Phase: all committed branches and the progressive Anchored Standard work are integrated in the isolated release candidate
+- Current milestone: complete the combined verification gates, clean Universal DMG rebuild, and data-preserving `/Applications` replacement
 - Repository: `https://github.com/Open-Less/deepseek-harness-code` (public)
-- Verified deliverables: self-contained sandbox preload, repaired Standard preset dependency closure, two-capability desktop plugin, progressive optional Agent Preset with official rc.6 discovery/session creation, atomic conflict-safe preset installation, localized General settings, native Edit/paste shortcuts, monochrome startup spinner, independent Watchdog, Code icon, and accessible system SVG
+- Verified deliverables: bilingual evidence-backed product README, self-contained sandbox preload, repaired Standard dependency closure, two-capability desktop plugin, progressive optional Agent Preset with official rc.6 discovery/session creation and atomic conflict-safe installation, streaming-output dissolve, active ThinkingOrb, localized General settings, native Edit/paste shortcuts, monochrome startup spinner, equal 16-point macOS traffic-light inset, independent Watchdog, Code icon, and accessible system SVG
 - Artifact: `release/DeepSeek-Harness-Code-0.2.0-mac-universal.dmg`
-- Artifact SHA-256: `b651c04dfeb5d21de9a8d5dbb10e9f04ab3c07cc789566eb89bcd587ee92c4c9`
-- External limits: native target-OS visual gates remain; V4 Pro paired capability validation is deferred until a safe replacement credential is entered through official settings
+- External limits: native Windows/Linux visual gates remain; live-provider soak and paired V4 Pro capability validation remain blocked until a safe replacement credential is entered through official settings

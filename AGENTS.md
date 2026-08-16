@@ -5,7 +5,7 @@
 - schema_version: 3
 - single_entry: true
 - repository_root: `/Users/trip/TRUE 开发/deepseek/deepseek-harness-desktop`
-- updated_at: `2026-08-16T13:42:00+08:00`
+- updated_at: `2026-08-16T14:25:00+08:00`
 - default_freshness: 10d
 - docs_entry: [docs/index.md](./docs/index.md)
 - project_entry: [docs/project/index.md](./docs/project/index.md)
@@ -15,10 +15,10 @@
 
 ## Current Project Snapshot
 
-- Goal: ship DeepSeek Harness Code with a cross-platform Electron shell, official-format integrated plugins, an optional progressive Anchored Standard Agent Preset, and an independent watchdog.
-- Current phase: Anchored Standard progressive preset integration and local Universal release verification are complete; final branch review remains.
+- Goal: ship DeepSeek Harness Code with a cross-platform Electron shell, official-format integrated plugins, an optional progressive Anchored Standard Agent Preset, streaming-output effects, and an independent watchdog.
+- Current phase: all committed branches and the progressive preset feature are being integrated for a clean Universal DMG rebuild and data-preserving local installation.
 - Primary constraints: macOS Universal local release plus native Windows/Linux CI, no global Node dependency at runtime, loopback-only Harness, unsigned macOS distribution with ad-hoc signing.
-- Active branch/worktree: `feat/anchored-standard-progressive` in an isolated worktree; repository is published at `Open-Less/deepseek-harness-code`.
+- Active branch/worktree: `feat/anchored-standard-progressive` is the isolated integration worktree; verified integration will fast-forward local `main` without rewriting history.
 - Build/test entry: `npm exec --yes --package=pnpm@11.19.0 -- pnpm test`.
 - Current critical risk: the progressive request-schema mechanism is locally verified, but any V4 Pro quality gain remains unverified without user-entered credentials and a repeated paired experiment.
 
@@ -49,19 +49,23 @@
 | Electron         | 43.4.0          | Desktop Chromium host     | active | 2026-08-15 | [Upstream baseline](./docs/knowledge/upstream-baseline.md) |
 | DeepSeek Harness | 0.1.0-rc.6      | Web app and agent runtime | active | 2026-08-15 | [Upstream baseline](./docs/knowledge/upstream-baseline.md) |
 | electron-builder | 26.15.3         | App and DMG packaging     | active | 2026-08-15 | [Upstream baseline](./docs/knowledge/upstream-baseline.md) |
+| thinking-orbs    | 0.3.1           | Active generation canvas  | active | 2026-08-16 | [Upstream baseline](./docs/knowledge/upstream-baseline.md) |
+| esbuild          | 0.25.12         | Offline plugin bundling   | active | 2026-08-16 | [Upstream baseline](./docs/knowledge/upstream-baseline.md) |
 
 ## Knowledge Topic Index
 
 | Topic             | Summary                                                                                    | Status  | Last verified | Revalidate after | Canonical document                            |
 | ----------------- | ------------------------------------------------------------------------------------------ | ------- | ------------- | ---------------- | --------------------------------------------- |
-| Upstream baseline | Official Harness and packaging version baseline                                            | current | 2026-08-15    | 2026-08-16       | [Open](./docs/knowledge/upstream-baseline.md) |
+| Upstream baseline | Harness, packaging, preset, and animation dependency baseline                              | current | 2026-08-16    | 2026-08-17       | [Open](./docs/knowledge/upstream-baseline.md) |
 | Anchored Standard | Pinned community preset, rc.6 integration contract, local patches, and experiment boundary | current | 2026-08-16    | 2026-08-26       | [Open](./docs/knowledge/anchored-standard.md) |
 
 ## Active Plans
 
-| Plan                        | Status | Current milestone                        | Updated    | Link                                                    |
-| --------------------------- | ------ | ---------------------------------------- | ---------- | ------------------------------------------------------- |
-| DeepSeek Harness Code 0.2.0 | active | Final diff review and branch integration | 2026-08-16 | [Open](./docs/plans/active/deepseek-harness-desktop.md) |
+| Plan                        | Status   | Current milestone                                 | Updated    | Link                                                                   |
+| --------------------------- | -------- | ------------------------------------------------- | ---------- | ---------------------------------------------------------------------- |
+| Merge, release, and install | active   | Branch integration and clean release verification | 2026-08-16 | [Open](./docs/plans/active/merge-all-branches-release-install.md)      |
+| DeepSeek Harness Code 0.2.0 | active   | Final Universal packaging and acceptance          | 2026-08-16 | [Open](./docs/plans/active/deepseek-harness-desktop.md)                |
+| Streaming output animation  | complete | Integrated into the all-branch release candidate  | 2026-08-16 | [Open](./docs/superpowers/plans/2026-08-16-stream-output-animation.md) |
 
 ## Known Risks and Open Questions
 

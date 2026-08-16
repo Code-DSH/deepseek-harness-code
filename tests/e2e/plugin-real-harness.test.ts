@@ -437,8 +437,13 @@ describe("desktop plugin with the real pinned Harness", () => {
         return {
           createElement: () => undefined,
           useEffect: () => undefined,
+          useLayoutEffect: () => undefined,
+          useRef: (value: unknown) => ({ current: value }),
           useState: () => [undefined, () => undefined],
         };
+      }
+      if (id === "react/jsx-runtime") {
+        return { jsx: () => undefined, jsxs: () => undefined };
       }
       if (id === "@deepseek-ai/dsh-client-ui-primitives") {
         return {
