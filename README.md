@@ -1,7 +1,7 @@
 <div align="center">
   <img src="./build/deepseek-harness-code.png" width="136" alt="DeepSeek Harness Code icon" />
   <h1>DeepSeek Harness Code</h1>
-  <h3>The complete, modern DeepSeek Harness desktop integration bundle — built for work that lasts longer than a browser session.</h3>
+  <h3>The complete, modern DeepSeek Harness assembled desktop integration distribution.</h3>
   <p>DeepSeek Harness Code brings the full Harness runtime, plugins, Skills, tools, agent workflows, a hardened desktop host, and an independent Watchdog together in one integrated package.</p>
   <p><a href="./README.md">English</a> · <a href="./README.zh-CN.md">简体中文</a></p>
   <p><a href="#the-dhc-integration-philosophy">Integration philosophy</a> · <a href="#vision">Vision</a> · <a href="#one-complete-deepseek-harness-distribution">Complete Harness</a> · <a href="#modernizing-the-beta1-experience">BETA1 improvements</a> · <a href="#beyond-a-web-wrapper">Why it is different</a> · <a href="#built-for-long-running-work">Reliability</a> · <a href="#architecture">Architecture</a> · <a href="#build-from-source">Build</a></p>
@@ -24,7 +24,7 @@
 
 ## The DHC integration philosophy
 
-DHC is the assembled integration bundle: the complete, modern DeepSeek Harness. Its integration philosophy is to bring together everything users need from DeepSeek Harness and package it correctly as a modern, working Agent application and toolkit. **Users should not have to assemble a fragile toolchain themselves**. Official Harness provides the building blocks; DHC provides the assembled product.
+DHC is the desktop integration bundle for DeepSeek Harness Code: a more complete desktop experience, modern support, a fuller Harness surface, stronger engineering capabilities, and a more complete set of Skills and user needs—assembled into one working Agent application and toolkit. **Users should not have to assemble a fragile toolchain themselves**. Official Harness provides the building blocks; DHC provides the assembled product.
 
 This project is the **desktop integration bundle for DeepSeek Harness**. It is not merely DeepSeek Harness by itself and not a thin Web wrapper. The bundle combines the official Harness runtime and capabilities with the new Skills, additional Skills, plugins, tools, workflows, agent foundations, desktop integration, diagnostics, and recovery mechanisms that DHC adds around it. DHC turns those pieces into one tested, installable Agent application and toolkit with a managed lifecycle and a coherent path from launch to long-running work.
 
