@@ -6,14 +6,19 @@
 
 :root[data-dsh-desktop-platform="macos"] {
   --dsh-desktop-titlebar-safe-inset: 78px;
-  --dsh-desktop-titlebar-height: 28px;
+  --dsh-desktop-titlebar-height: 40px;
+}
+
+/* Keep every Harness route below the native macOS traffic lights. */
+:root[data-dsh-desktop-platform="macos"] body {
+  box-sizing: border-box;
+  padding-top: 40px;
 }
 
 :root[data-dsh-desktop-platform="macos"] [data-dsh-desktop-breadcrumb],
 :root[data-dsh-desktop-platform="macos"] header [aria-label*="DeepSeek" i],
 :root[data-dsh-desktop-platform="macos"] header [data-dsh-desktop-title] {
   margin-left: var(--dsh-desktop-titlebar-safe-inset);
-  padding-top: var(--dsh-desktop-titlebar-height);
 }
 
 :root[data-dsh-desktop-platform] header,
@@ -111,72 +116,7 @@
   }
 }
 
-:root[data-dsh-desktop-page] main,
-:root[data-dsh-desktop-page] [data-dsh-desktop-breadcrumb],
-:root[data-dsh-desktop-recovery] [role="alert"] {
-  animation: dsh-desktop-enter var(--dsh-desktop-transition-duration) ease-out
-    both;
-}
-
-:root[data-dsh-desktop-recovery="loading"] [aria-busy="true"],
-:root[data-dsh-desktop-recovery="error"] [role="alert"] {
-  animation-duration: 180ms;
-}
-
-:root[data-dsh-desktop-animation="odd"] main,
-:root[data-dsh-desktop-animation="odd"] [data-dsh-desktop-breadcrumb],
-:root[data-dsh-desktop-animation="odd"] [role="alert"],
-:root[data-dsh-desktop-animation="odd"] [aria-busy="true"] {
-  animation-name: dsh-desktop-enter-odd;
-}
-
-:root[data-dsh-desktop-animation="even"] main,
-:root[data-dsh-desktop-animation="even"] [data-dsh-desktop-breadcrumb],
-:root[data-dsh-desktop-animation="even"] [role="alert"],
-:root[data-dsh-desktop-animation="even"] [aria-busy="true"] {
-  animation-name: dsh-desktop-enter-even;
-}
-
-@keyframes dsh-desktop-enter {
-  from {
-    opacity: 0;
-    transform: translateY(6px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@keyframes dsh-desktop-enter-odd {
-  from {
-    opacity: 0;
-    transform: translateY(6px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@keyframes dsh-desktop-enter-even {
-  from {
-    opacity: 0;
-    transform: translateY(6px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
 @media (prefers-reduced-motion: reduce) {
-  :root[data-dsh-desktop-page] main,
-  :root[data-dsh-desktop-page] [data-dsh-desktop-breadcrumb],
-  :root[data-dsh-desktop-recovery] [role="alert"] {
-    animation: none;
-  }
-
   :root[data-dsh-desktop-platform] header,
   :root[data-dsh-desktop-platform] [data-dsh-desktop-breadcrumb] {
     backdrop-filter: none;

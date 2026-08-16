@@ -6,6 +6,10 @@ Harness 0.1.0-rc.6 exposes no verified `/api/health` route. Integration tests th
 
 Live acceptance is separate: credentials are entered in the Harness UI by the user and are never inspected by automation. The planned 45-minute V4 Flash observation and 20 interactions are recorded only when configured.
 
+## Current Desktop Rendering Contract
+
+The desktop bundle leaves streamed prose and reasoning to the official Harness DOM. It does not install a text mask, fixed-position glyph overlay, particle effect, or DOM-mutation-driven page animation. On macOS it reserves a 40-pixel top content inset for native traffic lights. Superpowers 6.2.0 is copied from the packaged resource into the app-owned `DSH_HOME/skills` root at startup; an unmarked same-named skill directory remains untouched.
+
 ## Verified on 2026-08-16
 
 - Unit/state/security and conversation DOM behavior: 25 files, 97 tests covering the desktop host, watchdog, progressive preset installer, stream-output model/controller, and ThinkingOrb lifecycle.

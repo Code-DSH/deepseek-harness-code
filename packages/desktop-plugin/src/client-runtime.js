@@ -1,10 +1,6 @@
 const React = require("react");
 const { ThinkingOrb } = require("thinking-orbs");
 const {
-  createStreamOutputEffectController,
-  installStreamOutputEffects,
-} = require("./stream-output-controller.js");
-const {
   findRunningStatus,
   installThinkingStatus,
 } = require("./thinking-status.js");
@@ -218,36 +214,7 @@ function installTransitions(doc = document, win = window) {
       doc.startViewTransition(update);
     else update();
   };
-  let routeObserver;
-  let transitionNonce = 0;
-  const restartCommittedAnimation = () => {
-    if (prefersReducedMotion()) return;
-    transitionNonce += 1;
-    root.dataset.dshDesktopTransitionNonce = String(transitionNonce);
-    root.dataset.dshDesktopAnimation =
-      transitionNonce % 2 === 0 ? "even" : "odd";
-  };
-  const observeRouteCommit = () => {
-    const MutationObserver = win.MutationObserver;
-    const body = doc.body;
-    if (!MutationObserver || !body) return;
-    if (routeObserver) routeObserver.disconnect();
-    routeObserver = new MutationObserver((records) => {
-      if (records.length === 0) return;
-      routeObserver.disconnect();
-      routeObserver = undefined;
-      restartCommittedAnimation();
-    });
-    routeObserver.observe(body, {
-      childList: true,
-      subtree: true,
-      characterData: true,
-    });
-  };
-  const routeChanged = () => {
-    transition();
-    observeRouteCommit();
-  };
+  const routeChanged = () => transition();
   transition();
   win.addEventListener("popstate", routeChanged);
   win.addEventListener("hashchange", routeChanged);
@@ -269,7 +236,6 @@ function installTransitions(doc = document, win = window) {
   return () => {
     win.removeEventListener("popstate", routeChanged);
     win.removeEventListener("hashchange", routeChanged);
-    if (routeObserver) routeObserver.disconnect();
     if (pushState) history.pushState = pushState;
     if (replaceState) history.replaceState = replaceState;
   };
@@ -412,11 +378,6 @@ function ConversationEffectsOverlay() {
   React.useEffect(() => {
     const disposers = [];
     try {
-      disposers.push(installStreamOutputEffects(document, window));
-    } catch {
-      // Keep the canonical Harness output visible if enhancements cannot start.
-    }
-    try {
       disposers.push(installThinkingStatus(document, window, setStatus));
     } catch {
       // Keep the native Harness running status visible on adapter failure.
@@ -528,7 +489,5 @@ exports.DESKTOP_LOCALES = DESKTOP_LOCALES;
 exports.THINKING_ORB_PROPS = THINKING_ORB_PROPS;
 exports.createDesktopSettingsModel = createDesktopSettingsModel;
 exports.installTransitions = installTransitions;
-exports.createStreamOutputEffectController = createStreamOutputEffectController;
-exports.installStreamOutputEffects = installStreamOutputEffects;
 exports.findRunningStatus = findRunningStatus;
 exports.installThinkingStatus = installThinkingStatus;

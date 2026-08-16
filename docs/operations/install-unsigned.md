@@ -13,3 +13,7 @@ xattr -dr com.apple.quarantine "/Applications/DeepSeek Harness Code.app"
 Do not disable Gatekeeper globally and do not use `spctl --master-disable`.
 
 Files downloaded or transferred by another application can receive quarantine again, which is why the targeted command remains part of the installation instructions.
+
+## Bundled Superpowers skills
+
+On its first successful startup, the app installs Superpowers 6.2.0 into its own Harness home under `dsh-home/skills`. This is local and offline. A same-named directory without the app's ownership marker is treated as user-owned and is never overwritten.

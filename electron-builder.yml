@@ -36,6 +36,13 @@ extraResources:
       - UPSTREAM.json
       - UPSTREAM-SHA256SUMS
       - LOCAL-PATCHES.md
+  - from: packages/superpowers-skills
+    to: superpowers-skills
+    filter:
+      - package.json
+      - LICENSE
+      - UPSTREAM.json
+      - skills/**/*
   - from: build/THIRD-PARTY-NOTICES.md
     to: licenses/THIRD-PARTY-NOTICES.md
   - from: build/deepseek-harness-code-tray.png

@@ -206,10 +206,8 @@ describe("desktop plugin package contract", () => {
       "THINKING_ORB_PROPS",
       "apply",
       "createDesktopSettingsModel",
-      "createStreamOutputEffectController",
       "findRunningStatus",
       "inject",
-      "installStreamOutputEffects",
       "installThinkingStatus",
       "installTransitions",
     ]);
@@ -742,7 +740,7 @@ describe("desktop plugin package contract", () => {
     expect(root.dataset.dshDesktopTransition).toBe("css");
   });
 
-  it("installs the conversation effect stylesheet with the existing desktop styles", () => {
+  it("installs only non-text conversation effects with the desktop styles", () => {
     const dom = new JSDOM(
       "<!doctype html><html><head></head><body></body></html>",
       {
@@ -766,25 +764,43 @@ describe("desktop plugin package contract", () => {
       "#deepseek-harness-desktop-transitions",
     );
 
-    expect(style?.textContent).toContain("[data-dsh-stream-overlay]");
+    expect(style?.textContent).not.toContain("[data-dsh-stream-overlay]");
     expect(style?.textContent).toContain("[data-dsh-desktop-thinking-source]");
     expect(style?.textContent).toContain("[data-dsh-desktop-thinking-orb]");
     dispose();
   });
 
-  it("restarts the page animation only after an SPA history update commits DOM changes", async () => {
+  it("keeps macOS page content below the traffic lights", () => {
+    const dom = new JSDOM("<!doctype html><html><head></head><body><main></main></body></html>", {
+      url: "https://harness.test/session",
+    });
+    const { module } = loadClientExports(
+      dom.window as unknown as Record<string, unknown>,
+      dom.window.document,
+    );
+    const installTransitions = module.installTransitions as (
+      document: Document,
+      window: Window,
+    ) => () => void;
+
+    const dispose = installTransitions(
+      dom.window.document,
+      dom.window as unknown as Window,
+    );
+    dom.window.document.documentElement.dataset.dshDesktopPlatform = "macos";
+
+    expect(dom.window.getComputedStyle(dom.window.document.body).paddingTop).toBe(
+      "40px",
+    );
+    dispose();
+  });
+
+  it("does not reanimate the page for ordinary DOM changes after SPA navigation", async () => {
     const dom = new JSDOM('<!doctype html><main id="page"></main>', {
       url: "https://harness.test/settings",
     });
     const document = dom.window.document;
     const page = document.querySelector("main")!;
-    let layoutReads = 0;
-    Object.defineProperty(page, "offsetWidth", {
-      get: () => {
-        layoutReads += 1;
-        return 1;
-      },
-    });
     const desktopWindow = dom.window as unknown as Record<string, unknown>;
     desktopWindow.deepseekDesktop = {};
     const { module } = loadClientExports(desktopWindow, document);
@@ -809,10 +825,8 @@ describe("desktop plugin package contract", () => {
     await new Promise<void>((resolve) => queueMicrotask(resolve));
 
     expect(document.documentElement.dataset.dshDesktopPage).toBe("workspace");
-    expect(document.documentElement.dataset.dshDesktopTransitionNonce).toBe(
-      "1",
-    );
-    expect(layoutReads).toBe(0);
+    expect(document.documentElement.dataset.dshDesktopTransitionNonce).toBeUndefined();
+    expect(document.documentElement.dataset.dshDesktopAnimation).toBeUndefined();
 
     dom.reconfigure({ url: "https://harness.test/session" });
     dom.window.dispatchEvent(new dom.window.PopStateEvent("popstate"));
@@ -820,9 +834,8 @@ describe("desktop plugin package contract", () => {
     await new Promise<void>((resolve) => queueMicrotask(resolve));
 
     expect(document.documentElement.dataset.dshDesktopPage).toBe("session");
-    expect(document.documentElement.dataset.dshDesktopTransitionNonce).toBe(
-      "2",
-    );
+    expect(document.documentElement.dataset.dshDesktopTransitionNonce).toBeUndefined();
+    expect(document.documentElement.dataset.dshDesktopAnimation).toBeUndefined();
     dispose();
   });
 
@@ -837,7 +850,6 @@ describe("desktop plugin package contract", () => {
     );
 
     expect(css).toContain("[data-dsh-desktop-page]");
-    expect(css).toContain("[data-dsh-desktop-recovery]");
     expect(css).toContain("[data-dsh-desktop-breadcrumb]");
     expect(css).toContain('[data-dsh-desktop-platform="macos"]');
     expect(css).toContain("--dsh-desktop-titlebar-safe-inset");

@@ -17,6 +17,8 @@ import { dirname, join, resolve } from "node:path";
 const DESKTOP_PACKAGE_NAME = "deepseek-harness-desktop-plugin";
 const ANCHORED_PACKAGE_NAME = "dsh-anchored-standard";
 const ANCHORED_PRESET_ID = "anchored-standard";
+const SUPERPOWERS_PACKAGE_NAME = "superpowers";
+const SUPERPOWERS_SKILLS_DIRECTORY = "skills";
 const MANAGED_PRESET_MARKER = ".deepseek-harness-code-managed.json";
 const MANAGED_PRESET_METADATA = [
   "LICENSE",
@@ -94,6 +96,30 @@ export type ManagedPresetInstallResult = {
 
 export type ManagedPresetStartupResult =
   | ManagedPresetInstallResult
+  | { status: "unavailable"; path: string };
+
+type ManagedSkillMarker = {
+  schemaVersion: 1;
+  owner: "deepseek-harness-code";
+  skillName: string;
+  sourceVersion: string;
+  sourceDigest: string;
+};
+
+type ManagedSkillInstallResult = {
+  status: "installed" | "updated" | "unchanged" | "conflict";
+  path: string;
+};
+
+export type ManagedSkillsInstallSummary = {
+  installed: string[];
+  updated: string[];
+  unchanged: string[];
+  conflicts: string[];
+};
+
+export type ManagedSkillsStartupResult =
+  | { status: "available"; summary: ManagedSkillsInstallSummary }
   | { status: "unavailable"; path: string };
 
 type PresetSourceFile = {
@@ -303,6 +329,194 @@ export async function installAnchoredStandardPresetForStartup(
     return {
       status: "unavailable",
       path: join(dshHome, ".agent-presets", ANCHORED_PRESET_ID),
+    };
+  }
+}
+
+function isManagedSkillMarker(value: unknown): value is ManagedSkillMarker {
+  if (typeof value !== "object" || value === null) return false;
+  const marker = value as Record<string, unknown>;
+  return (
+    marker.schemaVersion === 1 &&
+    marker.owner === "deepseek-harness-code" &&
+    typeof marker.skillName === "string" &&
+    marker.skillName.length > 0 &&
+    typeof marker.sourceVersion === "string" &&
+    typeof marker.sourceDigest === "string" &&
+    /^[a-f0-9]{64}$/.test(marker.sourceDigest)
+  );
+}
+
+async function readManagedSkillMarker(
+  target: string,
+): Promise<ManagedSkillMarker | undefined> {
+  try {
+    const value: unknown = JSON.parse(
+      await readFile(join(target, MANAGED_PRESET_MARKER), "utf8"),
+    );
+    return isManagedSkillMarker(value) ? value : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+async function installedSkillDigest(target: string): Promise<string> {
+  const files = (await collectRegularFiles(target)).filter(
+    (file) => file.relativePath !== MANAGED_PRESET_MARKER,
+  );
+  return digestFiles(files);
+}
+
+async function writeManagedSkill(
+  target: string,
+  files: readonly PresetSourceFile[],
+  marker: ManagedSkillMarker,
+): Promise<void> {
+  await mkdir(target, { recursive: true, mode: 0o700 });
+  for (const file of files) {
+    const destination = join(target, file.relativePath);
+    await mkdir(dirname(destination), { recursive: true, mode: 0o700 });
+    await writeFile(destination, file.content, { mode: 0o600 });
+  }
+  await writeFile(
+    join(target, MANAGED_PRESET_MARKER),
+    `${JSON.stringify(marker, undefined, 2)}\n`,
+    { mode: 0o600 },
+  );
+}
+
+type PackagedSuperpowersSkill = {
+  name: string;
+  files: PresetSourceFile[];
+};
+
+async function packagedSuperpowersSkills(packagedRoot: string): Promise<{
+  version: string;
+  skills: PackagedSuperpowersSkill[];
+}> {
+  const manifest = JSON.parse(
+    await readFile(join(packagedRoot, "package.json"), "utf8"),
+  ) as { name?: unknown; version?: unknown };
+  if (
+    manifest.name !== SUPERPOWERS_PACKAGE_NAME ||
+    typeof manifest.version !== "string" ||
+    manifest.version.length === 0
+  ) {
+    throw new Error("Superpowers package has no valid name and version");
+  }
+  const skillRoot = join(packagedRoot, SUPERPOWERS_SKILLS_DIRECTORY);
+  const entries = await readdir(skillRoot, { withFileTypes: true });
+  const skills: PackagedSuperpowersSkill[] = [];
+  for (const entry of entries.sort((left, right) =>
+    left.name.localeCompare(right.name),
+  )) {
+    if (!entry.isDirectory()) {
+      throw new Error(
+        `Superpowers package contains an unsupported skill entry: ${entry.name}`,
+      );
+    }
+    const files = await collectRegularFiles(join(skillRoot, entry.name));
+    if (!files.some((file) => file.relativePath === "SKILL.md")) {
+      throw new Error(`Superpowers skill is missing SKILL.md: ${entry.name}`);
+    }
+    skills.push({ name: entry.name, files });
+  }
+  if (skills.length === 0) throw new Error("Superpowers package has no skills");
+  return { version: manifest.version, skills };
+}
+
+async function ensureSuperpowersSkill(
+  dshHome: string,
+  sourceVersion: string,
+  source: PackagedSuperpowersSkill,
+): Promise<ManagedSkillInstallResult> {
+  const skillsRoot = join(dshHome, SUPERPOWERS_SKILLS_DIRECTORY);
+  const target = join(skillsRoot, source.name);
+  const sourceDigest = digestFiles(source.files);
+  const targetKind = await existingEntryKind(target);
+  if (targetKind === "other") return { status: "conflict", path: target };
+  const targetExists = targetKind === "directory";
+  const marker = targetExists ? await readManagedSkillMarker(target) : undefined;
+  if (targetExists && marker === undefined)
+    return { status: "conflict", path: target };
+  if (marker !== undefined) {
+    const currentDigest = await installedSkillDigest(target);
+    if (currentDigest !== marker.sourceDigest)
+      return { status: "conflict", path: target };
+    if (
+      currentDigest === sourceDigest &&
+      marker.sourceVersion === sourceVersion
+    ) {
+      return { status: "unchanged", path: target };
+    }
+  }
+
+  await mkdir(skillsRoot, { recursive: true, mode: 0o700 });
+  const suffix = `${process.pid}.${randomUUID()}`;
+  const staging = join(skillsRoot, `.${source.name}.${suffix}.tmp`);
+  const backup = join(skillsRoot, `.${source.name}.${suffix}.bak`);
+  const nextMarker: ManagedSkillMarker = {
+    schemaVersion: 1,
+    owner: "deepseek-harness-code",
+    skillName: source.name,
+    sourceVersion,
+    sourceDigest,
+  };
+  try {
+    await writeManagedSkill(staging, source.files, nextMarker);
+    if (targetExists) await rename(target, backup);
+    await rename(staging, target);
+    if (targetExists) await rm(backup, { recursive: true, force: true });
+  } catch (error) {
+    await rm(staging, { recursive: true, force: true });
+    if (targetExists && !(await existingDirectory(target))) {
+      await rename(backup, target);
+    }
+    throw error;
+  }
+  return { status: targetExists ? "updated" : "installed", path: target };
+}
+
+/** Install app-owned Superpowers skills while preserving every user skill. */
+export async function ensureSuperpowersSkills(
+  dshHome: string,
+  packagedRoot: string,
+): Promise<ManagedSkillsInstallSummary> {
+  const packaged = await packagedSuperpowersSkills(packagedRoot);
+  const summary: ManagedSkillsInstallSummary = {
+    installed: [],
+    updated: [],
+    unchanged: [],
+    conflicts: [],
+  };
+  for (const skill of packaged.skills) {
+    const result = await ensureSuperpowersSkill(
+      dshHome,
+      packaged.version,
+      skill,
+    );
+    if (result.status === "installed") summary.installed.push(skill.name);
+    else if (result.status === "updated") summary.updated.push(skill.name);
+    else if (result.status === "unchanged") summary.unchanged.push(skill.name);
+    else summary.conflicts.push(skill.name);
+  }
+  return summary;
+}
+
+/** Keep an unavailable optional skill bundle from blocking Harness startup. */
+export async function installSuperpowersSkillsForStartup(
+  dshHome: string,
+  packagedRoot: string,
+): Promise<ManagedSkillsStartupResult> {
+  try {
+    return {
+      status: "available",
+      summary: await ensureSuperpowersSkills(dshHome, packagedRoot),
+    };
+  } catch {
+    return {
+      status: "unavailable",
+      path: join(dshHome, SUPERPOWERS_SKILLS_DIRECTORY),
     };
   }
 }

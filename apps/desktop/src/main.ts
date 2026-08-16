@@ -45,6 +45,7 @@ import {
   ensureDesktopPluginBundle,
   ensureDesktopPluginLink,
   installAnchoredStandardPresetForStartup,
+  installSuperpowersSkillsForStartup,
 } from "./lifecycle/desktop-plugin-link.js";
 import { classifyNavigation } from "./security/navigation-policy.js";
 import type {
@@ -279,6 +280,9 @@ async function startHarness(): Promise<HarnessChild> {
   const anchoredPluginRoot = app.isPackaged
     ? join(process.resourcesPath, "anchored-standard-plugin")
     : join(app.getAppPath(), "packages", "anchored-standard-plugin");
+  const superpowersSkillsRoot = app.isPackaged
+    ? join(process.resourcesPath, "superpowers-skills")
+    : join(app.getAppPath(), "packages", "superpowers-skills");
   const dshHome = join(app.getPath("userData"), "dsh-home");
   await ensureDesktopPluginLink(dshHome, pluginRoot);
   const anchoredPreset = await installAnchoredStandardPresetForStartup(
@@ -298,6 +302,19 @@ async function startHarness(): Promise<HarnessChild> {
   } else if (anchoredPreset.status === "unavailable") {
     process.stderr.write(
       "Anchored Standard preset is unavailable; Standard startup will continue.\n",
+    );
+  }
+  const superpowersSkills = await installSuperpowersSkillsForStartup(
+    dshHome,
+    superpowersSkillsRoot,
+  );
+  if (superpowersSkills.status === "unavailable") {
+    process.stderr.write(
+      "Bundled Superpowers skills are unavailable; Harness startup will continue.\n",
+    );
+  } else if (superpowersSkills.summary.conflicts.length > 0) {
+    process.stderr.write(
+      `Bundled Superpowers skills skipped user-owned directories: ${superpowersSkills.summary.conflicts.join(", ")}.\n`,
     );
   }
   await ensureDesktopPluginBundle(dshHome);

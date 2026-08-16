@@ -452,377 +452,6 @@ var require_dist = __commonJS({
   }
 });
 
-// src/stream-output-model.js
-function findAppendedGraphemes(previous, next, segmenter = graphemeSegmenter) {
-  if (!next.startsWith(previous)) return null;
-  if (next === previous) return [];
-  const parts = [...segmenter.segment(next)];
-  const appendStartsAtBoundary = previous.length === 0 || parts.some((part) => part.index === previous.length);
-  if (!appendStartsAtBoundary) return null;
-  const appended = parts.filter((part) => part.index >= previous.length);
-  if (previous.length === 0 && appended[0]?.index === 0 && /^\p{Mark}/u.test(appended[0].segment))
-    return null;
-  return appended.map((part, order) => ({
-    text: part.segment,
-    start: part.index,
-    end: part.index + part.segment.length,
-    order
-  }));
-}
-function isEligibleStreamTextNode(node) {
-  if (!node || node.nodeType !== 3 || node.data.trim().length === 0)
-    return false;
-  const parent = node.parentElement;
-  if (!parent || !parent.closest(STREAMING_ASSISTANT_SELECTOR)) return false;
-  return parent.closest(EXCLUDED_OUTPUT_SELECTOR) === null;
-}
-function eligibleTextNodes(root) {
-  if (!root?.ownerDocument) return [];
-  const nodes = [];
-  const walker = root.ownerDocument.createTreeWalker(root, 4);
-  for (let node = walker.nextNode(); node; node = walker.nextNode()) {
-    if (isEligibleStreamTextNode(node)) nodes.push(node);
-  }
-  return nodes;
-}
-var STREAMING_ASSISTANT_SELECTOR, EXCLUDED_OUTPUT_SELECTOR, graphemeSegmenter;
-var init_stream_output_model = __esm({
-  "src/stream-output-model.js"() {
-    "use strict";
-    STREAMING_ASSISTANT_SELECTOR = '[data-chat-flow-kind="assistant-step"] [data-streaming]';
-    EXCLUDED_OUTPUT_SELECTOR = [
-      "pre",
-      "code",
-      "kbd",
-      "samp",
-      "button",
-      "input",
-      "textarea",
-      "select",
-      '[role="button"]',
-      '[role="status"]',
-      '[aria-hidden="true"]',
-      "[data-tool-call]",
-      "[data-terminal]"
-    ].join(",");
-    graphemeSegmenter = new Intl.Segmenter(void 0, {
-      granularity: "grapheme"
-    });
-  }
-});
-
-// src/stream-output-controller.js
-var stream_output_controller_exports = {};
-__export(stream_output_controller_exports, {
-  createStreamOutputEffectController: () => createStreamOutputEffectController,
-  installStreamOutputEffects: () => installStreamOutputEffects
-});
-function mediaQueryOf(win) {
-  return typeof win.matchMedia === "function" ? win.matchMedia("(prefers-reduced-motion: reduce)") : void 0;
-}
-function textNodesIn(node) {
-  if (node?.nodeType === 3) return [node];
-  if (node?.nodeType === 1) return eligibleTextNodes(node);
-  return [];
-}
-function streamingRootsIn(node) {
-  const roots = [];
-  if (node?.nodeType === 1 && node.matches(STREAMING_ASSISTANT_SELECTOR))
-    roots.push(node);
-  if (typeof node?.querySelectorAll === "function")
-    roots.push(...node.querySelectorAll(STREAMING_ASSISTANT_SELECTOR));
-  return roots;
-}
-function createStreamOutputEffectController({
-  document: doc,
-  window: win
-}) {
-  let observer;
-  let overlay;
-  let highlight;
-  let frameId;
-  let started = false;
-  let disposed = false;
-  let snapshots = /* @__PURE__ */ new WeakMap();
-  let knownStreamingRoots = /* @__PURE__ */ new WeakSet();
-  let pending = [];
-  let activeParticleGlyphs = 0;
-  const activeEffects = /* @__PURE__ */ new Set();
-  const effectsBySource = /* @__PURE__ */ new Map();
-  const reducedMotion = mediaQueryOf(win);
-  const animationAllowed = () => !reducedMotion?.matches && typeof win.Highlight === "function" && Boolean(win.CSS?.highlights);
-  const ensurePaintResources = () => {
-    if (!animationAllowed()) return false;
-    if (!overlay) {
-      overlay = doc.createElement("div");
-      overlay.dataset.dshStreamOverlay = "";
-      overlay.setAttribute("aria-hidden", "true");
-      doc.body.appendChild(overlay);
-    }
-    if (!highlight) {
-      highlight = new win.Highlight();
-      win.CSS.highlights.set(HIGHLIGHT_NAME, highlight);
-    }
-    return true;
-  };
-  const removeEffect = (effect) => {
-    if (!activeEffects.delete(effect)) return;
-    win.clearTimeout(effect.timer);
-    highlight?.delete(effect.range);
-    effect.glyph.remove();
-    if (effect.hasParticles) activeParticleGlyphs -= 1;
-    const sourceEffects = effectsBySource.get(effect.source);
-    sourceEffects?.delete(effect);
-    if (sourceEffects?.size === 0) effectsBySource.delete(effect.source);
-  };
-  const cancelSource = (source) => {
-    pending = pending.filter((entry) => entry.source !== source);
-    for (const effect of [...effectsBySource.get(source) ?? []])
-      removeEffect(effect);
-  };
-  const cancelAll = () => {
-    pending = [];
-    if (frameId !== void 0) {
-      win.cancelAnimationFrame(frameId);
-      frameId = void 0;
-    }
-    for (const effect of [...activeEffects]) removeEffect(effect);
-    highlight?.clear();
-  };
-  const releasePaintResources = () => {
-    highlight?.clear();
-    win.CSS?.highlights?.delete(HIGHLIGHT_NAME);
-    highlight = void 0;
-    overlay?.remove();
-    overlay = void 0;
-  };
-  const copyTypography = (target, computed) => {
-    const properties = [
-      "font",
-      "fontFamily",
-      "fontSize",
-      "fontStyle",
-      "fontWeight",
-      "fontStretch",
-      "fontKerning",
-      "fontFeatureSettings",
-      "fontVariationSettings",
-      "lineHeight",
-      "letterSpacing",
-      "textTransform",
-      "color"
-    ];
-    for (const property of properties) {
-      if (computed[property]) target.style[property] = computed[property];
-    }
-  };
-  const createGlyph = (entry, range, rect, computed, withParticles) => {
-    const glyph = doc.createElement("span");
-    glyph.dataset.dshStreamGlyph = "";
-    glyph.appendChild(doc.createTextNode(entry.text));
-    glyph.style.left = `${rect.left}px`;
-    glyph.style.top = `${rect.top}px`;
-    glyph.style.width = `${rect.width}px`;
-    glyph.style.height = `${rect.height}px`;
-    glyph.style.whiteSpace = "pre";
-    const delay = Math.min(entry.order * 20, MAX_STAGGER_MS);
-    glyph.style.setProperty("--dsh-stream-delay", `${delay}ms`);
-    copyTypography(glyph, computed);
-    const hasParticles = withParticles && !/^\s+$/u.test(entry.text);
-    if (hasParticles) {
-      for (let index = 0; index < 3; index += 1) {
-        const particle = doc.createElement("i");
-        particle.dataset.dshStreamParticle = String(index);
-        glyph.appendChild(particle);
-      }
-    }
-    overlay.appendChild(glyph);
-    highlight.add(range);
-    const effect = {
-      source: entry.source,
-      range,
-      glyph,
-      timer: 0,
-      hasParticles
-    };
-    effect.timer = win.setTimeout(
-      () => removeEffect(effect),
-      Math.min(CLEANUP_DEADLINE_MS, DISSOLVE_DURATION_MS + delay)
-    );
-    activeEffects.add(effect);
-    if (hasParticles) activeParticleGlyphs += 1;
-    const sourceEffects = effectsBySource.get(entry.source) ?? /* @__PURE__ */ new Set();
-    sourceEffects.add(effect);
-    effectsBySource.set(entry.source, sourceEffects);
-  };
-  const flushPending = () => {
-    frameId = void 0;
-    if (!ensurePaintResources()) {
-      pending = [];
-      return;
-    }
-    const batch = pending;
-    pending = [];
-    for (const entry of batch) {
-      if (activeEffects.size >= MAX_LIVE_GLYPHS) break;
-      if (!entry.source.isConnected || !isEligibleStreamTextNode(entry.source) || entry.source.data.slice(entry.start, entry.end) !== entry.text) {
-        continue;
-      }
-      try {
-        const range = doc.createRange();
-        range.setStart(entry.source, entry.start);
-        range.setEnd(entry.source, entry.end);
-        const rect = range.getBoundingClientRect();
-        const parent = entry.source.parentElement;
-        if (!parent || rect.width <= 0 || rect.height <= 0) continue;
-        createGlyph(
-          entry,
-          range,
-          rect,
-          win.getComputedStyle(parent),
-          activeParticleGlyphs < MAX_PARTICLE_GLYPHS
-        );
-      } catch {
-        cancelSource(entry.source);
-      }
-    }
-  };
-  const schedule = (entries) => {
-    if (entries.length === 0 || !animationAllowed()) return;
-    pending.push(...entries);
-    if (pending.length > MAX_LIVE_GLYPHS)
-      pending = pending.slice(-MAX_LIVE_GLYPHS);
-    if (frameId === void 0)
-      frameId = win.requestAnimationFrame(flushPending);
-  };
-  const processText = (source, previous) => {
-    const next = source.data;
-    snapshots.set(source, next);
-    if (!isEligibleStreamTextNode(source)) {
-      cancelSource(source);
-      return;
-    }
-    const appended = findAppendedGraphemes(previous, next);
-    if (appended === null) {
-      cancelSource(source);
-      return;
-    }
-    schedule(appended.map((entry) => ({ ...entry, source })));
-  };
-  const baseline = (root = doc) => {
-    for (const streamingRoot of streamingRootsIn(root)) {
-      knownStreamingRoots.add(streamingRoot);
-      for (const node of eligibleTextNodes(streamingRoot))
-        snapshots.set(node, node.data);
-    }
-  };
-  const handleMutations = (records) => {
-    if (disposed) return;
-    for (const record of records) {
-      if (record.type === "characterData") {
-        const source = record.target;
-        const previous = snapshots.get(source) ?? record.oldValue ?? "";
-        processText(source, previous);
-        continue;
-      }
-      if (record.type === "attributes") {
-        cancelAll();
-        snapshots = /* @__PURE__ */ new WeakMap();
-        knownStreamingRoots = /* @__PURE__ */ new WeakSet();
-        baseline();
-        continue;
-      }
-      for (const removed of record.removedNodes) {
-        for (const streamingRoot of streamingRootsIn(removed))
-          knownStreamingRoots.delete(streamingRoot);
-        for (const source of textNodesIn(removed)) cancelSource(source);
-      }
-      const replacement = record.removedNodes.length > 0;
-      for (const added of record.addedNodes) {
-        for (const streamingRoot of streamingRootsIn(added)) {
-          if (!knownStreamingRoots.has(streamingRoot)) baseline(streamingRoot);
-        }
-        for (const source of textNodesIn(added)) {
-          if (!isEligibleStreamTextNode(source)) continue;
-          if (replacement || snapshots.has(source))
-            snapshots.set(source, source.data);
-          else processText(source, "");
-        }
-      }
-    }
-    if (!doc.querySelector(STREAMING_ASSISTANT_SELECTOR)) {
-      cancelAll();
-      releasePaintResources();
-    }
-  };
-  const onViewportChange = () => {
-    cancelAll();
-    releasePaintResources();
-  };
-  const onReducedMotionChange = () => {
-    cancelAll();
-    releasePaintResources();
-    snapshots = /* @__PURE__ */ new WeakMap();
-    knownStreamingRoots = /* @__PURE__ */ new WeakSet();
-    baseline();
-    if (!reducedMotion?.matches) ensurePaintResources();
-  };
-  const start = () => {
-    if (started || disposed || !doc.body) return;
-    started = true;
-    baseline();
-    ensurePaintResources();
-    observer = new win.MutationObserver(handleMutations);
-    observer.observe(doc.body, {
-      subtree: true,
-      childList: true,
-      characterData: true,
-      characterDataOldValue: true,
-      attributes: true,
-      attributeFilter: ["data-streaming"]
-    });
-    win.addEventListener("scroll", onViewportChange, true);
-    win.addEventListener("resize", onViewportChange);
-    win.addEventListener("popstate", onViewportChange);
-    win.addEventListener("hashchange", onViewportChange);
-    reducedMotion?.addEventListener("change", onReducedMotionChange);
-  };
-  const dispose = () => {
-    if (disposed) return;
-    disposed = true;
-    observer?.disconnect();
-    cancelAll();
-    releasePaintResources();
-    win.removeEventListener("scroll", onViewportChange, true);
-    win.removeEventListener("resize", onViewportChange);
-    win.removeEventListener("popstate", onViewportChange);
-    win.removeEventListener("hashchange", onViewportChange);
-    reducedMotion?.removeEventListener("change", onReducedMotionChange);
-  };
-  return { start, dispose };
-}
-function installStreamOutputEffects(doc = document, win = window) {
-  const controller = createStreamOutputEffectController({
-    document: doc,
-    window: win
-  });
-  controller.start();
-  return () => controller.dispose();
-}
-var HIGHLIGHT_NAME, DISSOLVE_DURATION_MS, MAX_STAGGER_MS, CLEANUP_DEADLINE_MS, MAX_LIVE_GLYPHS, MAX_PARTICLE_GLYPHS;
-var init_stream_output_controller = __esm({
-  "src/stream-output-controller.js"() {
-    "use strict";
-    init_stream_output_model();
-    HIGHLIGHT_NAME = "dsh-desktop-stream-mask";
-    DISSOLVE_DURATION_MS = 460;
-    MAX_STAGGER_MS = 200;
-    CLEANUP_DEADLINE_MS = 700;
-    MAX_LIVE_GLYPHS = 120;
-    MAX_PARTICLE_GLYPHS = 24;
-  }
-});
-
 // src/thinking-status.js
 var thinking_status_exports = {};
 __export(thinking_status_exports, {
@@ -945,10 +574,6 @@ var init_thinking_status = __esm({
 // src/client-runtime.cjs
 var React = require("react");
 var { ThinkingOrb } = require_dist();
-var {
-  createStreamOutputEffectController: createStreamOutputEffectController2,
-  installStreamOutputEffects: installStreamOutputEffects2
-} = (init_stream_output_controller(), __toCommonJS(stream_output_controller_exports));
 var {
   findRunningStatus: findRunningStatus2,
   installThinkingStatus: installThinkingStatus2
@@ -1116,8 +741,8 @@ function installTransitions(doc = document, win = window) {
   if (doc.getElementById(styleId) === null) {
     const style = doc.createElement("style");
     style.id = styleId;
-    style.textContent = `${':root[data-dsh-desktop-page] {\n  --dsh-desktop-transition-duration: 180ms;\n  --dsh-desktop-titlebar-safe-inset: 0px;\n  --dsh-desktop-titlebar-height: 0px;\n}\n\n:root[data-dsh-desktop-platform="macos"] {\n  --dsh-desktop-titlebar-safe-inset: 78px;\n  --dsh-desktop-titlebar-height: 28px;\n}\n\n:root[data-dsh-desktop-platform="macos"] [data-dsh-desktop-breadcrumb],\n:root[data-dsh-desktop-platform="macos"] header [aria-label*="DeepSeek" i],\n:root[data-dsh-desktop-platform="macos"] header [data-dsh-desktop-title] {\n  margin-left: var(--dsh-desktop-titlebar-safe-inset);\n  padding-top: var(--dsh-desktop-titlebar-height);\n}\n\n:root[data-dsh-desktop-platform] header,\n:root[data-dsh-desktop-platform] [data-dsh-desktop-breadcrumb] {\n  background: color-mix(in srgb, Canvas 78%, transparent);\n  backdrop-filter: blur(14px) saturate(1.08);\n}\n\n[data-dsh-desktop-settings] {\n  color: var(--dsw-alias-label-primary, CanvasText);\n  border-top: 1px solid\n    var(--dsw-alias-border-l2, color-mix(in srgb, CanvasText 14%, transparent));\n  padding: 20px 0 8px;\n}\n\n.dshDesktopSettingsTitle {\n  margin: 0;\n  font-size: 16px;\n  font-weight: 600;\n  line-height: 24px;\n}\n\n.dshDesktopSettingsStatus,\n.dshDesktopSettingsNote {\n  color: var(\n    --dsw-alias-label-secondary,\n    color-mix(in srgb, CanvasText 62%, transparent)\n  );\n  margin: 4px 0 12px;\n  font-size: 13px;\n  line-height: 20px;\n}\n\n.dshDesktopSettingsRow {\n  border-bottom: 1px solid\n    var(--dsw-alias-border-l2, color-mix(in srgb, CanvasText 14%, transparent));\n  align-items: center;\n  gap: 16px;\n  min-height: 68px;\n  display: flex;\n}\n\n.dshDesktopSettingsLabel {\n  flex: 1;\n  min-width: 0;\n  font-size: 14px;\n  line-height: 22px;\n}\n\n.dshDesktopSettingsControl {\n  flex: 0 1 280px;\n  min-width: 0;\n  display: flex;\n  justify-content: flex-end;\n}\n\n.dshDesktopSettingsDropdownButton {\n  width: min(100%, 260px);\n  min-width: 0;\n  display: inline-flex;\n  align-items: center;\n  justify-content: space-between;\n  gap: 8px;\n}\n\n.dshDesktopSettingsDropdownLabel {\n  min-width: 0;\n  overflow: hidden;\n  text-overflow: ellipsis;\n  white-space: nowrap;\n}\n\n.dshDesktopSettingsDropdownIcon {\n  flex: 0 0 auto;\n}\n\n.dshDesktopSettingsActions {\n  gap: 8px;\n  padding-top: 12px;\n  display: flex;\n  flex-wrap: wrap;\n}\n\n@media (max-width: 760px) {\n  .dshDesktopSettingsRow {\n    align-items: stretch;\n    flex-direction: column;\n    gap: 8px;\n    padding: 12px 0;\n  }\n\n  .dshDesktopSettingsControl {\n    flex: 0 0 auto;\n    justify-content: flex-start;\n  }\n}\n\n:root[data-dsh-desktop-page] main,\n:root[data-dsh-desktop-page] [data-dsh-desktop-breadcrumb],\n:root[data-dsh-desktop-recovery] [role="alert"] {\n  animation: dsh-desktop-enter var(--dsh-desktop-transition-duration) ease-out\n    both;\n}\n\n:root[data-dsh-desktop-recovery="loading"] [aria-busy="true"],\n:root[data-dsh-desktop-recovery="error"] [role="alert"] {\n  animation-duration: 180ms;\n}\n\n:root[data-dsh-desktop-animation="odd"] main,\n:root[data-dsh-desktop-animation="odd"] [data-dsh-desktop-breadcrumb],\n:root[data-dsh-desktop-animation="odd"] [role="alert"],\n:root[data-dsh-desktop-animation="odd"] [aria-busy="true"] {\n  animation-name: dsh-desktop-enter-odd;\n}\n\n:root[data-dsh-desktop-animation="even"] main,\n:root[data-dsh-desktop-animation="even"] [data-dsh-desktop-breadcrumb],\n:root[data-dsh-desktop-animation="even"] [role="alert"],\n:root[data-dsh-desktop-animation="even"] [aria-busy="true"] {\n  animation-name: dsh-desktop-enter-even;\n}\n\n@keyframes dsh-desktop-enter {\n  from {\n    opacity: 0;\n    transform: translateY(6px);\n  }\n  to {\n    opacity: 1;\n    transform: translateY(0);\n  }\n}\n\n@keyframes dsh-desktop-enter-odd {\n  from {\n    opacity: 0;\n    transform: translateY(6px);\n  }\n  to {\n    opacity: 1;\n    transform: translateY(0);\n  }\n}\n\n@keyframes dsh-desktop-enter-even {\n  from {\n    opacity: 0;\n    transform: translateY(6px);\n  }\n  to {\n    opacity: 1;\n    transform: translateY(0);\n  }\n}\n\n@media (prefers-reduced-motion: reduce) {\n  :root[data-dsh-desktop-page] main,\n  :root[data-dsh-desktop-page] [data-dsh-desktop-breadcrumb],\n  :root[data-dsh-desktop-recovery] [role="alert"] {\n    animation: none;\n  }\n\n  :root[data-dsh-desktop-platform] header,\n  :root[data-dsh-desktop-platform] [data-dsh-desktop-breadcrumb] {\n    backdrop-filter: none;\n  }\n}\n'}
-${'[data-dsh-stream-overlay] {\n  position: fixed;\n  inset: 0;\n  z-index: 30;\n  pointer-events: none;\n  contain: strict;\n}\n\n[data-dsh-desktop-thinking-source] {\n  opacity: 0 !important;\n}\n\n[data-dsh-desktop-thinking-orb] {\n  position: fixed;\n  z-index: 31;\n  width: 20px;\n  height: 20px;\n  pointer-events: none;\n}\n\n::highlight(dsh-desktop-stream-mask) {\n  color: transparent;\n  -webkit-text-fill-color: transparent;\n}\n\n[data-dsh-stream-glyph] {\n  position: fixed;\n  display: block;\n  overflow: visible;\n  opacity: 0.05;\n  filter: blur(3px);\n  clip-path: inset(0 100% 0 0);\n  animation: dsh-stream-dissolve 460ms ease-out both;\n  animation-delay: var(--dsh-stream-delay, 0ms);\n}\n\n[data-dsh-stream-particle] {\n  position: absolute;\n  top: 50%;\n  left: 50%;\n  width: 2px;\n  height: 2px;\n  border-radius: 50%;\n  background: currentColor;\n  opacity: 0;\n  animation: dsh-stream-particle 460ms ease-out both;\n  animation-delay: var(--dsh-stream-delay, 0ms);\n}\n\n[data-dsh-stream-particle="0"] {\n  --dsh-particle-x: -0.45em;\n  --dsh-particle-y: -0.35em;\n}\n\n[data-dsh-stream-particle="1"] {\n  --dsh-particle-x: 0.5em;\n  --dsh-particle-y: -0.15em;\n}\n\n[data-dsh-stream-particle="2"] {\n  --dsh-particle-x: 0.15em;\n  --dsh-particle-y: 0.45em;\n}\n\n@keyframes dsh-stream-dissolve {\n  0% {\n    opacity: 0.05;\n    filter: blur(3px);\n    clip-path: inset(0 100% 0 0);\n  }\n\n  55% {\n    opacity: 0.82;\n    filter: blur(0.8px);\n  }\n\n  100% {\n    opacity: 1;\n    filter: blur(0);\n    clip-path: inset(0 0 0 0);\n  }\n}\n\n@keyframes dsh-stream-particle {\n  0%,\n  100% {\n    opacity: 0;\n    transform: translate(0, 0) scale(0.4);\n  }\n\n  42% {\n    opacity: 0.58;\n  }\n\n  78% {\n    opacity: 0;\n    transform: translate(var(--dsh-particle-x), var(--dsh-particle-y)) scale(1);\n  }\n}\n\n@media (prefers-reduced-motion: reduce) {\n  [data-dsh-stream-glyph],\n  [data-dsh-stream-particle] {\n    animation: none;\n  }\n}\n'}`;
+    style.textContent = `${':root[data-dsh-desktop-page] {\n  --dsh-desktop-transition-duration: 180ms;\n  --dsh-desktop-titlebar-safe-inset: 0px;\n  --dsh-desktop-titlebar-height: 0px;\n}\n\n:root[data-dsh-desktop-platform="macos"] {\n  --dsh-desktop-titlebar-safe-inset: 78px;\n  --dsh-desktop-titlebar-height: 40px;\n}\n\n/* Keep every Harness route below the native macOS traffic lights. */\n:root[data-dsh-desktop-platform="macos"] body {\n  box-sizing: border-box;\n  padding-top: 40px;\n}\n\n:root[data-dsh-desktop-platform="macos"] [data-dsh-desktop-breadcrumb],\n:root[data-dsh-desktop-platform="macos"] header [aria-label*="DeepSeek" i],\n:root[data-dsh-desktop-platform="macos"] header [data-dsh-desktop-title] {\n  margin-left: var(--dsh-desktop-titlebar-safe-inset);\n}\n\n:root[data-dsh-desktop-platform] header,\n:root[data-dsh-desktop-platform] [data-dsh-desktop-breadcrumb] {\n  background: color-mix(in srgb, Canvas 78%, transparent);\n  backdrop-filter: blur(14px) saturate(1.08);\n}\n\n[data-dsh-desktop-settings] {\n  color: var(--dsw-alias-label-primary, CanvasText);\n  border-top: 1px solid\n    var(--dsw-alias-border-l2, color-mix(in srgb, CanvasText 14%, transparent));\n  padding: 20px 0 8px;\n}\n\n.dshDesktopSettingsTitle {\n  margin: 0;\n  font-size: 16px;\n  font-weight: 600;\n  line-height: 24px;\n}\n\n.dshDesktopSettingsStatus,\n.dshDesktopSettingsNote {\n  color: var(\n    --dsw-alias-label-secondary,\n    color-mix(in srgb, CanvasText 62%, transparent)\n  );\n  margin: 4px 0 12px;\n  font-size: 13px;\n  line-height: 20px;\n}\n\n.dshDesktopSettingsRow {\n  border-bottom: 1px solid\n    var(--dsw-alias-border-l2, color-mix(in srgb, CanvasText 14%, transparent));\n  align-items: center;\n  gap: 16px;\n  min-height: 68px;\n  display: flex;\n}\n\n.dshDesktopSettingsLabel {\n  flex: 1;\n  min-width: 0;\n  font-size: 14px;\n  line-height: 22px;\n}\n\n.dshDesktopSettingsControl {\n  flex: 0 1 280px;\n  min-width: 0;\n  display: flex;\n  justify-content: flex-end;\n}\n\n.dshDesktopSettingsDropdownButton {\n  width: min(100%, 260px);\n  min-width: 0;\n  display: inline-flex;\n  align-items: center;\n  justify-content: space-between;\n  gap: 8px;\n}\n\n.dshDesktopSettingsDropdownLabel {\n  min-width: 0;\n  overflow: hidden;\n  text-overflow: ellipsis;\n  white-space: nowrap;\n}\n\n.dshDesktopSettingsDropdownIcon {\n  flex: 0 0 auto;\n}\n\n.dshDesktopSettingsActions {\n  gap: 8px;\n  padding-top: 12px;\n  display: flex;\n  flex-wrap: wrap;\n}\n\n@media (max-width: 760px) {\n  .dshDesktopSettingsRow {\n    align-items: stretch;\n    flex-direction: column;\n    gap: 8px;\n    padding: 12px 0;\n  }\n\n  .dshDesktopSettingsControl {\n    flex: 0 0 auto;\n    justify-content: flex-start;\n  }\n}\n\n@media (prefers-reduced-motion: reduce) {\n  :root[data-dsh-desktop-platform] header,\n  :root[data-dsh-desktop-platform] [data-dsh-desktop-breadcrumb] {\n    backdrop-filter: none;\n  }\n}\n'}
+${"[data-dsh-desktop-thinking-source] {\n  opacity: 0 !important;\n}\n\n[data-dsh-desktop-thinking-orb] {\n  position: fixed;\n  z-index: 31;\n  width: 20px;\n  height: 20px;\n  pointer-events: none;\n}\n"}`;
     doc.head.appendChild(style);
   }
   const update = () => {
@@ -1131,35 +756,7 @@ ${'[data-dsh-stream-overlay] {\n  position: fixed;\n  inset: 0;\n  z-index: 30;\
       doc.startViewTransition(update);
     else update();
   };
-  let routeObserver;
-  let transitionNonce = 0;
-  const restartCommittedAnimation = () => {
-    if (prefersReducedMotion()) return;
-    transitionNonce += 1;
-    root.dataset.dshDesktopTransitionNonce = String(transitionNonce);
-    root.dataset.dshDesktopAnimation = transitionNonce % 2 === 0 ? "even" : "odd";
-  };
-  const observeRouteCommit = () => {
-    const MutationObserver2 = win.MutationObserver;
-    const body = doc.body;
-    if (!MutationObserver2 || !body) return;
-    if (routeObserver) routeObserver.disconnect();
-    routeObserver = new MutationObserver2((records) => {
-      if (records.length === 0) return;
-      routeObserver.disconnect();
-      routeObserver = void 0;
-      restartCommittedAnimation();
-    });
-    routeObserver.observe(body, {
-      childList: true,
-      subtree: true,
-      characterData: true
-    });
-  };
-  const routeChanged = () => {
-    transition();
-    observeRouteCommit();
-  };
+  const routeChanged = () => transition();
   transition();
   win.addEventListener("popstate", routeChanged);
   win.addEventListener("hashchange", routeChanged);
@@ -1181,7 +778,6 @@ ${'[data-dsh-stream-overlay] {\n  position: fixed;\n  inset: 0;\n  z-index: 30;\
   return () => {
     win.removeEventListener("popstate", routeChanged);
     win.removeEventListener("hashchange", routeChanged);
-    if (routeObserver) routeObserver.disconnect();
     if (pushState) history.pushState = pushState;
     if (replaceState) history.replaceState = replaceState;
   };
@@ -1320,10 +916,6 @@ function ConversationEffectsOverlay() {
   React.useEffect(() => {
     const disposers = [];
     try {
-      disposers.push(installStreamOutputEffects2(document, window));
-    } catch {
-    }
-    try {
       disposers.push(installThinkingStatus2(document, window, setStatus));
     } catch {
     }
@@ -1429,8 +1021,6 @@ exports.DESKTOP_LOCALES = DESKTOP_LOCALES;
 exports.THINKING_ORB_PROPS = THINKING_ORB_PROPS;
 exports.createDesktopSettingsModel = createDesktopSettingsModel;
 exports.installTransitions = installTransitions;
-exports.createStreamOutputEffectController = createStreamOutputEffectController2;
-exports.installStreamOutputEffects = installStreamOutputEffects2;
 exports.findRunningStatus = findRunningStatus2;
 exports.installThinkingStatus = installThinkingStatus2;
 
