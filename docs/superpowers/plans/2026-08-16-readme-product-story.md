@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Replace the minimal repository README with complete, equivalent English and Simplified Chinese product landing pages that explain the vision, wrapper distinction, long-running reliability, and verifiable memory-pressure controls.
+**Goal:** Replace the minimal repository README with complete, equivalent English and Simplified Chinese product landing pages that explain the V4 Pro-first integrated-product vision, wrapper distinction, long-running reliability, and verifiable memory-pressure controls.
 
 **Architecture:** Keep public product messaging in two top-level Markdown files with reciprocal language links. Reuse the checked-in product icon and architecture SVG, and trace reliability claims to the canonical lifecycle, architecture, testing, and acceptance documents instead of inventing benchmark numbers.
 
@@ -16,6 +16,8 @@
 - State that the project is community-built and is not an official DeepSeek release.
 - Do not invent release downloads, websites, Discord groups, star counts, or signed-package claims.
 - Preserve the unsigned macOS Gatekeeper guidance and existing security boundary.
+- Present V4 Pro/Flash, supported reasoning controls, and the integrated Harness/Skills/toolchain only to the extent supported by the pinned packages.
+- Treat the literal `We need` automatic reasoning trigger as a roadmap requirement until its implementation and tests exist.
 
 ---
 
@@ -152,3 +154,12 @@ git status --short --branch
 ```
 
 Expected: the repository is public, the default branch is `main`, and the local branch is synchronized with `origin/main`.
+
+### Scope extension: V4 Pro-first integrated distribution
+
+- [x] Add the V4 Pro-first product direction to both heroes and vision sections.
+- [x] Document the bundled Harness plugins, Skills, agent workflow, tools, and desktop reliability layers as one integrated workbench.
+- [x] State the current V4 Pro/Flash and reasoning-effort capabilities from the pinned adapter.
+- [x] Define literal `We need` automatic reasoning activation as the next core capability without representing it as shipped.
+- [x] Record the supporting pinned-package evidence in the upstream baseline and acceptance report.
+- [ ] Re-run publication verification, commit, push, and confirm the public branch state.

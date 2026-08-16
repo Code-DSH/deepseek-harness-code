@@ -42,7 +42,9 @@ Turn the GitHub landing page into a bilingual product narrative that explains wh
 
 ## Narrative
 
-The central vision is: **turn DeepSeek from a browser page into a dependable desktop coding environment for long-running work**.
+The central vision is: **turn DeepSeek from a browser page into a V4 Pro-first, all-in-one desktop coding environment for long-running work**.
+
+The product story includes the packaged official Harness plugin, Skills, tools, Goal, Plan, Workflow, question/approval, and subagent foundations. V4 Pro/Flash selection and supported reasoning efforts are current pinned-runtime capabilities. The literal `We need` automatic reasoning trigger is labeled as a core roadmap requirement until implemented and tested through the public per-request seam.
 
 The README may state that the project is not a simple Web wrapper. It must compare product categories and capabilities rather than insult or name individual community maintainers. The comparison should distinguish:
 
@@ -54,12 +56,13 @@ The README may state that the project is not a simple Web wrapper. It must compa
 
 1. Centered hero with product icon, name, one-sentence vision, language switch, navigation links, and badges.
 2. Vision statement and concise explanation of why the project exists.
-3. “Beyond a wrapper” capability comparison table.
-4. Long-running reliability and memory-pressure section.
-5. Modern desktop experience and integrated Harness capabilities.
-6. Architecture image and security boundary.
-7. Supported platforms and release state.
-8. Installation, source build, verification, documentation, roadmap, contribution, license, and disclaimer.
+3. V4 Pro-first model direction, `We need` reasoning-trigger boundary, and integrated Harness workbench.
+4. “Beyond a wrapper” capability comparison table.
+5. Long-running reliability and memory-pressure section.
+6. Modern desktop experience and integrated Harness capabilities.
+7. Architecture image and security boundary.
+8. Supported platforms and release state.
+9. Installation, source build, verification, documentation, roadmap, contribution, license, and disclaimer.
 
 The existing product icon at `build/deepseek-harness-code.png` and architecture diagram at `docs/architecture/system.svg` are reused. No speculative screenshots, download links, release badges, or community links are invented.
 
@@ -80,6 +83,8 @@ The README may describe implemented mechanisms:
 The memory statement must be mechanism-based: the application controls long-session memory pressure by bounding log growth, avoiding overlapping probes, replacing failed renderers, and owning process retirement. It must not claim a measured percentage reduction or universal elimination of leaks until a reproducible memory benchmark exists.
 
 The freeze statement may say the application detects and recovers from defined Web/Harness failure modes. It must not promise that every possible hang is impossible.
+
+The README may claim that the pinned official adapter publishes V4 Pro/Flash plus `off`, `high`, and `max` reasoning efforts, and that the official base/Web bundles carry the integrated Skills and agent toolchain. It must not claim that the literal `We need` trigger ships in 0.2.0 or that official reasoning controls expose hidden chain-of-thought.
 
 ## Tone
 
@@ -106,3 +111,4 @@ The freeze statement may say the application detects and recovers from defined W
 
 - `2026-08-16T12:55:00+08:00` — Approved bilingual product-led README design, including evidence-bounded memory and freeze claims.
 - `2026-08-16T13:00:00+08:00` — Implemented both language editions and verified GitHub rendering, local links, formatting, security contracts, types, lint, and the full test suite.
+- `2026-08-16T13:15:00+08:00` — Expanded the approved story to a V4 Pro-first integrated distribution and documented the unshipped `We need` automatic reasoning trigger as the next core requirement.

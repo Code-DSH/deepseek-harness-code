@@ -1,10 +1,10 @@
 <div align="center">
   <img src="./build/deepseek-harness-code.png" width="136" alt="DeepSeek Harness Code 图标" />
   <h1>DeepSeek Harness Code</h1>
-  <h3>面向 DeepSeek 的可靠桌面编码环境——为比浏览器标签页更长久的工作而生。</h3>
-  <p>DeepSeek Harness Code 将官方 DeepSeek Harness 运行时、强化的桌面宿主、集成插件和独立 Watchdog 打包为一个现代化应用。</p>
+  <h3>以 V4 Pro 为核心的 DeepSeek 一体化编码环境——为比浏览器标签页更长久的工作而生。</h3>
+  <p>DeepSeek Harness Code 把 V4 Pro 集成、官方 Harness 运行时、插件、Skills、工具、强化桌面宿主和独立 Watchdog 整合为一个现代化发行版。</p>
   <p><a href="./README.md">English</a> · <a href="./README.zh-CN.md">简体中文</a></p>
-  <p><a href="#愿景">愿景</a> · <a href="#不只是网页套壳">为什么不同</a> · <a href="#为长期运行而设计">长期稳定性</a> · <a href="#架构">架构</a> · <a href="#从源码构建">构建</a></p>
+  <p><a href="#愿景">愿景</a> · <a href="#以-deepseek-v4-pro-为核心">V4 Pro</a> · <a href="#一整套-deepseek-工作台">一体化工作台</a> · <a href="#不只是网页套壳">为什么不同</a> · <a href="#为长期运行而设计">长期稳定性</a> · <a href="#架构">架构</a> · <a href="#从源码构建">构建</a></p>
   <p>
     <img src="https://img.shields.io/badge/version-0.2.0-2563eb?style=flat-square" alt="版本 0.2.0" />
     <img src="https://img.shields.io/badge/license-MIT-16a34a?style=flat-square" alt="MIT 许可证" />
@@ -26,9 +26,35 @@
 
 DeepSeek 不应只是被困在浏览器页面里的一段对话。它应该成为一个可靠的工作环境：能够陪伴长时间编码任务，管理自己的运行时，从已知故障中恢复，保留会话，提供真正有用的诊断信息，并自然融入桌面系统。
 
-我们的目标是在不替换 Harness 会话模型、不另造一套 Agent 协议的前提下，把官方 DeepSeek Harness 体验变成这样的环境。我们围绕 Harness 建立明确的进程边界、官方格式插件、窄权限桌面桥接，以及可以被测试验证的恢复行为。
+我们的目标是在不替换 Harness 会话模型、不另造一套 Agent 协议的前提下，把官方 DeepSeek Harness 体验变成这样的环境。我们正在构建一套完整的 DeepSeek 工作发行版：V4 Pro 与 V4 Flash 模型支持、完整 Harness 插件与 Skills 基础、Agent 工具、桌面集成和经过测试的恢复机制，一次安装全部获得。
 
 **这个项目不是把网页塞进一个窗口，而是让 DeepSeek Harness 真正适合持续、真实、长期的工作。**
+
+## 以 DeepSeek V4 Pro 为核心
+
+DeepSeek V4 Pro 是本项目围绕构建的推理核心。当前固定的官方 Harness 适配器已经把 `deepseek-v4-pro` 与 `deepseek-v4-flash` 同时提供给模型选择器，公布 1,000,000 Token 上下文目录，并支持 `off`、`high`、`max` 三档推理强度。V4 Flash 继续承担快速、经济的任务；V4 Pro 则面向高强度规划、架构、调试和长周期编码工作。
+
+应用打包的是完整集成与运行时，而不是模型权重。Provider 凭据继续保存在官方 Harness 设置中，请求继续经过官方 DeepSeek Provider 边界。
+
+### `We need` 自动激活推理
+
+我们的下一项核心能力是意图感知的推理触发器。当用户用 **`We need`** 明确描述任务时，集成层将通过 Harness 公开的逐请求接口自动选择合适的 V4 Pro 推理强度，不再要求用户手动切换模式。
+
+> [!NOTE]
+> V4 Pro 模型选择以及官方 `off` / `high` / `max` 推理控制已经存在于当前固定的 Harness 运行时中。字面量 `We need` 自动触发器是明确的产品需求和路线图项目，并非 0.2.0 已交付声明。它只会激活官方推理控制，不会暴露隐藏思维链，也不会修改私有请求字段。
+
+## 一整套 DeepSeek 工作台
+
+我们的愿景是一套完整、连贯的发行版，而不是一堆互不相关的附加组件。官方 Harness Base 与 Web Bundle 已把 DeepSeek Agent 体系中真正有用的部分带进同一个应用：
+
+- **模型与推理**——V4 Pro/V4 Flash 目录、模型选择、Provider 设置、推理强度、重试策略和流式协议处理。
+- **Skills 系统**——Skills 运行时、文件系统发现、Skills UI、徽章以及官方 Skill 工具。
+- **Agent 工作流**——Standard Preset、系统指令、Goal、Plan 模式、Todo、Jobs、Workflow、上下文压缩、检查点和持久会话。
+- **工具能力**——文件读取/搜索/编辑、Bash 与 PowerShell、Web、用户提问、审批、Subagent、反馈和交付物。
+- **插件平台**——官方插件清单与设置，以及集成的桌面 Bundle 和 Anchored Standard Bundle。
+- **桌面可靠性**——原生生命周期、安全桥接、健康恢复、轮转诊断和独立 Watchdog。
+
+所有能力都以同一个产品边界固定版本、完成打包并接受验证，用户不必再手工拼装脆弱的工具链。
 
 ## 不只是网页套壳
 
@@ -36,19 +62,21 @@ DeepSeek 不应只是被困在浏览器页面里的一段对话。它应该成�
 
 DeepSeek Harness Code 选择了另一条路线：
 
-| 能力         | 普通网页套壳             | DeepSeek Harness Code                                     |
-| ------------ | ------------------------ | --------------------------------------------------------- |
-| 运行时       | 加载已有远程页面         | 内置 Chromium、Node、官方 Harness 运行时与集成插件        |
-| 进程所有权   | 页面本身就是产品         | 桌面宿主管理 Harness 启动、就绪、重启与退出               |
-| 长会话健康   | 依赖用户手动刷新         | 非重叠健康探测与基于证据的恢复机制                        |
-| Web 界面卡死 | 关闭或重载整个应用       | 检测无响应渲染器，在保留健康 Harness 状态的同时重建窗口   |
-| 服务失效     | 界面停止后用户才发现     | 连续探测失败或子进程退出后自动恢复                        |
-| 桌面进程崩溃 | 没有独立恢复层           | IPC-only Watchdog、有界退避与崩溃循环保护                 |
-| 内存压力     | 继承网页和进程的无界行为 | 限制已知增长路径、轮转日志、回收失效进程、隔离渲染器恢复  |
-| 诊断         | 最多只有浏览器控制台     | 经脱敏的 Electron、Harness、Watchdog 日志，可在应用内打开 |
-| 桌面集成     | 只有窗口外壳             | 原生托盘/菜单、关闭策略、系统主题、快捷键与会话感知恢复   |
-| 安全边界     | 常见宽权限 preload       | 仅回环地址 Harness 与两组经过验证的 preload 能力          |
-| 分发         | 依赖外部网站或运行环境   | 自包含应用，运行时不要求全局安装 Node                     |
+| 能力         | 普通网页套壳             | DeepSeek Harness Code                                             |
+| ------------ | ------------------------ | ----------------------------------------------------------------- |
+| 运行时       | 加载已有远程页面         | 内置 Chromium、Node、官方 Harness 运行时与集成插件                |
+| 模型集成     | 继承网页当时提供的模型   | 一等 V4 Pro/Flash 目录与官方推理强度控制                          |
+| Agent 工具链 | 没有集成式工具链         | Harness 插件、Skills、工具、Goal、Plan、Workflow、提问与 Subagent |
+| 进程所有权   | 页面本身就是产品         | 桌面宿主管理 Harness 启动、就绪、重启与退出                       |
+| 长会话健康   | 依赖用户手动刷新         | 非重叠健康探测与基于证据的恢复机制                                |
+| Web 界面卡死 | 关闭或重载整个应用       | 检测无响应渲染器，在保留健康 Harness 状态的同时重建窗口           |
+| 服务失效     | 界面停止后用户才发现     | 连续探测失败或子进程退出后自动恢复                                |
+| 桌面进程崩溃 | 没有独立恢复层           | IPC-only Watchdog、有界退避与崩溃循环保护                         |
+| 内存压力     | 继承网页和进程的无界行为 | 限制已知增长路径、轮转日志、回收失效进程、隔离渲染器恢复          |
+| 诊断         | 最多只有浏览器控制台     | 经脱敏的 Electron、Harness、Watchdog 日志，可在应用内打开         |
+| 桌面集成     | 只有窗口外壳             | 原生托盘/菜单、关闭策略、系统主题、快捷键与会话感知恢复           |
+| 安全边界     | 常见宽权限 preload       | 仅回环地址 Harness 与两组经过验证的 preload 能力                  |
+| 分发         | 依赖外部网站或运行环境   | 自包含应用，运行时不要求全局安装 Node                             |
 
 我们尊重轻量套壳的价值：它们解决的是“像应用一样打开这个网页”。DeepSeek Harness Code 解决的是另一个问题：**把 Harness 作为一个有韧性的桌面编码系统来运行。**
 
@@ -91,16 +119,18 @@ DeepSeek Harness Code 使用明确的生命周期控制覆盖这些已知失效�
 
 ## 功能矩阵
 
-| 领域           | 已包含能力                                                          |
-| -------------- | ------------------------------------------------------------------- |
-| 桌面宿主       | 强化 Electron 窗口、启动页、原生菜单、托盘、关闭偏好                |
-| Harness 运行时 | 固定 `@deepseek-ai/dsh` rc.6、仅回环地址 Web 服务、应用自有 Profile |
-| 恢复           | 健康探测、进程重启、渲染器替换、端口重试、会话恢复                  |
-| Watchdog       | 独立 IPC 进程、有界重启策略、持久化崩溃循环标记                     |
-| 插件           | 桌面设置/转场 Bundle 与 Anchored Standard Bundle                    |
-| 诊断           | 启动证据、运行状态、脱敏轮转日志、打开日志操作                      |
-| 安全           | 沙箱渲染器、禁用 Node 集成、验证 IPC、导航策略                      |
-| 打包           | macOS Universal DMG；Windows NSIS 与 Linux AppImage/deb 配置        |
+| 领域           | 已包含能力                                                            |
+| -------------- | --------------------------------------------------------------------- |
+| 桌面宿主       | 强化 Electron 窗口、启动页、原生菜单、托盘、关闭偏好                  |
+| Harness 运行时 | 固定 `@deepseek-ai/dsh` rc.6、仅回环地址 Web 服务、应用自有 Profile   |
+| V4 模型        | 官方 V4 Pro/Flash 目录与 `off` / `high` / `max` 推理控制              |
+| 一体化能力栈   | Skills、工具、Goal、Plan、Workflow、Todo、Jobs、提问、审批与 Subagent |
+| 恢复           | 健康探测、进程重启、渲染器替换、端口重试、会话恢复                    |
+| Watchdog       | 独立 IPC 进程、有界重启策略、持久化崩溃循环标记                       |
+| 插件           | 桌面设置/转场 Bundle 与 Anchored Standard Bundle                      |
+| 诊断           | 启动证据、运行状态、脱敏轮转日志、打开日志操作                        |
+| 安全           | 沙箱渲染器、禁用 Node 集成、验证 IPC、导航策略                        |
+| 打包           | macOS Universal DMG；Windows NSIS 与 Linux AppImage/deb 配置          |
 
 ## 架构
 
@@ -201,6 +231,7 @@ node scripts/verify-macos-artifact.mjs \
 
 ## 路线图
 
+- 通过 Harness 公开的逐请求推理强度接口，实现并验证字面量 `We need` 意图触发器。
 - 在所有支持平台发布可复现的内存与长期运行压力基准。
 - 在原生 CI Runner 上构建并验证 Windows 与 Linux 安装包。
 - 通过固定的兼容边界持续跟进快速演进的官方 Harness 插件 API。
