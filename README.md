@@ -166,6 +166,8 @@ These are implemented controls, not a synthetic “X% less memory” claim. A re
 - **System-native appearance** — light/dark startup UI, platform title-bar handling, official monochrome assets, and reduced-motion support.
 - **Smooth navigation** — route-commit transitions use View Transitions when available and a low-cost CSS fallback otherwise.
 - **Workspace resilience** — validated Standard workspace switching and official session restoration.
+- **Bundled Skills foundation** — Superpowers 6.2.0 is installed into the app-owned `DSH_HOME/skills` root on startup; user-authored skill directories with the same name are never overwritten.
+- **Localized Agent Presets** — `anchored-standard`, `router-standard`, and `router-spec` ship short bilingual Chinese/English names and descriptions without changing their preset IDs or routing behavior.
 - **Safe experimental integration** — Anchored Standard is a separate official-format bundle and fails closed to Standard on the pinned Harness rc.6 API.
 
 ## Feature matrix
@@ -176,6 +178,8 @@ These are implemented controls, not a synthetic “X% less memory” claim. A re
 | Harness runtime  | Pinned `@deepseek-ai/dsh` rc.6, loopback-only Web service, app-owned profile                |
 | V4 models        | Official V4 Pro/Flash catalog and `off` / `high` / `max` reasoning controls                 |
 | Integrated stack | Skills, tools, Goal, Plan, Workflow, Todo, Jobs, questions, approvals, and subagents        |
+| Bundled Skills   | Superpowers 6.2.0 collection installed into the app-owned Harness home without overwriting user skills |
+| Agent Presets    | Standard remains default; optional `anchored-standard` plus managed `router-standard`/`router-spec` |
 | Recovery         | Health probes, process restart, renderer replacement, port retry, session restoration       |
 | Watchdog         | Independent IPC process, bounded restart policy, persistent crash-loop marker               |
 | Plugins          | Desktop settings/transition bundle, Anchored Standard bundle, and auto-loaded Routing suite |
@@ -188,6 +192,7 @@ These are implemented controls, not a synthetic “X% less memory” claim. A re
 DeepSeek Harness Code bundles the community [dsh-routing-suite](https://github.com/yjh051108/dsh-routing-suite) and auto-loads it on every launch:
 
 - **Offline snapshot** - the installer ships a pinned snapshot of the suite's three components (the @dsh-external/dsh-super-injector bundle layer, the @dsh-external/dsh-mode-boost host-plane boost, and the router-standard + router-spec agent presets) inside the app resources.
+- **Pinned baseline** - the bundled snapshot records injector `0.3.3`, mode-boost `0.1.0`, router preset `0.2.0` at commit `eff787e95132d6c7104214542104a84d656b497e`, with SHA-256 digests in `build/routing-suite/versions.json`.
 - **Auto-assembly** - on startup the desktop host registers the suite bundles in the app-owned Web profile, links them into the profile's node_modules, adds the mode-boost entry to the profile patch layer, and installs the router presets as managed agent presets. Nothing is downloaded at first launch.
 - **Reviewed updates** - routing components update only with a new reviewed app release. The build verifies the exact SHA-256 of every pinned archive before extraction; the installed app never downloads or executes mutable routing code in the background.
 - **Fault-tolerant** - every assembly failure is non-fatal; Standard Harness startup continues and reports a bounded diagnostic without touching user-owned presets.

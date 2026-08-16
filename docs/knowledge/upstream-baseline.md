@@ -67,6 +67,15 @@ Pin `@deepseek-ai/dsh@0.1.0-rc.6`, Electron `43.4.0`, electron-builder `26.15.3`
 
 Retain `@deepseek-ai/dsh-tool-ask-user`, `@deepseek-ai/dsh-user-questions`, and `@deepseek-ai/dsh-client-ui-user-questions`. Required behavior includes stable IDs, single/multiple selection, custom answers, skip/cancel, plan review, and pending-question restoration. Desktop code may style and test these flows but must not alter field encoding.
 
+## DSH Routing Suite Contract
+
+- Bundled component versions: `@dsh-external/dsh-super-injector@0.3.3`, `@dsh-external/dsh-mode-boost@0.1.0`, and router preset `0.2.0` at commit `eff787e95132d6c7104214542104a84d656b497e`.
+- Recorded SHA-256 values in `build/routing-suite/versions.json`: injector `355238fa8e51bc45c0801066af51e0e122f3b21411b193f601ee54e534391f48`, mode boost `72836d64bc465bc7c915e1bbc810d15ae0825dd4448350bcbf42c6e76efca12b`, router preset `a8f3616fe4f5ed3951118dbc508239cf61dfcd5c763ed1ec9baafea886126676`.
+- Startup assembly appends the injector after the desktop bundle, links mode boost through the profile `cordis.patch.yml`, and installs `router-standard`/`router-spec` under `<DSH_HOME>/.agent-presets` as managed presets.
+- The installed app refreshes a user-level cache at most once per 24 hours. The injector and mode boost use pinned release tarballs; the router preset uses `dsh-router-standard/main`, which is mutable. This is documented as a release risk until reviewed immutable pins replace that path.
+- Managed presets normalize bilingual display copy before hashing, so the offline snapshot, startup install, and refreshed cache all present the same localized names/descriptions.
+- Every routing failure is optional and fail-open: Standard Harness startup continues with a bounded diagnostic, and user-owned same-name presets are never overwritten.
+
 ## Applicability
 
 Project versions are exact even if newer upstream releases appear. Revalidate before dependency upgrades, package publication, or compatibility claims. The Routing Suite README describes router preset `0.3.0`, but its checked submodule ref and the router repository's published tags identify `0.2.0` at `eff787e`; this release therefore records the exact commit as authoritative and does not infer an unpublished version.

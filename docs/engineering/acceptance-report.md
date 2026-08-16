@@ -82,6 +82,15 @@ The patched dependency was rebuilt from a moved-aside `node_modules` tree with `
 
 The user-supplied community claim is experimental and is not a benchmark guarantee. The pinned Agent Preset uses rc.6 assembly/event hooks rather than `AgentPresets.recompose()`: request one exposes exactly `bash` and `str_replace_editor`; a durable tool call or assistant message promotes the current epoch to resident discovery, and explicit unlock events extend later schemas. The real rc.6 roster reports the preset healthy, Standard remains default, and `session.create` successfully mounts `anchored-standard`. A loopback mock DeepSeek provider captured the serialized first request with exactly the two bootstrap tools and the second request with exactly the five resident tools. The implementation never intercepts private model-request fields or captures/replays hidden reasoning.
 
+## Routing Suite and bundled Skills boundary
+
+- The bundled snapshot pins injector `0.3.3`, mode-boost `0.1.0`, and router preset `0.2.0` at commit `eff787e95132d6c7104214542104a84d656b497e`; `build/routing-suite/versions.json` records each archive SHA-256.
+- Startup assembly is idempotent: the injector is appended after the desktop bundle, mode-boost is linked and inserted into `cordis.patch.yml`, and both router presets are installed under `<DSH_HOME>/.agent-presets` with ownership markers and digests.
+- A background cache refresh is attempted at most once every 24 hours. It downloads the pinned injector/mode-boost release tarballs and the current `dsh-router-standard/main` preset archive, records their digests, and atomically swaps the cache. Startup prefers a complete cache but never waits for the network; refresh or assembly failure is fail-open.
+- This runtime path follows a mutable upstream main branch for router presets and therefore is not yet a fully immutable supply chain. It must be replaced with reviewed pinned updates before a public release.
+- Superpowers 6.2.0 skills are installed under `<DSH_HOME>/skills` with per-skill markers. A same-named unmarked or modified directory is preserved and reported; package failure disables only the bundled Skills while Standard continues.
+- Managed preset and skill installation normalizes bilingual display copy before digesting, so refreshed routing presets cannot silently restore raw IDs or empty descriptions.
+
 ## Cross-platform status
 
 - macOS Universal DMG is locally built and inspected.
@@ -91,8 +100,10 @@ The user-supplied community claim is experimental and is not a benchmark guarant
 ## External limits
 
 - The equal 16-point traffic-light contract is verified in source, test, and the packaged main process. Native visual inspection on macOS 15 and macOS 26 remains an external gate; the local packaging host is macOS 27 and cannot substitute for those runs.
+- The browser gate is currently partial: three legacy Playwright tests still target the removed `installStreamOutputEffects` hook and must be repaired before a full `pnpm test` pass can be claimed.
 - The key pasted in chat was not used, stored, printed, or forwarded. It must be revoked. A 45-minute live-provider soak is intentionally deferred until a replacement is entered by the user through official Harness settings.
 - V4 Pro/Flash selection and the official `off` / `high` / `max` reasoning controls are available in the pinned adapter. The literal `We need` automatic reasoning trigger is documented as a next requirement and is not represented as shipped until its public per-request implementation and tests exist.
+- The routing-suite background refresh follows `dsh-router-standard/main` for preset updates. Until that path is changed to reviewed immutable pins, the public release should not claim a fully pinned routing supply chain.
 
 ## Related documents
 

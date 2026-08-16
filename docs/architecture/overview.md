@@ -5,7 +5,7 @@ summary: Implemented Electron shell, two-capability plugin bridge, checksum-pinn
 kind: architecture
 status: canonical
 content_stage: implementation-backed
-scope: [desktop, plugin, watchdog]
+scope: [desktop, plugin, routing-suite, skills, watchdog]
 triggers: [architecture, IPC, security boundary]
 read_when: [changing process ownership or public interfaces]
 skip_when: [documentation-only wording fixes]
@@ -49,6 +49,7 @@ Within a selected Anchored Standard session, `system-prompt/assemble` exposes ex
 - Startup diagnostics are bounded, redacted, and detached once the child is ready.
 - The detached Watchdog uses inherited OS IPC only. State, marker, and 10 MB × five-file logs are constrained to `<userData>/watchdog`; normal quit awaits an acknowledgement before disconnect.
 - The package intentionally uses an unpacked application tree (`asar: false`). With rc.6, package discovery through `createRequire` returned an empty client graph inside ASAR; the unpacked tree restored all 39 official/plugin client entries without exposing Node to the renderer.
+- Packaged extra resources include `routing-suite/` and `superpowers-skills/`. Both are installed only into the app-owned `DSH_HOME` and are never extracted or executed from inside the application bundle.
 
 ## Public Bridge
 
