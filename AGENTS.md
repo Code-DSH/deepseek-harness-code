@@ -5,7 +5,7 @@
 - schema_version: 3
 - single_entry: true
 - repository_root: `/Users/trip/TRUE 开发/deepseek/deepseek-harness-desktop`
-- updated_at: `2026-08-16T13:56:03+08:00`
+- updated_at: `2026-08-16T14:03:53+08:00`
 - default_freshness: 10d
 - docs_entry: [docs/index.md](./docs/index.md)
 - project_entry: [docs/project/index.md](./docs/project/index.md)
@@ -16,9 +16,9 @@
 ## Current Project Snapshot
 
 - Goal: ship DeepSeek Harness Code with a cross-platform Electron shell, official-format integrated plugins, and independent watchdog.
-- Current phase: streaming-output dissolve and active ThinkingOrb behavior are implementation-verified; cloud PR and local-main integration are pending.
+- Current phase: streaming-output dissolve and active ThinkingOrb behavior are implementation-verified and merged into local `main`; cloud PR [#2](https://github.com/Code-DSH/deepseek-harness-code/pull/2) remains open, and release packaging is deferred until the next requested features are integrated.
 - Primary constraints: macOS Universal local release plus native Windows/Linux CI, no global Node dependency at runtime, loopback-only Harness, unsigned macOS distribution with ad-hoc signing.
-- Active branch/worktree: local `main` is the integration target; feature work is isolated before local merge and cloud PR review.
+- Active branch/worktree: local `main` contains the integration merge; `feature/stream-output-animation` is pushed for open cloud PR review and its temporary worktree has been removed.
 - Build/test entry: `npm exec --yes --package=pnpm@11.19.0 -- pnpm test`.
 - Current critical risk: rc.6 does not safely permit post-tool preset recomposition; anchored mode must remain a visible Standard fallback when enabled.
 
@@ -60,10 +60,10 @@
 
 ## Active Plans
 
-| Plan                        | Status | Current milestone                          | Updated    | Link                                                                   |
-| --------------------------- | ------ | ------------------------------------------ | ---------- | ---------------------------------------------------------------------- |
-| Streaming output animation  | active | Verified; PR and local integration pending | 2026-08-16 | [Open](./docs/superpowers/plans/2026-08-16-stream-output-animation.md) |
-| DeepSeek Harness Code 0.2.0 | active | Native CI and final release verification   | 2026-08-16 | [Open](./docs/superpowers/plans/2026-08-16-deepseek-harness-code.md)   |
+| Plan                        | Status   | Current milestone                             | Updated    | Link                                                                   |
+| --------------------------- | -------- | --------------------------------------------- | ---------- | ---------------------------------------------------------------------- |
+| Streaming output animation  | complete | PR #2 open; merged and verified on local main | 2026-08-16 | [Open](./docs/superpowers/plans/2026-08-16-stream-output-animation.md) |
+| DeepSeek Harness Code 0.2.0 | active   | Native CI and final release verification      | 2026-08-16 | [Open](./docs/superpowers/plans/2026-08-16-deepseek-harness-code.md)   |
 
 ## Known Risks and Open Questions
 
