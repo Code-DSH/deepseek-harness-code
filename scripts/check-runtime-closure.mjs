@@ -8,6 +8,11 @@ const manifest = JSON.parse(
   await readFile(join(projectRoot, "package.json"), "utf8"),
 );
 const requireFromProject = createRequire(join(projectRoot, "package.json"));
+const pluginRoot = join(projectRoot, "packages", "desktop-plugin");
+const pluginManifest = JSON.parse(
+  await readFile(join(pluginRoot, "package.json"), "utf8"),
+);
+const requireFromPlugin = createRequire(join(pluginRoot, "package.json"));
 
 const criticalRuntimeVersions = new Map([
   ["@deepseek-ai/dsh", "0.1.0-rc.6"],
@@ -25,6 +30,7 @@ const runtimeArtifacts = [
   "packages/desktop-plugin/client.js",
   "packages/desktop-plugin/index.js",
   "packages/desktop-plugin/cordis.patch.yml",
+  "packages/desktop-plugin/THIRD_PARTY_NOTICES.md",
   "packages/anchored-standard-plugin/package.json",
   "packages/anchored-standard-plugin/preset/agent.cordis.yml",
   "packages/anchored-standard-plugin/preset/preset.yml",
@@ -72,6 +78,21 @@ for (const [name, expectedVersion] of criticalRuntimeVersions) {
   }
 }
 
+if (pluginManifest.dependencies?.["thinking-orbs"] !== "0.3.1") {
+  throw new Error("desktop plugin must pin thinking-orbs@0.3.1");
+}
+const thinkingOrbsManifest = JSON.parse(
+  await readFile(
+    requireFromPlugin.resolve("thinking-orbs/package.json"),
+    "utf8",
+  ),
+);
+if (thinkingOrbsManifest.version !== "0.3.1") {
+  throw new Error(
+    `thinking-orbs runtime version ${thinkingOrbsManifest.version} does not match 0.3.1`,
+  );
+}
+
 // The dsh-routing-suite snapshot must list every pinned component so the
 // auto-load path (routing-suite-link.ts) has versions to record.
 const routingSuiteVersions = JSON.parse(
@@ -103,6 +124,8 @@ const pluginClient = await readFile(
 for (const unresolved of [
   'require("./stream-output-model.js")',
   'require("./stream-output-controller.js")',
+  'require("./thinking-status.js")',
+  'require("thinking-orbs")',
 ]) {
   if (pluginClient.includes(unresolved)) {
     throw new Error(
@@ -110,12 +133,20 @@ for (const unresolved of [
     );
   }
 }
+if (
+  !pluginClient.includes("ThinkingOrb") ||
+  !pluginClient.includes("data-dsh-desktop-thinking-inline")
+) {
+  throw new Error(
+    "desktop plugin client is missing the bundled inline ThinkingOrb",
+  );
+}
 
 process.stdout.write(
   `${JSON.stringify({
     runtimeArtifacts: runtimeArtifacts.length,
     productionDependencies: resolvedDependencies.length,
     criticalRuntimePackages: criticalRuntimeVersions.size,
-    bundledPluginPackages: 0,
+    bundledPluginPackages: 1,
   })}\n`,
 );

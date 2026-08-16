@@ -20,6 +20,7 @@
 ### Task 1: Move the safe area into the sidebar component
 
 **Files:**
+
 - Modify: `tests/e2e/plugin-contract.test.ts`
 - Modify: `packages/desktop-plugin/src/transitions.css`
 - Create: `patches/@deepseek-ai__dsh-client-ui-sidebar@0.1.0-rc.6.patch`
@@ -29,20 +30,21 @@
 - Modify: `docs/engineering/testing.md`
 
 **Interfaces:**
+
 - Consumes: `data-dsh-desktop-platform="macos"` on the renderer root and pinned sidebar classes `.hHd-Xa_root` / `.hHd-Xa_collapsed`.
 - Produces: zero `body` top padding, expanded sidebar `padding-top: 46px`, collapsed sidebar `padding-top: 58px` on macOS only.
 
-- [ ] **Step 1: Write the failing geometry contract**
+- [x] **Step 1: Write the failing geometry contract**
 
 Replace the old assertion expecting `body.paddingTop === "40px"` with a real rc.6 sidebar fixture. Assert `body.paddingTop === ""`, the sidebar surface begins at the viewport top, and its computed top padding is `46px` expanded and `58px` collapsed.
 
-- [ ] **Step 2: Run the focused test and prove RED**
+- [x] **Step 2: Run the focused test and prove RED**
 
 Run: `pnpm vitest run --config tests/e2e/plugin-vitest.config.ts tests/e2e/plugin-contract.test.ts`
 
 Expected: FAIL because `body` still has `40px` top padding and the sidebar component has no macOS rule.
 
-- [ ] **Step 3: Apply the minimal component-style fix**
+- [x] **Step 3: Apply the minimal component-style fix**
 
 Delete the `body` padding rule. Add this rule to the pinned sidebar CSS module through a pnpm patch:
 
@@ -58,26 +60,28 @@ Delete the `body` padding rule. Add this rule to the pinned sidebar CSS module t
 
 Register the patch in `pnpm-workspace.yaml`, refresh the lockfile, perform a frozen clean-install check, and rebuild `packages/desktop-plugin/client.js`.
 
-- [ ] **Step 4: Prove GREEN and inspect the artifact**
+- [x] **Step 4: Prove GREEN and inspect the artifact**
 
 Run the focused plugin test and inspect the generated client and installed patched sidebar bundle. Confirm no global `body` inset remains and the component rule survives a frozen install.
 
-- [ ] **Step 5: Update rendering documentation and commit**
+- [x] **Step 5: Update rendering documentation**
 
 Document full-height backgrounds plus sidebar-only inner safe area. Commit the source, patch, lockfile, test, generated client, and docs together.
 
 ### Task 2: Package and visually accept the layout
 
 **Files:**
+
 - Modify: `package.json`
 - Modify: `docs/engineering/acceptance-report.md`
 - Modify: `docs/project/status.md`
 
 **Interfaces:**
+
 - Consumes: fixed component CSS and Electron window chrome.
 - Produces: version `0.3.2` Universal macOS DMG with no top blank band.
 
-- [ ] **Step 1: Run repository gates**
+- [ ] **Step 1: Run repository gates and record final counts**
 
 Run focused tests, unit/plugin/package suites, typecheck, build, runtime preflight, docs, security, lint/format checks, and record any proven pre-existing failures separately.
 

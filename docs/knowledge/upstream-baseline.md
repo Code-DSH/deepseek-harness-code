@@ -1,7 +1,7 @@
 ---
 id: knowledge.upstream-baseline
 title: Upstream Baseline
-summary: Version and official-contract evidence for Harness, packaging, DSH Routing Suite pins, native conversation-rendering ownership, and the exact rc.6 turn-tail projection patch.
+summary: Version and official-contract evidence for Harness, Thinking Orbs, packaging, DSH Routing Suite pins, native status ownership, and the exact rc.6 conversation patches.
 kind: knowledge
 status: canonical
 content_stage: implementation-backed
@@ -19,6 +19,8 @@ source_of_truth:
   - https://www.npmjs.com/package/@deepseek-ai/dsh
   - https://www.electronjs.org/docs/latest/
   - https://esbuild.github.io/api/
+  - https://orbs.jakubantalik.com/
+  - https://github.com/Jakubantalik/thinking-orbs
   - https://github.com/yjh051108/dsh-routing-suite
   - https://github.com/yjh051108/dsh-super-injector
   - https://github.com/yjh051108/dsh-mode-boost
@@ -34,7 +36,7 @@ tags: [research, versions]
 
 ## Current Conclusion
 
-Pin `@deepseek-ai/dsh@0.1.0-rc.6`, Electron `43.4.0`, electron-builder `26.15.3`, and esbuild `0.25.12`. The peer-qualified `@deepseek-ai/dsh-client-ui-conversation@0.1.0-rc.6` is reproducibly patched through pnpm to avoid an open-turn quadratic `turn-tail` scan while preserving the official canonical event path and fail-open fallback. The DSH Routing Suite snapshot pins injector `0.3.3`, mode boost `0.1.0`, and router preset commit `eff787e95132d6c7104214542104a84d656b497e`; reviewed SHA-256 values are required before extraction, and the installed app has no mutable routing-code updater. Harness supplies the official user-question packages, Cordis bundle mechanism, and conversation UI; this project composes the official UI rather than adding a thinking/status overlay.
+Pin `@deepseek-ai/dsh@0.1.0-rc.6`, Electron `43.4.0`, electron-builder `26.15.3`, esbuild `0.25.12`, and `thinking-orbs@0.3.1`. The peer-qualified `@deepseek-ai/dsh-client-ui-conversation@0.1.0-rc.6` is reproducibly patched through pnpm to avoid an open-turn quadratic `turn-tail` scan, expose its official elapsed clock immediately, and remove only the status-label shimmer while preserving the canonical event path and fail-open fallback. The peer-qualified rc.6 sidebar package is patched only to keep macOS surfaces full height while moving its internal content below native traffic lights. The DSH Routing Suite remains an immutable checksum-verified snapshot. Harness still supplies and owns the question protocol, Cordis bundle mechanism, conversation tree, live status semantics, and timer; the desktop plugin adds only one inline rotating Orb to that native row.
 
 ## Evidence
 
@@ -48,6 +50,7 @@ Pin `@deepseek-ai/dsh@0.1.0-rc.6`, Electron `43.4.0`, electron-builder `26.15.3`
 | 2026-08-16   | [esbuild bundle API](https://esbuild.github.io/api/) and workspace lock                                                         | 0.25.12                                                                      | Recursively bundles local/third-party client code while preserving the declared Harness externals | high       |
 | 2026-08-16   | Pinned installed Harness packages                                                                                               | `@deepseek-ai/dsh-llm-deepseek`, `dsh-base`, and `dsh-web-app` 0.1.0-rc.6    | V4 Pro/Flash catalog, official reasoning efforts, Skills, tools, workflows, and supporting UI     | high       |
 | 2026-08-16   | Installed rc.6 conversation bundle, pnpm patch, and real-bundle regression                                                      | `@deepseek-ai/dsh-client-ui-conversation@0.1.0-rc.6`                         | Open-turn match inspections: 50,015,000 before, zero after; exact 10,000-delta text retained      | high       |
+| 2026-08-16   | [Thinking Orbs site](https://orbs.jakubantalik.com/) and [official repository](https://github.com/Jakubantalik/thinking-orbs)   | npm `0.3.1`                                                                  | `working` renders rotating tilted orbits; `breathing` renders a morphing ring; MIT license        | high       |
 | 2026-08-16   | [DSH Routing Suite](https://github.com/yjh051108/dsh-routing-suite)                                                             | suite main `a09eb0ade28e6ec3b8e5eb22985a14f6bfa1fbe5`                        | Install chain and submodule refs identify injector, mode boost, and router preset components      | high       |
 | 2026-08-16   | [Super Injector](https://github.com/yjh051108/dsh-super-injector) and [Mode Boost](https://github.com/yjh051108/dsh-mode-boost) | tags `0.3.3` / `0.1.0` at `f4ef59f` / `a9a666a`                              | Release refs match the pinned prebuilt archives used by the offline snapshot                      | high       |
 | 2026-08-16   | [Router Standard](https://github.com/yjh051108/dsh-router-standard)                                                             | suite gitlink/tag `0.2.0` at `eff787e`; main `f9667f7`                       | The immutable suite gitlink is used instead of mutable main; README version wording is not a pin  | high       |
@@ -76,6 +79,7 @@ Project versions are exact even if newer upstream releases appear. Revalidate be
 - The rc.6 Agent Preset roster automatically scans `<DSH_HOME>/.agent-presets`. Preset-local `system-prompt/assemble`, `session/event`, and `agent/pre-step` hooks can implement event-derived schema phases without recompose or private transport mutation.
 - The official Web boot graph in the packaged app contains 39 client entries, including `@deepseek-ai/dsh-client-ui-user-questions` and `deepseek-harness-desktop-plugin`.
 - rc.6 package scanning does not discover this graph from the tested ASAR layout, so the release uses an unpacked application tree.
-- The desktop client does not add conversation paint. The only related runtime externals are Harness-provided React, `react/jsx-runtime`, and UI primitives; preflight rejects retired animation imports.
-- The rc.6 conversation patch changes only `turn-tail.tailData()`: normal Definition state proves whether `turn/end` exists in O(1); an unexpectedly absent state executes the original match scan. Assistant chunk ingestion, ordering, RAF/immediate publication selection, final-token handling, and structural completion remain official rc.6 behavior. Rollback removes the exact `patchedDependencies` mapping and regenerates the frozen lockfile, but must not proceed unless the focused regression remains green against the replacement upstream version.
+- The desktop client adds no fixed conversation paint. React and UI primitives remain Harness-provided externals; `thinking-orbs@0.3.1` is bundled and rendered only through a standard portal object inside the current native status row. Preflight rejects unresolved Orb/controller imports.
+- The rc.6 conversation patch has three narrow effects: normal Definition state proves whether `turn/end` exists in O(1), Harness's existing timer is always painted, and the status label is static instead of shimmer-filled. An unexpectedly absent state still executes the original match scan. Assistant chunk ingestion, ordering, RAF/immediate publication selection, final-token handling, structural completion, timer source, and formatting remain official rc.6 behavior. Rollback removes the exact `patchedDependencies` mapping and regenerates the frozen lockfile, but must not proceed unless the 10,000-delta correctness/performance and immediate-clock regressions remain green against the replacement upstream version.
+- The rc.6 sidebar patch adds only macOS-scoped padding to the existing sidebar root: `46px` expanded and `58px` collapsed. Global `html`, `body`, AppFrame, sidebar-surface, and main-surface insets remain forbidden.
 - Routing Suite archive SHA-256 values are injector `355238fa8e51bc45c0801066af51e0e122f3b21411b193f601ee54e534391f48`, mode boost `72836d64bc465bc7c915e1bbc810d15ae0825dd4448350bcbf42c6e76efca12b`, and router preset `a8f3616fe4f5ed3951118dbc508239cf61dfcd5c763ed1ec9baafea886126676`. A mismatch is fatal to the build before `tar`; missing packaged routing resources remain fail-open for Standard startup.

@@ -1,7 +1,7 @@
 import { spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { createRequire } from "node:module";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { pathToFileURL } from "node:url";
 import vm from "node:vm";
 
@@ -11,6 +11,9 @@ const repositoryRoot = process.cwd();
 const pluginRoot = join(repositoryRoot, "packages", "desktop-plugin");
 const packageName = "deepseek-harness-desktop-plugin";
 const nodeRequire = createRequire(join(repositoryRoot, "package.json"));
+const dshRequire = createRequire(
+  nodeRequire.resolve("@deepseek-ai/dsh/package.json"),
+);
 const { JSDOM } = nodeRequire("jsdom") as {
   JSDOM: new (html?: string, options?: { url?: string }) => any;
 };
@@ -193,19 +196,24 @@ describe("desktop plugin package contract", () => {
     });
     expect(manifest.exports?.["./client"]?.default).toBe("./client.js");
     expect(manifest.exports?.["./package.json"]).toBe("./package.json");
-    expect(manifest.dependencies?.["thinking-orbs"]).toBeUndefined();
+    expect(manifest.dependencies?.["thinking-orbs"]).toBe("0.3.1");
+    expect(manifest.dependencies?.["react-dom"]).toBeUndefined();
     expect(manifest.devDependencies?.esbuild).toBe("0.25.12");
-    expect(manifest.files).not.toContain("THIRD_PARTY_NOTICES.md");
+    expect(manifest.files).toContain("THIRD_PARTY_NOTICES.md");
     expect(patch).toMatch(new RegExp(`name: ["']${packageName}["']`));
     expect(registration.id).toBe(packageName);
-    expect(client).not.toContain("ThinkingOrb");
-    expect(client).not.toContain("data-dsh-desktop-thinking-orb");
+    expect(client).toContain("ThinkingOrb");
+    expect(client).toContain("data-dsh-desktop-thinking-inline");
     expect(Object.keys(module).sort()).toEqual([
       "DESKTOP_LOCALES",
       "DesktopSettingsRow",
+      "InlineThinkingStatus",
+      "THINKING_ORB_PROPS",
       "apply",
       "createDesktopSettingsModel",
+      "findRunningStatus",
       "inject",
+      "installThinkingStatus",
       "installTransitions",
     ]);
     expect(module.inject).toEqual(["slots", "locale"]);
@@ -266,7 +274,7 @@ describe("desktop plugin package contract", () => {
     expect(questionClient).toContain("PendingQuestion = class");
   });
 
-  it("registers desktop settings without a global conversation overlay", () => {
+  it("registers desktop settings and an inline status portal lifecycle", () => {
     const { module } = loadClientExports();
     const apply = module.apply as ClientApply;
     const injects: string[] = [];
@@ -290,18 +298,18 @@ describe("desktop plugin package contract", () => {
 
     const desktop = loadClientExports({ deepseekDesktop: {} });
     (desktop.module.apply as ClientApply)(ctx);
-    expect(injects).toEqual(["settings.general.item"]);
+    expect(injects).toEqual(["settings.general.item", "shell.overlay"]);
   });
 
-  it("leaves the native thinking state inside the official chat flow", () => {
+  it("portals the Orb into the native row without a fixed conversation visual", () => {
     const source = readFileSync(
       join(pluginRoot, "src", "client-runtime.js"),
       "utf8",
     );
 
-    expect(source).not.toContain('name: "shell.overlay"');
-    expect(source).not.toContain("data-dsh-desktop-thinking-source");
-    expect(source).not.toContain("data-dsh-desktop-thinking-orb");
+    expect(source).toContain('name: "shell.overlay"');
+    expect(source).toContain("data-dsh-desktop-thinking-inline");
+    expect(source).toContain('state: "working"');
     expect(source).not.toContain("position: fixed");
   });
 
@@ -445,7 +453,7 @@ describe("desktop plugin package contract", () => {
     const wrappedPushState = desktopWindow.history.pushState;
     const second = apply(ctx);
 
-    expect(registrations).toBe(1);
+    expect(registrations).toBe(2);
     expect(desktopWindow.history.pushState).toBe(wrappedPushState);
     expect(listeners.get("popstate")?.size).toBe(1);
     first();
@@ -456,7 +464,7 @@ describe("desktop plugin package contract", () => {
     expect(desktopWindow.history.pushState).toBe(pushState);
     expect(desktopWindow.history.replaceState).toBe(replaceState);
     expect(listeners.get("popstate")?.size).toBe(0);
-    expect(slotDisposals).toBe(1);
+    expect(slotDisposals).toBe(2);
   });
 
   it("runs only the bridge actions and cleans up its runtime subscription", async () => {
@@ -697,7 +705,7 @@ describe("desktop plugin package contract", () => {
     expect(root.dataset.dshDesktopTransition).toBe("css");
   });
 
-  it("installs desktop chrome styles without a conversation overlay", () => {
+  it("installs desktop chrome and inline status styles without a fixed overlay", () => {
     const dom = new JSDOM(
       "<!doctype html><html><head></head><body></body></html>",
       {
@@ -722,14 +730,14 @@ describe("desktop plugin package contract", () => {
     );
 
     expect(style?.textContent).not.toContain("[data-dsh-stream-overlay]");
-    expect(style?.textContent).not.toContain(
-      "[data-dsh-desktop-thinking-source]",
+    expect(style?.textContent).toContain("[data-dsh-desktop-thinking-inline]");
+    expect(style?.textContent).not.toMatch(
+      /\[data-dsh-desktop-thinking-inline\][^{]*\{[^}]*position:\s*fixed/s,
     );
-    expect(style?.textContent).not.toContain("[data-dsh-desktop-thinking-orb]");
     dispose();
   });
 
-  it("keeps macOS page content below the traffic lights", () => {
+  it("extends macOS surfaces to the top and offsets only sidebar inner content", () => {
     const dom = new JSDOM(
       "<!doctype html><html><head></head><body><main></main></body></html>",
       {
@@ -753,7 +761,41 @@ describe("desktop plugin package contract", () => {
 
     expect(
       dom.window.getComputedStyle(dom.window.document.body).paddingTop,
-    ).toBe("40px");
+    ).toBe("");
+
+    const sidebarClient = join(
+      dirname(
+        dshRequire.resolve("@deepseek-ai/dsh-client-ui-sidebar/package.json"),
+      ),
+      "lib",
+      "client.js",
+    );
+    let sidebarRegistration:
+      | { factory(require: (id: string) => unknown): unknown }
+      | undefined;
+    Object.assign(dom.window, {
+      __ModuleLoader__: {
+        load(value: typeof sidebarRegistration) {
+          sidebarRegistration = value;
+        },
+      },
+    });
+    vm.runInNewContext(readFileSync(sidebarClient, "utf8"), {
+      document: dom.window.document,
+      window: dom.window,
+    });
+    const noop = () => undefined;
+    sidebarRegistration?.factory((id) => {
+      if (id === "react") return new Proxy({}, { get: () => noop });
+      if (id === "react/jsx-runtime") return { jsx: noop, jsxs: noop };
+      return new Proxy({}, { get: () => noop });
+    });
+    const sidebar = dom.window.document.createElement("div");
+    sidebar.className = "hHd-Xa_root";
+    dom.window.document.body.append(sidebar);
+    expect(dom.window.getComputedStyle(sidebar).paddingTop).toBe("46px");
+    sidebar.classList.add("hHd-Xa_collapsed");
+    expect(dom.window.getComputedStyle(sidebar).paddingTop).toBe("58px");
     dispose();
   });
 

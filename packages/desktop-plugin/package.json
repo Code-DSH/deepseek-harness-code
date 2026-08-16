@@ -35,7 +35,8 @@
   "dependencies": {
     "@deepseek-ai/dsh-client-ui-user-questions": "0.1.0-rc.6",
     "@deepseek-ai/dsh-tool-ask-user": "0.1.0-rc.6",
-    "@deepseek-ai/dsh-user-questions": "0.1.0-rc.6"
+    "@deepseek-ai/dsh-user-questions": "0.1.0-rc.6",
+    "thinking-orbs": "0.3.1"
   },
   "peerDependencies": {
     "@deepseek-ai/cordis": "^4.0.1",
@@ -51,7 +52,8 @@
     "index.js",
     "index.d.ts",
     "client.js",
-    "cordis.patch.yml"
+    "cordis.patch.yml",
+    "THIRD_PARTY_NOTICES.md"
   ],
   "scripts": {
     "build": "pnpm run build:host && pnpm run build:client",

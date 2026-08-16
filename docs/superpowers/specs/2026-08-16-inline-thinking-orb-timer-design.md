@@ -4,7 +4,7 @@ title: Inline Thinking Orb and Elapsed Timer Design
 summary: Restore a rotating ThinkingOrb inside the native Harness running-status row and show the official elapsed timer immediately.
 kind: architecture
 status: canonical
-content_stage: goal-only
+content_stage: implementation-backed
 scope: [desktop-plugin, conversation-status, web-ui]
 triggers: [Deep diving, ThinkingOrb, rotating status, elapsed seconds]
 read_when: [changing the active model-running indicator]
@@ -13,11 +13,19 @@ priority: must
 freshness_class: project
 last_verified: 2026-08-16T18:00:00+08:00
 owners: [primary-agent]
-source_of_truth: [user correction, ../../../packages/desktop-plugin, pinned Harness rc.6 conversation bundle]
+source_of_truth:
+  [
+    user correction,
+    ../../../packages/desktop-plugin,
+    pinned Harness rc.6 conversation bundle,
+  ]
 related:
   prerequisites: [./2026-08-16-deepseek-harness-code-design.md]
   next: [../plans/2026-08-16-inline-thinking-orb-timer.md]
-supersedes: [./2026-08-16-stream-output-animation-design.md#active-thinking-indicator-lifecycle]
+supersedes:
+  [
+    ./2026-08-16-stream-output-animation-design.md#active-thinking-indicator-lifecycle,
+  ]
 tags: [thinking-orbs, conversation, timer, layering]
 ---
 
@@ -59,6 +67,7 @@ The Orb appears inside the official direct Harness running-status row, before th
 
 - `2026-08-16` — The user supplied the Thinking Orbs site and requested restoration, a rotating treatment, visible seconds, and corrected layering.
 - `2026-08-16` — The official `thinking-orbs@0.3.1` package declares `working` as tilted-orbits motion and `breathing` as a morphing ring; Harness rc.6 already owns the turn-start clock but delays its paint until 15 seconds.
+- `2026-08-16` — Real React 18/Chromium acceptance proved that the generated client mounts a 20×20 canvas host inside the native polite status row with relative positioning, `z-index: 1`, `order: -1`, and complete disposal.
 
 ## Related documents
 
@@ -69,3 +78,4 @@ The Orb appears inside the official direct Harness running-status row, before th
 ## Change log
 
 - `2026-08-16` — Recorded the user-approved restoration as an inline native-row enhancement rather than the retired fixed overlay.
+- `2026-08-16` — Implemented the bounded anchor detector, standard React portal object, exact rotating Orb props, immediate native clock, and static status label against the installed rc.6 bundles.

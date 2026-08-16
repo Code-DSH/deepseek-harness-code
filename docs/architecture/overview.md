@@ -1,7 +1,7 @@
 ---
 id: architecture.overview
 title: System Architecture
-summary: Implemented Electron shell, two-capability plugin bridge, checksum-pinned Routing Suite, managed progressive Agent Preset, watchdog process boundaries, and native conversation-rendering ownership.
+summary: Implemented Electron shell, two-capability plugin bridge, checksum-pinned Routing Suite, managed progressive Agent Preset, watchdog boundaries, full-height macOS surfaces, and an inline native-status Orb.
 kind: architecture
 status: canonical
 content_stage: implementation-backed
@@ -23,7 +23,7 @@ tags: [architecture, electron]
 
 # System Architecture
 
-The implemented Electron main process owns BrowserWindow security policy, close behavior, local Harness lifecycle, and the narrow preload bridge. Harness runs as a child through Electron's embedded Node runtime with `DSH_HOME` at `<userData>/dsh-home`. The official-format plugin augments settings, diagnostics, theme, and desktop chrome without replacing Harness sessions, Markdown rendering, thinking/status UI, or question protocols; its visible controls reuse the official Harness UI primitives and locale service. The detached Node-mode watchdog observes the desktop process over inherited OS IPC and only restarts after abnormal disconnect.
+The implemented Electron main process owns BrowserWindow security policy, close behavior, local Harness lifecycle, and the narrow preload bridge. Harness runs as a child through Electron's embedded Node runtime with `DSH_HOME` at `<userData>/dsh-home`. The official-format plugin augments settings, diagnostics, theme, desktop chrome, and the native running-status row without replacing Harness sessions, Markdown rendering, status semantics, elapsed-time ownership, or question protocols; its visible controls reuse the official Harness UI primitives and locale service. The detached Node-mode watchdog observes the desktop process over inherited OS IPC and only restarts after abnormal disconnect.
 
 The host creates an idempotent, app-owned Web profile manifest containing the two official Web bundles plus `deepseek-harness-desktop-plugin`. Anchored Standard is not a Web profile bundle: the complete pinned preset is packaged as an extra resource and atomically synchronized to `<DSH_HOME>/.agent-presets/anchored-standard` on Harness startup. A versioned ownership marker and SHA-256 digest allow safe upgrades only when the installed copy is still app-owned and unmodified. An unknown or edited same-name directory is preserved and publishes `anchored-preset-conflict`; an invalid packaged source publishes `anchored-preset-unavailable` and disables only the optional preset. Standard remains available in both cases.
 
@@ -71,7 +71,9 @@ BrowserWindow web contents
    └─ `shell.overlay` (`position: absolute; inset: 0; z-index: 20`)
 ```
 
-`shell.overlay` is a root-level modal/overlay layer, not a child of the chat flow. A fixed-position child placed there bypasses the Think row's clipping and native sweep/mask, so the desktop plugin must not register a conversation visual in that slot, hide a native polite status, or mount a fixed thinking indicator. Harness keeps the native Think disclosure, running status, animation, scrolling, clipping, and accessibility semantics in one component tree. The desktop plugin now registers only the General settings row and injects CSS for chrome/layout transitions; esbuild emits one offline `client.js` with only Harness-provided React and UI primitives external.
+`shell.overlay` is a root-level modal/overlay layer, not a child of the chat flow. A fixed-position child placed there bypasses the Think row's clipping and native mask, so the desktop plugin never paints a fixed conversation visual or hides the native polite status. Its second slot registration is only a React lifecycle seat: the returned standard portal object targets the current direct native status row. That row remains Harness-owned and receives one non-interactive 20-pixel `ThinkingOrb` host with `position: relative`, `z-index: 1`, and `order: -1`; completion, replacement, navigation, or disposal removes it. The exact rc.6 conversation patch exposes Harness's own clock from `0s` and removes only the label shimmer. Streamed prose, reasoning, Markdown, token ordering, scrolling, clipping, and live-region semantics stay inside the official component tree.
+
+On macOS, `html`, `body`, the renderer root, sidebar surface, and main surface retain full-window geometry. The exact rc.6 sidebar patch moves only its inner content below the native traffic lights: expanded mode computes `46px` top padding and collapsed mode `58px`. Windows and Linux receive neither rule. Esbuild emits one offline `client.js`; React and Harness UI primitives remain renderer-provided, while `thinking-orbs@0.3.1` is bundled with its MIT notice.
 
 ## Related Documents
 

@@ -9,12 +9,6 @@
   --dsh-desktop-titlebar-height: 40px;
 }
 
-/* Keep every Harness route below the native macOS traffic lights. */
-:root[data-dsh-desktop-platform="macos"] body {
-  box-sizing: border-box;
-  padding-top: 40px;
-}
-
 :root[data-dsh-desktop-platform="macos"] [data-dsh-desktop-breadcrumb],
 :root[data-dsh-desktop-platform="macos"] header [aria-label*="DeepSeek" i],
 :root[data-dsh-desktop-platform="macos"] header [data-dsh-desktop-title] {
@@ -25,6 +19,26 @@
 :root[data-dsh-desktop-platform] [data-dsh-desktop-breadcrumb] {
   background: color-mix(in srgb, Canvas 78%, transparent);
   backdrop-filter: blur(14px) saturate(1.08);
+}
+
+[data-dsh-desktop-thinking-inline] {
+  position: relative;
+  z-index: 1;
+  order: -1;
+  display: inline-flex;
+  flex: 0 0 20px;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  margin-right: 8px;
+  color: var(--dsw-alias-label-secondary, CanvasText);
+  -webkit-text-fill-color: initial;
+  pointer-events: none;
+}
+
+[data-dsh-desktop-thinking-inline] canvas {
+  display: block;
 }
 
 [data-dsh-desktop-settings] {

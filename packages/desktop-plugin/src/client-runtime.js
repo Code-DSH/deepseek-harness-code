@@ -1,4 +1,9 @@
 const React = require("react");
+const { ThinkingOrb } = require("thinking-orbs");
+const {
+  findRunningStatus,
+  installThinkingStatus,
+} = require("./thinking-status.js");
 const {
   Button,
   IconChevronDownOutline14,
@@ -6,6 +11,22 @@ const {
 } = require("@deepseek-ai/dsh-client-ui-primitives");
 let activeDesktopInstallation;
 const DESKTOP_LOCALE_NAMESPACE = "settings.desktop";
+const THINKING_ORB_PROPS = Object.freeze({
+  state: "working",
+  size: 20,
+  speed: 2,
+});
+const REACT_PORTAL_TYPE = Symbol.for("react.portal");
+
+function createInlinePortal(children, container) {
+  return {
+    $$typeof: REACT_PORTAL_TYPE,
+    key: null,
+    children,
+    containerInfo: container,
+    implementation: null,
+  };
+}
 const DESKTOP_LOCALES = {
   zh: {
     "runtime.title": "桌面运行状态",
@@ -362,6 +383,34 @@ function DesktopSettingsRow({ t }) {
   );
 }
 
+function InlineThinkingStatus() {
+  const [anchor, setAnchor] = React.useState(null);
+
+  React.useEffect(() => {
+    try {
+      return installThinkingStatus(document, window, setAnchor);
+    } catch {
+      return undefined;
+    }
+  }, []);
+
+  if (!anchor?.isConnected) return null;
+  return createInlinePortal(
+    React.createElement(
+      "span",
+      {
+        "data-dsh-desktop-thinking-inline": "",
+        "aria-hidden": "true",
+      },
+      React.createElement(ThinkingOrb, {
+        ...THINKING_ORB_PROPS,
+        "aria-hidden": "true",
+      }),
+    ),
+    anchor,
+  );
+}
+
 function apply(ctx) {
   if (!bridgeOf(window)) return () => {};
   if (activeDesktopInstallation) {
@@ -383,10 +432,21 @@ function apply(ctx) {
       DesktopSettingsRow,
     ),
   );
+  const disposeThinkingSlot = ctx.slots.inject("shell.overlay", () =>
+    ctx.slots.register(
+      {
+        name: "shell.overlay",
+        id: "deepseek-harness-desktop-inline-thinking-status",
+        order: 100,
+      },
+      InlineThinkingStatus,
+    ),
+  );
   const installation = {
     references: 0,
     released: false,
     disposeSettingsSlot,
+    disposeThinkingSlot,
     disposeLocale,
     disposeTransitions,
   };
@@ -403,6 +463,8 @@ function acquireInstallation(installation) {
     installation.references -= 1;
     if (installation.references > 0) return;
     installation.released = true;
+    if (typeof installation.disposeThinkingSlot === "function")
+      installation.disposeThinkingSlot();
     if (typeof installation.disposeSettingsSlot === "function")
       installation.disposeSettingsSlot();
     if (typeof installation.disposeLocale === "function")
@@ -419,6 +481,10 @@ function acquireInstallation(installation) {
 exports.inject = ["slots", "locale"];
 exports.apply = apply;
 exports.DesktopSettingsRow = DesktopSettingsRow;
+exports.InlineThinkingStatus = InlineThinkingStatus;
 exports.DESKTOP_LOCALES = DESKTOP_LOCALES;
+exports.THINKING_ORB_PROPS = THINKING_ORB_PROPS;
 exports.createDesktopSettingsModel = createDesktopSettingsModel;
 exports.installTransitions = installTransitions;
+exports.findRunningStatus = findRunningStatus;
+exports.installThinkingStatus = installThinkingStatus;

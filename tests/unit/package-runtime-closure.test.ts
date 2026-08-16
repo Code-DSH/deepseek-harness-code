@@ -54,21 +54,25 @@ describe("packaged runtime dependency closure", () => {
     expect(config).toContain('noExternal: ["zod"]');
   });
 
-  it("ships no custom conversation paint runtime", async () => {
+  it("bundles only the inline thinking status enhancement", async () => {
     const manifest = JSON.parse(
       await readFile(join(pluginRoot, "package.json"), "utf8"),
     ) as {
       dependencies: Record<string, string>;
     };
     const client = await readFile(join(pluginRoot, "client.js"), "utf8");
-    expect(manifest.dependencies["thinking-orbs"]).toBeUndefined();
+    expect(manifest.dependencies["thinking-orbs"]).toBe("0.3.1");
+    expect(client).toContain("ThinkingOrb");
+    expect(client).toContain("data-dsh-desktop-thinking-inline");
     for (const retiredEffect of [
-      "ThinkingOrb",
       "ConversationEffectsOverlay",
       "data-dsh-desktop-thinking-source",
       "data-dsh-desktop-thinking-orb",
+      "data-dsh-stream-overlay",
     ]) {
       expect(client).not.toContain(retiredEffect);
     }
+    expect(client).not.toContain('require("thinking-orbs")');
+    expect(client).not.toContain('require("./thinking-status.js")');
   });
 });
