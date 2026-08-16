@@ -4,16 +4,20 @@ title: macOS Traffic-Light Equal-Inset Design
 summary: Keep native macOS traffic lights in the underlay title bar with equal 16-point left and top insets, without adding a Web title bar.
 kind: architecture
 status: canonical
-content_stage: goal-only
+content_stage: implementation-backed
 scope: [desktop, macos, window-chrome]
 triggers: [traffic lights, title bar, macOS window controls, hiddenInset]
-read_when: [changing macOS BrowserWindow chrome or validating native window-control alignment]
+read_when:
+  [
+    changing macOS BrowserWindow chrome or validating native window-control alignment,
+  ]
 skip_when: [changing only Harness Web content or non-macOS window chrome]
 priority: must
 freshness_class: project
 last_verified: 2026-08-16T12:20:00+08:00
 owners: [primary-agent]
-source_of_truth: [user-approved geometry, ../../../apps/desktop/src/host-config.ts]
+source_of_truth:
+  [user-approved geometry, ../../../apps/desktop/src/host-config.ts]
 related:
   prerequisites: [./2026-08-16-deepseek-harness-code-design.md]
   next: [../plans/2026-08-16-macos-traffic-light-inset.md]
@@ -68,3 +72,4 @@ The project supports macOS 12 through 27. Automated tests validate the platform-
 ## Change log
 
 - `2026-08-16T12:20:00+08:00` — Recorded the user-approved equal 16-point native traffic-light inset and the no-Web-title-bar constraint.
+- `2026-08-16` — Implemented the 16-point equal inset in the BrowserWindow constructor configuration and added an explicit equality regression assertion.

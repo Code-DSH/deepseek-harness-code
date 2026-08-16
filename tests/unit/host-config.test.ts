@@ -68,12 +68,16 @@ describe("Electron host configuration", () => {
     );
   });
 
-  it("extends macOS Web content under a title bar that only keeps traffic lights", () => {
-    expect(createWindowChromeOptions("darwin")).toMatchObject({
+  it("equally insets native macOS traffic lights without adding a Web title bar", () => {
+    const macChrome = createWindowChromeOptions("darwin");
+    expect(macChrome).toMatchObject({
       title: "",
       titleBarStyle: "hiddenInset",
-      trafficLightPosition: { x: 16, y: 6 },
+      trafficLightPosition: { x: 16, y: 16 },
     });
+    expect(macChrome.trafficLightPosition?.x).toBe(
+      macChrome.trafficLightPosition?.y,
+    );
     expect(createWindowChromeOptions("win32")).toMatchObject({
       title: "DeepSeek Harness Code",
       titleBarStyle: "default",

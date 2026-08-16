@@ -11,7 +11,7 @@ read_when: [reviewing release readiness or reproducing validation]
 skip_when: [isolated source edits before release]
 priority: must
 freshness_class: project
-last_verified: 2026-08-16T11:18:00+08:00
+last_verified: 2026-08-16T12:31:00+08:00
 owners: [primary-agent]
 source_of_truth: [../../apps, ../../packages, ../../tests, ../../release]
 related:
@@ -27,9 +27,9 @@ tags: [acceptance, release, evidence]
 
 - DMG: `release/DeepSeek-Harness-Code-0.2.0-mac-universal.dmg`
 - App: `release/mac-universal/DeepSeek Harness Code.app`
-- Final SHA-256: pending the current rebuild.
-- Size: pending the current rebuild.
-- Signature, quarantine, and architecture verification: pending the current rebuild; the previous candidate passed all three gates but is not the release artifact after the latest fixes.
+- Final SHA-256: `101c3a317e8ba63d07c5d5fb66661473288901730b64bd00e25f24a4c2baa38b`.
+- Size: 291,050,531 bytes (278 MiB).
+- Signature, quarantine, and architecture verification: passed for the current Universal rebuild. The app has no quarantine attribute, and its main executable, Electron framework, helpers, and shared libraries contain both `x86_64` and `arm64` slices; architecture-specific optional modules are bundled as paired native variants.
 
 ## Root-cause and repair evidence
 
@@ -43,19 +43,20 @@ tags: [acceptance, release, evidence]
 8. The generic menu-bar glyph was replaced by a transparent template image generated from the official mark; Windows and Linux use the full Code product icon. The official mark in the main application icon was moved down toward the Code wordmark.
 9. The General-settings controls formerly used raw HTML select, checkbox, and buttons. They now use the official `@deepseek-ai/dsh-client-ui-primitives` Button/Menu/Icon components. A live layout audit found zero raw selects/checkboxes, matching trigger/menu right edges, and an ellipsis-safe label. The plugin follows the official locale service in both Chinese and English.
 10. The startup surface formerly used gradients and a frosted card. It now renders only a system light/dark pure background and one centered 24 px monochrome spinner. `preflight:runtime` resolves every production dependency, verifies 11 runtime artifacts, and pins five critical runtime packages before any builder command runs.
+11. The macOS traffic-light group previously used `{ x: 16, y: 6 }`, placing the red button closer to the top edge than the left edge. The native BrowserWindow position is now `{ x: 16, y: 16 }`; no Web title bar, spacer, or renderer offset was added.
 
 ## Automated verification
 
-| Gate              | Result                                                                        |
-| ----------------- | ----------------------------------------------------------------------------- |
-| Unit suite        | 21 files / 76 tests passed                                                    |
-| Official plugins  | 3 files / 15 tests passed, including pinned rc.6 boot and strict client apply |
-| Package contract  | 1 file / 4 tests passed                                                       |
-| TypeScript        | `tsc --noEmit` passed                                                         |
-| Static gates      | ESLint, Prettier, 22 documentation links, and security contract passed        |
-| Dependency audit  | Production audit reported no known vulnerabilities at high severity or above  |
-| Runtime preflight | 11 artifacts, 32 production dependencies, and 5 critical versions passed      |
-| macOS package     | Current rebuild pending; prior candidate passed the complete inspection       |
+| Gate              | Result                                                                                |
+| ----------------- | ------------------------------------------------------------------------------------- |
+| Unit suite        | 21 files / 76 tests passed                                                            |
+| Official plugins  | 3 files / 15 tests passed, including pinned rc.6 boot and strict client apply         |
+| Package contract  | 1 file / 4 tests passed                                                               |
+| TypeScript        | `tsc --noEmit` passed                                                                 |
+| Static gates      | ESLint, Prettier, 23 documentation links, and security contract passed                |
+| Dependency audit  | Production audit reported no known vulnerabilities at high severity or above          |
+| Runtime preflight | 11 artifacts, 32 production dependencies, and 5 critical versions passed              |
+| macOS package     | Current 278 MiB Universal DMG passed runtime, quarantine, and architecture inspection |
 
 ## Real renderer and performance evidence
 
@@ -80,7 +81,7 @@ The user-supplied community claim is experimental and was not treated as a verif
 
 ## External limits
 
-- Computer Use reported that the Mac is locked and could not auto-unlock. The same native renderer interactions were completed through the app's Chromium debugging endpoint, but native traffic-light and menu-bar clicks remain an external visual gate.
+- The equal 16-point traffic-light contract is verified in source, test, and the packaged main process. Native visual inspection on macOS 15 and macOS 26 remains an external gate; the local packaging host is macOS 27 and cannot substitute for those runs.
 - The key pasted in chat was not used, stored, printed, or forwarded. It must be revoked. A 45-minute live-provider soak is intentionally deferred until a replacement is entered by the user through official Harness settings.
 - The requested benchmark-score/“We need” outcome is not represented as a completed or measurable acceptance claim.
 

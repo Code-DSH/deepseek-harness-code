@@ -82,9 +82,9 @@ export function createWindowChromeOptions(
     return {
       title: "",
       titleBarStyle: "hiddenInset",
-      // Keep the native controls above the official sidebar wordmark, whose
-      // pinned rc.6 layout begins at y=24. This preserves the wordmark position.
-      trafficLightPosition: { x: 16, y: 6 },
+      // Keep the red traffic light equally inset from the window's left and top
+      // edges without adding a Web title bar or moving Harness content.
+      trafficLightPosition: { x: 16, y: 16 },
     };
   }
   return {
