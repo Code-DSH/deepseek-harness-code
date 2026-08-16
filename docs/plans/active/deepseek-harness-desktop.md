@@ -1,17 +1,17 @@
 ---
 id: plan.deepseek-harness-desktop
 title: DeepSeek Harness Desktop Implementation
-summary: Active, resumable execution plan for the desktop release and progressive Anchored Standard preset integration.
+summary: Active, resumable execution plan for the desktop release, Routing Suite and bundled Skills integration, and progressive Anchored Standard preset.
 kind: plan
 status: canonical
 content_stage: partial-implementation
-scope: [repository, desktop, watchdog, plugin, packaging, validation]
+scope: [repository, desktop, watchdog, plugin, routing-suite, skills, packaging, validation]
 triggers: [resume, milestone, implementation plan]
 read_when: [starting or reviewing any milestone]
 skip_when: [isolated documentation typo]
 priority: must
 freshness_class: project
-last_verified: 2026-08-16T14:26:00+08:00
+last_verified: 2026-08-16T19:17:07+08:00
 owners: [primary-agent]
 source_of_truth: [../../../apps, ../../../packages, ../../../tests]
 related:
@@ -33,10 +33,10 @@ Implement and verify the confirmed intent. Do not add auto-update, notarization,
 
 ## Read Set
 
-- [Project intent](../../project/intent.md) — approved scope and acceptance; verified 2026-08-15.
-- [Architecture overview](../../architecture/overview.md) — process/trust boundaries; verified 2026-08-15.
-- [Upstream baseline](../../knowledge/upstream-baseline.md) — pinned versions and official protocol; verified 2026-08-15.
-- [Testing](../../engineering/testing.md) — verification layers; verified 2026-08-15.
+- [Project intent](../../project/intent.md) — approved scope and acceptance; verified 2026-08-16.
+- [Architecture overview](../../architecture/overview.md) — process/trust boundaries including Routing Suite and Skills installers; verified 2026-08-16.
+- [Upstream baseline](../../knowledge/upstream-baseline.md) — pinned versions, routing archive digests, official protocol; verified 2026-08-16.
+- [Testing](../../engineering/testing.md) — verification layers and the currently partial Playwright gate; verified 2026-08-16.
 - [Anchored Standard](../../knowledge/anchored-standard.md) — pinned source, progressive state contract, and experiment boundary; verified 2026-08-16.
 
 ## Milestones
@@ -44,7 +44,7 @@ Implement and verify the confirmed intent. Do not add auto-update, notarization,
 1. **Bootstrap and baseline:** workspace, lockfile, official Harness launch, minimal docs, initial tests.
 2. **Desktop host:** secure window/preload, lifecycle controller, close behavior, menu, and navigation policy.
 3. **Watchdog and diagnostics:** IPC disconnect recovery, circuit breaker, health state, rotating redacted logs.
-4. **Official plugin and Agent Preset:** desktop Web bundle, close settings, transitions, official question compatibility, and managed progressive `anchored-standard` preset.
+4. **Official plugin, presets, Routing Suite, and Skills:** desktop Web bundle, close settings, transitions, official question compatibility, managed progressive `anchored-standard` preset, auto-assembled dsh-routing-suite, and bundled Superpowers skills.
 5. **Packaging:** icon, universal app/DMG, ad-hoc signing, targeted quarantine guidance.
 6. **Acceptance:** unit/integration/fault/security/package tests, Terra reviews, Computer Use, live soak if credentials exist.
 
@@ -54,6 +54,7 @@ Implement and verify the confirmed intent. Do not add auto-update, notarization,
 - Live V4 Flash acceptance depends on credentials entered by the user.
 - Harness RC behavior is version-pinned; upgrades require official-source revalidation.
 - A user-authored same-name preset is never overwritten; it produces a bounded conflict notice while Standard remains available.
+- The routing-suite daily cache refresh follows `dsh-router-standard/main` for preset content; replace that mutable path with reviewed immutable pins before a public release.
 - V4 Pro quality gains require a future credentialed paired experiment and are not a package acceptance gate.
 
 ## Test and Acceptance
@@ -81,6 +82,10 @@ Follow [testing strategy](../../engineering/testing.md). Every runtime change st
 - 2026-08-16 — Added strict optional-preset isolation so corrupt packaged resources publish an unavailable notice without blocking Standard, then completed 84 unit, 108 vendored, 20 plugin/integration, 4 package-contract, and 1 Playwright tests. The real Harness test uses a loopback mock provider to capture the serialized two-tool first request and five-tool second request.
 - 2026-08-16 — Rebuilt the 271 MiB Universal DMG and verified the pinned preset provenance, dependency resolution, signature, quarantine state, and all 49 Mach-O layouts. Final SHA-256 is `b651c04dfeb5d21de9a8d5dbb10e9f04ab3c07cc789566eb89bcd587ee92c4c9`.
 - 2026-08-16 — Integrated the progressive preset work with local `main`, including the previously merged streaming dissolve and active ThinkingOrb. The combined source gate passed 97 unit/state tests, 108 vendored preset tests, 22 plugin/real-Harness tests, 4 package-contract tests, 5 Chromium tests, typecheck, ESLint, Prettier, 31-file link validation, and the static security contract before the clean release rebuild.
+- 2026-08-16 — Bundled and auto-loaded the dsh-routing-suite snapshot: offline versions/hashes, idempotent profile assembly, managed router presets, mode-boost patch insertion, and a bounded 24-hour user-cache refresh with fail-open resolution.
+- 2026-08-16 — Stabilized desktop rendering by removing the registered stream-output dissolve from the client and bundled the Superpowers 6.2.0 skill collection with per-skill ownership markers and conflict preservation.
+- 2026-08-16 — Localized the three managed Agent Presets with short bilingual Chinese/English display copy and made the offline snapshot generator, startup installer, and cache refresh normalize to the same copy.
+- 2026-08-16 — Re-ran `pnpm test` on the current branch: 27 unit files / 103 tests, 108 vendored preset tests, 23 plugin/real-Harness tests, and 4 package-contract tests pass; Playwright passes 2 of 5 because three legacy stream-output-animation tests still reference the removed `installStreamOutputEffects` hook.
 
 ## Discoveries and Deviations
 

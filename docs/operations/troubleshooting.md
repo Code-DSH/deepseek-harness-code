@@ -8,4 +8,6 @@ If automatic desktop recovery reaches three abnormal exits in five minutes, the 
 
 Harness rc.6 does not expose a working `/api/health` endpoint. A 404 there is expected; desktop readiness is the live child plus an HTTP 2xx response from the loopback Web root.
 
+Routing Suite and bundled Skills installation is optional and fail-open. A `routing-suite-unavailable` or `routing-suite-conflict` notice means Standard Harness startup continued without replacing user-owned presets; inspect the log lines prefixed `[DeepSeek Harness Code]`. Background routing refresh failures are silent and leave the bundled snapshot or an existing complete cache in place.
+
 The packaged app intentionally does not use ASAR. Re-enabling ASAR without also changing rc.6 package discovery can produce an empty `window.__DSH_BOOT__.entries` list and a blank or incomplete UI.

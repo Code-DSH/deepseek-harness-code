@@ -1,17 +1,17 @@
 ---
 id: architecture.overview
 title: System Architecture
-summary: Implemented Electron shell, two-capability plugin bridge, managed progressive Agent Preset, and watchdog process boundaries.
+summary: Implemented Electron shell, two-capability plugin bridge, managed Routing Suite and Skills, progressive Agent Preset, native-status Orb, and watchdog boundaries.
 kind: architecture
 status: canonical
 content_stage: implementation-backed
-scope: [desktop, plugin, watchdog]
+scope: [desktop, plugin, routing-suite, skills, watchdog]
 triggers: [architecture, IPC, security boundary]
 read_when: [changing process ownership or public interfaces]
 skip_when: [documentation-only wording fixes]
 priority: must
 freshness_class: project
-last_verified: 2026-08-16T14:25:00+08:00
+last_verified: 2026-08-16T19:17:07+08:00
 owners: [project]
 source_of_truth: [../../apps, ../../packages]
 related:
@@ -27,6 +27,8 @@ The implemented Electron main process owns BrowserWindow security policy, close 
 
 The host creates an idempotent, app-owned Web profile manifest containing the two official Web bundles plus `deepseek-harness-desktop-plugin`. Anchored Standard is not a Web profile bundle: the complete pinned preset is packaged as an extra resource and atomically synchronized to `<DSH_HOME>/.agent-presets/anchored-standard` on Harness startup. A versioned ownership marker and SHA-256 digest allow safe upgrades only when the installed copy is still app-owned and unmodified. An unknown or edited same-name directory is preserved and publishes `anchored-preset-conflict`; an invalid packaged source publishes `anchored-preset-unavailable` and disables only the optional preset. Standard remains available in both cases.
 
+The bundled dsh-routing-suite snapshot is assembled into the same app-owned profile before Harness starts: the `@dsh-external/dsh-super-injector` directory is symlinked and appended after the host bundle, `@dsh-external/dsh-mode-boost` is linked and added to `cordis.patch.yml`, and `router-standard`/`router-spec` are installed as managed Agent Presets with the same ownership-marker and digest boundary. A user-level `routing-suite-cache` is refreshed at most once every 24 hours in the background and is preferred over the bundled snapshot when complete; refresh failures are silent and never wait on the network. The Superpowers 6.2.0 package is similarly installed into `<DSH_HOME>/skills` with per-skill ownership markers, preserving same-named user directories. Optional-resource failures publish bounded notices while Standard startup continues.
+
 Within a selected Anchored Standard session, `system-prompt/assemble` exposes exactly `bash` and `str_replace_editor` before a durable tool call or assistant message exists. `agent/pre-step` filters only automatic `agent-instructions` and `skill-catalog` messages during that bootstrap phase. Promotion retains the Minimal pair plus `dev_tool_search`, `skill_search`, and `skill_load`; other tools appear only after an explicit `dev_tool_search` unlock recorded in durable session events. Compaction starts a new epoch with a controlled work set, and subagents start resident. Missing phase-required tools fail preset assembly instead of returning the full catalog.
 
 ## Trust Boundaries
@@ -35,6 +37,7 @@ Within a selected Anchored Standard session, `system-prompt/assemble` exposes ex
 - Preload: exactly two allow-listed capability groups and validated payloads.
 - Main: process and filesystem authority limited to app-owned data and fixed actions.
 - Harness: loopback-only HTTP server and official plugin host.
+- Routing Suite: bundled offline snapshot plus bounded user-cache refresh; optional failure must never block Standard startup or overwrite user-owned presets.
 - Watchdog: can relaunch only the validated fixed application executable/argument vector; exposes no network listener; removes `ELECTRON_RUN_AS_NODE` before relaunch.
 
 ## Implemented Host Contract
@@ -46,6 +49,7 @@ Within a selected Anchored Standard session, `system-prompt/assemble` exposes ex
 - Startup diagnostics are bounded, redacted, and detached once the child is ready.
 - The detached Watchdog uses inherited OS IPC only. State, marker, and 10 MB × five-file logs are constrained to `<userData>/watchdog`; normal quit awaits an acknowledgement before disconnect.
 - The package intentionally uses an unpacked application tree (`asar: false`). With rc.6, package discovery through `createRequire` returned an empty client graph inside ASAR; the unpacked tree restored all 39 official/plugin client entries without exposing Node to the renderer.
+- Packaged extra resources include `routing-suite/` and `superpowers-skills/`. Both are installed only into the app-owned `DSH_HOME` and are never extracted or executed from inside the application bundle.
 
 ## Public Bridge
 
@@ -53,13 +57,12 @@ The public types are defined in `apps/desktop/src/shared/contracts.ts`. `window.
 
 ## Conversation Effects Boundary
 
-The desktop plugin registers `ConversationEffectsOverlay` through the official `shell.overlay` slot. Harness remains the source of truth for every message, reasoning disclosure, status live region, and layout box.
+The desktop plugin registers `ConversationEffectsOverlay` through the official `shell.overlay` slot. Harness remains the source of truth for every message, reasoning disclosure, status live region, and layout box. The current client has exactly one conversation effect: a non-interactive `ThinkingOrb` rendered at the measured native running-status anchor.
 
-- `stream-output-model.js` accepts only newly appended grapheme clusters inside the current streaming assistant step. It validates the append boundary against segmentation of the complete next string, so combining marks, emoji modifiers, and ZWJ sequences cannot be detached from the preceding grapheme. It excludes user content, code, tools, terminals, controls, status labels, and hydrated history.
-- `stream-output-controller.js` leaves React-owned text nodes untouched. Newly discovered streaming roots are baselined before descendant mutations can animate, preventing hydration and navigation replay. It masks only accepted appended ranges with CSS Custom Highlight, draws accessibility-hidden fixed duplicates with sampled font metrics and source color, and removes all paint resources on completion or cancellation. Missing Highlight support, reduced motion, and overflow beyond the 120-glyph live budget all leave canonical text visible.
-- `thinking-status.js` recognizes only the direct polite status below `data-chat-flow`, without matching English copy. The overlay renders `ThinkingOrb` with `breathing`, 20-pixel, 2.0-speed props; a layout effect hides the native paint only after the Orb host commits. The original 26-pixel box and live-region semantics remain, and completed DeepSeek `Think` output is not changed.
-- The controllers use observers and bounded animation frames, not polling. At most 120 copied glyphs and 24 particle-bearing glyphs (72 particle nodes) can be live; overload degrades to immediate canonical paint. They neither log nor persist response content. The five-second post-completion Chromium gate records no additional frames and no retained overlay, highlight, Orb, or status marker.
-- esbuild creates one offline `client.js`: `thinking-orbs` and local controllers are inlined, while only Harness-provided React and UI primitives remain external. Runtime closure verifies the generated imports and packages the plugin-specific MIT notices.
+- `thinking-status.js` recognizes only the direct polite status below `data-chat-flow`, without matching English copy. The overlay renders `ThinkingOrb` with `breathing`, 20-pixel, 2.0-speed props; a layout effect hides the native status paint only after the Orb host commits. The native live region and its completed DeepSeek `Think` output are not changed.
+- The detector uses a `MutationObserver`, `ResizeObserver`, scroll/resize/popstate listeners, and bounded `requestAnimationFrame` measurements. On completion or disposal it removes the Orb host, data marker, and all listeners; nothing is logged or persisted.
+- The earlier stream-output dissolve (grapheme copies, CSS Highlight masks, and particle bursts) is no longer registered by `client.js`. Its source and tests remain in the repository only as historical artifacts until the browser test layer is repaired.
+- esbuild creates one offline `client.js`: `thinking-orbs` and `thinking-status.js` are inlined, while only Harness-provided React and UI primitives remain external. Runtime closure verifies the generated imports and packages the plugin-specific MIT notices.
 
 ## Related Documents
 
@@ -69,4 +72,4 @@ The desktop plugin registers `ConversationEffectsOverlay` through the official `
 
 ## Validation
 
-The combined release gate passes 25 unit/state files / 97 tests, 108 vendored preset tests, 3 plugin/real-Harness files / 22 tests, 1 package file / 4 tests, and 5 Chromium tests. It covers the progressive preset lifecycle, official rc.6 roster/session creation, stream-output grapheme boundaries, hydration baselines, bounded burst behavior, paint-only geometry preservation, real ReactDOM/ThinkingOrb commit and cleanup, reduced-motion quiescence, runtime closure, and package structure. A prior real Electron run separately proved the grouped preload bridge, Standard workspace creation after compaction-peer repair, editable IME-capable composer, permission-menu persistence, official localized Button/Menu settings, password-field paste, and its host-level idle probe. Artifact evidence is recorded in the [acceptance report](../engineering/acceptance-report.md).
+The source gate at this commit passes 27 unit/state files / 103 tests, 108 vendored preset tests, 3 plugin/real-Harness files / 23 tests, and 1 package file / 4 tests. It covers the progressive preset lifecycle, official rc.6 roster/session creation, Routing Suite assembly/idempotency/cache-refresh fail-open behavior, Superpowers conflict preservation, bilingual preset metadata, real ReactDOM/ThinkingOrb commit and cleanup, reduced-motion quiescence, runtime closure, and package structure. The Playwright layer currently passes 2 of 5 tests: three legacy stream-output-animation tests still target the removed `installStreamOutputEffects` hook and must be repaired before a full browser-gate claim. A prior real Electron run separately proved the grouped preload bridge, Standard workspace creation after compaction-peer repair, editable IME-capable composer, permission-menu persistence, official localized Button/Menu settings, password-field paste, and its host-level idle probe. Artifact evidence is recorded in the [acceptance report](../engineering/acceptance-report.md).

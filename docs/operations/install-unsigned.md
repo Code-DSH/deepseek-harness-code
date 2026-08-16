@@ -17,3 +17,7 @@ Files downloaded or transferred by another application can receive quarantine ag
 ## Bundled Superpowers skills
 
 On its first successful startup, the app installs Superpowers 6.2.0 into its own Harness home under `dsh-home/skills`. This is local and offline. A same-named directory without the app's ownership marker is treated as user-owned and is never overwritten.
+
+## Bundled Routing Suite
+
+The app also assembles the offline dsh-routing-suite snapshot into its own Harness profile and may download a daily routing cache update in the background. First launch works without network access and never waits for the refresh. The bundled snapshot or an existing complete cache remains available when the network is unavailable.

@@ -1,17 +1,17 @@
 ---
 id: project.intent
 title: DeepSeek Harness Code Intent
-summary: Confirmed scope and acceptance baseline for the desktop app and optional progressive Anchored Standard Agent Preset.
+summary: Confirmed scope and acceptance baseline for the desktop app, bundled DSH Routing Suite and Skills, and the optional progressive Anchored Standard Agent Preset.
 kind: product
 status: canonical
 content_stage: implementation-backed
-scope: [desktop, plugin, watchdog, packaging]
+scope: [desktop, plugin, routing-suite, skills, watchdog, packaging]
 triggers: [scope, acceptance, product intent]
 read_when: [starting or changing implementation]
 skip_when: [performing an isolated test with unchanged scope]
 priority: must
 freshness_class: project
-last_verified: 2026-08-16T13:06:11+08:00
+last_verified: 2026-08-16T19:17:07+08:00
 owners: [project]
 source_of_truth: [user-approved implementation plan]
 related:
@@ -40,6 +40,9 @@ Deliver an all-in-one, modernized DeepSeek Harness Code desktop distribution tha
 - Official question UI/protocol compatibility across macOS, Linux, and Windows Web environments.
 - System light/dark monochrome startup UI with one centered spinner, underlay title bar, real tray, page transitions without forced layout, official-component desktop settings integration, tests, operations guidance, and an accessible SVG system diagram.
 - Integrated desktop Web bundle plus the optional `anchored-standard` Agent Preset in every installer. Standard remains the official default.
+- Bundled offline DSH Routing Suite with the injector/mode-boost layers and `router-standard`/`router-spec` managed presets, assembled into the app-owned profile on startup without blocking Standard.
+- Bundled Superpowers 6.2.0 skill collection installed into the app-owned `DSH_HOME/skills` root while preserving user-authored skill directories.
+- Short bilingual Chinese/English display copy for `anchored-standard`, `router-standard`, and `router-spec`, including refreshed routing presets.
 - First-class official V4 Pro/Flash model selection and reasoning controls, with the literal `We need` intent trigger tracked as the next public-seam implementation requirement.
 - One packaged Harness toolchain covering Skills, tools, Goal, Plan, Workflow, Todo, Jobs, user questions/approval, and subagents.
 
@@ -62,6 +65,7 @@ Deliver an all-in-one, modernized DeepSeek Harness Code desktop distribution tha
 - No credential collection or logging by the desktop layer.
 - `anchored-standard` starts a new top-level session with exactly `bash` and `str_replace_editor`, promotes on the first durable tool call or assistant message, and then keeps only resident discovery plus explicitly unlocked tools.
 - Invalid preset configuration or missing required tools fails that selected preset; it never silently expands to Standard. Standard sessions stay operational.
+- The routing suite ships as an offline pinned snapshot plus a best-effort user cache refresh that is bounded to once per 24 hours, verifies archive digests it records, never blocks startup, and never overwrites user-owned presets or skills.
 
 ## Acceptance
 

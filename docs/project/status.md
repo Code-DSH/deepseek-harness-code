@@ -1,8 +1,8 @@
 # Project Status
 
-- Phase: all committed branches and the progressive Anchored Standard work are integrated in the isolated release candidate
-- Current milestone: complete the combined verification gates, clean Universal DMG rebuild, and data-preserving `/Applications` replacement
+- Phase: `feat/routing-suite` carries the committed Routing Suite, Superpowers Skills, and bilingual-preset source integration; the primary worktree is clean
+- Current milestone: finish browser-gate repair, clean Universal DMG rebuild, and data-preserving `/Applications` replacement
 - Repository: `https://github.com/Open-Less/deepseek-harness-code` (public)
-- Verified deliverables: bilingual evidence-backed product README, self-contained sandbox preload, repaired Standard dependency closure, two-capability desktop plugin, progressive optional Agent Preset with official rc.6 discovery/session creation and atomic conflict-safe installation, streaming-output dissolve, active ThinkingOrb, localized General settings, native Edit/paste shortcuts, monochrome startup spinner, equal 16-point macOS traffic-light inset, independent Watchdog, Code icon, and accessible system SVG
-- Artifact: `release/DeepSeek-Harness-Code-0.2.0-mac-universal.dmg`
-- External limits: native Windows/Linux visual gates remain; live-provider soak and paired V4 Pro capability validation remain blocked until a safe replacement credential is entered through official settings
+- Verified deliverables: bilingual evidence-backed product README, self-contained sandbox preload, repaired Standard dependency closure, two-capability desktop plugin, progressive optional Agent Preset with official rc.6 discovery/session creation and atomic conflict-safe installation, offline dsh-routing-suite auto-assembly with daily bounded cache refresh, bundled Superpowers 6.2.0 skills with conflict-safe installation, bilingual names/descriptions for all three managed presets, native-status ThinkingOrb, localized General settings, native Edit/paste shortcuts, monochrome startup spinner, equal 16-point macOS traffic-light inset, independent Watchdog, Code icon, and accessible system SVG
+- Artifact: `release/DeepSeek-Harness-Code-0.2.0-mac-universal.dmg` contains the Routing Suite and Superpowers resources but predates the 2026-08-16 bilingual-preset copy and current documentation; a clean rebuild is required before those facts can be claimed for the artifact
+- External limits: native Windows/Linux visual gates remain; live-provider soak and paired V4 Pro capability validation remain blocked until a safe replacement credential is entered through official settings; three legacy Playwright stream-animation tests still fail until their removed test hook is repaired

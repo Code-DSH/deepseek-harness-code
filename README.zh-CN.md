@@ -159,6 +159,8 @@ DeepSeek Harness Code 使用明确的生命周期控制覆盖这些已知失效�
 - **系统级外观**——跟随浅色/深色系统主题的启动页、平台标题栏处理、官方单色资产和减少动画支持。
 - **平滑导航**——可用时采用 View Transitions，否则使用低开销 CSS 回退完成路由提交转场。
 - **工作区韧性**——已验证 Standard 工作区切换和官方会话恢复。
+- **内置 Skills 基础**——启动时将 Superpowers 6.2.0 安装到应用自有的 `DSH_HOME/skills` 根目录；同名用户自建 Skill 目录绝不会被覆盖。
+- **本地化 Agent Preset**——`anchored-standard`、`router-standard`、`router-spec` 均提供简短的中英双语名称与描述，且不改变 Preset ID 或路由行为。
 - **安全的实验集成**——Anchored Standard 是独立的官方格式 Bundle；在固定的 Harness rc.6 API 上会安全回退到 Standard。
 
 ## 功能矩阵
@@ -169,6 +171,8 @@ DeepSeek Harness Code 使用明确的生命周期控制覆盖这些已知失效�
 | Harness 运行时 | 固定 `@deepseek-ai/dsh` rc.6、仅回环地址 Web 服务、应用自有 Profile   |
 | V4 模型        | 官方 V4 Pro/Flash 目录与 `off` / `high` / `max` 推理控制              |
 | 一体化能力栈   | Skills、工具、Goal、Plan、Workflow、Todo、Jobs、提问、审批与 Subagent |
+| 内置 Skills     | Superpowers 6.2.0 合集安装进应用自有 Harness 目录，不覆盖用户 Skills |
+| Agent Preset    | Standard 保持默认；可选 `anchored-standard` 与受管 `router-standard`/`router-spec` |
 | 恢复           | 健康探测、进程重启、渲染器替换、端口重试、会话恢复                    |
 | Watchdog       | 独立 IPC 进程、有界重启策略、持久化崩溃循环标记                       |
 | 插件           | 桌面设置/转场 Bundle、Anchored Standard Bundle 与自动装载的路由套件   |
@@ -181,6 +185,7 @@ DeepSeek Harness Code 使用明确的生命周期控制覆盖这些已知失效�
 DeepSeek Harness Code 内置社区 [dsh-routing-suite](https://github.com/yjh051108/dsh-routing-suite)，并在每次启动时自动装载：
 
 - **离线快照** —— 安装包内置套件三个组件的固定版本快照（@dsh-external/dsh-super-injector Bundle 层、@dsh-external/dsh-mode-boost 宿主增强、router-standard 与 router-spec 智能体预设），存放在应用资源目录中。
+- **固定基线** —— 内置快照记录 injector `0.3.3`、mode-boost `0.1.0`、路由预设 `0.2.0`（commit `eff787e95132d6c7104214542104a84d656b497e`），SHA-256 摘要保存在 `build/routing-suite/versions.json`。
 - **自动装配** —— 启动时桌面宿主将套件 Bundle 注册进应用自有 Web Profile，链接到 Profile 的 node_modules，把 mode-boost 写入 Profile 补丁层，并将路由预设安装为受管智能体预设。首次启动无需联网下载。
 - **自动更新** —— 后台每天最多一次下载路由预设 main 分支的最新版及固定版本的发布包，校验后原子替换用户级缓存；后续启动优先使用刷新后的缓存，因此更新无需任何手动操作。
 - **容错** —— 任何刷新或装配失败都静默且不影响启动；启动从不等待网络，内置快照始终作为兜底。

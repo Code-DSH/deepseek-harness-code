@@ -4,6 +4,8 @@
 
 The host shows the packaged local startup page, allocates a loopback port, starts `dsh web`, and loads Harness only after the child is alive and the verified Web root responds successfully. Each request has a five-second timeout and readiness has a 30-second outer window. A bind race is retried at most three times and only explicit `EADDRINUSE` evidence is retryable. In Harness 0.1.0-rc.6, `/api/health` and `/api/` return 404, so neither is used.
 
+Before Harness starts, the host installs the managed optional resources into the app-owned `DSH_HOME`: the Anchored Standard preset, Superpowers skills, and the assembled dsh-routing-suite layers/presets. The routing-suite background cache refresh is fired without blocking startup and the bundled snapshot remains the fallback when the cache is incomplete. Any optional-resource failure is bounded to a diagnostic notice; Standard Harness startup continues.
+
 ## Recovery
 
 The implemented host probes every five seconds without overlapping probes. Three consecutive failed probes or a current-child exit restarts Harness, serializes concurrent recovery, retires the old child first, and reloads the newly allocated origin. Renderer failure rebuilds the window without terminating Harness. An unresponsive renderer must remain unresponsive for 30 seconds before reload; a responsive event cancels it. The implemented Watchdog restarts an abnormally disconnected desktop process after one second for the first crash and two seconds for the second. The third abnormal disconnect within five minutes writes the crash-loop marker and does not perform the otherwise theoretical four-second restart.
