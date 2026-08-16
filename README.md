@@ -131,18 +131,27 @@ These are implemented controls, not a synthetic “X% less memory” claim. A re
 
 ## Feature matrix
 
-| Area             | Included                                                                              |
-| ---------------- | ------------------------------------------------------------------------------------- |
-| Desktop host     | Hardened Electron window, startup page, native menus, tray, close preferences         |
-| Harness runtime  | Pinned `@deepseek-ai/dsh` rc.6, loopback-only Web service, app-owned profile          |
-| V4 models        | Official V4 Pro/Flash catalog and `off` / `high` / `max` reasoning controls           |
-| Integrated stack | Skills, tools, Goal, Plan, Workflow, Todo, Jobs, questions, approvals, and subagents  |
-| Recovery         | Health probes, process restart, renderer replacement, port retry, session restoration |
-| Watchdog         | Independent IPC process, bounded restart policy, persistent crash-loop marker         |
-| Plugins          | Desktop settings/transition bundle and Anchored Standard bundle                       |
-| Diagnostics      | Startup evidence, runtime state, redacted rotating logs, open-logs action             |
-| Security         | Sandboxed renderer, no Node integration, validated IPC, navigation policy             |
-| Packaging        | macOS Universal DMG; Windows NSIS and Linux AppImage/deb definitions                  |
+| Area             | Included                                                                                    |
+| ---------------- | ------------------------------------------------------------------------------------------- |
+| Desktop host     | Hardened Electron window, startup page, native menus, tray, close preferences               |
+| Harness runtime  | Pinned `@deepseek-ai/dsh` rc.6, loopback-only Web service, app-owned profile                |
+| V4 models        | Official V4 Pro/Flash catalog and `off` / `high` / `max` reasoning controls                 |
+| Integrated stack | Skills, tools, Goal, Plan, Workflow, Todo, Jobs, questions, approvals, and subagents        |
+| Recovery         | Health probes, process restart, renderer replacement, port retry, session restoration       |
+| Watchdog         | Independent IPC process, bounded restart policy, persistent crash-loop marker               |
+| Plugins          | Desktop settings/transition bundle, Anchored Standard bundle, and auto-loaded Routing suite |
+| Diagnostics      | Startup evidence, runtime state, redacted rotating logs, open-logs action                   |
+| Security         | Sandboxed renderer, no Node integration, validated IPC, navigation policy                   |
+| Packaging        | macOS Universal DMG; Windows NSIS and Linux AppImage/deb definitions                        |
+
+## Routing suite
+
+DeepSeek Harness Code bundles the community [dsh-routing-suite](https://github.com/yjh051108/dsh-routing-suite) and auto-loads it on every launch:
+
+- **Offline snapshot** - the installer ships a pinned snapshot of the suite's three components (the @dsh-external/dsh-super-injector bundle layer, the @dsh-external/dsh-mode-boost host-plane boost, and the router-standard + router-spec agent presets) inside the app resources.
+- **Auto-assembly** - on startup the desktop host registers the suite bundles in the app-owned Web profile, links them into the profile's node_modules, adds the mode-boost entry to the profile patch layer, and installs the router presets as managed agent presets. Nothing is downloaded at first launch.
+- **Auto-refresh** - in the background, once per day at most, the host downloads the latest router preset from the suite's main branch plus the pinned release tarballs, verifies and atomically swaps the user-level cache. Later launches prefer the refreshed cache over the bundled snapshot, so updates arrive without any manual step.
+- **Fault-tolerant** - every refresh or assembly failure is silent and non-fatal; startup never waits on the network, and the bundled snapshot is always the fallback.
 
 ## Architecture
 

@@ -51,10 +51,10 @@ async function existingLinkTarget(
 }
 
 /**
- * Expose the packaged plugin through the dedicated Harness profile's normal
+ * Expose a packaged plugin through the dedicated Harness profile's normal
  * Node package resolution without invoking pnpm or mutating the application.
  */
-async function ensurePluginLink(
+export async function ensurePluginLink(
   dshHome: string,
   pluginRoot: string,
   packageName: string,
@@ -63,6 +63,8 @@ async function ensurePluginLink(
   const modulesRoot = join(dshHome, "profiles", "web", "node_modules");
   const linkPath = join(modulesRoot, packageName);
   await mkdir(modulesRoot, { recursive: true, mode: 0o700 });
+  // Scoped package names nest one directory (node_modules/@scope/name).
+  await mkdir(dirname(linkPath), { recursive: true, mode: 0o700 });
   const currentTarget = await existingLinkTarget(linkPath);
   if (currentTarget === canonicalPluginRoot) return linkPath;
   if (currentTarget !== undefined) await unlink(linkPath);
@@ -84,7 +86,7 @@ export async function ensureDesktopPluginLink(
 type ManagedPresetMarker = {
   schemaVersion: 1;
   owner: "deepseek-harness-code";
-  presetId: typeof ANCHORED_PRESET_ID;
+  presetId: string;
   sourceVersion: string;
   sourceDigest: string;
 };
@@ -144,7 +146,7 @@ async function collectRegularFiles(
     }
     if (!entry.isFile()) {
       throw new Error(
-        `Anchored Standard preset contains an unsupported filesystem entry: ${relativePath}`,
+        `Managed preset/skill source contains an unsupported filesystem entry: ${relativePath}`,
       );
     }
     files.push({
@@ -168,6 +170,34 @@ function digestFiles(files: readonly PresetSourceFile[]): string {
   return digest.digest("hex");
 }
 
+async function collectPresetSource(
+  presetId: string,
+  sourceRoot: string,
+  version: string,
+  metadataRoot?: string,
+): Promise<{ files: PresetSourceFile[]; version: string }> {
+  const files = await collectRegularFiles(sourceRoot);
+  if (metadataRoot !== undefined) {
+    for (const name of MANAGED_PRESET_METADATA) {
+      try {
+        files.push({
+          relativePath: name,
+          content: await readFile(join(metadataRoot, name)),
+        });
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+      }
+    }
+  }
+  const paths = new Set(files.map((file) => file.relativePath));
+  for (const required of ["agent.cordis.yml", "preset.yml"]) {
+    if (!paths.has(required)) {
+      throw new Error(`Managed preset ${presetId} is missing ${required}`);
+    }
+  }
+  return { files, version };
+}
+
 async function packagedPresetFiles(
   packagedRoot: string,
 ): Promise<{ files: PresetSourceFile[]; version: string }> {
@@ -177,29 +207,24 @@ async function packagedPresetFiles(
   if (typeof manifest.version !== "string" || manifest.version.length === 0) {
     throw new Error("Anchored Standard package has no valid version");
   }
-  const files = await collectRegularFiles(join(packagedRoot, "preset"));
-  for (const name of MANAGED_PRESET_METADATA) {
-    files.push({
-      relativePath: name,
-      content: await readFile(join(packagedRoot, name)),
-    });
-  }
-  const paths = new Set(files.map((file) => file.relativePath));
-  for (const required of ["agent.cordis.yml", "preset.yml"]) {
-    if (!paths.has(required)) {
-      throw new Error(`Anchored Standard preset is missing ${required}`);
-    }
-  }
-  return { files, version: manifest.version };
+  return collectPresetSource(
+    ANCHORED_PRESET_ID,
+    join(packagedRoot, "preset"),
+    manifest.version,
+    packagedRoot,
+  );
 }
 
-function isManagedMarker(value: unknown): value is ManagedPresetMarker {
+function isManagedMarker(
+  value: unknown,
+  presetId: string,
+): value is ManagedPresetMarker {
   if (typeof value !== "object" || value === null) return false;
   const marker = value as Record<string, unknown>;
   return (
     marker.schemaVersion === 1 &&
     marker.owner === "deepseek-harness-code" &&
-    marker.presetId === ANCHORED_PRESET_ID &&
+    marker.presetId === presetId &&
     typeof marker.sourceVersion === "string" &&
     typeof marker.sourceDigest === "string" &&
     /^[a-f0-9]{64}$/.test(marker.sourceDigest)
@@ -208,12 +233,13 @@ function isManagedMarker(value: unknown): value is ManagedPresetMarker {
 
 async function readManagedMarker(
   target: string,
+  presetId: string,
 ): Promise<ManagedPresetMarker | undefined> {
   try {
     const value: unknown = JSON.parse(
       await readFile(join(target, MANAGED_PRESET_MARKER), "utf8"),
     );
-    return isManagedMarker(value) ? value : undefined;
+    return isManagedMarker(value, presetId) ? value : undefined;
   } catch {
     return undefined;
   }
@@ -264,19 +290,29 @@ async function existingEntryKind(
   }
 }
 
-/** Install the app-owned agent preset without overwriting unknown user data. */
-export async function ensureAnchoredStandardPreset(
+/** Install an app-owned agent preset without overwriting unknown user data. */
+export async function installManagedPreset(
   dshHome: string,
-  packagedRoot: string,
+  sourceRoot: string,
+  presetId: string,
+  version: string,
+  metadataRoot?: string,
 ): Promise<ManagedPresetInstallResult> {
   const presetRoot = join(dshHome, ".agent-presets");
-  const target = join(presetRoot, ANCHORED_PRESET_ID);
-  const source = await packagedPresetFiles(packagedRoot);
+  const target = join(presetRoot, presetId);
+  const source = await collectPresetSource(
+    presetId,
+    sourceRoot,
+    version,
+    metadataRoot,
+  );
   const sourceDigest = digestFiles(source.files);
   const targetKind = await existingEntryKind(target);
   if (targetKind === "other") return { status: "conflict", path: target };
   const targetExists = targetKind === "directory";
-  const marker = targetExists ? await readManagedMarker(target) : undefined;
+  const marker = targetExists
+    ? await readManagedMarker(target, presetId)
+    : undefined;
   if (targetExists && marker === undefined)
     return { status: "conflict", path: target };
   if (marker !== undefined) {
@@ -294,12 +330,12 @@ export async function ensureAnchoredStandardPreset(
 
   await mkdir(presetRoot, { recursive: true, mode: 0o700 });
   const suffix = `${process.pid}.${randomUUID()}`;
-  const staging = join(presetRoot, `${ANCHORED_PRESET_ID}.${suffix}.tmp`);
-  const backup = join(presetRoot, `${ANCHORED_PRESET_ID}.${suffix}.bak`);
+  const staging = join(presetRoot, `${presetId}.${suffix}.tmp`);
+  const backup = join(presetRoot, `${presetId}.${suffix}.bak`);
   const nextMarker: ManagedPresetMarker = {
     schemaVersion: 1,
     owner: "deepseek-harness-code",
-    presetId: ANCHORED_PRESET_ID,
+    presetId,
     sourceVersion: source.version,
     sourceDigest,
   };
@@ -316,6 +352,45 @@ export async function ensureAnchoredStandardPreset(
     throw error;
   }
   return { status: targetExists ? "updated" : "installed", path: target };
+}
+
+/** Keep an invalid optional preset from preventing the Standard runtime from starting. */
+export async function installManagedPresetForStartup(
+  dshHome: string,
+  sourceRoot: string,
+  presetId: string,
+  version: string,
+  metadataRoot?: string,
+): Promise<ManagedPresetStartupResult> {
+  try {
+    return await installManagedPreset(
+      dshHome,
+      sourceRoot,
+      presetId,
+      version,
+      metadataRoot,
+    );
+  } catch {
+    return {
+      status: "unavailable",
+      path: join(dshHome, ".agent-presets", presetId),
+    };
+  }
+}
+
+/** Install the app-owned Anchored Standard preset (compat entry point). */
+export async function ensureAnchoredStandardPreset(
+  dshHome: string,
+  packagedRoot: string,
+): Promise<ManagedPresetInstallResult> {
+  const source = await packagedPresetFiles(packagedRoot);
+  return installManagedPreset(
+    dshHome,
+    join(packagedRoot, "preset"),
+    ANCHORED_PRESET_ID,
+    source.version,
+    packagedRoot,
+  );
 }
 
 /** Keep an invalid optional preset from preventing the Standard runtime from starting. */
@@ -436,7 +511,9 @@ async function ensureSuperpowersSkill(
   const targetKind = await existingEntryKind(target);
   if (targetKind === "other") return { status: "conflict", path: target };
   const targetExists = targetKind === "directory";
-  const marker = targetExists ? await readManagedSkillMarker(target) : undefined;
+  const marker = targetExists
+    ? await readManagedSkillMarker(target)
+    : undefined;
   if (targetExists && marker === undefined)
     return { status: "conflict", path: target };
   if (marker !== undefined) {
