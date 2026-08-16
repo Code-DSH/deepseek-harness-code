@@ -129,6 +129,11 @@ type PresetSourceFile = {
   content: Buffer;
 };
 
+export type PresetDisplayMetadata = {
+  name: string;
+  description: string;
+};
+
 async function collectRegularFiles(
   root: string,
   relativeRoot = "",
@@ -175,8 +180,18 @@ async function collectPresetSource(
   sourceRoot: string,
   version: string,
   metadataRoot?: string,
+  displayMetadata?: PresetDisplayMetadata,
 ): Promise<{ files: PresetSourceFile[]; version: string }> {
   const files = await collectRegularFiles(sourceRoot);
+  if (displayMetadata !== undefined) {
+    const presetFile = files.find((file) => file.relativePath === "preset.yml");
+    if (presetFile === undefined) {
+      throw new Error(`Managed preset ${presetId} is missing preset.yml`);
+    }
+    presetFile.content = Buffer.from(
+      `name: ${displayMetadata.name}\ndescription: ${displayMetadata.description}\n`,
+    );
+  }
   if (metadataRoot !== undefined) {
     for (const name of MANAGED_PRESET_METADATA) {
       try {
@@ -297,6 +312,7 @@ export async function installManagedPreset(
   presetId: string,
   version: string,
   metadataRoot?: string,
+  displayMetadata?: PresetDisplayMetadata,
 ): Promise<ManagedPresetInstallResult> {
   const presetRoot = join(dshHome, ".agent-presets");
   const target = join(presetRoot, presetId);
@@ -305,6 +321,7 @@ export async function installManagedPreset(
     sourceRoot,
     version,
     metadataRoot,
+    displayMetadata,
   );
   const sourceDigest = digestFiles(source.files);
   const targetKind = await existingEntryKind(target);
@@ -361,6 +378,7 @@ export async function installManagedPresetForStartup(
   presetId: string,
   version: string,
   metadataRoot?: string,
+  displayMetadata?: PresetDisplayMetadata,
 ): Promise<ManagedPresetStartupResult> {
   try {
     return await installManagedPreset(
@@ -369,6 +387,7 @@ export async function installManagedPresetForStartup(
       presetId,
       version,
       metadataRoot,
+      displayMetadata,
     );
   } catch {
     return {

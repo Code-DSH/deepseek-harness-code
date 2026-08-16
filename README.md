@@ -30,6 +30,12 @@ Our goal is to modernize the complete DeepSeek Harness experience without replac
 
 **This project is not about putting a website inside a window. It is about making DeepSeek Harness sustainable for real, long-running work.**
 
+## The DHC integration philosophy
+
+The official DeepSeek Harness provides the building blocks. DeepSeek Harness Code provides the assembled product. Users should not have to put together a fragile toolchain themselves just to get a dependable working environment.
+
+That is the role of DHC: integrate the official Harness runtime, plugins, Skills, tools, workflows, and desktop reliability into one coherent distribution with clear boundaries and a tested path from launch to long-running work. DHC is a **community project**, not an official DeepSeek release and **not a fork of DeepSeek Harness**. It builds on the official Harness format and runtime while turning the available pieces into a complete desktop experience.
+
 ## One complete DeepSeek Harness distribution
 
 The product is a complete, coherent Harness distribution—not a model launcher and not a folder of unrelated add-ons. The official Harness base and Web bundles bring the useful parts of the DeepSeek agent stack into one application:

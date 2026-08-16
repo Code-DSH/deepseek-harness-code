@@ -5,6 +5,7 @@ import {
   ensureDesktopPluginBundle,
   ensurePluginLink,
   installManagedPresetForStartup,
+  type PresetDisplayMetadata,
   type ManagedPresetStartupResult,
 } from "./desktop-plugin-link.js";
 
@@ -26,6 +27,19 @@ const ROUTING_MODE_BOOST_PACKAGE = "@dsh-external/dsh-mode-boost";
 const ROUTING_MODE_BOOST_PATCH_ID = "mode-boost";
 const ROUTING_PRESET_DIRECTORY = "preset";
 const ROUTING_VERSIONS_FILE = "versions.json";
+
+export const ROUTING_PRESET_METADATA: Record<string, PresetDisplayMetadata> = {
+  "router-standard": {
+    name: "路由标准模式 / Router Standard",
+    description:
+      "根据任务类型自动选择偏执行或偏分析的首轮策略；首次调用工具后恢复完整标准工具集。 / Automatically chooses an execution- or analysis-oriented first turn based on the task, then restores the full Standard toolset after the first tool call.",
+  },
+  "router-spec": {
+    name: "路由深度思考模式 / Router Spec",
+    description:
+      "优先进行深入分析和规格梳理，适合修复、排查、重构等需要先理解问题的任务；首次调用工具后恢复完整标准工具集。 / Prioritizes deep analysis and specification before action for fixes, debugging, and refactors, then restores the full Standard toolset after the first tool call.",
+  },
+};
 
 const LEGACY_MODE_BOOST_PATCH_BLOCK = `- insert:
     - id: ${ROUTING_MODE_BOOST_PATCH_ID}
@@ -237,6 +251,7 @@ async function ensureRouterPresets(
       id,
       version,
       presetRoot,
+      ROUTING_PRESET_METADATA[id],
     );
     presets.push({ id, status: result.status });
   }

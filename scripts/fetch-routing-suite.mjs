@@ -38,6 +38,19 @@ const INJECTOR_BARE_ENTRY = "name: '@dsh-external/dsh-super-injector'";
 const INJECTOR_PROFILE_ENTRY =
   "name: './node_modules/@dsh-external/dsh-super-injector/lib/index.js'";
 
+const ROUTING_PRESET_METADATA = {
+  "router-standard": {
+    name: "路由标准模式 / Router Standard",
+    description:
+      "根据任务类型自动选择偏执行或偏分析的首轮策略；首次调用工具后恢复完整标准工具集。 / Automatically chooses an execution- or analysis-oriented first turn based on the task, then restores the full Standard toolset after the first tool call.",
+  },
+  "router-spec": {
+    name: "路由深度思考模式 / Router Spec",
+    description:
+      "优先进行深入分析和规格梳理，适合修复、排查、重构等需要先理解问题的任务；首次调用工具后恢复完整标准工具集。 / Prioritizes deep analysis and specification before action for fixes, debugging, and refactors, then restores the full Standard toolset after the first tool call.",
+  },
+};
+
 /** Pinned snapshot manifest. Kept in sync with the suite's submodules. */
 const SOURCES = [
   {
@@ -251,6 +264,14 @@ async function assembleRouterPreset(source, cacheDir, outDir, components) {
       (await fileExists(join(entryPath, "agent.cordis.yml")))
     ) {
       await copyTree(entryPath, join(target, id));
+      const metadata = ROUTING_PRESET_METADATA[id];
+      if (metadata !== undefined) {
+        await writeFile(
+          join(target, id, "preset.yml"),
+          `name: ${metadata.name}\ndescription: ${metadata.description}\n`,
+          { mode: 0o600 },
+        );
+      }
       presetIds.push(id);
     }
   }
