@@ -10,6 +10,7 @@ import {
 import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import sharp from "sharp";
 
 const root = process.cwd();
 const require = createRequire(join(root, "package.json"));
@@ -77,6 +78,17 @@ async function writeIco() {
   await writeFile(icoOutput, Buffer.concat([header, ...images]));
 }
 
+async function rasterize(svgPath, pngPath, size) {
+  await sharp(svgPath, { density: 144 })
+    .resize(size, size, { fit: "fill" })
+    .png()
+    .toFile(pngPath);
+}
+
+function isMac() {
+  return process.platform === "darwin";
+}
+
 try {
   await mkdir(iconset, { recursive: true });
   await mkdir(buildRoot, { recursive: true });
@@ -106,33 +118,21 @@ try {
     "utf8",
   );
   for (const [name, size] of variants) {
-    execFileSync(
-      "sips",
-      [
-        "-s",
-        "format",
-        "png",
-        "-z",
-        String(size),
-        String(size),
-        svgOutput,
-        "--out",
-        join(iconset, name),
-      ],
-      {
-        stdio: "ignore",
-      },
+    await rasterize(svgOutput, join(iconset, name), size);
+  }
+  // iconutil ships with macOS; the committed .icns remains valid on other
+  // platforms where the tool is unavailable.
+  if (isMac()) {
+    execFileSync("iconutil", ["-c", "icns", iconset, "-o", icnsOutput], {
+      stdio: "inherit",
+    });
+  } else {
+    process.stderr.write(
+      "iconutil unavailable on this platform; keeping the committed .icns file\n",
     );
   }
-  execFileSync("iconutil", ["-c", "icns", iconset, "-o", icnsOutput], {
-    stdio: "inherit",
-  });
   await copyFile(join(iconset, "icon_512x512@2x.png"), pngOutput);
-  execFileSync(
-    "sips",
-    ["-s", "format", "png", "-z", "64", "64", traySvg, "--out", trayPngOutput],
-    { stdio: "ignore" },
-  );
+  await rasterize(traySvg, trayPngOutput, 64);
   await writeIco();
   process.stdout.write(
     `${svgOutput}\n${icnsOutput}\n${icoOutput}\n${pngOutput}\n${trayPngOutput}\n`,

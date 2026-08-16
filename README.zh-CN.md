@@ -212,11 +212,11 @@ Electron 主进程负责窗口、本地 Harness 子进程、就绪检查和窄�
 
 ## 平台状态
 
-| 平台    | 目标                              | 当前状态                                                          |
-| ------- | --------------------------------- | ----------------------------------------------------------------- |
+| 平台    | 目标                              | 当前状态                                                           |
+| ------- | --------------------------------- | ------------------------------------------------------------------ |
 | macOS   | macOS 12+，Intel 与 Apple Silicon | Universal 应用与未签名/ad-hoc 签名 DMG 已验证，随 0.1.0-BETA1 发布 |
-| Windows | Windows 10+，x64 与 arm64         | 原生 NSIS 安装包在 Windows Runner 构建，随 0.1.0-BETA1 发布       |
-| Linux   | x64 与 arm64                      | AppImage/deb 打包配置已就绪，原生构建在后续版本推出              |
+| Windows | Windows 10+，x64 与 arm64         | 原生 NSIS 安装包在 Windows Runner 构建，随 0.1.0-BETA1 发布        |
+| Linux   | x64 与 arm64                      | AppImage/deb 打包配置已就绪，原生构建在后续版本推出                |
 
 跨平台配置已经进入仓库，只有经过对应原生 Runner 构建与验证的产物才会被视为正式发行。首个公开预览版为 **DeepSeek Harness Code（DHSC）0.1.0-BETA1**——预览版覆盖 macOS 与 Windows，Linux 构建稍后推出。
 

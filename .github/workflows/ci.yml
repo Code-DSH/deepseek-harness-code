@@ -1,0 +1,137 @@
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # Code structure gates: types, lint, formatting, documentation links, and
+  # the security contract. Required before any commit is considered clean.
+  structure:
+    name: Structure (typecheck / lint / format / docs / security)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.19.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24.18.0
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm check
+
+  # Code compliance: dependency vulnerability audit, runtime closure of the
+  # packaged surface, and the license notices artifact.
+  compliance:
+    name: Compliance (audit / runtime closure / notices)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.19.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24.18.0
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Dependency vulnerability audit
+        run: pnpm audit --prod
+      - name: Build distribution artifacts
+        run: pnpm build
+      - name: Runtime closure check
+        run: node scripts/check-runtime-closure.mjs
+      - name: License notices present
+        run: test -s build/THIRD-PARTY-NOTICES.md
+
+  # Full test suite on every supported OS (unit, anchored, plugin, package
+  # contract, and browser E2E).
+  test:
+    name: Test (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.19.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24.18.0
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Install Playwright Chromium (with Linux system dependencies)
+        if: runner.os == 'Linux'
+        run: pnpm exec playwright install --with-deps chromium
+      - name: Install Playwright Chromium
+        if: runner.os != 'Linux'
+        run: pnpm exec playwright install chromium
+      - run: pnpm test
+
+  # Memory gate: the unit suites must pass under a bounded V8 heap, and the
+  # peak resident set must stay below the documented tripwire.
+  memory:
+    name: Memory bounds
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.19.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24.18.0
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm check:memory
+
+  # Platform packaging adaptation: build, regenerate icons, verify runtime
+  # closure, and produce a directory package on every supported OS.
+  adapt:
+    name: Packaging adaptation (${{ matrix.label }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - label: linux
+            os: ubuntu-latest
+            command: pnpm exec electron-builder --linux --dir
+          - label: windows
+            os: windows-latest
+            command: pnpm exec electron-builder --win --dir
+          - label: macos
+            os: macos-latest
+            command: pnpm exec electron-builder --mac --dir
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.19.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24.18.0
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+      - run: pnpm build:icon
+      - run: node scripts/check-runtime-closure.mjs
+      - run: ${{ matrix.command }}

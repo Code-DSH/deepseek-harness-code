@@ -219,11 +219,11 @@ The experimental Anchored Standard setting does not intercept private model traf
 
 ## Platform status
 
-| Platform | Target                             | Current status                                                                          |
-| -------- | ---------------------------------- | --------------------------------------------------------------------------------------- |
-| macOS    | macOS 12+, Intel and Apple Silicon | Universal application and unsigned/ad-hoc-signed DMG verified; shipped in 0.1.0-BETA1    |
-| Windows  | Windows 10+, x64 and arm64         | Native NSIS installers built on Windows runners; shipped in 0.1.0-BETA1                  |
-| Linux    | x64 and arm64                      | AppImage/deb packaging definition ready; native builds follow in a later release        |
+| Platform | Target                             | Current status                                                                        |
+| -------- | ---------------------------------- | ------------------------------------------------------------------------------------- |
+| macOS    | macOS 12+, Intel and Apple Silicon | Universal application and unsigned/ad-hoc-signed DMG verified; shipped in 0.1.0-BETA1 |
+| Windows  | Windows 10+, x64 and arm64         | Native NSIS installers built on Windows runners; shipped in 0.1.0-BETA1               |
+| Linux    | x64 and arm64                      | AppImage/deb packaging definition ready; native builds follow in a later release      |
 
 Cross-platform definitions are checked into the repository, and an artifact is only considered released after it has been built and verified on its native runner. The first public preview release is **DeepSeek Harness Code (DHSC) 0.1.0-BETA1** — a preview covering macOS and Windows, with Linux builds to follow.
 

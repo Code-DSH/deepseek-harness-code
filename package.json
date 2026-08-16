@@ -23,6 +23,8 @@
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
     "format:check": "prettier --check .",
+    "check": "pnpm typecheck && pnpm lint && pnpm format:check && node scripts/check-doc-links.mjs && node scripts/check-security-contract.mjs",
+    "check:memory": "node scripts/check-memory-bounds.mjs",
     "preflight:runtime": "node scripts/check-runtime-closure.mjs",
     "start": "pnpm build && electron .",
     "pack:dir": "pnpm build && pnpm build:icon && pnpm preflight:runtime && electron-builder --mac --dir --universal",
@@ -116,6 +118,7 @@
     "jsdom": "26.1.0",
     "prettier": "3.6.2",
     "rimraf": "6.0.1",
+    "sharp": "0.35.3",
     "tsup": "8.5.0",
     "typescript": "5.9.2",
     "vitest": "3.2.4"

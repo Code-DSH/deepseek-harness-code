@@ -34,7 +34,10 @@ describe("DeepSeek Harness Code distribution contract", () => {
   test("covers macOS, Windows, and Linux targets with generated product icons", async () => {
     const config = await readProjectFile("electron-builder.yml");
     const iconScript = await readProjectFile("scripts/build-icon.mjs");
-    const workflow = await readProjectFile(".github/workflows/package.yml");
+    const releaseWorkflow = await readProjectFile(
+      ".github/workflows/package.yml",
+    );
+    const ciWorkflow = await readProjectFile(".github/workflows/ci.yml");
 
     expect(config).toContain("nsis");
     expect(config).toContain("AppImage");
@@ -50,9 +53,16 @@ describe("DeepSeek Harness Code distribution contract", () => {
     expect(config).toContain("to: deepseek-harness-code-tray.png");
     expect(config).toContain("to: deepseek-harness-code.png");
     expect(iconScript).toContain(">Code<");
-    expect(workflow).toContain("macos");
-    expect(workflow).toContain("windows");
-    expect(workflow).toContain("ubuntu");
+    // Release workflow builds Windows installers on native runners.
+    expect(releaseWorkflow).toContain("windows");
+    // The CI workflow runs structure, compliance, memory, test, and packaging
+    // adaptation gates across Linux (ubuntu), Windows, and macOS runners for
+    // both pushes and pull requests.
+    expect(ciWorkflow).toContain("macos");
+    expect(ciWorkflow).toContain("windows");
+    expect(ciWorkflow).toContain("ubuntu");
+    expect(ciWorkflow).toContain("pull_request");
+    expect(ciWorkflow).toContain("check:memory");
   });
 
   test("generates a self-contained SVG, ICNS, ICO, and PNG product icon", async () => {
