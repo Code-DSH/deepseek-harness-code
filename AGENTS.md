@@ -5,7 +5,7 @@
 - schema_version: 3
 - single_entry: true
 - repository_root: `/Users/trip/TRUE 开发/deepseek/deepseek-harness-desktop`
-- updated_at: `2026-08-16T13:20:00+08:00`
+- updated_at: `2026-08-16T13:56:03+08:00`
 - default_freshness: 10d
 - docs_entry: [docs/index.md](./docs/index.md)
 - project_entry: [docs/project/index.md](./docs/project/index.md)
@@ -16,9 +16,9 @@
 ## Current Project Snapshot
 
 - Goal: ship DeepSeek Harness Code with a cross-platform Electron shell, official-format integrated plugins, and independent watchdog.
-- Current phase: implementing the approved streaming-output dissolve and active ThinkingOrb behavior in the official desktop plugin.
+- Current phase: streaming-output dissolve and active ThinkingOrb behavior are implementation-verified; cloud PR and local-main integration are pending.
 - Primary constraints: macOS Universal local release plus native Windows/Linux CI, no global Node dependency at runtime, loopback-only Harness, unsigned macOS distribution with ad-hoc signing.
-- Active branch/worktree: `main` in this standalone repository, published at `Open-Less/deepseek-harness-code`.
+- Active branch/worktree: local `main` is the integration target; feature work is isolated before local merge and cloud PR review.
 - Build/test entry: `npm exec --yes --package=pnpm@11.19.0 -- pnpm test`.
 - Current critical risk: rc.6 does not safely permit post-tool preset recomposition; anchored mode must remain a visible Standard fallback when enabled.
 
@@ -49,19 +49,21 @@
 | Electron         | 43.4.0          | Desktop Chromium host     | active | 2026-08-15 | [Upstream baseline](./docs/knowledge/upstream-baseline.md) |
 | DeepSeek Harness | 0.1.0-rc.6      | Web app and agent runtime | active | 2026-08-15 | [Upstream baseline](./docs/knowledge/upstream-baseline.md) |
 | electron-builder | 26.15.3         | App and DMG packaging     | active | 2026-08-15 | [Upstream baseline](./docs/knowledge/upstream-baseline.md) |
+| thinking-orbs    | 0.3.1           | Active generation canvas  | active | 2026-08-16 | [Upstream baseline](./docs/knowledge/upstream-baseline.md) |
+| esbuild          | 0.25.12         | Offline plugin bundling   | active | 2026-08-16 | [Upstream baseline](./docs/knowledge/upstream-baseline.md) |
 
 ## Knowledge Topic Index
 
-| Topic             | Summary                                         | Status  | Last verified | Revalidate after | Canonical document                            |
-| ----------------- | ----------------------------------------------- | ------- | ------------- | ---------------- | --------------------------------------------- |
-| Upstream baseline | Official Harness and packaging version baseline | current | 2026-08-15    | 2026-08-16       | [Open](./docs/knowledge/upstream-baseline.md) |
+| Topic             | Summary                                               | Status  | Last verified | Revalidate after | Canonical document                            |
+| ----------------- | ----------------------------------------------------- | ------- | ------------- | ---------------- | --------------------------------------------- |
+| Upstream baseline | Harness, packaging, and animation dependency baseline | current | 2026-08-16    | 2026-08-17       | [Open](./docs/knowledge/upstream-baseline.md) |
 
 ## Active Plans
 
-| Plan                        | Status | Current milestone                        | Updated    | Link                                                                   |
-| --------------------------- | ------ | ---------------------------------------- | ---------- | ---------------------------------------------------------------------- |
-| Streaming output animation  | active | Offline client bundle and TDD model      | 2026-08-16 | [Open](./docs/superpowers/plans/2026-08-16-stream-output-animation.md) |
-| DeepSeek Harness Code 0.2.0 | active | Native CI and final release verification | 2026-08-16 | [Open](./docs/superpowers/plans/2026-08-16-deepseek-harness-code.md)   |
+| Plan                        | Status | Current milestone                          | Updated    | Link                                                                   |
+| --------------------------- | ------ | ------------------------------------------ | ---------- | ---------------------------------------------------------------------- |
+| Streaming output animation  | active | Verified; PR and local integration pending | 2026-08-16 | [Open](./docs/superpowers/plans/2026-08-16-stream-output-animation.md) |
+| DeepSeek Harness Code 0.2.0 | active | Native CI and final release verification   | 2026-08-16 | [Open](./docs/superpowers/plans/2026-08-16-deepseek-harness-code.md)   |
 
 ## Known Risks and Open Questions
 

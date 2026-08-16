@@ -4,7 +4,7 @@ title: Streaming Output and Thinking Indicator Animation Design
 summary: Add layout-neutral dissolve effects to newly streamed assistant prose and reasoning, and replace the active bottom status with a breathing ThinkingOrb through the official desktop plugin.
 kind: architecture
 status: canonical
-content_stage: goal-only
+content_stage: implementation-backed
 scope: [desktop-plugin, conversation, streaming-output, accessibility]
 triggers:
   [streaming text, dissolve, generative-loaders, thinking-orbs, ThinkingOrb]
@@ -13,7 +13,7 @@ read_when:
 skip_when: [changing non-conversation desktop chrome or backend lifecycle]
 priority: must
 freshness_class: project
-last_verified: 2026-08-16T13:00:00+08:00
+last_verified: 2026-08-16T13:56:03+08:00
 owners: [primary-agent]
 source_of_truth:
   [
@@ -76,7 +76,7 @@ The plugin therefore adapts the `dissolve` visual treatment into a namespaced, n
 The existing client plugin registers one additive controller in the official `shell.overlay` slot. The controller owns two independent services:
 
 1. `StreamTextEffectController` observes eligible text changes under the currently streaming assistant step and manages transient dissolve masks and overlays.
-2. `ThinkingStatusController` observes the current conversation's bottom running status and portals a bundled `ThinkingOrb` into a plugin-owned sibling host.
+2. `ThinkingStatusController` observes the current conversation's bottom running status and renders a bundled `ThinkingOrb` in the plugin-owned root overlay.
 
 The controller does not shadow `conversation.chat.node`, duplicate the built-in assistant renderer, or depend on a private React component export. Compatibility with the pinned Harness renderer is isolated to a small DOM classifier and status-anchor adapter. If either adapter does not recognize the current DOM, it fails closed and leaves native Harness behavior intact.
 
@@ -88,7 +88,7 @@ The controller does not shadow `conversation.chat.node`, duplicate the built-in 
 - On controller startup, navigation, or attachment to an already-rendered stream, existing text becomes the baseline and does not animate retroactively.
 - A centralized classifier accepts only text nodes inside renderer regions verified as assistant Markdown prose or reasoning content for pinned Harness rc.6.
 - The classifier denies semantic code elements and all tool, terminal, control, live-status, and application-chrome regions before creating any effect.
-- Text added after the baseline is segmented with `Intl.Segmenter` at grapheme boundaries, so emoji, combining marks, and composed scripts are never split into invalid characters.
+- Text added after the baseline is segmented with `Intl.Segmenter` across the complete next string. The previous UTF-16 length must be a boundary in that segmentation, so emoji modifiers, ZWJ sequences, combining marks, and composed scripts are never detached from the preceding grapheme.
 
 ### Detecting appended output
 
@@ -112,7 +112,7 @@ All layout reads are batched before overlay writes. Scroll, resize, navigation, 
 
 - Animation duration and stagger follow the inspected `generative-loaders` dissolve treatment, tuned only if necessary to keep continuous token streams legible.
 - Stable prefixes never replay when a new suffix arrives.
-- Overlapping updates may share a batch, but every eligible appended grapheme receives one reveal.
+- Overlapping updates may share a batch. Under normal token streaming every eligible appended grapheme receives one dissolve reveal; a pathological burst beyond the hard live-node budget fails open by showing excess canonical text immediately.
 - The effect does not set `font-family`, `font-size`, `line-height`, or a hard-coded foreground color on canonical content.
 - Reasoning and answer output can stream concurrently in separate regions; each overlay samples its own source color.
 - A final or cancelled response has no masks, particles, copied glyphs, or persistent animation classes.
@@ -141,20 +141,21 @@ The plugin does not infer completion from timers or token inactivity. Aborts, er
 ## Performance and cleanup
 
 - Idle cost is zero polling and zero animation frames; observers only enqueue work after relevant mutations.
-- Mutation handling is scoped to the active chat flow, and unrelated subtrees are rejected before measurement.
+- Mutation handling observes the dynamic document body so newly mounted chat flows are discoverable, but the classifier rejects nodes outside the active streaming assistant selector before measurement.
 - Reads and writes are frame-batched to avoid layout thrashing.
-- The overlay has a bounded number of live glyph/particle nodes. Backpressure may reduce particle density or coalesce timing, but it may not skip the glyph reveal or alter canonical output.
+- The overlay has a hard ceiling of 120 live copied-glyph nodes and 24 particle-bearing glyphs (72 particle nodes). Pending visual work is also capped. Backpressure first removes particle density and then shows excess canonical text immediately; it never delays, masks, or alters canonical output.
 - Every effect has an abort handle and a hard cleanup deadline.
-- Route changes, conversation changes, plugin disposal, and renderer teardown disconnect observers, cancel frames, clear CSS highlights, unmount portals, and remove plugin-owned DOM.
+- Route changes, conversation changes, plugin disposal, and renderer teardown disconnect observers, cancel frames, clear CSS highlights, unmount fixed hosts, and remove plugin-owned DOM.
 - The controller never logs, stores, or sends response text.
 
 ## Dependencies, packaging, and attribution
 
-| Item                 | Project state                                                         | Design decision                                                                                                                                             |
-| -------------------- | --------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `thinking-orbs`      | Target `0.3.1`                                                        | Add as a pinned plugin client dependency and bundle its browser code into `client.js`; React remains a Harness-provided external.                           |
-| `generative-loaders` | Reference `0.1.1`                                                     | Adapt only the dissolve visual behavior required for rich Harness DOM; do not ship the plain-string `TextLoader` renderer or add an unused runtime package. |
-| Client bundler       | To be selected in the implementation plan from the existing toolchain | Produce one offline plugin client artifact and fail the build on unresolved third-party runtime imports.                                                    |
+| Item                  | Project state            | Design decision                                                                                                                                             |
+| --------------------- | ------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `thinking-orbs`       | Pinned `0.3.1`           | Bundled into `client.js`; React and `react/jsx-runtime` remain Harness-provided externals.                                                                  |
+| `generative-loaders`  | Reference `0.1.1`        | Only the dissolve visual behavior is adapted for rich Harness DOM; the plain-string `TextLoader` and package are not bundled.                               |
+| Client bundler        | Pinned esbuild `0.25.12` | Produces one deterministic offline client artifact from any working directory; preflight fails on unresolved third-party or local animation-module imports. |
+| ReactDOM test runtime | Pinned `18.3.1`          | Development-only dependency used to mount the generated overlay with real React `createRoot`; it is not a plugin runtime external.                          |
 
 The packaged application must not fetch either library from a CDN or resolve it from a developer checkout at runtime. The plugin package's file list and desktop runtime-closure tests must cover the bundled artifact. A third-party notices file records the MIT licenses and upstream project URLs.
 
@@ -163,16 +164,18 @@ The packaged application must not fetch either library from a CDN or resolve it 
 - Feature setup is isolated: a text-effect failure must not disable the orb, settings integration, page transitions, or the rest of the plugin.
 - Missing CSS Highlight support disables the dissolve effect and leaves canonical text visible. It does not fall back to wrapping or rewriting React-owned text nodes.
 - A changed or ambiguous Harness selector disables only the affected adapter and leaves native rendering/status visible.
-- An exception during measurement or animation first clears every associated mask, then reports a bounded diagnostic without response content.
+- An exception during measurement or animation first clears every associated mask and fails open without emitting response content.
 - Pinned-Harness integration tests treat a selector mismatch as a compatibility failure before packaging.
 
 ## Testing and acceptance
 
 Implementation follows TDD and must cover these layers:
 
+Automated implementation evidence now covers the unit/DOM, plugin contract, pinned-Harness boot, package closure, Chromium geometry/color/reduced-motion, and five-second idle gates below. A credentialed live-model visual pass through the actual Harness conversation renderer remains a separate manual acceptance activity; no provider credential was used for this implementation.
+
 ### Unit and DOM tests
 
-1. Appended-suffix detection animates only the new grapheme clusters and does not replay stable text.
+1. Appended-suffix detection animates only new complete grapheme clusters, rejects modifier/ZWJ extensions of the previous grapheme, and does not replay stable text or newly attached hydrated streams.
 2. Rewrites, shortened text, node replacement, and completion reveal canonical text and clear state.
 3. Emoji, combining marks, CJK characters, and mixed scripts segment correctly.
 4. The classifier accepts assistant prose and reasoning while rejecting code, inline code, tools, terminal output, controls, user content, and bottom status text.
@@ -180,6 +183,7 @@ Implementation follows TDD and must cover these layers:
 6. Reduced motion, scroll, resize, navigation, abort, and disposal clean up masks and overlays.
 7. The orb mounts only after a running-status anchor exists, uses the approved props, and unmounts on completion.
 8. If orb mounting or anchor recognition fails, the native status remains visible.
+9. A 300-grapheme burst preserves all canonical text while keeping copied glyphs and particles within their hard budgets.
 
 ### Real Harness browser integration
 
@@ -188,7 +192,7 @@ Implementation follows TDD and must cover these layers:
 3. Compare message-container geometry before, during, and after the effect; line wrapping and bounding boxes must not move beyond subpixel measurement tolerance.
 4. Confirm links, emphasis, lists, code, math, copy, selection, and screen-reader semantics remain owned by the original Harness DOM.
 5. Confirm code blocks, tool output, terminal output, user messages, and rehydrated history do not animate.
-6. Confirm the breathing 20-pixel, 2.0-speed orb is present only during the bottom active-thinking state and disappears after normal completion, abort, error, and session switch.
+6. Mount the generated overlay through real ReactDOM `createRoot`; confirm the bundled breathing 20-pixel, 2.0-speed Orb canvas commits before native status paint is hidden and disappears after normal completion, abort, error, session switch, or React unmount.
 7. Confirm completed reasoning returns to the existing DeepSeek `Think` presentation.
 8. Confirm reduced motion removes the dissolve and prevents continuous orb motion.
 
@@ -232,3 +236,4 @@ These facts apply to the pinned target versions only. A version change requires 
 ## Change log
 
 - `2026-08-16T13:00:00+08:00` — Recorded the user-approved official-plugin overlay design, dissolve scope, exact active-orb configuration, completion cleanup, and fail-open compatibility behavior.
+- `2026-08-16T13:37:00+08:00` — Marked the design implementation-backed after deterministic bundling, TDD controller/status coverage, pinned-Harness boot, runtime closure, and Chromium geometry/idle verification.

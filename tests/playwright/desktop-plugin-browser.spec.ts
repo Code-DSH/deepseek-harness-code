@@ -43,6 +43,8 @@ test("installs desktop settings and animates route commits with cleanup", async 
     const fakeReact = {
       createElement: () => null,
       useEffect: () => undefined,
+      useLayoutEffect: () => undefined,
+      useRef: (value: unknown) => ({ current: value }),
       useState: (factory: () => unknown) => [factory(), () => undefined],
     };
     Object.assign(window, {
@@ -53,6 +55,12 @@ test("installs desktop settings and animates route commits with cleanup", async 
           Object.assign(window, {
             desktopPlugin: definition.factory((id) => {
               if (id === "react") return fakeReact;
+              if (id === "react/jsx-runtime") {
+                return {
+                  jsx: fakeReact.createElement,
+                  jsxs: fakeReact.createElement,
+                };
+              }
               if (id === "@deepseek-ai/dsh-client-ui-primitives") {
                 return {
                   Button: () => null,
@@ -106,7 +114,7 @@ test("installs desktop settings and animates route commits with cleanup", async 
       ),
     };
   });
-  expect(installed).toEqual({ registrations: 1, style: true });
+  expect(installed).toEqual({ registrations: 2, style: true });
   await expect
     .poll(() =>
       page.evaluate(() => document.documentElement.dataset.dshDesktopPage),

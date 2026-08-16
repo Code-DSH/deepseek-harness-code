@@ -78,7 +78,7 @@ tags: [execplan, tdd, plugin, animation]
 - Consumes: current CommonJS-shaped `client-runtime.js`, `TRANSITION_STYLES`, and Harness ModuleLoader factory.
 - Produces: deterministic `client.js`; compile-time `TRANSITION_STYLES` and `CONVERSATION_EFFECT_STYLES` string constants; exact `thinking-orbs@0.3.1`; exact development bundler `esbuild@0.25.12`.
 
-- [ ] **Step 1: Write the failing package and bundle test**
+- [x] **Step 1: Write the failing package and bundle test**
 
 Add assertions to the deterministic bundle test:
 
@@ -92,7 +92,7 @@ expect(source).not.toContain('require("./stream-output-');
 expect(source).toContain("deepseek-harness-desktop-plugin");
 ```
 
-- [ ] **Step 2: Run the test to verify it fails**
+- [x] **Step 2: Run the test to verify it fails**
 
 Run:
 
@@ -102,7 +102,7 @@ npm exec --yes --package=pnpm@11.19.0 -- pnpm vitest run --config tests/e2e/plug
 
 Expected: FAIL because the exact dependencies, notice, and bundled module pipeline do not exist.
 
-- [ ] **Step 3: Add exact dependencies with the workspace package manager**
+- [x] **Step 3: Add exact dependencies with the workspace package manager**
 
 Run:
 
@@ -113,7 +113,7 @@ npm exec --yes --package=pnpm@11.19.0 -- pnpm --filter deepseek-harness-desktop-
 
 Add `THIRD_PARTY_NOTICES.md` to the plugin `files` list. Record the MIT copyright/license notices and official URLs for `thinking-orbs` and `generative-loaders`; do not copy response data or upstream source bodies into the notice.
 
-- [ ] **Step 4: Replace string-only assembly with deterministic esbuild output**
+- [x] **Step 4: Replace string-only assembly with deterministic esbuild output**
 
 Use `build()` from `esbuild` in `build-client.mjs`:
 
@@ -140,7 +140,7 @@ const result = await build({
 
 Wrap `result.outputFiles[0].text` in the existing `window.__ModuleLoader__.load({ id, factory })` envelope. Keep the factory-local `module`, `exports`, and Harness `require`; throw if esbuild produces other than one JavaScript output file. Create an initially namespaced `conversation-effects.css` with the fixed root contract so the compile-time constant is always defined.
 
-- [ ] **Step 5: Build and run the focused contract test**
+- [x] **Step 5: Build and run the focused contract test**
 
 Run:
 
@@ -151,7 +151,7 @@ npm exec --yes --package=pnpm@11.19.0 -- pnpm vitest run --config tests/e2e/plug
 
 Expected: PASS; the generated client resolves only the three declared Harness externals and contains bundled `thinking-orbs` code.
 
-- [ ] **Step 6: Commit the bundle foundation**
+- [x] **Step 6: Commit the bundle foundation**
 
 ```bash
 git add packages/desktop-plugin/package.json packages/desktop-plugin/scripts/build-client.mjs packages/desktop-plugin/src/conversation-effects.css packages/desktop-plugin/THIRD_PARTY_NOTICES.md packages/desktop-plugin/client.js pnpm-lock.yaml tests/e2e/plugin-contract.test.ts
@@ -170,7 +170,7 @@ git commit -m "build: bundle conversation animation dependencies"
 - Consumes: pinned selectors `[data-chat-flow-kind="assistant-step"] [data-streaming]` and DOM `Text` nodes.
 - Produces: `findAppendedGraphemes(previous, next, segmenter?)`, `isEligibleStreamTextNode(node)`, `eligibleTextNodes(root)`, `STREAMING_ASSISTANT_SELECTOR`, and `EXCLUDED_OUTPUT_SELECTOR`.
 
-- [ ] **Step 1: Write failing suffix and Unicode tests**
+- [x] **Step 1: Write failing suffix and Unicode tests**
 
 ```ts
 expect(findAppendedGraphemes("思考", "思考中🙂")).toEqual([
@@ -183,11 +183,11 @@ expect(findAppendedGraphemes("e", "e\u0301")).toBeNull();
 
 The last assertion treats a combining-mark rewrite as structural replacement rather than animating an invalid suffix.
 
-- [ ] **Step 2: Write failing DOM classification tests**
+- [x] **Step 2: Write failing DOM classification tests**
 
 Build a JSDOM assistant row containing prose, a gray `[data-variant="think"]` region, `code`, `pre`, a tool descendant, a button, an `aria-hidden` clone, a user row, and history without `[data-streaming]`. Assert that only visible prose/reasoning text nodes inside the streaming assistant root are returned.
 
-- [ ] **Step 3: Run the focused test and observe the missing module failure**
+- [x] **Step 3: Run the focused test and observe the missing module failure**
 
 ```bash
 npm exec --yes --package=pnpm@11.19.0 -- pnpm vitest run packages/desktop-plugin/test/stream-output-model.test.ts
@@ -195,7 +195,7 @@ npm exec --yes --package=pnpm@11.19.0 -- pnpm vitest run packages/desktop-plugin
 
 Expected: FAIL because `stream-output-model.js` does not exist.
 
-- [ ] **Step 4: Implement strict prefix segmentation and classification**
+- [x] **Step 4: Implement strict prefix segmentation and classification**
 
 Use UTF-16 offsets returned by `Intl.Segmenter` so DOM Ranges receive valid offsets:
 
@@ -240,7 +240,7 @@ export const EXCLUDED_OUTPUT_SELECTOR = [
 
 Require the streaming assistant ancestor and reject every excluded ancestor. Do not match hashed upstream class names or message text.
 
-- [ ] **Step 5: Run the focused model test**
+- [x] **Step 5: Run the focused model test**
 
 ```bash
 npm exec --yes --package=pnpm@11.19.0 -- pnpm vitest run packages/desktop-plugin/test/stream-output-model.test.ts
@@ -248,7 +248,7 @@ npm exec --yes --package=pnpm@11.19.0 -- pnpm vitest run packages/desktop-plugin
 
 Expected: PASS for append, rewrite, emoji, combining mark, CJK, classifier, and history cases.
 
-- [ ] **Step 6: Commit the stream model**
+- [x] **Step 6: Commit the stream model**
 
 ```bash
 git add packages/desktop-plugin/src/stream-output-model.js packages/desktop-plugin/test/stream-output-model.test.ts
@@ -271,7 +271,7 @@ git commit -m "feat: classify appended assistant graphemes"
 - Consumes: Task 2 exports plus `document`, `window`, `CSS.highlights`, `Highlight`, `MutationObserver`, `Range`, and requestAnimationFrame.
 - Produces: `createStreamOutputEffectController({ document, window })` returning `{ start(), dispose() }`, and `installStreamOutputEffects(document, window)` returning one idempotent disposer.
 
-- [ ] **Step 1: Write the failing controller tests**
+- [x] **Step 1: Write the failing controller tests**
 
 Use JSDOM plus injected/fake `CSS.highlights`, `Highlight`, range rectangles, animation frames, and timers. Assert:
 
@@ -289,11 +289,11 @@ expect(document.querySelector("[data-dsh-stream-overlay]")).toBeNull();
 
 Also assert no effect without CSS Highlight support, no replay of the baseline, cleanup after rewrite/completion/scroll/resize, exact copied `color` and font shorthand, no response text in diagnostics, and idempotent disposal.
 
-- [ ] **Step 2: Add the failing Playwright browser contract**
+- [x] **Step 2: Add the failing Playwright browser contract**
 
 Create a streaming assistant fixture with ordinary prose, gray reasoning, a link, inline code, a code block, and a user row. Load the built client, call exported `installStreamOutputEffects`, append text, and assert native Chromium creates only eligible overlay glyphs, preserves source/container bounding boxes, retains link/code DOM, and clears every overlay when `data-streaming` is removed.
 
-- [ ] **Step 3: Run both focused tests to verify failure**
+- [x] **Step 3: Run both focused tests to verify failure**
 
 ```bash
 npm exec --yes --package=pnpm@11.19.0 -- pnpm vitest run packages/desktop-plugin/test/stream-output-controller.test.ts
@@ -302,7 +302,7 @@ npm exec --yes --package=pnpm@11.19.0 -- pnpm exec playwright test tests/playwri
 
 Expected: FAIL because the controller and generated client export do not exist.
 
-- [ ] **Step 4: Implement observation, masks, overlays, and cleanup**
+- [x] **Step 4: Implement observation, masks, overlays, and cleanup**
 
 On `start()`, baseline all existing eligible text nodes, create one fixed `aria-hidden`/`pointer-events:none` overlay root, create `new Highlight()`, register it as `dsh-desktop-stream-mask`, and attach a scoped body observer with `{ subtree: true, childList: true, characterData: true, characterDataOldValue: true }`.
 
@@ -317,7 +317,7 @@ For each accepted append:
 
 Use one cancellation path for rewrite, root completion, scroll, resize, navigation, node removal, and disposal. It must clear masks before removing overlays. Do not wrap or replace a React-owned text node.
 
-- [ ] **Step 5: Add namespaced dissolve paint styles**
+- [x] **Step 5: Add namespaced dissolve paint styles**
 
 Define only plugin-owned selectors and paint properties:
 
@@ -344,11 +344,11 @@ Define only plugin-owned selectors and paint properties:
 
 Use opacity, blur, clip-path, and `currentColor` particles. Under reduced motion, disable glyph/particle animation and let the controller skip masking entirely.
 
-- [ ] **Step 6: Export and build the controller**
+- [x] **Step 6: Export and build the controller**
 
 Require the local controller from `client-runtime.js`, export `createStreamOutputEffectController` and `installStreamOutputEffects` for deterministic tests, and keep local requires bundled by esbuild.
 
-- [ ] **Step 7: Run focused unit and browser tests**
+- [x] **Step 7: Run focused unit and browser tests**
 
 ```bash
 npm exec --yes --package=pnpm@11.19.0 -- pnpm --dir packages/desktop-plugin build:client
@@ -358,7 +358,7 @@ npm exec --yes --package=pnpm@11.19.0 -- pnpm exec playwright test tests/playwri
 
 Expected: PASS with no geometry movement, no code/user animation, correct gray/primary sampled colors, and complete cleanup.
 
-- [ ] **Step 8: Commit the dissolve controller**
+- [x] **Step 8: Commit the dissolve controller**
 
 ```bash
 git add packages/desktop-plugin/src/stream-output-controller.js packages/desktop-plugin/src/conversation-effects.css packages/desktop-plugin/src/client-runtime.js packages/desktop-plugin/test/stream-output-controller.test.ts tests/playwright/stream-output-animation.spec.ts packages/desktop-plugin/client.js
@@ -384,11 +384,11 @@ git commit -m "feat: animate appended assistant text without layout changes"
 - Consumes: direct status selector `[data-chat-flow] > [role="status"][aria-live="polite"]`, React hooks, bundled `ThinkingOrb`, and `installStreamOutputEffects`.
 - Produces: `findRunningStatus(document)`, `installThinkingStatus(document, window, onSnapshot)`, `THINKING_ORB_PROPS = { state: "breathing", size: 20, speed: 2 }`, and `ConversationEffectsOverlay` registered as `deepseek-harness-desktop-conversation-effects` in `shell.overlay`.
 
-- [ ] **Step 1: Write failing status-adapter tests**
+- [x] **Step 1: Write failing status-adapter tests**
 
 Assert the adapter ignores unrelated live regions, emits only for the direct bottom child, measures `{ left, top: top + (height - 20) / 2 }`, repositions on captured scroll/resize, emits `null` on status removal, removes all listeners/observers on disposal, and never keys lifecycle from the English `Deep diving...` text.
 
-- [ ] **Step 2: Tighten the failing official-plugin contract**
+- [x] **Step 2: Tighten the failing official-plugin contract**
 
 Update the apply test to expect both `settings.general.item` and `shell.overlay`. Assert the layout bundle is present in `dsh.client.inject`, the exact orb props are exported, `thinking-orbs` is absent from runtime `require()` calls, and the overlay registration disposer participates in reference-counted cleanup.
 
@@ -402,11 +402,11 @@ if (id === "react/jsx-runtime") {
 
 The bundled library uses only `react`, `react/jsx-runtime`, and its embedded engine.
 
-- [ ] **Step 3: Add failing browser lifecycle assertions**
+- [x] **Step 3: Add failing browser lifecycle assertions**
 
 Extend the Playwright fixture with a direct bottom `role="status"`. Assert the source becomes transparent only after an orb host render, the host is fixed at the approved coordinates with a 20-by-20 canvas contract, the live region remains in the accessibility tree, and removing the status removes the host and marker. Emulate reduced motion and assert text overlays are absent; inspect the bundled orb props/static behavior rather than expecting continuous frames.
 
-- [ ] **Step 4: Run focused tests to verify failure**
+- [x] **Step 4: Run focused tests to verify failure**
 
 ```bash
 npm exec --yes --package=pnpm@11.19.0 -- pnpm vitest run packages/desktop-plugin/test/thinking-status.test.ts
@@ -416,7 +416,7 @@ npm exec --yes --package=pnpm@11.19.0 -- pnpm exec playwright test tests/playwri
 
 Expected: FAIL because no status adapter, shell overlay registration, or orb host exists.
 
-- [ ] **Step 5: Implement the status adapter**
+- [x] **Step 5: Implement the status adapter**
 
 Use `querySelectorAll()` and choose the last direct status child without matching text. Batch measurements in requestAnimationFrame. Observe child-list changes for authoritative mount/unmount; attach captured scroll and resize handlers only while active. The callback receives either:
 
@@ -426,7 +426,7 @@ Use `querySelectorAll()` and choose the last direct status child without matchin
 
 or `null`. Repeated mutations with the same coordinates and anchor do not emit another snapshot.
 
-- [ ] **Step 6: Mount the bundled orb from the official root slot**
+- [x] **Step 6: Mount the bundled orb from the official root slot**
 
 In `client-runtime.js`:
 
@@ -443,7 +443,7 @@ const THINKING_ORB_PROPS = Object.freeze({
 
 Register the component in `shell.overlay`, add `@deepseek-ai/dsh-client-ui-layout@^0.1.0-rc.6` to plugin peers and `dsh.client.inject` so the seat exists before registration, and dispose both slot registrations during final release.
 
-- [ ] **Step 7: Build and run focused lifecycle tests**
+- [x] **Step 7: Build and run focused lifecycle tests**
 
 ```bash
 npm exec --yes --package=pnpm@11.19.0 -- pnpm --dir packages/desktop-plugin build:client
@@ -454,7 +454,9 @@ npm exec --yes --package=pnpm@11.19.0 -- pnpm exec playwright test tests/playwri
 
 Expected: PASS for running-only presence, exact props, geometry preservation, accessible fallback, all completion paths, reduced motion, and real Harness boot.
 
-- [ ] **Step 8: Commit the ThinkingOrb lifecycle**
+Verified with 9 focused unit tests, 17 official-plugin tests (including the pinned real Harness boot), two Chromium tests, TypeScript, and ESLint. The browser test exercises the real DOM adapter and reduced-motion path; the plugin contract separately executes the React layout-effect boundary to prove the native source is hidden only after host commit. Strict type checking also required colocated declarations for the JavaScript controllers and `@types/jsdom@21.1.7`; these are test/type-only additions and do not enter the runtime bundle.
+
+- [x] **Step 8: Commit the ThinkingOrb lifecycle**
 
 ```bash
 git add packages/desktop-plugin/src/thinking-status.js packages/desktop-plugin/src/client-runtime.js packages/desktop-plugin/src/conversation-effects.css packages/desktop-plugin/package.json packages/desktop-plugin/test/thinking-status.test.ts tests/e2e/plugin-contract.test.ts tests/e2e/plugin-real-harness.test.ts tests/playwright/stream-output-animation.spec.ts packages/desktop-plugin/client.js
@@ -475,11 +477,11 @@ git commit -m "feat: show breathing orb while the model is active"
 - Consumes: final generated `client.js`, Electron package file list, plugin package manifest, and browser controllers from Tasks 3–4.
 - Produces: release-gating assertions for offline dependency closure, cleanup, and idle behavior.
 
-- [ ] **Step 1: Add failing release-closure assertions before changing the checker**
+- [x] **Step 1: Add failing release-closure assertions before changing the checker**
 
 Assert the plugin notice is a runtime artifact, `thinking-orbs@0.3.1` resolves from the workspace lock, the generated client contains no runtime request for `thinking-orbs` or local effect modules, and the package contract includes the notice.
 
-- [ ] **Step 2: Run package checks and capture the expected missing-artifact failure**
+- [x] **Step 2: Run package checks and capture the expected missing-artifact failure**
 
 ```bash
 npm exec --yes --package=pnpm@11.19.0 -- pnpm vitest run tests/unit/package-runtime-closure.test.ts
@@ -488,7 +490,7 @@ npm exec --yes --package=pnpm@11.19.0 -- pnpm vitest run --config tests/e2e/pack
 
 Expected: FAIL until the runtime closure and package assertions include the new notice/bundle contract.
 
-- [ ] **Step 3: Extend closure checks and idle browser evidence**
+- [x] **Step 3: Extend closure checks and idle browser evidence**
 
 Add `packages/desktop-plugin/THIRD_PARTY_NOTICES.md` to `runtimeArtifacts`. Read the generated client and reject these patterns:
 
@@ -505,7 +507,7 @@ for (const unresolved of [
 
 In Playwright, instrument requestAnimationFrame after stream completion, wait five seconds, and assert the plugin schedules no new frames, leaves no overlays/highlights/status markers, and does not change message geometry or heap through retained plugin DOM.
 
-- [ ] **Step 4: Run package, preflight, and browser gates**
+- [x] **Step 4: Run package, preflight, and browser gates**
 
 ```bash
 npm exec --yes --package=pnpm@11.19.0 -- pnpm build:plugin
@@ -517,7 +519,9 @@ npm exec --yes --package=pnpm@11.19.0 -- pnpm exec playwright test tests/playwri
 
 Expected: PASS with a self-contained plugin and zero post-generation animation activity.
 
-- [ ] **Step 5: Commit release gates**
+Verified with five runtime-closure unit tests, four package-contract tests, the preflight checker (12 artifacts, 32 production dependencies, five critical runtime packages, and one bundled plugin package), and three Chromium tests. The five-second idle observation retained no plugin paint DOM or CSS Highlight and scheduled no additional animation frame. Only ordinary compilation was performed; no distributable installer or version artifact was built.
+
+- [x] **Step 5: Commit release gates**
 
 ```bash
 git add tests/unit/package-runtime-closure.test.ts scripts/check-runtime-closure.mjs tests/e2e/package-contract.test.ts tests/playwright/stream-output-animation.spec.ts
@@ -540,7 +544,7 @@ git commit -m "test: gate conversation animation runtime closure"
 - Consumes: verified implementation paths, exact dependency versions, test counts, browser results, and final Git diff.
 - Produces: implementation-backed design/architecture/testing facts and a completed recoverable plan record.
 
-- [ ] **Step 1: Run the complete verification matrix from a clean generated state**
+- [x] **Step 1: Run the complete verification matrix from a clean generated state**
 
 ```bash
 npm exec --yes --package=pnpm@11.19.0 -- pnpm build
@@ -555,7 +559,9 @@ npm exec --yes --package=pnpm@11.19.0 -- pnpm preflight:runtime
 
 Expected: every command exits 0. Record exact test file/test counts and distinguish any host-limited manual visual check from automated evidence.
 
-- [ ] **Step 2: Write back only verified facts**
+Verified from a clean generated state before review: build, 24 unit files / 86 tests, 3 plugin files / 17 tests, 1 package file / 4 tests, 4 Chromium tests, TypeScript, ESLint, documentation links, security contracts, and runtime closure passed. After review remediation and merging the latest local `main`, the current suite passes 24 unit files / 89 tests, 3 plugin files / 17 tests, 1 package file / 4 tests, and 5 Chromium tests; repository-wide Prettier, TypeScript, ESLint, documentation links, security contracts, and runtime closure also pass. A credentialed live-model visual pass was not run.
+
+- [x] **Step 2: Write back only verified facts**
 
 - Mark the design `content_stage: implementation-backed` and add the actual controller/build/test paths.
 - Add the root overlay, DOM compatibility adapter, fail-closed behavior, and no-content-logging boundary to architecture.
@@ -564,7 +570,7 @@ Expected: every command exits 0. Record exact test file/test counts and distingu
 - Add this plan to `AGENTS.md` while active; mark it completed and update the current snapshot only after final verification.
 - Check every plan checkbox and record any deviation with its evidence rather than rewriting history.
 
-- [ ] **Step 3: Format, link-check, and inspect the final scope**
+- [x] **Step 3: Format, link-check, and inspect the final scope**
 
 ```bash
 npm exec --yes --package=pnpm@11.19.0 -- pnpm exec prettier --write AGENTS.md docs/architecture/overview.md docs/engineering/testing.md docs/knowledge/upstream-baseline.md docs/superpowers/specs/2026-08-16-stream-output-animation-design.md docs/superpowers/plans/2026-08-16-stream-output-animation.md
@@ -576,14 +582,14 @@ git diff --stat
 
 Expected: no formatting/link/diff errors and no unrelated file changes.
 
-- [ ] **Step 4: Commit documentation and verified completion evidence**
+- [x] **Step 4: Commit documentation and verified completion evidence**
 
 ```bash
 git add AGENTS.md docs/architecture/overview.md docs/engineering/testing.md docs/knowledge/upstream-baseline.md docs/superpowers/specs/2026-08-16-stream-output-animation-design.md docs/superpowers/plans/2026-08-16-stream-output-animation.md
 git commit -m "docs: record verified conversation animations"
 ```
 
-- [ ] **Step 5: Perform the final clean-tree audit**
+- [x] **Step 5: Perform the final clean-tree audit**
 
 ```bash
 git status --short --branch
@@ -602,3 +608,12 @@ Expected: the feature worktree is clean; all implementation commits are visible;
 ## Progress
 
 - 2026-08-16 — User approved the written design and requested implementation; TDD execution plan created.
+- 2026-08-16 — Task 1 complete: exact dependencies, MIT notices, warning-free esbuild client bundling, stylesheet composition, and plugin contract are green.
+- 2026-08-16 — Task 2 complete: strict appended-grapheme ranges and the semantic prose/reasoning classifier are green for CJK, emoji, combining marks, history, code, tool, status, and user exclusions.
+- 2026-08-16 — Task 3 complete: CSS Highlight masking and the fixed dissolve overlay preserve canonical Markdown geometry while copying primary/reasoning typography and clearing on every tested lifecycle boundary.
+- 2026-08-16 — Task 4 complete: the official `shell.overlay` renders the exact breathing 20-pixel Orb only for the authoritative direct running status, with commit-ordered native fallback and active-only viewport listeners.
+- 2026-08-16 — Task 5 complete: package closure ships MIT notices, rejects unresolved client imports, and proves five seconds of zero-frame post-generation quiescence with no retained paint DOM.
+- 2026-08-16 — Task 6 verification complete: all feature tests, build, type, lint, docs, security, and runtime gates pass; the unrelated baseline product-story Prettier exception and unexecuted credentialed visual pass are recorded explicitly.
+- 2026-08-16 — Final feature-worktree audit was clean with seven implementation/verification commits above the approved design and plan baseline; cloud PR and local-main integration remain the delivery workflow outside this implementation checklist.
+- 2026-08-16 — Pre-merge code review found no critical issues and four important gaps. TDD remediation now baselines newly attached streaming roots, validates full-string emoji grapheme boundaries, caps live DOM at 120 glyphs/72 particles with fail-open overflow, and mounts the bundled Orb through real ReactDOM in Chromium to prove commit ordering, reduced-motion quiescence, and cleanup.
+- 2026-08-16 — Re-review found no remaining critical or important issues. The latest local `main` was merged into the feature branch; both the V4 Pro/toolchain facts and animation dependency facts were retained, and the complete post-merge verification matrix passed.
