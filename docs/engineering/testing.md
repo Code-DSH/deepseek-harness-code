@@ -12,8 +12,9 @@ The desktop bundle leaves streamed prose, Think disclosures, and running status 
 
 ## Verified on 2026-08-16
 
-- Unit/state/security and plugin contracts: 27 files / 103 tests cover the desktop host, watchdog, progressive preset installer, checksum-pinned Routing Suite assembly, native conversation-rendering boundary, and absence of a global thinking overlay.
-- Four Routing Suite tests cover startup assembly, idempotency, fail-open absence, and rejection of a structurally valid substituted archive before executable extraction. Temporarily disabling only the SHA-256 comparison makes the security regression fail.
+- Unit/state/security and plugin contracts: 28 files / 107 tests cover the desktop host, watchdog, progressive preset installer, checksum-pinned Routing Suite assembly, native conversation-rendering boundary, and absence of a global thinking overlay.
+- Seven Routing Suite tests cover valid rc.6 YAML loading, 0.3.0 migration, preservation of user entries, idempotency, fail-open absence, profile-relative injector adaptation, and rejection of a structurally valid substituted archive before executable extraction. Temporarily disabling only the SHA-256 comparison makes the security regression fail.
+- The Electron readiness regression imports the real main module with `whenReady()` pending and proves that an early macOS `activate` event cannot construct a BrowserWindow. The pre-fix test reproduced the user's exact `Cannot create BrowserWindow before app is ready` exception.
 - The rc.6 stream-performance regression executes the actual packaged Assistant and turn-tail Definitions. Across 10,000 ordered deltas it independently accumulates the expected text, verifies the `[7pr]` final token, reasoning/final/structural synchronous publication, hydration/reconnect, two interleaved session assemblers, and fail-open behavior. Open-turn match inspections fell from 50,015,000 on the unpatched bundle to zero with the exact-version patch.
 - Vendored Anchored Standard implementation: 108 upstream and local-patch tests.
 - Anchored Standard coverage includes exact two-tool bootstrap, both promotion events, automatic-context filtering, explicit unlock recovery, session isolation, subagent residency, compaction epochs, strict missing-tool failures, official rc.6 discovery/session creation, conflict preservation, and atomic upgrades.
@@ -24,7 +25,8 @@ The desktop bundle leaves streamed prose, Think disclosures, and running status 
 - Runtime closure verifies the local runtime artifacts and critical Harness packages, and rejects unresolved retired animation-module imports in `client.js`.
 - The desktop plugin has no conversation overlay, CSS Highlight, Orb, or status marker to retain after completion.
 - Fault injection recovered a killed Harness in nine seconds. Killing the renderer rebuilt the window while preserving the Electron main and Harness PIDs.
-- The 0.3.0 Universal package was mounted and signature-checked; both managed preset resource sets were present and 49 Mach-O files passed Universal/architecture-qualified inspection. The Routing Suite manifest and all four expected executable/preset entry points were also checked in the packaged resources.
+- The 0.3.1 Universal package was mounted and signature-checked; both managed preset resource sets were present and 49 Mach-O files passed Universal/architecture-qualified inspection. The Routing Suite manifest and all four expected executable/preset entry points were also checked in the packaged resources.
+- The packaged 0.3.1 Electron executable ran the bundled rc.6 DSH against an isolated profile containing both Routing Suite packages; the loopback Web root returned HTTP 200 and advertised both the official conversation client and `deepseek-harness-desktop-plugin`.
 - A real Electron run verified the grouped preload API, text input and full selection, Standard workspace creation after the compaction-peer repair, permission-menu persistence, localized General settings, official Harness Button/Menu rendering with no raw select/checkbox, close-preference persistence, and `Control+V` paste into the official password field without reading a credential.
 - An idle five-second performance sample recorded zero layouts, 1.631 ms total task time, and a 456-byte JS-heap delta. The plugin no longer uses `offsetWidth` or an always-running animation.
 

@@ -34,6 +34,9 @@ import { execFileSync } from "node:child_process";
 const scriptDir = dirname(fileURLToPath(import.meta.url));
 const projectRoot = resolve(scriptDir, "..");
 const DEFAULT_OUT = join(projectRoot, "build", "routing-suite");
+const INJECTOR_BARE_ENTRY = "name: '@dsh-external/dsh-super-injector'";
+const INJECTOR_PROFILE_ENTRY =
+  "name: './node_modules/@dsh-external/dsh-super-injector/lib/index.js'";
 
 /** Pinned snapshot manifest. Kept in sync with the suite's submodules. */
 const SOURCES = [
@@ -81,6 +84,21 @@ function verifyArchive(source, bytes) {
     );
   }
   return actualSha256;
+}
+
+/**
+ * Adapt the verified upstream injector patch to rc.6's Node Loader boundary.
+ * Bundle discovery resolves from the profile, but a bare plugin import does
+ * not; a profile-relative entry keeps the same audited package and export.
+ */
+export function adaptInjectorPatchContent(content) {
+  const occurrences = content.split(INJECTOR_BARE_ENTRY).length - 1;
+  if (occurrences !== 1) {
+    throw new Error(
+      `fetch-routing-suite: injector patch expected exactly one audited bare entry, found ${occurrences}`,
+    );
+  }
+  return content.replace(INJECTOR_BARE_ENTRY, INJECTOR_PROFILE_ENTRY);
 }
 
 function parseArgs(argv) {
@@ -171,6 +189,11 @@ async function assembleFromTarball(source, cacheDir, outDir, components) {
   const target = join(outDir, source.target);
   await rm(target, { recursive: true, force: true });
   await extractTarball(archive, target, source.strip);
+  if (source.id === "injector") {
+    const patchPath = join(target, "cordis.patch.yml");
+    const patch = adaptInjectorPatchContent(await readFile(patchPath, "utf8"));
+    await writeFile(patchPath, patch, { mode: 0o600 });
+  }
   if (source.id === "injector" || source.id === "mode-boost") {
     await ensureExecutable(join(target, "scripts"));
   }
@@ -299,9 +322,11 @@ async function main() {
   );
 }
 
-main().catch((error) => {
-  process.stderr.write(
-    `${error instanceof Error ? error.message : String(error)}\n`,
-  );
-  process.exit(1);
-});
+if (resolve(process.argv[1] ?? "") === fileURLToPath(import.meta.url)) {
+  main().catch((error) => {
+    process.stderr.write(
+      `${error instanceof Error ? error.message : String(error)}\n`,
+    );
+    process.exit(1);
+  });
+}

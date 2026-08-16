@@ -1,5 +1,6 @@
 # Plans Index
 
+- [Startup recovery 0.3.1](./active/startup-recovery-0.3.1.md) — completed Electron readiness, Routing Suite YAML migration, rc.6 profile-resolution, and Universal patch-release plan.
 - [DSH Routing Suite 0.3.0 release](../superpowers/plans/2026-08-16-routing-suite-release.md) — completed all-branch merge, supply-chain hardening, clean-install gates, and verified Universal DMG evidence.
 - [Previous DeepSeek Harness Code plan](./active/deepseek-harness-desktop.md) — historical 0.2.0 progressive-preset scope, risks, Read Set, and evidence.
 - [Superseded merge/install plan](./active/merge-all-branches-release-install.md) — previous all-branch packaging/install plan; its unexecuted installation step is replaced by the 0.3.0 artifact-only handoff.

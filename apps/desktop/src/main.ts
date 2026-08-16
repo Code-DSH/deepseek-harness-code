@@ -527,11 +527,16 @@ function reportLaunchFailure(error: unknown): void {
   dialog.showErrorBox("DeepSeek Harness Code could not start", message);
 }
 
-app.whenReady().then(launch).catch(reportLaunchFailure);
-app.on("activate", () => {
-  if (BrowserWindow.getAllWindows().length === 0) createWindow();
-  else mainWindow?.show();
-});
+app
+  .whenReady()
+  .then(() => {
+    app.on("activate", () => {
+      if (BrowserWindow.getAllWindows().length === 0) createWindow();
+      else mainWindow?.show();
+    });
+    return launch();
+  })
+  .catch(reportLaunchFailure);
 app.on("before-quit", (event) => {
   if (quitting) return;
   event.preventDefault();

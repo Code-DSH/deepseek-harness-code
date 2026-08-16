@@ -7,8 +7,10 @@ import {
   realpath,
   writeFile,
 } from "node:fs/promises";
+import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
+import { pathToFileURL } from "node:url";
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -37,6 +39,45 @@ type LinkModule = {
   ) => Promise<RoutingSuiteStartupResult>;
 };
 
+type HarnessAppBootModule = {
+  composeEntries: (
+    layers: Record<string, unknown>[][],
+  ) => Record<string, unknown>[];
+  loadOverlayPatches: (
+    binName: string,
+    file: string,
+  ) => Record<string, unknown>[];
+};
+
+async function loadPinnedHarnessAppBoot(): Promise<HarnessAppBootModule> {
+  const workspaceRequire = createRequire(join(process.cwd(), "package.json"));
+  const dshManifest = workspaceRequire.resolve("@deepseek-ai/dsh/package.json");
+  const dshRequire = createRequire(dshManifest);
+  const appBootEntry = dshRequire.resolve("@deepseek-ai/dsh-app-boot");
+  return (await import(
+    pathToFileURL(appBootEntry).href
+  )) as HarnessAppBootModule;
+}
+
+async function loadWithPinnedHarness(
+  patchPath: string,
+): Promise<Record<string, unknown>[]> {
+  const appBoot = await loadPinnedHarnessAppBoot();
+  return appBoot.loadOverlayPatches("dsh", patchPath);
+}
+
+const expectedManagedRoutingPatches = [
+  {
+    insert: [
+      {
+        id: "mode-boost",
+        name: "./node_modules/@dsh-external/dsh-mode-boost/lib/index.js",
+        config: {},
+      },
+    ],
+  },
+];
+
 async function loadLinker(): Promise<LinkModule> {
   const module = (await import(
     "../../apps/desktop/src/lifecycle/routing-suite-link.js"
@@ -64,7 +105,12 @@ async function createRoutingSuiteSnapshot(
   });
   await writeFile(
     join(suiteRoot, "injector", "cordis.patch.yml"),
-    "# injector patch layer\n[]\n",
+    `# injector patch layer
+- insert:
+    - id: dsh-super-injector
+      name: './node_modules/@dsh-external/dsh-super-injector/lib/index.js'
+      config: {}
+`,
   );
   await mkdir(join(suiteRoot, "injector", "lib"), { recursive: true });
   await writeFile(
@@ -169,12 +215,27 @@ describe("dsh-routing-suite auto-load pipeline", () => {
     ).toBe(await realpath(join(suiteRoot, "mode-boost")));
 
     // The user patch layer registers the host-plane boost plugin.
-    const patch = await readFile(
-      join(dshHome, "profiles", "web", "cordis.patch.yml"),
-      "utf8",
-    );
+    const patchPath = join(dshHome, "profiles", "web", "cordis.patch.yml");
+    const patch = await readFile(patchPath, "utf8");
     expect(patch).toContain("id: mode-boost");
     expect(patch).toContain("@dsh-external/dsh-mode-boost");
+    const profilePatches = await loadWithPinnedHarness(patchPath);
+    expect(profilePatches).toEqual(expectedManagedRoutingPatches);
+    const appBoot = await loadPinnedHarnessAppBoot();
+    const composed = appBoot.composeEntries([
+      await loadWithPinnedHarness(
+        join(suiteRoot, "injector", "cordis.patch.yml"),
+      ),
+      profilePatches,
+    ]);
+    expect(
+      composed.find((entry) => entry.id === "dsh-super-injector"),
+    ).toMatchObject({
+      name: "./node_modules/@dsh-external/dsh-super-injector/lib/index.js",
+    });
+    expect(composed.find((entry) => entry.id === "mode-boost")).toMatchObject({
+      name: "./node_modules/@dsh-external/dsh-mode-boost/lib/index.js",
+    });
 
     // Authored presets are managed installs with ownership markers.
     for (const presetId of ["router-standard", "router-spec"]) {
@@ -224,6 +285,71 @@ describe("dsh-routing-suite auto-load pipeline", () => {
       "utf8",
     );
     expect(patch.match(/id: mode-boost/g)).toHaveLength(1);
+  });
+
+  it("repairs the exact malformed patch emitted by 0.3.0 without duplication", async () => {
+    const { ensureRoutingSuite } = await loadLinker();
+    const root = await mkdtemp(join(tmpdir(), "routing-suite-migration-"));
+    const suiteRoot = await createRoutingSuiteSnapshot(root);
+    const dshHome = join(root, "dsh-home");
+    const patchPath = join(dshHome, "profiles", "web", "cordis.patch.yml");
+    await mkdir(dirname(patchPath), { recursive: true });
+    await writeFile(
+      patchPath,
+      `# Your patch layer for this dsh profile, applied after every bundle layer:
+# a top-level YAML array of loader patch entries (id-targeted config
+# overrides, disables, and insert lists; \`!!js\` expressions allowed).
+[]
+- insert:
+    - id: mode-boost
+      name: '@dsh-external/dsh-mode-boost'
+      config: {}
+`,
+    );
+
+    await ensureRoutingSuite(dshHome, suiteRoot);
+    await ensureRoutingSuite(dshHome, suiteRoot);
+
+    const patch = await readFile(patchPath, "utf8");
+    expect(patch.match(/id: mode-boost/g)).toHaveLength(1);
+    expect(await loadWithPinnedHarness(patchPath)).toEqual(
+      expectedManagedRoutingPatches,
+    );
+  });
+
+  it("preserves valid user patch entries while appending the managed routing entry", async () => {
+    const { ensureRoutingSuite } = await loadLinker();
+    const root = await mkdtemp(join(tmpdir(), "routing-suite-user-patch-"));
+    const suiteRoot = await createRoutingSuiteSnapshot(root);
+    const dshHome = join(root, "dsh-home");
+    const patchPath = join(dshHome, "profiles", "web", "cordis.patch.yml");
+    await mkdir(dirname(patchPath), { recursive: true });
+    await writeFile(
+      patchPath,
+      `# user-owned entry
+- insert:
+    - id: user-plugin
+      name: './user-plugin.mjs'
+      config:
+        enabled: true
+`,
+    );
+
+    await ensureRoutingSuite(dshHome, suiteRoot);
+    await ensureRoutingSuite(dshHome, suiteRoot);
+
+    expect(await loadWithPinnedHarness(patchPath)).toEqual([
+      {
+        insert: [
+          {
+            id: "user-plugin",
+            name: "./user-plugin.mjs",
+            config: { enabled: true },
+          },
+        ],
+      },
+      ...expectedManagedRoutingPatches,
+    ]);
   });
 
   it("degrades to 'unavailable' without ever blocking startup", async () => {
@@ -295,5 +421,25 @@ describe("dsh-routing-suite auto-load pipeline", () => {
     await expect(
       readFile(join(outputRoot, "injector", "lib", "index.js"), "utf8"),
     ).rejects.toThrow();
+  });
+
+  it("adapts the verified injector entry to profile-relative resolution", async () => {
+    const { adaptInjectorPatchContent } = (await import(
+      pathToFileURL(join(process.cwd(), "scripts", "fetch-routing-suite.mjs"))
+        .href
+    )) as {
+      adaptInjectorPatchContent: (content: string) => string;
+    };
+
+    expect(
+      adaptInjectorPatchContent(
+        "- insert:\n    - id: dsh-super-injector\n      name: '@dsh-external/dsh-super-injector'\n",
+      ),
+    ).toContain(
+      "name: './node_modules/@dsh-external/dsh-super-injector/lib/index.js'",
+    );
+    expect(() => adaptInjectorPatchContent("- insert: []\n")).toThrow(
+      "expected exactly one audited bare entry",
+    );
   });
 });

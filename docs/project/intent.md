@@ -11,7 +11,7 @@ read_when: [starting or changing implementation]
 skip_when: [performing an isolated test with unchanged scope]
 priority: must
 freshness_class: project
-last_verified: 2026-08-16T16:38:10+08:00
+last_verified: 2026-08-16T17:35:00+08:00
 owners: [project]
 source_of_truth: [user-approved implementation plan]
 related:
@@ -56,7 +56,7 @@ Deliver an all-in-one, modernized DeepSeek Harness Code desktop distribution tha
 
 ## Constraints
 
-- App and product display name `DeepSeek Harness Code`; package name `deepseek-harness-code`; combined Routing Suite release version `0.3.0`.
+- App and product display name `DeepSeek Harness Code`; package name `deepseek-harness-code`; startup-recovery release version `0.3.1` with the checksum-pinned Routing Suite retained.
 - Baseline versions: `@deepseek-ai/dsh@0.1.0-rc.6`, Electron `43.4.0`, electron-builder `26.15.3`, Node build baseline `24.18.0`, pnpm `11.19.0`.
 - macOS 12-27 x64/arm64, Windows and Linux x64 native CI; fail closed rather than mislabel an architecture.
 - Harness binds only to `127.0.0.1`; user data remains outside `.app`.

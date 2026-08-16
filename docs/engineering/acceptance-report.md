@@ -1,7 +1,7 @@
 ---
 id: engineering.acceptance-report
-title: DeepSeek Harness Code 0.3.0 Acceptance Report
-summary: Final source, Routing Suite, rc.6 long-stream projection, clean-install, and Universal macOS package evidence for the integrated 0.3.0 release.
+title: DeepSeek Harness Code 0.3.1 Acceptance Report
+summary: Final source, startup recovery, Routing Suite, rc.6 long-stream projection, and Universal macOS package evidence for the integrated 0.3.1 release.
 kind: engineering
 status: canonical
 content_stage: final-verified
@@ -11,7 +11,7 @@ read_when: [reviewing release readiness or reproducing validation]
 skip_when: [isolated source edits before release]
 priority: must
 freshness_class: project
-last_verified: 2026-08-16T16:38:10+08:00
+last_verified: 2026-08-16T17:35:00+08:00
 owners: [primary-agent]
 source_of_truth: [../../apps, ../../packages, ../../tests, ../../release]
 related:
@@ -21,14 +21,14 @@ supersedes: []
 tags: [acceptance, release, evidence]
 ---
 
-# DeepSeek Harness Code 0.3.0 Acceptance Report
+# DeepSeek Harness Code 0.3.1 Acceptance Report
 
 ## Artifact
 
-- DMG: `release/DeepSeek-Harness-Code-0.3.0-mac-universal.dmg`
+- DMG: `release/DeepSeek-Harness-Code-0.3.1-mac-universal.dmg`
 - App: `release/mac-universal/DeepSeek Harness Code.app`
-- Size: 284,134,947 bytes (271 MiB displayed by `ls`)
-- SHA-256: `c4d94cbe36b01152083f9eb5606fb85f2d5b80b155b4a5ecbe7946d37054314f`
+- Size: 284,138,156 bytes (271 MiB displayed by `ls`)
+- SHA-256: `35d7a81fbddd8ffb479b5834ac2b669eb5708c62ac67781f6d43368af91bbf79`
 - `verify:mac --universal` mounted the DMG read-only, verified the runtime dependency closure, Anchored Standard provenance, ad-hoc signature, and 49 Universal/architecture-qualified Mach-O files. A separate `codesign --verify --deep --strict` completed without error.
 
 ## Root-cause and repair evidence
@@ -46,23 +46,26 @@ tags: [acceptance, release, evidence]
 11. The macOS traffic-light group previously used `{ x: 16, y: 6 }`, placing the red button closer to the top edge than the left edge. The native BrowserWindow position is now `{ x: 16, y: 16 }`; no Web title bar, spacer, or renderer offset was added.
 12. The rc.6 `turn-tail.tailData()` fallback searched the complete growing Context match list on every open-turn derived flush because `state.end` is intentionally absent before `turn/end`. A 10,000-delta real-bundle regression measured 50,015,000 match inspections. The exact-version pnpm patch now reads the Definition-owned state directly during normal operation (zero inspections), retains the original scan only when state is unexpectedly absent, and leaves canonical chunk ingestion and Assistant publication cadence unchanged.
 13. The merged Routing Suite branch originally downloaded release archives plus a mutable router `main` archive in the background, recorded their digests only after download, and executed the resulting cache on the next launch. The release now bundles exact injector `0.3.3`, mode-boost `0.1.0`, and router preset commit `eff787e95132d6c7104214542104a84d656b497e`; each archive is compared with a reviewed SHA-256 before any `tar` extraction. The runtime updater was removed, and an intentionally valid but substituted archive fixture proves the check fails before executable output is created.
+14. The 0.3.0 macOS `activate` listener was registered before Electron readiness and could call `new BrowserWindow()` from a pre-ready event. The installed stack resolved exactly to that callback. The listener is now registered only inside the fulfilled `app.whenReady()` continuation, matching Electron's documented lifecycle requirement; the regression reproduces the old exception under a pending readiness promise.
+15. Routing Suite assembly appended its managed `- insert:` block after the official empty `[]` profile document. The exact rc.6 loader rejected line 5 with `end of the stream or a document separator is expected`, so the child exited before readiness. Startup now replaces the empty document, migrates the exact malformed 0.3.0 output idempotently, and preserves unrelated valid user patch entries.
+16. After repairing YAML, a real isolated rc.6 run revealed both Routing Suite packages still failed as bare imports from profile-local links. The build now adapts the injector's checksum-verified patch only after archive verification, and both injector and mode boost resolve through stable profile-relative public entry paths. A source-tree run and the packaged 0.3.1 executable each served the loopback Web root with HTTP 200.
 
 ## Automated verification
 
 | Gate              | Result                                                                                       |
 | ----------------- | -------------------------------------------------------------------------------------------- |
-| Unit suite        | 27 files / 103 tests passed, including 4 Routing Suite and 4 real-bundle stream regressions  |
+| Unit suite        | 28 files / 107 tests passed, including 7 Routing Suite and 4 real-bundle stream regressions  |
 | Upstream preset   | 108 vendored upstream and local-patch tests passed                                           |
 | Official plugins  | 3 files / 23 tests passed, including pinned rc.6 roster, session creation, and boot          |
 | Package contract  | 1 file / 4 tests passed                                                                      |
 | Browser E2E       | 1/1 passed; asserts only `settings.general.item`, route commit, and disposal                 |
 | TypeScript        | `tsc --noEmit` passed                                                                        |
-| Static gates      | ESLint, Prettier, 34 documentation files, and 7-control/3-forbidden security contract passed |
+| Static gates      | ESLint, Prettier, 35 documentation files, and 7-control/3-forbidden security contract passed |
 | Dependency audit  | `pnpm audit --prod` reported no known vulnerabilities                                        |
 | Runtime preflight | 22 artifacts, 32 production dependencies, and 5 critical Harness packages verified           |
-| macOS package     | 0.3.0 Universal DMG mounted, signature/resource closure checked, and SHA-256 recorded        |
+| macOS package     | 0.3.1 Universal DMG mounted, signature/resource closure checked, and SHA-256 recorded        |
 
-The patched dependency was rebuilt from a moved-aside `node_modules` tree with `pnpm install --frozen-lockfile`; the installed peer-qualified package contained the patch and the focused stream suite passed 4/4. Reverting only the installed optimization reproduced the 50,015,000-inspection failure, then restoring it returned the suite to green. The Routing Suite checksum test was also mutation-checked: disabling only the comparison made the substituted archive test fail, restoring it returned all four routing tests to green. The final frozen install, full tests, build, typecheck, runtime preflight, lint, formatting, documentation links, security contract, production audit, Universal packaging, artifact verification, and deep signature check all passed.
+The patched dependency was rebuilt from a moved-aside `node_modules` tree with `pnpm install --frozen-lockfile`; the installed peer-qualified package contained the patch and the focused stream suite passed 4/4. Reverting only the installed optimization reproduced the 50,015,000-inspection failure, then restoring it returned the suite to green. The Routing Suite checksum test was also mutation-checked: disabling only the comparison made the substituted archive test fail, restoring it returned the routing suite to green. For startup recovery, the new readiness and pinned-loader tests first reproduced the exact Electron and YAML failures, then passed after the fixes. The final full tests, build, typecheck, runtime preflight, lint, formatting, documentation links, security contract, production audit, Universal packaging, artifact verification, deep signature check, and isolated packaged-Harness HTTP smoke test all passed.
 
 ## Real renderer and performance evidence
 

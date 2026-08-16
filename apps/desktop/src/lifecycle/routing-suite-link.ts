@@ -27,9 +27,17 @@ const ROUTING_MODE_BOOST_PATCH_ID = "mode-boost";
 const ROUTING_PRESET_DIRECTORY = "preset";
 const ROUTING_VERSIONS_FILE = "versions.json";
 
-const MODE_BOOST_PATCH_BLOCK = `- insert:
+const LEGACY_MODE_BOOST_PATCH_BLOCK = `- insert:
     - id: ${ROUTING_MODE_BOOST_PATCH_ID}
       name: '${ROUTING_MODE_BOOST_PACKAGE}'
+      config: {}
+`;
+
+// The rc.6 Node Loader cannot resolve a bare package name from a profile-local
+// link. Address the linked package relative to the profile's cordis.yml.
+const MANAGED_ROUTING_PATCH_BLOCK = `- insert:
+    - id: ${ROUTING_MODE_BOOST_PATCH_ID}
+      name: './node_modules/@dsh-external/dsh-mode-boost/lib/index.js'
       config: {}
 `;
 
@@ -38,6 +46,39 @@ const PROFILE_PATCH_TEMPLATE = `# Your patch layer for this dsh profile, applied
 # overrides, disables, and insert lists; \`!!js\` expressions allowed).
 []
 `;
+
+function isEmptyPatchDocument(content: string): boolean {
+  const dataLines = content
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter((line) => line !== "" && !line.startsWith("#"));
+  return dataLines.length === 1 && dataLines[0] === "[]";
+}
+
+function withoutEmptyPatchSequence(content: string): string {
+  return content
+    .split(/\r?\n/)
+    .filter((line) => line.trim() !== "[]")
+    .join("\n")
+    .replace(/\s*$/, "");
+}
+
+function appendManagedRoutingPatch(content: string): string {
+  const prefix = isEmptyPatchDocument(content)
+    ? withoutEmptyPatchSequence(content)
+    : content.replace(/\s*$/, "");
+  return prefix === ""
+    ? MANAGED_ROUTING_PATCH_BLOCK
+    : `${prefix}\n${MANAGED_ROUTING_PATCH_BLOCK}`;
+}
+
+/** Return the untouched prefix before the exact app-managed 0.3.0 block. */
+function legacyManagedPatchPrefix(content: string): string | undefined {
+  const normalized = content.replace(/\s*$/, "");
+  const managedBlock = LEGACY_MODE_BOOST_PATCH_BLOCK.trimEnd();
+  if (!normalized.endsWith(managedBlock)) return undefined;
+  return normalized.slice(0, -managedBlock.length);
+}
 
 export type RoutingSuitePresetInstall = {
   id: string;
@@ -140,11 +181,15 @@ async function ensureModeBoostPatch(
   } catch {
     content = PROFILE_PATCH_TEMPLATE;
   }
+  const legacyPrefix = legacyManagedPatchPrefix(content);
+  if (legacyPrefix !== undefined) {
+    await writeFile(patchPath, appendManagedRoutingPatch(legacyPrefix), {
+      mode: 0o600,
+    });
+    return "present";
+  }
   if (content.includes(ROUTING_MODE_BOOST_PACKAGE)) return "present";
-  const block =
-    content.trim() === "" || content.trim() === "[]"
-      ? `${PROFILE_PATCH_TEMPLATE}${MODE_BOOST_PATCH_BLOCK}`
-      : `${content.replace(/\s*$/, "")}\n${MODE_BOOST_PATCH_BLOCK}`;
+  const block = appendManagedRoutingPatch(content);
   await writeFile(patchPath, block, { mode: 0o600 });
   return "added";
 }

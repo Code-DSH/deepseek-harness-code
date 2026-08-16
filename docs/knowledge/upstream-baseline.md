@@ -11,8 +11,8 @@ read_when: [changing pinned versions or official integration behavior]
 skip_when: [editing app-local styling only]
 priority: must
 freshness_class: rapid
-last_verified: 2026-08-16T16:38:10+08:00
-revalidate_after: 2026-08-17T16:38:10+08:00
+last_verified: 2026-08-16T17:35:00+08:00
+revalidate_after: 2026-08-17T17:35:00+08:00
 owners: [project]
 source_of_truth:
   - https://github.com/deepseek-ai/deepseek-harness
@@ -43,6 +43,7 @@ Pin `@deepseek-ai/dsh@0.1.0-rc.6`, Electron `43.4.0`, electron-builder `26.15.3`
 | 2026-08-15   | [DeepSeek Harness repository](https://github.com/deepseek-ai/deepseek-harness)                                                  | inspected commit `47f943859bef60e4160492346772ded9b24f765a` plus npm release | Official packages, `dsh web`, Cordis `apply(ctx)`, bundle patches, question tool and client UI    | high       |
 | 2026-08-15   | [npm: @deepseek-ai/dsh](https://www.npmjs.com/package/@deepseek-ai/dsh)                                                         | 0.1.0-rc.6                                                                   | CLI package baseline                                                                              | high       |
 | 2026-08-15   | [Electron releases](https://releases.electronjs.org/)                                                                           | 43.4.0                                                                       | Chromium desktop runtime baseline                                                                 | high       |
+| 2026-08-16   | [Electron first-app lifecycle guide](https://www.electronjs.org/docs/latest/tutorial/tutorial-first-app)                        | documentation retrieved 2026-08-16                                           | BrowserWindows and macOS `activate` listeners that create them belong inside `app.whenReady()`    | high       |
 | 2026-08-15   | [electron-builder](https://www.electron.build/)                                                                                 | 26.15.3                                                                      | macOS universal and DMG packaging baseline                                                        | high       |
 | 2026-08-16   | [esbuild bundle API](https://esbuild.github.io/api/) and workspace lock                                                         | 0.25.12                                                                      | Recursively bundles local/third-party client code while preserving the declared Harness externals | high       |
 | 2026-08-16   | Pinned installed Harness packages                                                                                               | `@deepseek-ai/dsh-llm-deepseek`, `dsh-base`, and `dsh-web-app` 0.1.0-rc.6    | V4 Pro/Flash catalog, official reasoning efforts, Skills, tools, workflows, and supporting UI     | high       |
@@ -70,6 +71,7 @@ Project versions are exact even if newer upstream releases appear. Revalidate be
 ## Pinned Runtime Findings
 
 - `dsh web --host 127.0.0.1 --port <port>` is the verified launch form; `/api/health` and `/api/` return 404 in rc.6.
+- Electron allows BrowserWindow creation only after readiness and documents registering the macOS `activate` listener inside the fulfilled `app.whenReady()` callback.
 - The app-owned profile is stored under `DSH_HOME` and loads the official base/Web bundles before the desktop bundle.
 - The rc.6 Agent Preset roster automatically scans `<DSH_HOME>/.agent-presets`. Preset-local `system-prompt/assemble`, `session/event`, and `agent/pre-step` hooks can implement event-derived schema phases without recompose or private transport mutation.
 - The official Web boot graph in the packaged app contains 39 client entries, including `@deepseek-ai/dsh-client-ui-user-questions` and `deepseek-harness-desktop-plugin`.
