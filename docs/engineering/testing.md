@@ -12,7 +12,8 @@ The desktop bundle leaves streamed prose and reasoning to the official Harness D
 
 ## Verified on 2026-08-16
 
-- Unit/state/security and conversation DOM behavior: 25 files, 97 tests covering the desktop host, watchdog, progressive preset installer, stream-output model/controller, and ThinkingOrb lifecycle.
+- Unit/state/security and conversation behavior: 27 files, 102 tests covering the desktop host, watchdog, progressive preset installer, stream-output model/controller, ThinkingOrb lifecycle, and the installed rc.6 conversation bundle.
+- The rc.6 stream-performance regression executes the actual packaged Assistant and turn-tail Definitions. Across 10,000 ordered deltas it independently accumulates the expected text, verifies the `[7pr]` final token, reasoning/final/structural synchronous publication, hydration/reconnect, two interleaved session assemblers, and fail-open behavior. Open-turn match inspections fell from 50,015,000 on the unpatched bundle to zero with the exact-version patch.
 - Vendored Anchored Standard implementation: 108 upstream and local-patch tests.
 - Anchored Standard coverage includes exact two-tool bootstrap, both promotion events, automatic-context filtering, explicit unlock recovery, session isolation, subagent residency, compaction epochs, strict missing-tool failures, official rc.6 discovery/session creation, conflict preservation, and atomic upgrades.
 - Package contract: 1 file, 4 tests.

@@ -1,7 +1,7 @@
 ---
 id: engineering.acceptance-report
 title: DeepSeek Harness Code 0.2.0 Acceptance Report
-summary: Executed all-branch source and renderer evidence; final clean Universal macOS package evidence is being refreshed.
+summary: Executed all-branch source, renderer, and rc.6 long-stream projection evidence; final clean Universal macOS package evidence is being refreshed.
 kind: engineering
 status: canonical
 content_stage: partial-implementation
@@ -42,14 +42,15 @@ tags: [acceptance, release, evidence]
 9. The General-settings controls formerly used raw HTML select, checkbox, and buttons. They now use the official `@deepseek-ai/dsh-client-ui-primitives` Button/Menu/Icon components. A live layout audit found zero raw selects/checkboxes, matching trigger/menu right edges, and an ellipsis-safe label. The plugin follows the official locale service in both Chinese and English.
 10. The startup surface formerly used gradients and a frosted card. It now renders only a system light/dark pure background and one centered 24 px monochrome spinner. `preflight:runtime` resolves every production dependency, verifies 17 runtime artifacts including the preset/provenance set, and pins five critical runtime packages before any builder command runs.
 11. The macOS traffic-light group previously used `{ x: 16, y: 6 }`, placing the red button closer to the top edge than the left edge. The native BrowserWindow position is now `{ x: 16, y: 16 }`; no Web title bar, spacer, or renderer offset was added.
+12. The rc.6 `turn-tail.tailData()` fallback searched the complete growing Context match list on every open-turn derived flush because `state.end` is intentionally absent before `turn/end`. A 10,000-delta real-bundle regression measured 50,015,000 match inspections. The exact-version pnpm patch now reads the Definition-owned state directly during normal operation (zero inspections), retains the original scan only when state is unexpectedly absent, and leaves canonical chunk ingestion and Assistant publication cadence unchanged.
 
 ## Automated verification
 
 | Gate              | Result                                                                              |
 | ----------------- | ----------------------------------------------------------------------------------- |
-| Unit suite        | 25 files / 97 tests passed                                                          |
+| Unit suite        | 27 files / 102 tests passed, including 4 real-bundle stream regressions             |
 | Upstream preset   | 108 vendored upstream and local-patch tests passed                                  |
-| Official plugins  | 3 files / 22 tests passed, including pinned rc.6 roster, session creation, and boot |
+| Official plugins  | 3 files / 23 tests passed, including pinned rc.6 roster, session creation, and boot |
 | Package contract  | 1 file / 4 tests passed                                                             |
 | Browser E2E       | 5 Playwright Chromium tests passed                                                  |
 | TypeScript        | `tsc --noEmit` passed                                                               |
@@ -57,6 +58,8 @@ tags: [acceptance, release, evidence]
 | Dependency audit  | Production audit reported no known vulnerabilities at high severity or above        |
 | Runtime preflight | Clean all-branch package rerun follows the verified source integration              |
 | macOS package     | Clean all-branch Universal DMG rerun follows the verified source integration        |
+
+The patched dependency was rebuilt from a moved-aside `node_modules` tree with `pnpm install --frozen-lockfile`; the installed peer-qualified package contained the patch and the focused suite passed 4/4. Reverting only the installed optimization reproduced the 50,015,000-inspection failure, then restoring it returned the suite to green. `pnpm build`, typecheck, runtime preflight, docs links, security, unit, Anchored, real-Harness plugin, and package-contract gates passed. The full Playwright run retained exactly the two documented `installStreamOutputEffects is not a function` baseline failures (3/5 passed). Full-repository lint/format remain blocked by pre-existing vendored Superpowers files and unrelated formatting drift; changed TypeScript passed targeted ESLint.
 
 ## Real renderer and performance evidence
 
