@@ -9,3 +9,4 @@ coverage/
 .worktrees/
 *.log
 .DS_Store
+build/routing-suite/

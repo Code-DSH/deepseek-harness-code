@@ -47,6 +47,14 @@ import {
   installAnchoredStandardPresetForStartup,
   installSuperpowersSkillsForStartup,
 } from "./lifecycle/desktop-plugin-link.js";
+import {
+  installRoutingSuiteForStartup,
+  type RoutingSuiteStartupResult,
+} from "./lifecycle/routing-suite-link.js";
+import {
+  refreshRoutingSuiteCache,
+  resolveRoutingSuiteRoot,
+} from "./lifecycle/routing-suite-update.js";
 import { classifyNavigation } from "./security/navigation-policy.js";
 import type {
   DesktopPreferences,
@@ -71,6 +79,7 @@ let tray: Tray | undefined;
 let quitting = false;
 let preferences: DesktopPreferencesState = { ...DEFAULT_DESKTOP_PREFERENCES };
 let anchoredPresetNotice: RuntimeNotice | undefined;
+let routingSuiteNotice: RuntimeNotice | undefined;
 
 // Preserve sessions and credentials across the product rename. This is an
 // intentional compatibility path; no user data is copied into the app bundle.
@@ -283,6 +292,9 @@ async function startHarness(): Promise<HarnessChild> {
   const superpowersSkillsRoot = app.isPackaged
     ? join(process.resourcesPath, "superpowers-skills")
     : join(app.getAppPath(), "packages", "superpowers-skills");
+  const bundledRoutingSuiteRoot = app.isPackaged
+    ? join(process.resourcesPath, "routing-suite")
+    : join(app.getAppPath(), "build", "routing-suite");
   const dshHome = join(app.getPath("userData"), "dsh-home");
   await ensureDesktopPluginLink(dshHome, pluginRoot);
   const anchoredPreset = await installAnchoredStandardPresetForStartup(
@@ -316,6 +328,31 @@ async function startHarness(): Promise<HarnessChild> {
     process.stderr.write(
       `Bundled Superpowers skills skipped user-owned directories: ${superpowersSkills.summary.conflicts.join(", ")}.\n`,
     );
+  }
+  // Auto-assemble the dsh-routing-suite: prefer the refreshed user-level
+  // cache, fall back to the bundled snapshot, and never block on the network.
+  const routingSuiteRoot = await resolveRoutingSuiteRoot(
+    app.getPath("userData"),
+    bundledRoutingSuiteRoot,
+  );
+  void refreshRoutingSuiteCache(app.getPath("userData"));
+  const routingSuite: RoutingSuiteStartupResult =
+    await installRoutingSuiteForStartup(dshHome, routingSuiteRoot);
+  if (routingSuite.status === "unavailable") {
+    routingSuiteNotice = "routing-suite-unavailable";
+    process.stderr.write(
+      "Routing suite is unavailable; Standard startup will continue.\n",
+    );
+  } else {
+    const conflicts = routingSuite.summary.presets.filter(
+      (preset) => preset.status === "conflict",
+    );
+    if (conflicts.length > 0) {
+      routingSuiteNotice = "routing-suite-conflict";
+      process.stderr.write(
+        `Routing suite presets skipped user-owned directories: ${conflicts.map((preset) => preset.id).join(", ")}.\n`,
+      );
+    }
   }
   await ensureDesktopPluginBundle(dshHome);
   return startWithPortRetries(reserveLoopbackPort, async (port) => {
@@ -438,7 +475,7 @@ async function launch(): Promise<void> {
     waitForReady: async (child, origin) =>
       isHarnessChildAlive(child) && httpOk(origin),
     isChildAlive: isHarnessChildAlive,
-    runtimeNotice: () => anchoredPresetNotice,
+    runtimeNotice: () => routingSuiteNotice ?? anchoredPresetNotice,
     onReady: async (origin) => {
       await mainWindow?.loadURL(origin);
     },

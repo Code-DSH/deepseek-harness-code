@@ -35,6 +35,11 @@ const runtimeArtifacts = [
   "packages/anchored-standard-plugin/UPSTREAM-SHA256SUMS",
   "packages/anchored-standard-plugin/LOCAL-PATCHES.md",
   "apps/desktop/src/startup.html",
+  "build/routing-suite/versions.json",
+  "build/routing-suite/injector/package.json",
+  "build/routing-suite/mode-boost/package.json",
+  "build/routing-suite/preset/router-standard/agent.cordis.yml",
+  "build/routing-suite/preset/router-spec/agent.cordis.yml",
 ];
 
 function resolveDependency(name) {
@@ -63,6 +68,30 @@ for (const [name, expectedVersion] of criticalRuntimeVersions) {
   if (installed.version !== expectedVersion) {
     throw new Error(
       `${name} runtime version ${installed.version} does not match ${expectedVersion}`,
+    );
+  }
+}
+
+// The dsh-routing-suite snapshot must list every pinned component so the
+// auto-load path (routing-suite-link.ts) has versions to record.
+const routingSuiteVersions = JSON.parse(
+  await readFile(
+    join(projectRoot, "build", "routing-suite", "versions.json"),
+    "utf8",
+  ),
+);
+const routingSuitePins = new Map([
+  ["injector", "0.3.3"],
+  ["mode-boost", "0.1.0"],
+  ["router-preset", "0.2.0"],
+]);
+for (const [component, expectedVersion] of routingSuitePins) {
+  const recorded = routingSuiteVersions.components?.find(
+    (entry) => entry.id === component,
+  );
+  if (recorded?.version !== expectedVersion) {
+    throw new Error(
+      `routing-suite ${component} version ${recorded?.version ?? "missing"} does not match ${expectedVersion}`,
     );
   }
 }

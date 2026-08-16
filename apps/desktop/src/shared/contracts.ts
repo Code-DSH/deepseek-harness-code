@@ -51,6 +51,8 @@ export type RuntimePhase = z.infer<typeof runtimePhaseSchema>;
 export const runtimeNoticeSchema = z.enum([
   "anchored-preset-conflict",
   "anchored-preset-unavailable",
+  "routing-suite-conflict",
+  "routing-suite-unavailable",
 ]);
 export type RuntimeNotice = z.infer<typeof runtimeNoticeSchema>;
 

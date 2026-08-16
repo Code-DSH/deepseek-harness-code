@@ -139,10 +139,19 @@ DeepSeek Harness Code 使用明确的生命周期控制覆盖这些已知失效�
 | 一体化能力栈   | Skills、工具、Goal、Plan、Workflow、Todo、Jobs、提问、审批与 Subagent |
 | 恢复           | 健康探测、进程重启、渲染器替换、端口重试、会话恢复                    |
 | Watchdog       | 独立 IPC 进程、有界重启策略、持久化崩溃循环标记                       |
-| 插件           | 桌面设置/转场 Bundle 与 Anchored Standard Bundle                      |
+| 插件           | 桌面设置/转场 Bundle、Anchored Standard Bundle 与自动装载的路由套件   |
 | 诊断           | 启动证据、运行状态、脱敏轮转日志、打开日志操作                        |
 | 安全           | 沙箱渲染器、禁用 Node 集成、验证 IPC、导航策略                        |
 | 打包           | macOS Universal DMG；Windows NSIS 与 Linux AppImage/deb 配置          |
+
+## 路由套件
+
+DeepSeek Harness Code 内置社区 [dsh-routing-suite](https://github.com/yjh051108/dsh-routing-suite)，并在每次启动时自动装载：
+
+- **离线快照** —— 安装包内置套件三个组件的固定版本快照（@dsh-external/dsh-super-injector Bundle 层、@dsh-external/dsh-mode-boost 宿主增强、router-standard 与 router-spec 智能体预设），存放在应用资源目录中。
+- **自动装配** —— 启动时桌面宿主将套件 Bundle 注册进应用自有 Web Profile，链接到 Profile 的 node_modules，把 mode-boost 写入 Profile 补丁层，并将路由预设安装为受管智能体预设。首次启动无需联网下载。
+- **自动更新** —— 后台每天最多一次下载路由预设 main 分支的最新版及固定版本的发布包，校验后原子替换用户级缓存；后续启动优先使用刷新后的缓存，因此更新无需任何手动操作。
+- **容错** —— 任何刷新或装配失败都静默且不影响启动；启动从不等待网络，内置快照始终作为兜底。
 
 ## 架构
 
