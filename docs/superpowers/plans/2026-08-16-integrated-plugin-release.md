@@ -14,7 +14,7 @@
 - Preserve explicit `DSH_HOME`, existing official Home content, existing plugins, sessions, credentials, Skills, and presets.
 - Never package credentials, settings, sessions, logs, prompts, or private profile state.
 - Retain bare package names in every `cordis.patch.yml`; the Harness child must keep `--expose-internals`.
-- Include the installed `dsh-ui-motion@1.0.0` and `dsh-model-two-level-selector@1.0.0` compiled closures as app resources.
+- Include the installed `dsh-ui-motion@1.0.0` and `dsh-model2-selector@1.0.0` compiled closures as app resources.
 - Decide packaging success only from the terminal process exit status and subsequent DMG verification output.
 - Do not rerun the previously completed full test suite; run only release preflight and artifact verification required to prove this new package.
 
@@ -85,4 +85,3 @@
 - A missing compiled plugin artifact aborts preflight before electron-builder starts.
 - A failed public CLI install aborts Harness startup and retries on the next launch; user data remains intact.
 - Existing user-owned plugin/profile content is not deleted. Rollback is the prior app version plus the unchanged official or legacy Home.
-

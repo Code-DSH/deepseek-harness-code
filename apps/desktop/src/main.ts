@@ -286,6 +286,12 @@ async function startHarness(): Promise<HarnessChild> {
   const anchoredPluginRoot = app.isPackaged
     ? join(process.resourcesPath, "anchored-standard-plugin")
     : join(app.getAppPath(), "packages", "anchored-standard-plugin");
+  const uiMotionPluginRoot = app.isPackaged
+    ? join(process.resourcesPath, "dsh-ui-motion")
+    : join(app.getAppPath(), "packages", "dsh-ui-motion");
+  const modelSelectorPluginRoot = app.isPackaged
+    ? join(process.resourcesPath, "dsh-model-two-level-selector")
+    : join(app.getAppPath(), "packages", "dsh-model-two-level-selector");
   const superpowersSkillsRoot = app.isPackaged
     ? join(process.resourcesPath, "superpowers-skills")
     : join(app.getAppPath(), "packages", "superpowers-skills");
@@ -317,6 +323,14 @@ async function startHarness(): Promise<HarnessChild> {
       {
         packageName: "deepseek-harness-desktop-plugin",
         packageRoot: pluginRoot,
+      },
+      {
+        packageName: "dsh-ui-motion",
+        packageRoot: uiMotionPluginRoot,
+      },
+      {
+        packageName: "dsh-model2-selector",
+        packageRoot: modelSelectorPluginRoot,
       },
       {
         packageName: "@dsh-external/dsh-super-injector",

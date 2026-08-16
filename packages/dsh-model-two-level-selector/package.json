@@ -1,0 +1,27 @@
+{
+  "name": "dsh-model2-selector",
+  "description": "DSH Model Two-Level Selector：模型/推理等级二级选择——一级菜单两行固定，二级悬浮框位于菜单右侧、锚定行内箭头顶端向上展开，互斥切换，双向动画。",
+  "version": "1.0.0",
+  "private": true,
+  "main": "lib/index.js",
+  "exports": {
+    ".": "./lib/index.js",
+    "./client": "./lib/client.js",
+    "./package.json": "./package.json"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "inject": [
+        "@deepseek-ai/dsh-client-runtime",
+        "@deepseek-ai/dsh-client-ui-slots",
+        "@deepseek-ai/dsh-client-locale",
+        "@deepseek-ai/dsh-client-ui-model-selection"
+      ],
+      "platform": "web"
+    }
+  },
+  "license": "BSD-3-Clause"
+}

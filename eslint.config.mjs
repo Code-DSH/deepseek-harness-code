@@ -11,6 +11,8 @@ export default [
       "node_modules/**",
       "release/**",
       "packages/desktop-plugin/client.js",
+      "packages/dsh-ui-motion/**",
+      "packages/dsh-model-two-level-selector/**",
       "packages/superpowers-skills/**",
     ],
   },

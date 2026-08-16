@@ -84,6 +84,16 @@ try {
   await access(pnpmEntry); // packaged contract: pnpm/bin/pnpm.mjs
   runtimeModules.push({ specifier: "pnpm/bin/pnpm.mjs", path: pnpmEntry });
   const integratedPluginArtifacts = [
+    "dsh-ui-motion/package.json",
+    "dsh-ui-motion/index.js",
+    "dsh-ui-motion/lib/index.js",
+    "dsh-ui-motion/lib/client.js",
+    "dsh-ui-motion/cordis.patch.yml",
+    "dsh-model-two-level-selector/package.json",
+    "dsh-model-two-level-selector/index.js",
+    "dsh-model-two-level-selector/lib/index.js",
+    "dsh-model-two-level-selector/lib/client.js",
+    "dsh-model-two-level-selector/cordis.patch.yml",
     "routing-suite/injector/package.json",
     "routing-suite/injector/cordis.patch.yml",
     "routing-suite/mode-boost/package.json",
@@ -109,6 +119,29 @@ try {
     throw new Error(
       "packaged mode-boost patch is not the official bare-name form",
     );
+  }
+  for (const [directory, packageName, version] of [
+    ["dsh-ui-motion", "dsh-ui-motion", "1.0.0"],
+    ["dsh-model-two-level-selector", "dsh-model2-selector", "1.0.0"],
+  ]) {
+    const manifest = JSON.parse(
+      await readFile(join(resourcesRoot, directory, "package.json"), "utf8"),
+    );
+    const patch = await readFile(
+      join(resourcesRoot, directory, "cordis.patch.yml"),
+      "utf8",
+    );
+    if (manifest.name !== packageName || manifest.version !== version) {
+      throw new Error(
+        `unexpected packaged plugin identity: ${String(manifest.name)}@${String(manifest.version)}`,
+      );
+    }
+    if (
+      !patch.includes(`name: '${packageName}'`) ||
+      patch.includes("./node_modules/")
+    ) {
+      throw new Error(`${packageName} is not using its bare package name`);
+    }
   }
   run("codesign", ["--verify", "--deep", "--strict", appPath]); // codesign --verify --deep --strict
   try {

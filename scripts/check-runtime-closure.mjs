@@ -34,6 +34,16 @@ const runtimeArtifacts = [
   "packages/desktop-plugin/index.js",
   "packages/desktop-plugin/cordis.patch.yml",
   "packages/desktop-plugin/THIRD_PARTY_NOTICES.md",
+  "packages/dsh-ui-motion/package.json",
+  "packages/dsh-ui-motion/index.js",
+  "packages/dsh-ui-motion/lib/index.js",
+  "packages/dsh-ui-motion/lib/client.js",
+  "packages/dsh-ui-motion/cordis.patch.yml",
+  "packages/dsh-model-two-level-selector/package.json",
+  "packages/dsh-model-two-level-selector/index.js",
+  "packages/dsh-model-two-level-selector/lib/index.js",
+  "packages/dsh-model-two-level-selector/lib/client.js",
+  "packages/dsh-model-two-level-selector/cordis.patch.yml",
   "packages/anchored-standard-plugin/package.json",
   "packages/anchored-standard-plugin/preset/agent.cordis.yml",
   "packages/anchored-standard-plugin/preset/preset.yml",
@@ -99,6 +109,28 @@ const findPluginPatch = await readFile(
 );
 if (!findPluginPatch.includes("name: 'dsh-find-plugin'")) {
   throw new Error("dsh-find-plugin must retain its official bare-name patch");
+}
+
+for (const [directory, packageName, version] of [
+  ["dsh-ui-motion", "dsh-ui-motion", "1.0.0"],
+  ["dsh-model-two-level-selector", "dsh-model2-selector", "1.0.0"],
+]) {
+  const pluginRoot = join(projectRoot, "packages", directory);
+  const pluginPackage = JSON.parse(
+    await readFile(join(pluginRoot, "package.json"), "utf8"),
+  );
+  if (pluginPackage.name !== packageName || pluginPackage.version !== version) {
+    throw new Error(
+      `${directory} must retain installed identity ${packageName}@${version}`,
+    );
+  }
+  const patch = await readFile(join(pluginRoot, "cordis.patch.yml"), "utf8");
+  if (
+    !patch.includes(`name: '${packageName}'`) ||
+    patch.includes("./node_modules/")
+  ) {
+    throw new Error(`${packageName} must retain its official bare-name patch`);
+  }
 }
 
 if (pluginManifest.dependencies?.["thinking-orbs"] !== "0.3.1") {
@@ -219,6 +251,6 @@ process.stdout.write(
     runtimeArtifacts: runtimeArtifacts.length,
     productionDependencies: resolvedDependencies.length,
     criticalRuntimePackages: criticalRuntimeVersions.size,
-    bundledPluginPackages: 4,
+    bundledPluginPackages: 6,
   })}\n`,
 );
