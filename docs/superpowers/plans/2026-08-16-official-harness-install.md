@@ -97,11 +97,11 @@
 - Startup order: resolve Home → migrate legacy data → official plugin reconciliation → managed presets/Skills → launch Harness.
 - `routing-suite-link.ts` retains only managed router-preset synchronization; plugin linking, bundle edits, and user-patch injection are removed.
 
-- [ ] Add failing tests proving startup helpers never create profile links, bundles, manifests, or mode-boost user patch entries.
-- [ ] Run focused tests and prove RED.
-- [ ] Rewire `main.ts` to the official Home and coordinator, preserving bounded optional-resource notices.
-- [ ] Delete the superseded manual profile/link functions and update routing helpers to presets only.
-- [ ] Run unit, plugin, real-Harness, typecheck, and security tests.
+- [x] Add failing tests proving startup helpers never create profile links, bundles, manifests, or mode-boost user patch entries.
+- [x] Run focused tests and prove RED.
+- [x] Rewire `main.ts` to the official Home and coordinator, preserving bounded optional-resource notices.
+- [x] Delete the superseded manual profile/link functions and update routing helpers to presets only.
+- [x] Run unit, plugin, real-Harness, typecheck, and security tests.
 
 ### Task 5: Packaging, documentation, and completion gates
 

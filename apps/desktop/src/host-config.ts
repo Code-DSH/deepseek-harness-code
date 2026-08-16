@@ -1,5 +1,22 @@
 import { join } from "node:path";
 
+import { resolveDshHome } from "@deepseek-ai/dsh-home-paths";
+
+export interface HarnessDataPaths {
+  dshHome: string;
+  legacyHome: string;
+}
+
+export function resolveHarnessDataPaths(
+  appUserData: string,
+  env: Record<string, string | undefined> = process.env,
+): HarnessDataPaths {
+  return {
+    dshHome: resolveDshHome(undefined, env),
+    legacyHome: join(appUserData, "dsh-home"),
+  };
+}
+
 export interface SecureWebPreferences {
   contextIsolation: true;
   sandbox: true;

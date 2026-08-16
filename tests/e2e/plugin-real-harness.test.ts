@@ -1,14 +1,7 @@
-import { spawn, spawnSync, type ChildProcess } from "node:child_process";
+import { spawn, type ChildProcess } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import { createServer, type Server } from "node:http";
-import {
-  mkdtemp,
-  mkdir,
-  readFile,
-  rm,
-  symlink,
-  writeFile,
-} from "node:fs/promises";
+import { mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { createRequire } from "node:module";
 import { dirname, join } from "node:path";
@@ -436,40 +429,33 @@ describe("desktop plugin with the real pinned Harness", () => {
     const root = await mkdtemp(join(tmpdir(), "dsh-desktop-plugin-"));
     temporaryRoots.add(root);
     const dshHome = join(root, "home");
-    const initialized = spawnSync(
-      process.execPath,
-      [dshEntry, "web", "--dump-config"],
-      {
-        cwd: repositoryRoot,
-        env: { ...process.env, DSH_HOME: dshHome },
-        encoding: "utf8",
-      },
-    );
-    expect(initialized.status, initialized.stderr).toBe(0);
-
-    const profileRoot = join(dshHome, "profiles", "web");
-    const manifestPath = join(profileRoot, "package.json");
-    const manifest = JSON.parse(await readFile(manifestPath, "utf8")) as {
-      dsh: { profile: { bundles: string[] } };
-    };
-    manifest.dsh.profile.bundles.push("deepseek-harness-desktop-plugin");
-    await writeFile(
-      manifestPath,
-      `${JSON.stringify(manifest, undefined, 2)}\n`,
-    );
-    const modules = join(profileRoot, "node_modules");
-    await mkdir(modules, { recursive: true });
-    await symlink(
-      pluginRoot,
-      join(modules, "deepseek-harness-desktop-plugin"),
-      process.platform === "win32" ? "junction" : "dir",
-    );
+    await ensureOfficialHarnessInstall({
+      dshEntry,
+      dshHome,
+      electronExecutable: process.execPath,
+      pnpmEntry: join(dirname(require.resolve("pnpm")), "bin", "pnpm.mjs"),
+      runtimeBinRoot: join(root, "runtime-bin"),
+      integratedPlugins: [
+        {
+          packageName: "deepseek-harness-desktop-plugin",
+          packageRoot: pluginRoot,
+        },
+      ],
+    });
 
     const port = await reserveLoopbackPort();
     const origin = `http://127.0.0.1:${port}`;
     const child = spawn(
       process.execPath,
-      [dshEntry, "web", "--host", "127.0.0.1", "--port", String(port)],
+      [
+        "--expose-internals",
+        dshEntry,
+        "web",
+        "--host",
+        "127.0.0.1",
+        "--port",
+        String(port),
+      ],
       {
         cwd: repositoryRoot,
         env: { ...process.env, DSH_HOME: dshHome },

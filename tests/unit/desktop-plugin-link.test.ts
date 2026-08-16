@@ -1,22 +1,18 @@
 import {
-  lstat,
   mkdir,
   mkdtemp,
   readFile,
-  readlink,
   realpath,
   stat,
   symlink,
   writeFile,
 } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { dirname, join, resolve } from "node:path";
+import { join, resolve } from "node:path";
 
 import { describe, expect, it, vi } from "vitest";
 
 import {
-  ensureDesktopPluginBundle,
-  ensureDesktopPluginLink,
   ensureOfficialHarnessInstall,
   migrateLegacyHarnessHome,
   type OfficialCommandRunner,
@@ -43,82 +39,6 @@ async function createPlugin(
   );
   return pluginRoot;
 }
-
-describe("desktop plugin profile link", () => {
-  it("makes the bundled package resolvable from the app-owned web profile", async () => {
-    const root = await mkdtemp(join(tmpdir(), "dsh-plugin-link-"));
-    const pluginRoot = join(root, "resources", "desktop-plugin");
-    const dshHome = join(root, "dsh-home");
-    await mkdir(pluginRoot, { recursive: true });
-
-    const link = await ensureDesktopPluginLink(dshHome, pluginRoot);
-
-    expect(link).toBe(
-      join(
-        dshHome,
-        "profiles",
-        "web",
-        "node_modules",
-        "deepseek-harness-desktop-plugin",
-      ),
-    );
-    expect((await lstat(link)).isSymbolicLink()).toBe(true);
-    expect(resolve(dirname(link), await readlink(link))).toBe(
-      await realpath(pluginRoot),
-    );
-  });
-
-  it("registers only the desktop plugin as an official web profile bundle idempotently", async () => {
-    const root = await mkdtemp(join(tmpdir(), "dsh-plugin-bundle-"));
-    const dshHome = join(root, "dsh-home");
-
-    await ensureDesktopPluginBundle(dshHome);
-    await ensureDesktopPluginBundle(dshHome);
-
-    const manifest = JSON.parse(
-      await readFile(join(dshHome, "profiles", "web", "package.json"), "utf8"),
-    ) as { dsh: { profile: { bundles: string[] } } };
-    expect(manifest.dsh.profile.bundles).toEqual([
-      "@deepseek-ai/dsh-base",
-      "@deepseek-ai/dsh-web-app",
-      "deepseek-harness-desktop-plugin",
-    ]);
-  });
-
-  it("removes a legacy anchored web bundle registration", async () => {
-    const root = await mkdtemp(join(tmpdir(), "dsh-plugin-disabled-"));
-    const dshHome = join(root, "dsh-home");
-
-    const profileRoot = join(dshHome, "profiles", "web");
-    await mkdir(profileRoot, { recursive: true });
-    await writeFile(
-      join(profileRoot, "package.json"),
-      `${JSON.stringify({
-        name: "dsh-profile-web",
-        private: true,
-        dsh: {
-          profile: {
-            bundles: [
-              "@deepseek-ai/dsh-base",
-              "@deepseek-ai/dsh-web-app",
-              "dsh-anchored-standard",
-            ],
-          },
-        },
-      })}\n`,
-    );
-    await ensureDesktopPluginBundle(dshHome);
-
-    const manifest = JSON.parse(
-      await readFile(join(dshHome, "profiles", "web", "package.json"), "utf8"),
-    ) as { dsh: { profile: { bundles: string[] } } };
-    expect(manifest.dsh.profile.bundles).toEqual([
-      "@deepseek-ai/dsh-base",
-      "@deepseek-ai/dsh-web-app",
-      "deepseek-harness-desktop-plugin",
-    ]);
-  });
-});
 
 describe("official Harness plugin installation", () => {
   it("invokes the public dsh plugin command with bundled pnpm on PATH", async () => {
@@ -157,6 +77,12 @@ describe("official Harness plugin installation", () => {
           packageRoot: modeBoost,
         },
       ],
+      legacyPluginSpecs: [
+        {
+          packageName: "legacy-user-plugin",
+          installSpec: "legacy-user-plugin@1.2.3",
+        },
+      ],
       env: { PATH: "/usr/bin" },
       runCommand,
     });
@@ -164,12 +90,21 @@ describe("official Harness plugin installation", () => {
     expect(result).toEqual({
       status: "installed",
       packages: [
+        "legacy-user-plugin",
         "deepseek-harness-desktop-plugin",
         "@dsh-external/dsh-mode-boost",
       ],
     });
-    expect(runCommand).toHaveBeenCalledTimes(2);
-    expect(runCommand.mock.calls[0]?.slice(0, 2)).toEqual([
+    expect(runCommand).toHaveBeenCalledTimes(3);
+    expect(runCommand.mock.calls[0]?.[1]).toEqual([
+      "/app/node_modules/@deepseek-ai/dsh/lib/bin.js",
+      "plugin",
+      "--profile",
+      "web",
+      "add",
+      "legacy-user-plugin@1.2.3",
+    ]);
+    expect(runCommand.mock.calls[1]?.slice(0, 2)).toEqual([
       "/Applications/DeepSeek Harness Code.app/Electron",
       [
         "/app/node_modules/@deepseek-ai/dsh/lib/bin.js",
@@ -180,7 +115,7 @@ describe("official Harness plugin installation", () => {
         await realpath(desktopPlugin),
       ],
     ]);
-    const options = runCommand.mock.calls[0]?.[2];
+    const options = runCommand.mock.calls[1]?.[2];
     expect(options).toMatchObject({
       shell: false,
       env: {

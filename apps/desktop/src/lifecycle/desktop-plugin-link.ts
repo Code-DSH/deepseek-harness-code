@@ -5,13 +5,10 @@ import {
   mkdir,
   readFile,
   readdir,
-  readlink,
   realpath,
   rename,
   rm,
   rmdir,
-  symlink,
-  unlink,
   writeFile,
 } from "node:fs/promises";
 import { createReadStream } from "node:fs";
@@ -19,8 +16,6 @@ import { createHash, randomUUID } from "node:crypto";
 import { spawnSync } from "node:child_process";
 import { delimiter, dirname, join, resolve } from "node:path";
 
-const DESKTOP_PACKAGE_NAME = "deepseek-harness-desktop-plugin";
-const ANCHORED_PACKAGE_NAME = "dsh-anchored-standard";
 const ANCHORED_PRESET_ID = "anchored-standard";
 const SUPERPOWERS_PACKAGE_NAME = "superpowers";
 const SUPERPOWERS_SKILLS_DIRECTORY = "skills";
@@ -32,11 +27,6 @@ const MANAGED_PRESET_METADATA = [
   "UPSTREAM-SHA256SUMS",
   "LOCAL-PATCHES.md",
 ] as const;
-const OFFICIAL_WEB_BUNDLES = [
-  "@deepseek-ai/dsh-base",
-  "@deepseek-ai/dsh-web-app",
-];
-const MANAGED_BUNDLES = [DESKTOP_PACKAGE_NAME, ANCHORED_PACKAGE_NAME];
 
 export type IntegratedHarnessPlugin = {
   packageName: string;
@@ -70,6 +60,7 @@ export type OfficialHarnessInstallInput = {
   pnpmEntry: string;
   runtimeBinRoot: string;
   integratedPlugins: readonly IntegratedHarnessPlugin[];
+  legacyPluginSpecs?: readonly LegacyPluginSpec[];
   env?: Record<string, string | undefined>;
   runCommand?: OfficialCommandRunner;
 };
@@ -147,6 +138,29 @@ export async function ensureOfficialHarnessInstall(
     plugins.push({ packageName: plugin.packageName, packageRoot });
   }
 
+  const integratedNames = new Set(plugins.map((plugin) => plugin.packageName));
+  const legacyPluginSpecs = (input.legacyPluginSpecs ?? []).filter((plugin) => {
+    if (
+      plugin.packageName.trim() === "" ||
+      plugin.installSpec.trim() === "" ||
+      plugin.packageName.includes("\0") ||
+      plugin.installSpec.includes("\0")
+    ) {
+      throw new Error("Legacy plugin specification is invalid");
+    }
+    return !integratedNames.has(plugin.packageName);
+  });
+  const installRequests = [
+    ...legacyPluginSpecs.map((plugin) => ({
+      packageName: plugin.packageName,
+      installSpec: plugin.installSpec,
+    })),
+    ...plugins.map((plugin) => ({
+      packageName: plugin.packageName,
+      installSpec: plugin.packageRoot,
+    })),
+  ];
+
   await writePnpmLaunchers(input.runtimeBinRoot);
   const inheritedEnv = input.env ?? process.env;
   const existingPath = inheritedEnv.PATH;
@@ -162,10 +176,17 @@ export async function ensureOfficialHarnessInstall(
         : `${input.runtimeBinRoot}${delimiter}${existingPath}`,
   };
   const runCommand = input.runCommand ?? defaultOfficialCommandRunner;
-  for (const plugin of plugins) {
+  for (const request of installRequests) {
     const result = runCommand(
       input.electronExecutable,
-      [input.dshEntry, "plugin", "--profile", "web", "add", plugin.packageRoot],
+      [
+        input.dshEntry,
+        "plugin",
+        "--profile",
+        "web",
+        "add",
+        request.installSpec,
+      ],
       {
         encoding: "utf8",
         env,
@@ -176,13 +197,13 @@ export async function ensureOfficialHarnessInstall(
     if (result.error !== undefined || result.status !== 0) {
       const exit = result.status === null ? "spawn" : String(result.status);
       throw new Error(
-        `official plugin installation failed for ${plugin.packageName} (exit ${exit})`,
+        `official plugin installation failed for ${request.packageName} (exit ${exit})`,
       );
     }
   }
   return {
     status: "installed",
-    packages: plugins.map((plugin) => plugin.packageName),
+    packages: installRequests.map((request) => request.packageName),
   };
 }
 
@@ -434,56 +455,6 @@ export async function migrateLegacyHarnessHome(
     skippedSymlinks,
     legacyPluginSpecs,
   };
-}
-
-async function existingLinkTarget(
-  linkPath: string,
-): Promise<string | undefined> {
-  try {
-    const stat = await lstat(linkPath);
-    if (!stat.isSymbolicLink()) {
-      throw new Error(
-        `Desktop plugin link path is occupied by a non-link entry: ${linkPath}`,
-      );
-    }
-    return resolve(dirname(linkPath), await readlink(linkPath));
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === "ENOENT") return undefined;
-    throw error;
-  }
-}
-
-/**
- * Expose a packaged plugin through the dedicated Harness profile's normal
- * Node package resolution without invoking pnpm or mutating the application.
- */
-export async function ensurePluginLink(
-  dshHome: string,
-  pluginRoot: string,
-  packageName: string,
-): Promise<string> {
-  const canonicalPluginRoot = await realpath(pluginRoot);
-  const modulesRoot = join(dshHome, "profiles", "web", "node_modules");
-  const linkPath = join(modulesRoot, packageName);
-  await mkdir(modulesRoot, { recursive: true, mode: 0o700 });
-  // Scoped package names nest one directory (node_modules/@scope/name).
-  await mkdir(dirname(linkPath), { recursive: true, mode: 0o700 });
-  const currentTarget = await existingLinkTarget(linkPath);
-  if (currentTarget === canonicalPluginRoot) return linkPath;
-  if (currentTarget !== undefined) await unlink(linkPath);
-  await symlink(
-    canonicalPluginRoot,
-    linkPath,
-    process.platform === "win32" ? "junction" : "dir",
-  );
-  return linkPath;
-}
-
-export async function ensureDesktopPluginLink(
-  dshHome: string,
-  pluginRoot: string,
-): Promise<string> {
-  return ensurePluginLink(dshHome, pluginRoot, DESKTOP_PACKAGE_NAME);
 }
 
 type ManagedPresetMarker = {
@@ -1018,42 +989,4 @@ export async function installSuperpowersSkillsForStartup(
       path: join(dshHome, SUPERPOWERS_SKILLS_DIRECTORY),
     };
   }
-}
-
-/** Ensure the app-owned Web profile loads the desktop package as a standard dsh bundle. */
-export async function ensureDesktopPluginBundle(
-  dshHome: string,
-): Promise<string> {
-  const profileRoot = join(dshHome, "profiles", "web");
-  const manifestPath = join(profileRoot, "package.json");
-  await mkdir(profileRoot, { recursive: true, mode: 0o700 });
-  let manifest: Record<string, unknown>;
-  try {
-    manifest = JSON.parse(await readFile(manifestPath, "utf8")) as Record<
-      string,
-      unknown
-    >;
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
-    manifest = { name: "dsh-profile-web", private: true, dependencies: {} };
-  }
-  const dsh = (manifest.dsh ??= {}) as Record<string, unknown>;
-  const profile = (dsh.profile ??= {}) as Record<string, unknown>;
-  const existing = Array.isArray(profile.bundles)
-    ? profile.bundles.filter(
-        (value): value is string =>
-          typeof value === "string" && !MANAGED_BUNDLES.includes(value),
-      )
-    : [];
-  profile.bundles = [
-    ...new Set([...OFFICIAL_WEB_BUNDLES, ...existing, DESKTOP_PACKAGE_NAME]),
-  ];
-  const temporaryPath = `${manifestPath}.${process.pid}.tmp`;
-  await writeFile(
-    temporaryPath,
-    `${JSON.stringify(manifest, undefined, 2)}\n`,
-    { mode: 0o600 },
-  );
-  await rename(temporaryPath, manifestPath);
-  return manifestPath;
 }
