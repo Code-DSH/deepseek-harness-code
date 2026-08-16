@@ -170,7 +170,7 @@ git commit -m "build: bundle conversation animation dependencies"
 - Consumes: pinned selectors `[data-chat-flow-kind="assistant-step"] [data-streaming]` and DOM `Text` nodes.
 - Produces: `findAppendedGraphemes(previous, next, segmenter?)`, `isEligibleStreamTextNode(node)`, `eligibleTextNodes(root)`, `STREAMING_ASSISTANT_SELECTOR`, and `EXCLUDED_OUTPUT_SELECTOR`.
 
-- [ ] **Step 1: Write failing suffix and Unicode tests**
+- [x] **Step 1: Write failing suffix and Unicode tests**
 
 ```ts
 expect(findAppendedGraphemes("思考", "思考中🙂")).toEqual([
@@ -183,11 +183,11 @@ expect(findAppendedGraphemes("e", "e\u0301")).toBeNull();
 
 The last assertion treats a combining-mark rewrite as structural replacement rather than animating an invalid suffix.
 
-- [ ] **Step 2: Write failing DOM classification tests**
+- [x] **Step 2: Write failing DOM classification tests**
 
 Build a JSDOM assistant row containing prose, a gray `[data-variant="think"]` region, `code`, `pre`, a tool descendant, a button, an `aria-hidden` clone, a user row, and history without `[data-streaming]`. Assert that only visible prose/reasoning text nodes inside the streaming assistant root are returned.
 
-- [ ] **Step 3: Run the focused test and observe the missing module failure**
+- [x] **Step 3: Run the focused test and observe the missing module failure**
 
 ```bash
 npm exec --yes --package=pnpm@11.19.0 -- pnpm vitest run packages/desktop-plugin/test/stream-output-model.test.ts
@@ -195,7 +195,7 @@ npm exec --yes --package=pnpm@11.19.0 -- pnpm vitest run packages/desktop-plugin
 
 Expected: FAIL because `stream-output-model.js` does not exist.
 
-- [ ] **Step 4: Implement strict prefix segmentation and classification**
+- [x] **Step 4: Implement strict prefix segmentation and classification**
 
 Use UTF-16 offsets returned by `Intl.Segmenter` so DOM Ranges receive valid offsets:
 
@@ -240,7 +240,7 @@ export const EXCLUDED_OUTPUT_SELECTOR = [
 
 Require the streaming assistant ancestor and reject every excluded ancestor. Do not match hashed upstream class names or message text.
 
-- [ ] **Step 5: Run the focused model test**
+- [x] **Step 5: Run the focused model test**
 
 ```bash
 npm exec --yes --package=pnpm@11.19.0 -- pnpm vitest run packages/desktop-plugin/test/stream-output-model.test.ts
@@ -248,7 +248,7 @@ npm exec --yes --package=pnpm@11.19.0 -- pnpm vitest run packages/desktop-plugin
 
 Expected: PASS for append, rewrite, emoji, combining mark, CJK, classifier, and history cases.
 
-- [ ] **Step 6: Commit the stream model**
+- [x] **Step 6: Commit the stream model**
 
 ```bash
 git add packages/desktop-plugin/src/stream-output-model.js packages/desktop-plugin/test/stream-output-model.test.ts
@@ -603,3 +603,4 @@ Expected: the feature worktree is clean; all implementation commits are visible;
 
 - 2026-08-16 — User approved the written design and requested implementation; TDD execution plan created.
 - 2026-08-16 — Task 1 complete: exact dependencies, MIT notices, warning-free esbuild client bundling, stylesheet composition, and plugin contract are green.
+- 2026-08-16 — Task 2 complete: strict appended-grapheme ranges and the semantic prose/reasoning classifier are green for CJK, emoji, combining marks, history, code, tool, status, and user exclusions.
