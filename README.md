@@ -22,6 +22,14 @@
 > [!IMPORTANT]
 > DeepSeek Harness Code is a community project. It is not an official DeepSeek release and is not affiliated with DeepSeek.
 
+## DHC is the assembled integration bundle
+
+DHC's integration philosophy is simple: **users should not have to assemble a fragile toolchain themselves**. Official Harness provides the building blocks; DHC provides the assembled product.
+
+This project is the **desktop distribution of an integrated Harness bundle**. It is not merely DeepSeek Harness by itself and not a thin Web wrapper. The bundle combines the official Harness runtime and capabilities with the new Skills, additional Skills, plugins, tools, workflows, agent foundations, desktop integration, diagnostics, and recovery mechanisms that DHC adds around it. DHC turns those pieces into one tested, installable product with a managed lifecycle and a coherent path from launch to long-running work.
+
+DHC remains a community project built on the official Harness format and runtime. It does not ship model weights, replace the official provider boundary, or claim to be an official DeepSeek release.
+
 ## Vision
 
 DeepSeek should be more than a conversation trapped inside a browser page. It should be a dependable working environment: one that can stay open through long coding sessions, own its runtime, recover from defined failures, preserve sessions, expose useful diagnostics, and feel at home on the desktop.
@@ -29,12 +37,6 @@ DeepSeek should be more than a conversation trapped inside a browser page. It sh
 Our goal is to modernize the complete DeepSeek Harness experience without replacing its session model or inventing a parallel agent protocol. We package the Harness runtime, plugins, Skills, agent tools, workflows, desktop integration, diagnostics, and tested recovery as one coherent product instead of asking users to assemble them piece by piece.
 
 **This project is not about putting a website inside a window. It is about making DeepSeek Harness sustainable for real, long-running work.**
-
-## The DHC integration philosophy
-
-The official DeepSeek Harness provides the building blocks. DeepSeek Harness Code provides the assembled product. Users should not have to put together a fragile toolchain themselves just to get a dependable working environment.
-
-That is the role of DHC: integrate the official Harness runtime, plugins, Skills, tools, workflows, and desktop reliability into one coherent distribution with clear boundaries and a tested path from launch to long-running work. DHC is a **community project**, not an official DeepSeek release and **not a fork of DeepSeek Harness**. It builds on the official Harness format and runtime while turning the available pieces into a complete desktop experience.
 
 ## One complete DeepSeek Harness distribution
 
@@ -67,12 +69,43 @@ V4 Pro is one of the important capabilities improved by this integrated foundati
 
 This application bundles the integration and runtime—not the model weights. Provider credentials stay in official Harness settings, and requests continue through the official DeepSeek provider boundary.
 
-### `We need` automatic reasoning activation
+### Tool-surface anchoring for V4 Pro
 
-One planned V4 Pro enhancement is an intent-aware reasoning trigger. When a user explicitly frames a task with **`We need`**, the integration will use Harness's public per-request seam to select an appropriate supported reasoning effort instead of relying on users to switch modes manually.
+The next V4 Pro improvement is not a keyword that turns reasoning on. It is a
+tool-surface control that preserves the reasoning trajectory V4 Pro is capable
+of producing before the full Harness tool catalog is introduced.
+
+After the official V4 Pro release underperformed grey-release expectations and
+triggered community debate, open-source ablation experiments identified a
+strong sensitivity to the API-visible tool catalog (the **Schema Surface**) on
+the first request:
+
+- In **Standard** mode, all 25 tools are visible immediately. V4 Pro can fall
+  into an inefficient `Let me...` trajectory, with Project2 scores around
+  **9,192**.
+- In **Minimal** mode, only the Shell and Read tools are visible. The model is
+  more likely to recover the grey-release-style `We need...` trajectory, with
+  Project2 scores around **9,699**.
+
+The `dsh-anchored-standard` approach addresses the trade-off with
+**first-request anchoring plus dynamic promotion**: expose only the two core
+tools on the first request to anchor the trajectory, then unlock the complete
+25-tool Standard surface immediately after the first durable tool call. This
+keeps advanced tools available without making the initial schema carry the
+full cost of the Standard catalog. In native Windows Project2 runs, the
+approach produced consecutive scores of **98** and **99**, entering the score
+band of leading frontier models.
+
+The working hypothesis is that V4 Pro's core capability has not disappeared;
+its RL post-training may be substantially overfit to particular Harness
+scaffolding and tool-exposure conditions. This project therefore treats V4 Pro
+as an important capability within the broader Harness modernization: preserve
+the official runtime and provider boundary, and improve the tool environment
+around the model without exposing hidden chain-of-thought or patching private
+request fields.
 
 > [!NOTE]
-> V4 Pro selection and official `off` / `high` / `max` reasoning controls are available in the pinned Harness runtime today. The literal `We need` automatic trigger is a roadmap item, not a shipped 0.3.0 claim. It is one part of the wider Harness modernization effort and will activate official reasoning controls without exposing hidden chain-of-thought or patching private request fields.
+> V4 Pro selection and the official `off` / `high` / `max` reasoning controls are available in the pinned Harness runtime. Tool-surface anchoring is a separate integration capability: it changes the tool catalog exposed across session phases, not private model fields. It does not expose hidden chain-of-thought, and it does not replace the official provider boundary.
 
 ## Beyond a Web wrapper
 
@@ -260,7 +293,7 @@ node scripts/verify-macos-artifact.mjs \
 
 - Publish reproducible memory and long-session soak benchmarks across supported platforms.
 - Build and verify Windows and Linux packages on native CI runners.
-- Implement and verify the literal `We need` intent trigger through Harness's public per-request reasoning-effort seam.
+- Complete and validate the V4 Pro first-request tool-surface anchoring and dynamic-promotion path across supported Harness sessions.
 - Continue tracking the rapidly evolving official Harness plugin API behind pinned compatibility boundaries.
 - Expand fault-injection coverage without replaying user requests or weakening the security model.
 
