@@ -1,0 +1,13 @@
+diff --git a/lib/client.js b/lib/client.js
+index 86e79067dd0feed0d099b0bf578ac2118453caeb..9cd388193923bcbe2fae2ebcc0e5893c5143d11f 100644
+--- a/lib/client.js
++++ b/lib/client.js
+@@ -8760,7 +8760,7 @@ window.__ModuleLoader__.load({
+ 			return data.finalNode !== void 0 && data.blocks.some((block) => block.kind === "text" && block.text.trim() !== "");
+ 		}
+ 		function tailData(context) {
+-			const end = context.state?.end ?? context.matches.find((match) => match.event.type === "turn/end");
++			const end = context.state === void 0 ? context.matches.find((match) => match.event.type === "turn/end") : context.state.end;
+ 			if (end?.event.type !== "turn/end") return null;
+ 			const turn = turnLocation(context);
+ 			if (turn === void 0) return null;

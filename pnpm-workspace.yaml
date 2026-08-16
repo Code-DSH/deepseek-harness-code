@@ -16,3 +16,6 @@ allowBuilds:
   koffi: true
   node-pty: true
   protobufjs: true
+
+patchedDependencies:
+  "@deepseek-ai/dsh-client-ui-conversation@0.1.0-rc.6": patches/@deepseek-ai__dsh-client-ui-conversation@0.1.0-rc.6.patch

@@ -1,7 +1,7 @@
 ---
 id: knowledge.upstream-baseline
 title: Upstream Baseline
-summary: Version and official-contract evidence for Harness, packaging, and native conversation-rendering ownership.
+summary: Version and official-contract evidence for Harness, packaging, native conversation-rendering ownership, and the exact rc.6 turn-tail projection patch.
 kind: knowledge
 status: canonical
 content_stage: implementation-backed
@@ -30,7 +30,7 @@ tags: [research, versions]
 
 ## Current Conclusion
 
-Pin `@deepseek-ai/dsh@0.1.0-rc.6`, Electron `43.4.0`, electron-builder `26.15.3`, and esbuild `0.25.12`. Harness supplies the official user-question packages, Cordis bundle mechanism, and conversation UI; this project composes the official UI rather than adding a thinking/status overlay.
+Pin `@deepseek-ai/dsh@0.1.0-rc.6`, Electron `43.4.0`, electron-builder `26.15.3`, and esbuild `0.25.12`. The peer-qualified `@deepseek-ai/dsh-client-ui-conversation@0.1.0-rc.6` is reproducibly patched through pnpm to avoid an open-turn quadratic `turn-tail` scan while preserving the official canonical event path and fail-open fallback. Harness supplies the official user-question packages, Cordis bundle mechanism, and conversation UI; this project composes the official UI rather than adding a thinking/status overlay.
 
 ## Evidence
 
@@ -42,6 +42,7 @@ Pin `@deepseek-ai/dsh@0.1.0-rc.6`, Electron `43.4.0`, electron-builder `26.15.3`
 | 2026-08-15   | [electron-builder](https://www.electron.build/)                                                                | 26.15.3                                                                      | macOS universal and DMG packaging baseline                                                        | high       |
 | 2026-08-16   | [esbuild bundle API](https://esbuild.github.io/api/) and workspace lock                                        | 0.25.12                                                                      | Recursively bundles local/third-party client code while preserving the declared Harness externals | high       |
 | 2026-08-16   | Pinned installed Harness packages                                                                              | `@deepseek-ai/dsh-llm-deepseek`, `dsh-base`, and `dsh-web-app` 0.1.0-rc.6    | V4 Pro/Flash catalog, official reasoning efforts, Skills, tools, workflows, and supporting UI     | high       |
+| 2026-08-16   | Installed rc.6 conversation bundle, pnpm patch, and real-bundle regression                                     | `@deepseek-ai/dsh-client-ui-conversation@0.1.0-rc.6`                         | Open-turn match inspections: 50,015,000 before, zero after; exact 10,000-delta text retained      | high       |
 
 ## V4 Pro and Integrated Toolchain
 
@@ -67,3 +68,4 @@ Project versions are exact even if newer upstream releases appear. Revalidate be
 - The official Web boot graph in the packaged app contains 39 client entries, including `@deepseek-ai/dsh-client-ui-user-questions` and `deepseek-harness-desktop-plugin`.
 - rc.6 package scanning does not discover this graph from the tested ASAR layout, so the release uses an unpacked application tree.
 - The desktop client does not add conversation paint. The only related runtime externals are Harness-provided React, `react/jsx-runtime`, and UI primitives; preflight rejects retired animation imports.
+- The rc.6 conversation patch changes only `turn-tail.tailData()`: normal Definition state proves whether `turn/end` exists in O(1); an unexpectedly absent state executes the original match scan. Assistant chunk ingestion, ordering, RAF/immediate publication selection, final-token handling, and structural completion remain official rc.6 behavior. Rollback removes the exact `patchedDependencies` mapping and regenerates the frozen lockfile, but must not proceed unless the focused regression remains green against the replacement upstream version.

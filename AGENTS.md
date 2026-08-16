@@ -5,7 +5,7 @@
 - schema_version: 3
 - single_entry: true
 - repository_root: `/Users/trip/TRUE 开发/deepseek/deepseek-harness-desktop`
-- updated_at: `2026-08-16T14:25:00+08:00`
+- updated_at: `2026-08-16T15:50:00+08:00`
 - default_freshness: 10d
 - docs_entry: [docs/index.md](./docs/index.md)
 - project_entry: [docs/project/index.md](./docs/project/index.md)
@@ -16,7 +16,7 @@
 ## Current Project Snapshot
 
 - Goal: ship DeepSeek Harness Code with a cross-platform Electron shell, official-format integrated plugins, an optional progressive Anchored Standard Agent Preset, streaming-output effects, and an independent watchdog.
-- Current phase: all committed branches and the progressive preset feature are being integrated for a clean Universal DMG rebuild and data-preserving local installation.
+- Current phase: the rc.6 long-stream turn-tail projection fix is implementation-verified; all committed branches are being integrated for a clean Universal DMG rebuild and data-preserving local installation.
 - Primary constraints: macOS Universal local release plus native Windows/Linux CI, no global Node dependency at runtime, loopback-only Harness, unsigned macOS distribution with ad-hoc signing.
 - Active branch/worktree: `feat/anchored-standard-progressive` is the isolated integration worktree; verified integration will fast-forward local `main` without rewriting history.
 - Build/test entry: `npm exec --yes --package=pnpm@11.19.0 -- pnpm test`.
@@ -60,11 +60,12 @@
 
 ## Active Plans
 
-| Plan                        | Status   | Current milestone                                 | Updated    | Link                                                                   |
-| --------------------------- | -------- | ------------------------------------------------- | ---------- | ---------------------------------------------------------------------- |
-| Merge, release, and install | active   | Branch integration and clean release verification | 2026-08-16 | [Open](./docs/plans/active/merge-all-branches-release-install.md)      |
-| DeepSeek Harness Code 0.2.0 | active   | Final Universal packaging and acceptance          | 2026-08-16 | [Open](./docs/plans/active/deepseek-harness-desktop.md)                |
-| Streaming output animation  | retired | Reverted to the official renderer after stream and layering defects | 2026-08-16 | [Historical record](./docs/superpowers/plans/2026-08-16-stream-output-animation.md) |
+| Plan                           | Status   | Current milestone                                      | Updated    | Link                                                                            |
+| ------------------------------ | -------- | ------------------------------------------------------ | ---------- | ------------------------------------------------------------------------------- |
+| Merge, release, and install    | active   | Branch integration and clean release verification      | 2026-08-16 | [Open](./docs/plans/active/merge-all-branches-release-install.md)               |
+| DeepSeek Harness Code 0.2.0    | active   | Final Universal packaging and acceptance               | 2026-08-16 | [Open](./docs/plans/active/deepseek-harness-desktop.md)                         |
+| Streaming output animation     | retired  | Reverted to the official renderer after visual defects | 2026-08-16 | [Historical record](./docs/superpowers/plans/2026-08-16-stream-output-animation.md) |
+| Harness Web stream performance | complete | Exact-version rc.6 patch and regression gates verified | 2026-08-16 | [Open](./docs/superpowers/plans/2026-08-16-harness-web-performance.md)          |
 
 ## Known Risks and Open Questions
 
@@ -73,6 +74,7 @@
 | Exposed provider key must be rotated        | Blocks safe live-provider soak                                              | Key appeared in chat and was not used or stored                                       | User rotates it and enters the replacement only through official settings      | [Testing](./docs/engineering/testing.md)                   |
 | V4 Pro capability improvement is unverified | Mechanism can ship without proving the reported 98/99 score band            | No replacement credentials were entered and the community score is benchmark-specific | Run at least 10 paired Standard/Anchored trials when credentials are available | [Anchored Standard](./docs/knowledge/anchored-standard.md) |
 | Preset ID conflict                          | A user-authored `anchored-standard` directory prevents managed installation | Installer deliberately refuses to overwrite unknown or modified content               | Show a bounded conflict notice; Standard remains available                     | [Architecture](./docs/architecture/overview.md)            |
+| Pinned conversation patch                   | An rc.6 upgrade can invalidate the turn-tail optimization                   | pnpm patch is guarded by exact package version and lockfile hash                      | Remove/rebase the patch only with the 10,000-delta regression green            | [Upstream](./docs/knowledge/upstream-baseline.md)          |
 
 ## Mandatory Rules
 
