@@ -6,7 +6,7 @@
   <p><a href="./README.md">English</a> · <a href="./README.zh-CN.md">简体中文</a></p>
   <p><a href="#vision">Vision</a> · <a href="#one-complete-deepseek-harness-distribution">Complete Harness</a> · <a href="#modernizing-the-beta1-experience">BETA1 improvements</a> · <a href="#beyond-a-web-wrapper">Why it is different</a> · <a href="#built-for-long-running-work">Reliability</a> · <a href="#architecture">Architecture</a> · <a href="#build-from-source">Build</a></p>
   <p>
-    <img src="https://img.shields.io/badge/version-0.2.0-2563eb?style=flat-square" alt="Version 0.2.0" />
+    <img src="https://img.shields.io/badge/version-0.3.0-2563eb?style=flat-square" alt="Version 0.3.0" />
     <img src="https://img.shields.io/badge/license-MIT-16a34a?style=flat-square" alt="MIT License" />
     <img src="https://img.shields.io/badge/macOS-12%2B-111827?style=flat-square&amp;logo=apple" alt="macOS 12+" />
     <img src="https://img.shields.io/badge/Windows-10%2B-0078D4?style=flat-square&amp;logo=windows" alt="Windows 10+" />
@@ -66,7 +66,7 @@ This application bundles the integration and runtime—not the model weights. Pr
 One planned V4 Pro enhancement is an intent-aware reasoning trigger. When a user explicitly frames a task with **`We need`**, the integration will use Harness's public per-request seam to select an appropriate supported reasoning effort instead of relying on users to switch modes manually.
 
 > [!NOTE]
-> V4 Pro selection and official `off` / `high` / `max` reasoning controls are available in the pinned Harness runtime today. The literal `We need` automatic trigger is a roadmap item, not a shipped 0.2.0 claim. It is one part of the wider Harness modernization effort and will activate official reasoning controls without exposing hidden chain-of-thought or patching private request fields.
+> V4 Pro selection and official `off` / `high` / `max` reasoning controls are available in the pinned Harness runtime today. The literal `We need` automatic trigger is a roadmap item, not a shipped 0.3.0 claim. It is one part of the wider Harness modernization effort and will activate official reasoning controls without exposing hidden chain-of-thought or patching private request fields.
 
 ## Beyond a Web wrapper
 
@@ -237,7 +237,7 @@ npm exec --yes --package=pnpm@11.19.0 -- pnpm verify:security
 
 # Universal macOS artifact inspection
 node scripts/verify-macos-artifact.mjs \
-  release/DeepSeek-Harness-Code-0.2.0-mac-universal.dmg --universal
+  release/DeepSeek-Harness-Code-0.3.0-mac-universal.dmg --universal
 ```
 
 ## Documentation

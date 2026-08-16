@@ -6,7 +6,7 @@
   <p><a href="./README.md">English</a> · <a href="./README.zh-CN.md">简体中文</a></p>
   <p><a href="#愿景">愿景</a> · <a href="#一整套-deepseek-harness-发行版">完整 Harness</a> · <a href="#让-beta1-体验更加现代化">BETA1 改进</a> · <a href="#不只是网页套壳">为什么不同</a> · <a href="#为长期运行而设计">长期稳定性</a> · <a href="#架构">架构</a> · <a href="#从源码构建">构建</a></p>
   <p>
-    <img src="https://img.shields.io/badge/version-0.2.0-2563eb?style=flat-square" alt="版本 0.2.0" />
+    <img src="https://img.shields.io/badge/version-0.3.0-2563eb?style=flat-square" alt="版本 0.3.0" />
     <img src="https://img.shields.io/badge/license-MIT-16a34a?style=flat-square" alt="MIT 许可证" />
     <img src="https://img.shields.io/badge/macOS-12%2B-111827?style=flat-square&amp;logo=apple" alt="macOS 12+" />
     <img src="https://img.shields.io/badge/Windows-10%2B-0078D4?style=flat-square&amp;logo=windows" alt="Windows 10+" />
@@ -66,7 +66,7 @@ V4 Pro 是这套整合基础所增强的重要能力之一，而不是产品的�
 我们计划提供的一项 V4 Pro 增强能力是意图感知的推理触发器。当用户用 **`We need`** 明确描述任务时，集成层将通过 Harness 公开的逐请求接口自动选择合适的推理强度，不再要求用户手动切换模式。
 
 > [!NOTE]
-> V4 Pro 模型选择以及官方 `off` / `high` / `max` 推理控制已经存在于当前固定的 Harness 运行时中。字面量 `We need` 自动触发器是路线图项目，并非 0.2.0 已交付声明。它只是整个 Harness 现代化工程的一部分，并且只会激活官方推理控制，不会暴露隐藏思维链，也不会修改私有请求字段。
+> V4 Pro 模型选择以及官方 `off` / `high` / `max` 推理控制已经存在于当前固定的 Harness 运行时中。字面量 `We need` 自动触发器是路线图项目，并非 0.3.0 已交付声明。它只是整个 Harness 现代化工程的一部分，并且只会激活官方推理控制，不会暴露隐藏思维链，也不会修改私有请求字段。
 
 ## 不只是网页套壳
 
@@ -237,7 +237,7 @@ npm exec --yes --package=pnpm@11.19.0 -- pnpm verify:security
 
 # Universal macOS 产物检查
 node scripts/verify-macos-artifact.mjs \
-  release/DeepSeek-Harness-Code-0.2.0-mac-universal.dmg --universal
+  release/DeepSeek-Harness-Code-0.3.0-mac-universal.dmg --universal
 ```
 
 ## 文档

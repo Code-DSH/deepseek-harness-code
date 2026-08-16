@@ -90,13 +90,16 @@ test("installs desktop settings and animates route commits with cleanup", async 
       desktopPlugin: { apply(context: unknown): () => void };
       desktopDispose?: () => void;
       slotRegistrations?: number;
+      slotNames?: string[];
     };
     target.slotRegistrations = 0;
+    target.slotNames = [];
     target.desktopDispose = target.desktopPlugin.apply({
       slots: {
-        inject: (_name: string, register: () => unknown) => {
+        inject: (name: string, register: () => unknown) => {
           register();
           target.slotRegistrations! += 1;
+          target.slotNames!.push(name);
           return () => {
             target.slotRegistrations! -= 1;
           };
@@ -109,12 +112,17 @@ test("installs desktop settings and animates route commits with cleanup", async 
     });
     return {
       registrations: target.slotRegistrations,
+      slots: target.slotNames,
       style: Boolean(
         document.querySelector("#deepseek-harness-desktop-transitions"),
       ),
     };
   });
-  expect(installed).toEqual({ registrations: 2, style: true });
+  expect(installed).toEqual({
+    registrations: 1,
+    slots: ["settings.general.item"],
+    style: true,
+  });
   await expect
     .poll(() =>
       page.evaluate(() => document.documentElement.dataset.dshDesktopPage),
