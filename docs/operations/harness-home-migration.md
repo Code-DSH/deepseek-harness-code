@@ -73,7 +73,7 @@ Quit the app before inspection. Do not delete either Home. The retired source re
 
 ## Validation
 
-The prior unit suite covers absent sources, nonconflicting merges, target-wins conflicts, modes, symlink rejection, plugin-spec normalization, rerun idempotence, and injected mid-copy rollback. The prior Electron Node-mode integration test uses bundled pnpm and the public CLI to install the original four packages, then starts the pinned Harness and fetches the desktop client from its boot graph. Release `0.3.3` extends the same coordinator with two compiled local plugin snapshots and checks their identities, entry/client closure, and bare-name patches both before packaging and inside the mounted DMG.
+The prior unit suite covers absent sources, nonconflicting merges, target-wins conflicts, modes, symlink rejection, plugin-spec normalization, rerun idempotence, and injected mid-copy rollback. The prior Electron Node-mode integration test uses bundled pnpm and the public CLI to install the original four packages, then starts the pinned Harness and fetches the desktop client from its boot graph. Release `0.3.3` extends the same coordinator with two compiled local plugin snapshots and checks their identities, entry/client closure, and bare-name patches both before packaging and inside the mounted DMG. The release build and mounted-image verifier both exited 0; the full previously green test suite was intentionally not rerun for this packaging-only addition.
 
 ## Related Documents
 

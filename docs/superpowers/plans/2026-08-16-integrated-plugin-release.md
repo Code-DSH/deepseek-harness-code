@@ -61,7 +61,7 @@
 
 - [x] Bump the local integrated release to `0.3.3`.
 - [x] Document the six-Web-plugin first-launch set plus the Anchored Standard preset and ownership/preservation rules.
-- [ ] Record the local-plugin snapshot provenance and final build evidence without including private user data.
+- [x] Record the local-plugin snapshot provenance and final build evidence without including private user data.
 
 ### Task 4: Build, verify, and publish the PR
 
@@ -69,10 +69,19 @@
 
 - Generated: `release/DeepSeek-Harness-Code-0.3.3-mac-universal.dmg`
 
-- [ ] Run `pnpm dist:mac` once and monitor the same terminal session until it exits.
-- [ ] Require exit code 0, then run `pnpm verify:mac release/DeepSeek-Harness-Code-0.3.3-mac-universal.dmg --universal`.
-- [ ] Inspect the final diff and confirm every branch head is an ancestor of the release branch.
+- [x] Run `pnpm dist:mac` once and monitor the same terminal session until it exits.
+- [x] Require exit code 0, then run `pnpm verify:mac release/DeepSeek-Harness-Code-0.3.3-mac-universal.dmg --universal`.
+- [x] Inspect the final diff and confirm every branch head is an ancestor of the release branch.
 - [ ] Commit, push `release/0.3.3-integrated-plugins`, and create a PR against `main`.
+
+## Release Evidence
+
+- Build terminal: `pnpm dist:mac` exited 0 after generating the Universal DMG and blockmap.
+- Artifact terminal: `pnpm verify:mac release/DeepSeek-Harness-Code-0.3.3-mac-universal.dmg --universal` exited 0 after mounted-image signature, runtime, plugin, and Mach-O checks.
+- DMG size: 289,838,445 bytes.
+- DMG SHA-256: `21835867dc474d39ad04b0de5f0825d1a409ccb2105c055e423e65e919a65cd8`.
+- Branch audit: every fetched local and remote branch head is an ancestor of `release/0.3.3-integrated-plugins`.
+- Full test suite: intentionally not rerun per the user's packaging instruction; prior full-suite evidence remains in the architecture and acceptance documents.
 
 ## Read Set
 
