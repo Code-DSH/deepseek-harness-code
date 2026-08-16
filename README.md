@@ -1,10 +1,10 @@
 <div align="center">
   <img src="./build/deepseek-harness-code.png" width="136" alt="DeepSeek Harness Code icon" />
   <h1>DeepSeek Harness Code</h1>
-  <h3>The complete, modern DeepSeek Harness desktop distribution — built for work that lasts longer than a browser tab.</h3>
+  <h3>The complete, modern DeepSeek Harness desktop integration bundle — built for work that lasts longer than a browser session.</h3>
   <p>DeepSeek Harness Code brings the full Harness runtime, plugins, Skills, tools, agent workflows, a hardened desktop host, and an independent Watchdog together in one integrated package.</p>
   <p><a href="./README.md">English</a> · <a href="./README.zh-CN.md">简体中文</a></p>
-  <p><a href="#vision">Vision</a> · <a href="#one-complete-deepseek-harness-distribution">Complete Harness</a> · <a href="#modernizing-the-beta1-experience">BETA1 improvements</a> · <a href="#beyond-a-web-wrapper">Why it is different</a> · <a href="#built-for-long-running-work">Reliability</a> · <a href="#architecture">Architecture</a> · <a href="#build-from-source">Build</a></p>
+  <p><a href="#the-dhc-integration-philosophy">Integration philosophy</a> · <a href="#vision">Vision</a> · <a href="#one-complete-deepseek-harness-distribution">Complete Harness</a> · <a href="#modernizing-the-beta1-experience">BETA1 improvements</a> · <a href="#beyond-a-web-wrapper">Why it is different</a> · <a href="#built-for-long-running-work">Reliability</a> · <a href="#architecture">Architecture</a> · <a href="#build-from-source">Build</a></p>
   <p>
     <img src="https://img.shields.io/badge/version-0.3.0-2563eb?style=flat-square" alt="Version 0.3.0" />
     <img src="https://img.shields.io/badge/license-MIT-16a34a?style=flat-square" alt="MIT License" />
@@ -22,11 +22,11 @@
 > [!IMPORTANT]
 > DeepSeek Harness Code is a community project. It is not an official DeepSeek release and is not affiliated with DeepSeek.
 
-## DHC is the assembled integration bundle
+## The DHC integration philosophy
 
-DHC's integration philosophy is simple: **users should not have to assemble a fragile toolchain themselves**. Official Harness provides the building blocks; DHC provides the assembled product.
+DHC is the assembled integration bundle: the complete, modern DeepSeek Harness. Its integration philosophy is to bring together everything users need from DeepSeek Harness and package it correctly as a modern, working Agent application and toolkit. **Users should not have to assemble a fragile toolchain themselves**. Official Harness provides the building blocks; DHC provides the assembled product.
 
-This project is the **desktop distribution of an integrated Harness bundle**. It is not merely DeepSeek Harness by itself and not a thin Web wrapper. The bundle combines the official Harness runtime and capabilities with the new Skills, additional Skills, plugins, tools, workflows, agent foundations, desktop integration, diagnostics, and recovery mechanisms that DHC adds around it. DHC turns those pieces into one tested, installable product with a managed lifecycle and a coherent path from launch to long-running work.
+This project is the **desktop integration bundle for DeepSeek Harness**. It is not merely DeepSeek Harness by itself and not a thin Web wrapper. The bundle combines the official Harness runtime and capabilities with the new Skills, additional Skills, plugins, tools, workflows, agent foundations, desktop integration, diagnostics, and recovery mechanisms that DHC adds around it. DHC turns those pieces into one tested, installable Agent application and toolkit with a managed lifecycle and a coherent path from launch to long-running work.
 
 DHC remains a community project built on the official Harness format and runtime. It does not ship model weights, replace the official provider boundary, or claim to be an official DeepSeek release.
 
