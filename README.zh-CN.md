@@ -159,29 +159,34 @@ DeepSeek Harness Code 使用明确的生命周期控制覆盖这些已知失效�
 - **系统级外观**——跟随浅色/深色系统主题的启动页、平台标题栏处理、官方单色资产和减少动画支持。
 - **平滑导航**——可用时采用 View Transitions，否则使用低开销 CSS 回退完成路由提交转场。
 - **工作区韧性**——已验证 Standard 工作区切换和官方会话恢复。
+- **内置 Skills 基础**——启动时将 Superpowers 6.2.0 安装到官方 `<DSH_HOME>/skills` 根目录；同名用户自建 Skill 目录绝不会被覆盖。
+- **本地化 Agent Preset**——`anchored-standard`、`router-standard`、`router-spec` 均提供简短的中英双语名称与描述，且不改变 Preset ID 或路由行为。
 - **安全的实验集成**——Anchored Standard 是独立的官方格式 Bundle；在固定的 Harness rc.6 API 上会安全回退到 Standard。
 
 ## 功能矩阵
 
-| 领域           | 已包含能力                                                            |
-| -------------- | --------------------------------------------------------------------- |
-| 桌面宿主       | 强化 Electron 窗口、启动页、原生菜单、托盘、关闭偏好                  |
-| Harness 运行时 | 固定 `@deepseek-ai/dsh` rc.6、仅回环地址 Web 服务、应用自有 Profile   |
-| V4 模型        | 官方 V4 Pro/Flash 目录与 `off` / `high` / `max` 推理控制              |
-| 一体化能力栈   | Skills、工具、Goal、Plan、Workflow、Todo、Jobs、提问、审批与 Subagent |
-| 恢复           | 健康探测、进程重启、渲染器替换、端口重试、会话恢复                    |
-| Watchdog       | 独立 IPC 进程、有界重启策略、持久化崩溃循环标记                       |
-| 插件           | 桌面设置/转场 Bundle、Anchored Standard Bundle 与自动装载的路由套件   |
-| 诊断           | 启动证据、运行状态、脱敏轮转日志、打开日志操作                        |
-| 安全           | 沙箱渲染器、禁用 Node 集成、验证 IPC、导航策略                        |
-| 打包           | macOS Universal DMG；Windows NSIS 与 Linux AppImage/deb 配置          |
+| 领域           | 已包含能力                                                                         |
+| -------------- | ---------------------------------------------------------------------------------- |
+| 桌面宿主       | 强化 Electron 窗口、启动页、原生菜单、托盘、关闭偏好                               |
+| Harness 运行时 | 固定 `@deepseek-ai/dsh` rc.6、仅回环地址 Web 服务、官方单一 Harness Home           |
+| V4 模型        | 官方 V4 Pro/Flash 目录与 `off` / `high` / `max` 推理控制                           |
+| 一体化能力栈   | Skills、工具、Goal、Plan、Workflow、Todo、Jobs、提问、审批与 Subagent              |
+| 内置 Skills    | Superpowers 6.2.0 合集安装进官方 Harness Home，不覆盖用户 Skills                   |
+| Agent Preset   | Standard 保持默认；可选 `anchored-standard` 与受管 `router-standard`/`router-spec` |
+| 恢复           | 健康探测、进程重启、渲染器替换、端口重试、会话恢复                                 |
+| Watchdog       | 独立 IPC 进程、有界重启策略、持久化崩溃循环标记                                    |
+| 插件           | 桌面设置/转场 Bundle、Anchored Standard Bundle 与自动装载的路由套件                |
+| 诊断           | 启动证据、运行状态、脱敏轮转日志、打开日志操作                                     |
+| 安全           | 沙箱渲染器、禁用 Node 集成、验证 IPC、导航策略                                     |
+| 打包           | macOS Universal DMG；Windows NSIS 与 Linux AppImage/deb 配置                       |
 
 ## 路由套件
 
 DeepSeek Harness Code 内置社区 [dsh-routing-suite](https://github.com/yjh051108/dsh-routing-suite)，并在每次启动时自动装载：
 
 - **离线快照** —— 安装包内置套件三个组件的固定版本快照（@dsh-external/dsh-super-injector Bundle 层、@dsh-external/dsh-mode-boost 宿主增强、router-standard 与 router-spec 智能体预设），存放在应用资源目录中。
-- **自动装配** —— 启动时桌面宿主将套件 Bundle 注册进应用自有 Web Profile，链接到 Profile 的 node_modules，把 mode-boost 写入 Profile 补丁层，并将路由预设安装为受管智能体预设。首次启动无需联网下载。
+- **固定基线** —— 内置快照记录 injector `0.3.3`、mode-boost `0.1.0`、路由预设 `0.2.0`（commit `eff787e95132d6c7104214542104a84d656b497e`），SHA-256 摘要保存在 `build/routing-suite/versions.json`。
+- **官方安装** —— 启动时桌面宿主使用应用内置 pnpm 运行公开的 `dsh plugin --profile web add` 流程，安装桌面 Bundle、`dsh-ui-motion`、`dsh-model2-selector`、Super Injector、Mode Boost 与 `dsh-find-plugin`。Profile 清单、依赖位置、Bundle 列表和补丁加载均由 Harness 管理；桌面宿主只在该 CLI 之外管理路由预设与 Skills。
 - **审核后更新** —— 路由组件只随经过审核的新 App 版本更新。构建在解压前校验每个固定归档的精确 SHA-256；安装后的 App 不会在后台下载或执行可变的路由代码。
 - **容错** —— 任何装配失败都不影响 Standard Harness 启动，并只报告有限诊断；用户自建的同名预设不会被覆盖。
 
@@ -189,7 +194,7 @@ DeepSeek Harness Code 内置社区 [dsh-routing-suite](https://github.com/yjh051
 
 ![DeepSeek Harness Code 架构](./docs/architecture/system.svg)
 
-Electron 主进程负责窗口、本地 Harness 子进程、就绪检查和窄权限 preload 桥接。Harness 仅绑定 `127.0.0.1`，并把官方会话保存在应用用户数据目录。官方格式 Bundle 在不替换协议的情况下扩展 Web 客户端。独立 Watchdog 不开放网络监听，并且只能重新启动经过验证的应用命令。
+Electron 主进程负责窗口、本地 Harness 子进程、就绪检查和窄权限 preload 桥接。Harness 仅绑定 `127.0.0.1`，并把会话保存在官方 Home（显式 `$DSH_HOME` 或默认 `~/.dsh`）。官方格式 Bundle 由 Harness 公开插件 CLI 协调安装，并在不替换协议的情况下扩展 Web 客户端。独立 Watchdog 不开放网络监听，并且只能重新启动经过验证的应用命令。
 
 完整边界请阅读[系统概览](./docs/architecture/overview.md)和[生命周期设计](./docs/architecture/lifecycle.md)。
 

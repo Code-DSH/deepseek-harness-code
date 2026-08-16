@@ -26,6 +26,20 @@ extraResources:
       - client.js
       - cordis.patch.yml
       - THIRD_PARTY_NOTICES.md
+  - from: packages/dsh-ui-motion
+    to: dsh-ui-motion
+    filter:
+      - package.json
+      - index.js
+      - lib/**/*
+      - cordis.patch.yml
+  - from: packages/dsh-model-two-level-selector
+    to: dsh-model-two-level-selector
+    filter:
+      - package.json
+      - index.js
+      - lib/**/*
+      - cordis.patch.yml
   - from: packages/anchored-standard-plugin
     to: anchored-standard-plugin
     filter:

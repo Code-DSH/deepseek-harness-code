@@ -1,17 +1,17 @@
 ---
 id: engineering.acceptance-report
-title: DeepSeek Harness Code 0.3.1 Acceptance Report
-summary: Final source, startup recovery, Routing Suite, rc.6 long-stream projection, and Universal macOS package evidence for the integrated 0.3.1 release.
+title: DeepSeek Harness Code Acceptance Report
+summary: Current 0.3.2 official-install evidence plus retained 0.3.1 startup recovery, Routing Suite, stream projection, and Universal release evidence.
 kind: engineering
 status: canonical
-content_stage: final-verified
+content_stage: implementation-backed
 scope: [desktop, watchdog, plugin, routing-suite, packaging]
 triggers: [release, acceptance, verification, DMG]
 read_when: [reviewing release readiness or reproducing validation]
 skip_when: [isolated source edits before release]
 priority: must
 freshness_class: project
-last_verified: 2026-08-16T17:35:00+08:00
+last_verified: 2026-08-16T19:20:00+08:00
 owners: [primary-agent]
 source_of_truth: [../../apps, ../../packages, ../../tests, ../../release]
 related:
@@ -21,7 +21,18 @@ supersedes: []
 tags: [acceptance, release, evidence]
 ---
 
-# DeepSeek Harness Code 0.3.1 Acceptance Report
+# DeepSeek Harness Code Acceptance Report
+
+## 0.3.2 official-install evidence
+
+- All pre-existing local branches and worktrees were consolidated into `main@89c2b19`; implementation continues in the isolated `feat/official-harness-install` worktree.
+- Harness Home resolution now uses `@deepseek-ai/dsh-home-paths@0.1.0-rc.6`. Migration from `<Electron userData>/dsh-home` is copy-only, target-wins, symlink-rejecting, permission-preserving, idempotent, and rollback-safe; it never removes the source or copies profile installation state.
+- The host installs the desktop bundle, Super Injector, Mode Boost, and `dsh-find-plugin` only through `dsh plugin --profile web add`. Its private `PATH` exposes `pnpm@11.19.0` from the app bundle, while the Harness child receives `--expose-internals` and all three audited plugin patches retain bare names.
+- The Universal app directory is 871 MB unpacked, ad-hoc signature verification passes, and its primary executable contains `x86_64 arm64`. Packaged Electron resolves its own `@deepseek-ai/dsh`, Home-paths, pnpm entry, and find-plugin package.
+- A packaged-runtime integration run used the Universal executable, packaged pnpm, packaged rc.6, and all four actual plugin roots against an isolated Home. Official reconciliation completed and the loopback boot graph served `deepseek-harness-desktop-plugin/client.js` successfully.
+- Current gates: 30 unit files / 118 tests, 108 Anchored tests, 24 plugin/real-Harness tests, four package tests, two Chromium tests, typecheck, lint, formatting, 42 documentation files, security contract, production audit, and runtime closure all pass. Runtime closure records 25 artifacts, 35 production dependencies, eight critical versions, and four integrated plugin packages.
+
+## 0.3.1 historical artifact
 
 ## Artifact
 
@@ -82,6 +93,15 @@ The patched dependency was rebuilt from a moved-aside `node_modules` tree with `
 
 The user-supplied community claim is experimental and is not a benchmark guarantee. The pinned Agent Preset uses rc.6 assembly/event hooks rather than `AgentPresets.recompose()`: request one exposes exactly `bash` and `str_replace_editor`; a durable tool call or assistant message promotes the current epoch to resident discovery, and explicit unlock events extend later schemas. The real rc.6 roster reports the preset healthy, Standard remains default, and `session.create` successfully mounts `anchored-standard`. A loopback mock DeepSeek provider captured the serialized first request with exactly the two bootstrap tools and the second request with exactly the five resident tools. The implementation never intercepts private model-request fields or captures/replays hidden reasoning.
 
+## Routing Suite and bundled Skills boundary
+
+- The bundled snapshot pins injector `0.3.3`, mode-boost `0.1.0`, and router preset `0.2.0` at commit `eff787e95132d6c7104214542104a84d656b497e`; `build/routing-suite/versions.json` records each archive SHA-256.
+- Startup assembly is idempotent: the injector is appended after the desktop bundle, mode-boost is linked and inserted into `cordis.patch.yml`, and both router presets are installed under `<DSH_HOME>/.agent-presets` with ownership markers and digests.
+- A background cache refresh is attempted at most once every 24 hours. It downloads the pinned injector/mode-boost release tarballs and the current `dsh-router-standard/main` preset archive, records their digests, and atomically swaps the cache. Startup prefers a complete cache but never waits for the network; refresh or assembly failure is fail-open.
+- This runtime path follows a mutable upstream main branch for router presets and therefore is not yet a fully immutable supply chain. It must be replaced with reviewed pinned updates before a public release.
+- Superpowers 6.2.0 skills are installed under `<DSH_HOME>/skills` with per-skill markers. A same-named unmarked or modified directory is preserved and reported; package failure disables only the bundled Skills while Standard continues.
+- Managed preset and skill installation normalizes bilingual display copy before digesting, so refreshed routing presets cannot silently restore raw IDs or empty descriptions.
+
 ## Cross-platform status
 
 - macOS Universal DMG is locally built and inspected.
@@ -91,8 +111,11 @@ The user-supplied community claim is experimental and is not a benchmark guarant
 ## External limits
 
 - The equal 16-point traffic-light contract is verified in source, test, and the packaged main process. Native visual inspection on macOS 15 and macOS 26 remains an external gate; the local packaging host is macOS 27 and cannot substitute for those runs.
+- The browser gate is currently partial: three legacy Playwright tests still target the removed `installStreamOutputEffects` hook and must be repaired before a full `pnpm test` pass can be claimed.
+- `pnpm lint` from this primary worktree currently reports generated files under the nested `.worktrees` directory. The lint scope must exclude or remove those worktree outputs before claiming a clean static-gate pass.
 - The key pasted in chat was not used, stored, printed, or forwarded. It must be revoked. A 45-minute live-provider soak is intentionally deferred until a replacement is entered by the user through official Harness settings.
 - V4 Pro/Flash selection and the official `off` / `high` / `max` reasoning controls are available in the pinned adapter. The literal `We need` automatic reasoning trigger is documented as a next requirement and is not represented as shipped until its public per-request implementation and tests exist.
+- The routing-suite background refresh follows `dsh-router-standard/main` for preset updates. Until that path is changed to reviewed immutable pins, the public release should not claim a fully pinned routing supply chain.
 
 ## Related documents
 

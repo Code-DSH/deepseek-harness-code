@@ -1,0 +1,25 @@
+{
+  "name": "dsh-ui-motion",
+  "description": "DSH UI Motion：全局 UI 动效插件——平滑/曲线动画、浮层入场动画、页面切换淡白过渡。不改任何 UI 位置。",
+  "version": "1.0.0",
+  "private": true,
+  "main": "lib/index.js",
+  "exports": {
+    ".": "./lib/index.js",
+    "./client": "./lib/client.js",
+    "./package.json": "./package.json"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "inject": [
+        "@deepseek-ai/dsh-client-runtime",
+        "@deepseek-ai/dsh-client-ui-slots"
+      ],
+      "platform": "web"
+    }
+  },
+  "license": "BSD-3-Clause"
+}

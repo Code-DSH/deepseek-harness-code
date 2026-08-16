@@ -1,29 +1,47 @@
-import { spawn, spawnSync, type ChildProcess } from "node:child_process";
+import { spawn, type ChildProcess } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import { createServer, type Server } from "node:http";
-import {
-  mkdtemp,
-  mkdir,
-  readFile,
-  rm,
-  symlink,
-  writeFile,
-} from "node:fs/promises";
+import { mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { createRequire } from "node:module";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { pathToFileURL } from "node:url";
 import vm from "node:vm";
 
 import { afterEach, describe, expect, it } from "vitest";
 
 import { reserveLoopbackPort } from "../../apps/desktop/src/lifecycle/port-retry.js";
-import { ensureAnchoredStandardPreset } from "../../apps/desktop/src/lifecycle/desktop-plugin-link.js";
+import {
+  ensureAnchoredStandardPreset,
+  ensureOfficialHarnessInstall,
+} from "../../apps/desktop/src/lifecycle/desktop-plugin-link.js";
 
 const repositoryRoot = process.cwd();
 const require = createRequire(join(repositoryRoot, "package.json"));
 const dshEntry = require.resolve("@deepseek-ai/dsh/lib/bin.js");
 const pluginRoot = join(repositoryRoot, "packages", "desktop-plugin");
+const packagedAppPath = process.env.DHC_PACKAGED_APP_PATH;
+const packagedResourcesRoot =
+  packagedAppPath === undefined
+    ? undefined
+    : join(packagedAppPath, "Contents", "Resources");
+const bootRequire =
+  packagedResourcesRoot === undefined
+    ? require
+    : createRequire(join(packagedResourcesRoot, "app", "package.json"));
+const bootElectronExecutable =
+  packagedAppPath === undefined
+    ? (require("electron") as string)
+    : join(packagedAppPath, "Contents", "MacOS", "DeepSeek Harness Code");
+const bootDshEntry = bootRequire.resolve("@deepseek-ai/dsh/lib/bin.js");
+const bootPluginRoot =
+  packagedResourcesRoot === undefined
+    ? pluginRoot
+    : join(packagedResourcesRoot, "desktop-plugin");
+const bootRoutingSuiteRoot =
+  packagedResourcesRoot === undefined
+    ? join(repositoryRoot, "build", "routing-suite")
+    : join(packagedResourcesRoot, "routing-suite");
 const anchoredPluginRoot = join(
   repositoryRoot,
   "packages",
@@ -221,6 +239,81 @@ async function waitForSessionIdle(
 }
 
 describe("desktop plugin with the real pinned Harness", () => {
+  it("uses the public plugin CLI idempotently without removing unrelated packages", async () => {
+    const root = await mkdtemp(join(tmpdir(), "dsh-official-plugin-real-"));
+    temporaryRoots.add(root);
+    const dshHome = join(root, "home");
+    const runtimeBinRoot = join(root, "app-data", "runtime-bin");
+    const pnpmEntry = join(dirname(require.resolve("pnpm")), "bin", "pnpm.mjs");
+
+    async function createBundle(packageName: string): Promise<string> {
+      const packageRoot = join(root, packageName.replaceAll("/", "-"));
+      await mkdir(packageRoot, { recursive: true });
+      await writeFile(
+        join(packageRoot, "package.json"),
+        `${JSON.stringify({
+          name: packageName,
+          version: "1.0.0",
+          type: "module",
+          main: "index.js",
+          dsh: { bundle: { patch: "./cordis.patch.yml" } },
+        })}\n`,
+      );
+      await writeFile(join(packageRoot, "index.js"), "export default {}\n");
+      await writeFile(
+        join(packageRoot, "cordis.patch.yml"),
+        `- insert:\n    - id: ${packageName.replaceAll("/", "-")}\n      name: '${packageName}'\n`,
+      );
+      return packageRoot;
+    }
+
+    const userPlugin = await createBundle("user-owned-plugin");
+    const managedPlugin = await createBundle("managed-desktop-plugin");
+    const baseInput = {
+      dshEntry,
+      dshHome,
+      electronExecutable: process.execPath,
+      pnpmEntry,
+      runtimeBinRoot,
+      env: process.env,
+    };
+    await ensureOfficialHarnessInstall({
+      ...baseInput,
+      integratedPlugins: [
+        { packageName: "user-owned-plugin", packageRoot: userPlugin },
+      ],
+    });
+    await ensureOfficialHarnessInstall({
+      ...baseInput,
+      integratedPlugins: [
+        { packageName: "managed-desktop-plugin", packageRoot: managedPlugin },
+      ],
+    });
+    await ensureOfficialHarnessInstall({
+      ...baseInput,
+      integratedPlugins: [
+        { packageName: "managed-desktop-plugin", packageRoot: managedPlugin },
+      ],
+    });
+
+    const manifest = JSON.parse(
+      await readFile(join(dshHome, "profiles", "web", "package.json"), "utf8"),
+    ) as {
+      dependencies: Record<string, string>;
+      dsh: { profile: { bundles: string[] } };
+    };
+    expect(Object.keys(manifest.dependencies).sort()).toEqual([
+      "managed-desktop-plugin",
+      "user-owned-plugin",
+    ]);
+    expect(manifest.dsh.profile.bundles).toEqual([
+      "@deepseek-ai/dsh-base",
+      "@deepseek-ai/dsh-web-app",
+      "user-owned-plugin",
+      "managed-desktop-plugin",
+    ]);
+  }, 30_000);
+
   it("is discovered as a healthy optional preset by the pinned rc.6 roster", async () => {
     const root = await mkdtemp(join(tmpdir(), "dsh-anchored-preset-real-"));
     temporaryRoots.add(root);
@@ -358,43 +451,54 @@ describe("desktop plugin with the real pinned Harness", () => {
     const root = await mkdtemp(join(tmpdir(), "dsh-desktop-plugin-"));
     temporaryRoots.add(root);
     const dshHome = join(root, "home");
-    const initialized = spawnSync(
-      process.execPath,
-      [dshEntry, "web", "--dump-config"],
-      {
-        cwd: repositoryRoot,
-        env: { ...process.env, DSH_HOME: dshHome },
-        encoding: "utf8",
-      },
-    );
-    expect(initialized.status, initialized.stderr).toBe(0);
-
-    const profileRoot = join(dshHome, "profiles", "web");
-    const manifestPath = join(profileRoot, "package.json");
-    const manifest = JSON.parse(await readFile(manifestPath, "utf8")) as {
-      dsh: { profile: { bundles: string[] } };
-    };
-    manifest.dsh.profile.bundles.push("deepseek-harness-desktop-plugin");
-    await writeFile(
-      manifestPath,
-      `${JSON.stringify(manifest, undefined, 2)}\n`,
-    );
-    const modules = join(profileRoot, "node_modules");
-    await mkdir(modules, { recursive: true });
-    await symlink(
-      pluginRoot,
-      join(modules, "deepseek-harness-desktop-plugin"),
-      process.platform === "win32" ? "junction" : "dir",
-    );
+    await ensureOfficialHarnessInstall({
+      dshEntry: bootDshEntry,
+      dshHome,
+      electronExecutable: bootElectronExecutable,
+      pnpmEntry: join(dirname(bootRequire.resolve("pnpm")), "bin", "pnpm.mjs"),
+      runtimeBinRoot: join(root, "runtime-bin"),
+      integratedPlugins: [
+        {
+          packageName: "deepseek-harness-desktop-plugin",
+          packageRoot: bootPluginRoot,
+        },
+        {
+          packageName: "@dsh-external/dsh-super-injector",
+          packageRoot: join(bootRoutingSuiteRoot, "injector"),
+        },
+        {
+          packageName: "@dsh-external/dsh-mode-boost",
+          packageRoot: join(bootRoutingSuiteRoot, "mode-boost"),
+        },
+        {
+          packageName: "dsh-find-plugin",
+          packageRoot: dirname(
+            bootRequire.resolve("dsh-find-plugin/package.json"),
+          ),
+        },
+      ],
+    });
 
     const port = await reserveLoopbackPort();
     const origin = `http://127.0.0.1:${port}`;
     const child = spawn(
-      process.execPath,
-      [dshEntry, "web", "--host", "127.0.0.1", "--port", String(port)],
+      bootElectronExecutable,
+      [
+        "--expose-internals",
+        bootDshEntry,
+        "web",
+        "--host",
+        "127.0.0.1",
+        "--port",
+        String(port),
+      ],
       {
         cwd: repositoryRoot,
-        env: { ...process.env, DSH_HOME: dshHome },
+        env: {
+          ...process.env,
+          DSH_HOME: dshHome,
+          ELECTRON_RUN_AS_NODE: "1",
+        },
         stdio: ["ignore", "pipe", "pipe"],
       },
     );

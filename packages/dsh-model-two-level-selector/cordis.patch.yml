@@ -1,0 +1,6 @@
+# dsh-model2-selector bundle layer: one loader row (bare package name so the
+# client-modules registry qualifies the entry and serves lib/client.js).
+- insert:
+    - id: dsh-model2-selector
+      name: 'dsh-model2-selector'
+      config: {}

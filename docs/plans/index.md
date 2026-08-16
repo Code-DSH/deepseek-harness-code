@@ -1,5 +1,7 @@
 # Plans Index
 
+- [Integrated Plugin Release 0.3.3](../superpowers/plans/2026-08-16-integrated-plugin-release.md) — completed release plan for the two installed local Web plugin snapshots, official first-launch installation, verified Universal DMG, and PR #3.
+- [Official Harness installation](../superpowers/plans/2026-08-16-official-harness-install.md) — active implementation plan for the official single Home, public plugin CLI, bundled pnpm, and copy-only migration.
 - [Startup recovery 0.3.1](./active/startup-recovery-0.3.1.md) — completed Electron readiness, Routing Suite YAML migration, rc.6 profile-resolution, and Universal patch-release plan.
 - [DSH Routing Suite 0.3.0 release](../superpowers/plans/2026-08-16-routing-suite-release.md) — completed all-branch merge, supply-chain hardening, clean-install gates, and verified Universal DMG evidence.
 - [Previous DeepSeek Harness Code plan](./active/deepseek-harness-desktop.md) — historical 0.2.0 progressive-preset scope, risks, Read Set, and evidence.

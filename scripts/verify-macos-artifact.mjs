@@ -2,7 +2,7 @@ import { execFileSync } from "node:child_process";
 import { access, mkdtemp, readFile, readdir, rm, stat } from "node:fs/promises";
 import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 
 const dmgPath = process.argv[2];
 if (!dmgPath)
@@ -74,10 +74,75 @@ try {
   const runtimeModules = [
     "@deepseek-ai/dsh-compaction/package.json",
     "@deepseek-ai/dsh-invariants/package.json",
+    "dsh-find-plugin/package.json",
   ].map((specifier) => ({
     specifier,
     path: requireFromPackagedApp.resolve(specifier),
   }));
+  const pnpmManifestPath = requireFromPackagedApp.resolve("pnpm");
+  const pnpmEntry = join(dirname(pnpmManifestPath), "bin", "pnpm.mjs");
+  await access(pnpmEntry); // packaged contract: pnpm/bin/pnpm.mjs
+  runtimeModules.push({ specifier: "pnpm/bin/pnpm.mjs", path: pnpmEntry });
+  const integratedPluginArtifacts = [
+    "dsh-ui-motion/package.json",
+    "dsh-ui-motion/index.js",
+    "dsh-ui-motion/lib/index.js",
+    "dsh-ui-motion/lib/client.js",
+    "dsh-ui-motion/cordis.patch.yml",
+    "dsh-model-two-level-selector/package.json",
+    "dsh-model-two-level-selector/index.js",
+    "dsh-model-two-level-selector/lib/index.js",
+    "dsh-model-two-level-selector/lib/client.js",
+    "dsh-model-two-level-selector/cordis.patch.yml",
+    "routing-suite/injector/package.json",
+    "routing-suite/injector/cordis.patch.yml",
+    "routing-suite/mode-boost/package.json",
+    "routing-suite/mode-boost/cordis.patch.yml",
+  ].map((relativePath) => join(resourcesRoot, relativePath));
+  await Promise.all(integratedPluginArtifacts.map((path) => access(path)));
+  const [injectorPatch, modeBoostPatch] = await Promise.all([
+    readFile(
+      join(resourcesRoot, "routing-suite/injector/cordis.patch.yml"),
+      "utf8",
+    ),
+    readFile(
+      join(resourcesRoot, "routing-suite/mode-boost/cordis.patch.yml"),
+      "utf8",
+    ),
+  ]);
+  if (!injectorPatch.includes("name: '@dsh-external/dsh-super-injector'")) {
+    throw new Error(
+      "packaged injector patch is not the official bare-name form",
+    );
+  }
+  if (!modeBoostPatch.includes("name: '@dsh-external/dsh-mode-boost'")) {
+    throw new Error(
+      "packaged mode-boost patch is not the official bare-name form",
+    );
+  }
+  for (const [directory, packageName, version] of [
+    ["dsh-ui-motion", "dsh-ui-motion", "1.0.0"],
+    ["dsh-model-two-level-selector", "dsh-model2-selector", "1.0.0"],
+  ]) {
+    const manifest = JSON.parse(
+      await readFile(join(resourcesRoot, directory, "package.json"), "utf8"),
+    );
+    const patch = await readFile(
+      join(resourcesRoot, directory, "cordis.patch.yml"),
+      "utf8",
+    );
+    if (manifest.name !== packageName || manifest.version !== version) {
+      throw new Error(
+        `unexpected packaged plugin identity: ${String(manifest.name)}@${String(manifest.version)}`,
+      );
+    }
+    if (
+      !patch.includes(`name: '${packageName}'`) ||
+      patch.includes("./node_modules/")
+    ) {
+      throw new Error(`${packageName} is not using its bare package name`);
+    }
+  }
   run("codesign", ["--verify", "--deep", "--strict", appPath]); // codesign --verify --deep --strict
   try {
     const quarantine = run("xattr", ["-p", "com.apple.quarantine", appPath]); // xattr
@@ -120,6 +185,7 @@ try {
         appPath,
         runtimeModules,
         anchoredPresetArtifacts,
+        integratedPluginArtifacts,
         anchoredUpstreamCommit: anchoredUpstream.commit,
         machFiles,
       },

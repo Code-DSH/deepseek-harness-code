@@ -39,6 +39,9 @@ importers:
       '@deepseek-ai/dsh-fs':
         specifier: 0.1.0-rc.6
         version: 0.1.0-rc.6(6889042eed4b1d3d73c9a7bc6cc8e4e3)
+      '@deepseek-ai/dsh-home-paths':
+        specifier: 0.1.0-rc.6
+        version: 0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1))
       '@deepseek-ai/dsh-invariants':
         specifier: 0.1.0-rc.6
         version: 0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)
@@ -96,6 +99,9 @@ importers:
       deepseek-harness-desktop-plugin:
         specifier: workspace:*
         version: link:packages/desktop-plugin
+      dsh-find-plugin:
+        specifier: 0.3.6
+        version: 0.3.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-tools@0.1.0-rc.6(f8724372086ccc1457fc84e7becee2e0))
       eventsource:
         specifier: 3.0.7
         version: 3.0.7
@@ -105,6 +111,9 @@ importers:
       express-rate-limit:
         specifier: 8.6.2
         version: 8.6.2(express@5.2.1(supports-color@7.2.0))(supports-color@7.2.0)
+      pnpm:
+        specifier: 11.19.0
+        version: 11.19.0
       raw-body:
         specifier: 3.0.2
         version: 3.0.2
@@ -287,6 +296,10 @@ importers:
       esbuild:
         specifier: 0.25.12
         version: 0.25.12
+
+  packages/dsh-model-two-level-selector: {}
+
+  packages/dsh-ui-motion: {}
 
   packages/superpowers-skills: {}
 
@@ -4155,6 +4168,12 @@ packages:
     resolution: {integrity: sha512-uBq4egWHTcTt33a72vpSG0z3HnPuIl6NqYcTrKEg2azoEyl2hpW0zqlxysq2pK9HlDIHyHyakeYaYnSAwd8bow==}
     engines: {node: '>=12'}
 
+  dsh-find-plugin@0.3.6:
+    resolution: {integrity: sha512-B9xAQNjsRECbbmi9n43UKyZBtee0tOJ/7tJw8OwviycSHAanTohmVb+wTG9W24iKhAEXR1sds3FKmWhoTZ9ZEQ==}
+    peerDependencies:
+      '@deepseek-ai/cordis': ^4.0.1
+      '@deepseek-ai/dsh-tools': ^0.0.1-rc.1
+
   dunder-proto@1.0.1:
     resolution: {integrity: sha512-KIN/nDJBQRcXw0MLVhZE9iQHmG68qAVIBg9CqmUYjmQIhgij9U5MFvrqkUL5FbtyyzZuOeOt0zdeRe4UY7ct+A==}
     engines: {node: '>= 0.4'}
@@ -5310,6 +5329,11 @@ packages:
   plist@3.1.0:
     resolution: {integrity: sha512-uysumyrvkUX0rX/dEVqt8gC3sTBzd4zoWfLeS29nb53imdaXVvLINYXTI2GNqzaMuvacNx4uJQ8+b3zXR0pkgQ==}
     engines: {node: '>=10.4.0'}
+
+  pnpm@11.19.0:
+    resolution: {integrity: sha512-eIHz7VkNRyxKlV4riLISF5ERYGbcyIy8o4SeybYPG7qm0syyIfqR2k4cZb7yvL43k2Wup6xTnHv4be3DobItzg==}
+    engines: {node: '>=22.13'}
+    hasBin: true
 
   postcss-load-config@6.0.1:
     resolution: {integrity: sha512-oPtTM4oerL+UXmx+93ytZVN82RrlY/wPUV8IeDxFrzIjXOLF1pN+EmKPLbubvKHT2HC20xXsCAH2Z+CKV6Oz/g==}
@@ -10512,6 +10536,11 @@ snapshots:
 
   dotenv@16.6.1: {}
 
+  dsh-find-plugin@0.3.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-tools@0.1.0-rc.6(f8724372086ccc1457fc84e7becee2e0)):
+    dependencies:
+      '@deepseek-ai/cordis': 4.0.1(@deepseek-ai/cordis-plugin-include@1.0.6)(@deepseek-ai/cordis-plugin-loader@1.0.2)
+      '@deepseek-ai/dsh-tools': 0.1.0-rc.6(f8724372086ccc1457fc84e7becee2e0)
+
   dunder-proto@1.0.1:
     dependencies:
       call-bind-apply-helpers: 1.0.2
@@ -12012,6 +12041,8 @@ snapshots:
       '@xmldom/xmldom': 0.8.14
       base64-js: 1.5.1
       xmlbuilder: 15.1.1
+
+  pnpm@11.19.0: {}
 
   postcss-load-config@6.0.1(jiti@2.7.0)(postcss@8.5.26)(yaml@2.9.0):
     dependencies:

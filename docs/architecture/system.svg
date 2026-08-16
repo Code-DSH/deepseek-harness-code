@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1440" height="1020" viewBox="0 0 1440 1020" role="img" aria-labelledby="title desc">
   <title id="title">DeepSeek Harness Code system architecture</title>
-  <desc id="desc">DeepSeek Harness Code uses Electron to host the loopback Harness Web application through two narrow preload capability groups. The desktop Cordis bundle provides settings and transitions, while an optional managed Agent Preset starts sessions with a minimal tool schema and progressively exposes discovery and explicitly unlocked tools. An IPC-only watchdog restarts the Electron main process after abnormal exits, while Harness talks to the DeepSeek API and persists official sessions under application user data.</desc>
+  <desc id="desc">DeepSeek Harness Code uses Electron to host the loopback Harness Web application through two narrow preload capability groups. The desktop Cordis bundle provides settings, transitions, and the native-status ThinkingOrb. The host installs the bundled DSH Routing Suite and Superpowers Skills into the app-owned Harness home, while an optional managed Agent Preset starts sessions with a minimal tool schema and progressively exposes discovery and explicitly unlocked tools. An IPC-only watchdog restarts the Electron main process after abnormal exits, while Harness talks to the DeepSeek API and persists official sessions under application user data.</desc>
   <defs>
     <style>
       :root { color-scheme: light dark; }
@@ -39,7 +39,7 @@
 
   <rect class="bg" width="1440" height="1020"/>
   <rect class="zone" x="45" y="18" width="970" height="54" rx="18"/>
-  <text class="heading" x="64" y="53">DeepSeek Harness Code · Electron + 官方插件 + 独立 Watchdog</text>
+  <text class="heading" x="64" y="53">DeepSeek Harness Code · Electron + 官方插件 + 路由套件/Skills + 独立 Watchdog</text>
 
   <rect class="zone" x="45" y="90" width="970" height="770" rx="24"/>
   <text class="label" x="70" y="126">DeepSeek Harness Code.app（全部可执行代码与运行时）</text>
@@ -78,7 +78,8 @@
   <text class="small" x="545" y="499">关闭行为 · 单色启动 UI · 页面过渡</text>
   <text class="small" x="545" y="523">prefers-reduced-motion · 键盘 / IME / A11y</text>
   <text class="small" x="545" y="547">anchored-standard：首轮极简，后续渐进发现</text>
-  <text class="small" x="545" y="571">不接管会话 · 不修改私有请求或隐藏思维链</text>
+  <text class="small" x="545" y="571">dsh-routing-suite + Superpowers Skills</text>
+  <text class="small" x="545" y="595">不接管会话 · 不修改私有请求或隐藏思维链</text>
 
   <rect class="guard box" x="80" y="675" width="360" height="135"/>
   <text class="label" x="105" y="710">独立 Watchdog</text>
@@ -87,8 +88,8 @@
   <text class="small" x="105" y="788">正常 shutdown 握手不重启</text>
 
   <rect class="store box" x="520" y="675" width="455" height="135"/>
-  <text class="label" x="545" y="710">系统用户数据目录（不写入 .app）</text>
-  <text class="small" x="545" y="740">dsh-home：设置 / 凭据 / 官方会话</text>
+  <text class="label" x="545" y="710">应用用户数据目录（不写入 .app）</text>
+  <text class="small" x="545" y="740">dsh-home：设置 / 凭据 / 官方会话 / 受管预设与 Skills</text>
   <text class="small" x="545" y="764">logs：Electron / Harness / Watchdog</text>
   <text class="small" x="545" y="788">10 MB × 5 · 敏感信息脱敏</text>
 

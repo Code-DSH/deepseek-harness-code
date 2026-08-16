@@ -163,5 +163,15 @@ describe("DeepSeek Harness Code distribution contract", () => {
     );
     expect(preflightScript).toContain("thinking-orbs");
     expect(preflightScript).toContain("thinking-status.js");
+    expect(preflightScript).toContain('["pnpm", "11.19.0"]');
+    expect(preflightScript).toContain('["dsh-find-plugin", "0.3.6"]');
+    expect(preflightScript).toContain("bin/pnpm.mjs");
+    expect(preflightScript).toContain("name: 'dsh-find-plugin'");
+    expect(preflightScript).toContain(
+      "name: '@dsh-external/dsh-super-injector'",
+    );
+    expect(preflightScript).toContain("name: '@dsh-external/dsh-mode-boost'");
+    expect(verifyScript).toContain("dsh-find-plugin/package.json");
+    expect(verifyScript).toContain("pnpm/bin/pnpm.mjs");
   });
 });

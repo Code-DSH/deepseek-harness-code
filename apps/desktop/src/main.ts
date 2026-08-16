@@ -16,6 +16,7 @@ import {
 
 import {
   createHarnessLaunchSpec,
+  resolveHarnessDataPaths,
   createSecureWebPreferences,
   createStartupPagePath,
   createTrayIconPath,
@@ -42,14 +43,14 @@ import {
 import { WatchdogHost } from "./lifecycle/watchdog-host.js";
 import { replaceWindowKeepingHostAlive } from "./lifecycle/window-recovery.js";
 import {
-  ensureDesktopPluginBundle,
-  ensureDesktopPluginLink,
+  ensureOfficialHarnessInstall,
   installAnchoredStandardPresetForStartup,
   installSuperpowersSkillsForStartup,
+  migrateLegacyHarnessHome,
 } from "./lifecycle/desktop-plugin-link.js";
 import {
-  installRoutingSuiteForStartup,
-  type RoutingSuiteStartupResult,
+  installRoutingPresetsForStartup,
+  type RoutingPresetStartupResult,
 } from "./lifecycle/routing-suite-link.js";
 import { classifyNavigation } from "./security/navigation-policy.js";
 import type {
@@ -285,14 +286,67 @@ async function startHarness(): Promise<HarnessChild> {
   const anchoredPluginRoot = app.isPackaged
     ? join(process.resourcesPath, "anchored-standard-plugin")
     : join(app.getAppPath(), "packages", "anchored-standard-plugin");
+  const uiMotionPluginRoot = app.isPackaged
+    ? join(process.resourcesPath, "dsh-ui-motion")
+    : join(app.getAppPath(), "packages", "dsh-ui-motion");
+  const modelSelectorPluginRoot = app.isPackaged
+    ? join(process.resourcesPath, "dsh-model-two-level-selector")
+    : join(app.getAppPath(), "packages", "dsh-model-two-level-selector");
   const superpowersSkillsRoot = app.isPackaged
     ? join(process.resourcesPath, "superpowers-skills")
     : join(app.getAppPath(), "packages", "superpowers-skills");
   const bundledRoutingSuiteRoot = app.isPackaged
     ? join(process.resourcesPath, "routing-suite")
     : join(app.getAppPath(), "build", "routing-suite");
-  const dshHome = join(app.getPath("userData"), "dsh-home");
-  await ensureDesktopPluginLink(dshHome, pluginRoot);
+  const { dshHome, legacyHome } = resolveHarnessDataPaths(
+    app.getPath("userData"),
+  );
+  const migration = await migrateLegacyHarnessHome({ legacyHome, dshHome });
+  if (migration.conflicts.length > 0) {
+    process.stderr.write(
+      `Legacy Harness data preserved at the official Home without overwriting existing entries: ${migration.conflicts.join(", ")}\n`,
+    );
+  }
+  if (migration.skippedSymlinks.length > 0) {
+    process.stderr.write(
+      `Legacy Harness migration skipped symbolic links: ${migration.skippedSymlinks.join(", ")}\n`,
+    );
+  }
+  const pnpmPackageRoot = dirname(require.resolve("pnpm"));
+  await ensureOfficialHarnessInstall({
+    dshEntry,
+    dshHome,
+    electronExecutable: process.execPath,
+    pnpmEntry: join(pnpmPackageRoot, "bin", "pnpm.mjs"),
+    runtimeBinRoot: join(app.getPath("userData"), "runtime-bin"),
+    integratedPlugins: [
+      {
+        packageName: "deepseek-harness-desktop-plugin",
+        packageRoot: pluginRoot,
+      },
+      {
+        packageName: "dsh-ui-motion",
+        packageRoot: uiMotionPluginRoot,
+      },
+      {
+        packageName: "dsh-model2-selector",
+        packageRoot: modelSelectorPluginRoot,
+      },
+      {
+        packageName: "@dsh-external/dsh-super-injector",
+        packageRoot: join(bundledRoutingSuiteRoot, "injector"),
+      },
+      {
+        packageName: "@dsh-external/dsh-mode-boost",
+        packageRoot: join(bundledRoutingSuiteRoot, "mode-boost"),
+      },
+      {
+        packageName: "dsh-find-plugin",
+        packageRoot: dirname(require.resolve("dsh-find-plugin/package.json")),
+      },
+    ],
+    legacyPluginSpecs: migration.legacyPluginSpecs,
+  });
   const anchoredPreset = await installAnchoredStandardPresetForStartup(
     dshHome,
     anchoredPluginRoot,
@@ -327,8 +381,8 @@ async function startHarness(): Promise<HarnessChild> {
   }
   // Assemble the reviewed, immutable dsh-routing-suite snapshot bundled with
   // this app release. Startup never downloads or executes mutable code.
-  const routingSuite: RoutingSuiteStartupResult =
-    await installRoutingSuiteForStartup(dshHome, bundledRoutingSuiteRoot);
+  const routingSuite: RoutingPresetStartupResult =
+    await installRoutingPresetsForStartup(dshHome, bundledRoutingSuiteRoot);
   if (routingSuite.status === "unavailable") {
     routingSuiteNotice = "routing-suite-unavailable";
     process.stderr.write(
@@ -345,7 +399,6 @@ async function startHarness(): Promise<HarnessChild> {
       );
     }
   }
-  await ensureDesktopPluginBundle(dshHome);
   return startWithPortRetries(reserveLoopbackPort, async (port) => {
     harnessOrigin = `http://127.0.0.1:${port}`;
     const spec = createHarnessLaunchSpec({

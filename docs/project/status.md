@@ -1,8 +1,13 @@
 # Project Status
 
-- Phase: 0.3.0 all-branch integration and Universal release verification complete
-- Current milestone: verified DMG is ready for user installation; `/Applications` was deliberately left unchanged
-- Repository: `https://github.com/Open-Less/deepseek-harness-code` (public)
-- Verified deliverables: bilingual evidence-backed product README, self-contained sandbox preload, repaired Standard dependency closure, exact-version rc.6 long-stream turn-tail projection patch, checksum-pinned offline DSH Routing Suite integration, two-capability desktop plugin, progressive optional Agent Preset with official rc.6 discovery/session creation and atomic conflict-safe installation, official native streaming and Think rendering, localized General settings, native Edit/paste shortcuts, monochrome startup spinner, equal 16-point macOS traffic-light inset, independent Watchdog, Code icon, and accessible system SVG
-- Artifact: `release/DeepSeek-Harness-Code-0.3.0-mac-universal.dmg`; SHA-256 `c4d94cbe36b01152083f9eb5606fb85f2d5b80b155b4a5ecbe7946d37054314f`
-- External limits: native Windows/Linux visual gates remain; live-provider soak and paired V4 Pro capability validation remain blocked until a safe replacement credential is entered through official settings
+- Phase: every fetched local/remote branch change is consolidated into `release/0.3.3-integrated-plugins`; official single-Home and public plugin-CLI integration now includes the complete installed Web plugin set
+- Current milestone: the two installed local plugin closures are frozen; release preflight, Universal DMG construction, mounted-artifact verification, push, and PR creation are complete
+- Repository: `https://github.com/Code-DSH/deepseek-harness-code` (public)
+- Pull request: `https://github.com/Code-DSH/deepseek-harness-code/pull/3`
+- Verified deliverables: official Harness Home resolution, copy-only legacy migration, application-bundled pnpm launcher, six-package public `dsh plugin --profile web add` coordination, bare-package loader restoration, checksum-pinned Routing Suite resources, `dsh-ui-motion@1.0.0`, `dsh-model2-selector@1.0.0`, bilingual managed presets, Superpowers Skills, sandboxed desktop host, independent Watchdog, and current APP build outputs
+- Release artifact: `release/DeepSeek-Harness-Code-0.3.3-mac-universal.dmg` (289,838,445 bytes; SHA-256 `21835867dc474d39ad04b0de5f0825d1a409ccb2105c055e423e65e919a65cd8`)
+- Build evidence: `pnpm dist:mac` exited 0; `pnpm verify:mac release/DeepSeek-Harness-Code-0.3.3-mac-universal.dmg --universal` exited 0 after mounted-image plugin/runtime/signature/architecture checks
+- Test scope: per user direction, the previously completed full suite was not rerun; this release freshly passed the packaging build, 35-artifact runtime closure, six-plugin package closure, documentation links, formatting, and mounted-DMG verification
+- Plugin snapshots: the earlier desktop state remains at `archive/desktop-plugin-before-app-merge-20260816`; release `0.3.3` additionally vendors the exact installed UI Motion and Model2 compiled closures under `packages/`
+- Historical artifact: any `0.3.0` or `0.3.2` DMG predates this complete installed-plugin snapshot and must not be presented as the new build
+- External limits: native Windows/Linux visual gates, live-provider soak, and paired V4 Pro capability validation remain pending; this local macOS release is unsigned and not notarized

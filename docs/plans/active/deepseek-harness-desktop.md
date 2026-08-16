@@ -1,17 +1,27 @@
 ---
 id: plan.deepseek-harness-desktop
 title: DeepSeek Harness Desktop Implementation
-summary: Active, resumable execution plan for the desktop release and progressive Anchored Standard preset integration.
+summary: Active, resumable execution plan for the desktop release, Routing Suite and bundled Skills integration, and progressive Anchored Standard preset.
 kind: plan
 status: canonical
 content_stage: partial-implementation
-scope: [repository, desktop, watchdog, plugin, packaging, validation]
+scope:
+  [
+    repository,
+    desktop,
+    watchdog,
+    plugin,
+    routing-suite,
+    skills,
+    packaging,
+    validation,
+  ]
 triggers: [resume, milestone, implementation plan]
 read_when: [starting or reviewing any milestone]
 skip_when: [isolated documentation typo]
 priority: must
 freshness_class: project
-last_verified: 2026-08-16T14:26:00+08:00
+last_verified: 2026-08-16T19:17:07+08:00
 owners: [primary-agent]
 source_of_truth: [../../../apps, ../../../packages, ../../../tests]
 related:
@@ -33,10 +43,10 @@ Implement and verify the confirmed intent. Do not add auto-update, notarization,
 
 ## Read Set
 
-- [Project intent](../../project/intent.md) — approved scope and acceptance; verified 2026-08-15.
-- [Architecture overview](../../architecture/overview.md) — process/trust boundaries; verified 2026-08-15.
-- [Upstream baseline](../../knowledge/upstream-baseline.md) — pinned versions and official protocol; verified 2026-08-15.
-- [Testing](../../engineering/testing.md) — verification layers; verified 2026-08-15.
+- [Project intent](../../project/intent.md) — approved scope and acceptance; verified 2026-08-16.
+- [Architecture overview](../../architecture/overview.md) — process/trust boundaries including Routing Suite and Skills installers; verified 2026-08-16.
+- [Upstream baseline](../../knowledge/upstream-baseline.md) — pinned versions, routing archive digests, official protocol; verified 2026-08-16.
+- [Testing](../../engineering/testing.md) — verification layers and the currently partial Playwright gate; verified 2026-08-16.
 - [Anchored Standard](../../knowledge/anchored-standard.md) — pinned source, progressive state contract, and experiment boundary; verified 2026-08-16.
 
 ## Milestones
@@ -44,7 +54,7 @@ Implement and verify the confirmed intent. Do not add auto-update, notarization,
 1. **Bootstrap and baseline:** workspace, lockfile, official Harness launch, minimal docs, initial tests.
 2. **Desktop host:** secure window/preload, lifecycle controller, close behavior, menu, and navigation policy.
 3. **Watchdog and diagnostics:** IPC disconnect recovery, circuit breaker, health state, rotating redacted logs.
-4. **Official plugin and Agent Preset:** desktop Web bundle, close settings, transitions, official question compatibility, and managed progressive `anchored-standard` preset.
+4. **Official plugin, presets, Routing Suite, and Skills:** desktop Web bundle, close settings, transitions, official question compatibility, managed progressive `anchored-standard` preset, auto-assembled dsh-routing-suite, and bundled Superpowers skills.
 5. **Packaging:** icon, universal app/DMG, ad-hoc signing, targeted quarantine guidance.
 6. **Acceptance:** unit/integration/fault/security/package tests, Terra reviews, Computer Use, live soak if credentials exist.
 
@@ -54,6 +64,7 @@ Implement and verify the confirmed intent. Do not add auto-update, notarization,
 - Live V4 Flash acceptance depends on credentials entered by the user.
 - Harness RC behavior is version-pinned; upgrades require official-source revalidation.
 - A user-authored same-name preset is never overwritten; it produces a bounded conflict notice while Standard remains available.
+- The routing-suite daily cache refresh follows `dsh-router-standard/main` for preset content; replace that mutable path with reviewed immutable pins before a public release.
 - V4 Pro quality gains require a future credentialed paired experiment and are not a package acceptance gate.
 
 ## Test and Acceptance
