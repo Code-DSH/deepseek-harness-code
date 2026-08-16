@@ -65,9 +65,11 @@
     "cross-spawn": "7.0.6",
     "debug": "4.4.3",
     "deepseek-harness-desktop-plugin": "workspace:*",
+    "dsh-find-plugin": "0.3.6",
     "eventsource": "3.0.7",
     "express": "5.2.1",
     "express-rate-limit": "8.6.2",
+    "pnpm": "11.19.0",
     "raw-body": "3.0.2",
     "zod": "4.1.5"
   },

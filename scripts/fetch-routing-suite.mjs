@@ -35,8 +35,12 @@ const scriptDir = dirname(fileURLToPath(import.meta.url));
 const projectRoot = resolve(scriptDir, "..");
 const DEFAULT_OUT = join(projectRoot, "build", "routing-suite");
 const INJECTOR_BARE_ENTRY = "name: '@dsh-external/dsh-super-injector'";
-const INJECTOR_PROFILE_ENTRY =
-  "name: './node_modules/@dsh-external/dsh-super-injector/lib/index.js'";
+
+export const MODE_BOOST_BUNDLE_PATCH = `- insert:
+    - id: mode-boost
+      name: '@dsh-external/dsh-mode-boost'
+      config: {}
+`;
 
 const ROUTING_PRESET_METADATA = {
   "router-standard": {
@@ -100,18 +104,32 @@ function verifyArchive(source, bytes) {
 }
 
 /**
- * Adapt the verified upstream injector patch to rc.6's Node Loader boundary.
- * Bundle discovery resolves from the profile, but a bare plugin import does
- * not; a profile-relative entry keeps the same audited package and export.
+ * Validate the verified upstream injector patch without changing its official
+ * bare-package entry. The packaged Electron child enables Node internals so
+ * the pinned loader can use the same native resolution path as standalone dsh.
  */
-export function adaptInjectorPatchContent(content) {
+export function validateInjectorPatchContent(content) {
   const occurrences = content.split(INJECTOR_BARE_ENTRY).length - 1;
   if (occurrences !== 1) {
     throw new Error(
       `fetch-routing-suite: injector patch expected exactly one audited bare entry, found ${occurrences}`,
     );
   }
-  return content.replace(INJECTOR_BARE_ENTRY, INJECTOR_PROFILE_ENTRY);
+  return content;
+}
+
+export function createOfficialModeBoostManifest(manifest) {
+  const dsh =
+    typeof manifest.dsh === "object" && manifest.dsh !== null
+      ? manifest.dsh
+      : {};
+  return {
+    ...manifest,
+    dsh: {
+      ...dsh,
+      bundle: { patch: "./cordis.patch.yml" },
+    },
+  };
 }
 
 function parseArgs(argv) {
@@ -204,8 +222,19 @@ async function assembleFromTarball(source, cacheDir, outDir, components) {
   await extractTarball(archive, target, source.strip);
   if (source.id === "injector") {
     const patchPath = join(target, "cordis.patch.yml");
-    const patch = adaptInjectorPatchContent(await readFile(patchPath, "utf8"));
-    await writeFile(patchPath, patch, { mode: 0o600 });
+    validateInjectorPatchContent(await readFile(patchPath, "utf8"));
+  }
+  if (source.id === "mode-boost") {
+    const manifestPath = join(target, "package.json");
+    const manifest = JSON.parse(await readFile(manifestPath, "utf8"));
+    await writeFile(
+      manifestPath,
+      `${JSON.stringify(createOfficialModeBoostManifest(manifest), undefined, 2)}\n`,
+      { mode: 0o600 },
+    );
+    await writeFile(join(target, "cordis.patch.yml"), MODE_BOOST_BUNDLE_PATCH, {
+      mode: 0o600,
+    });
   }
   if (source.id === "injector" || source.id === "mode-boost") {
     await ensureExecutable(join(target, "scripts"));

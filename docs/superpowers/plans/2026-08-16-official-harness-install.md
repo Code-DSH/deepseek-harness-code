@@ -57,12 +57,12 @@
 - Input contains `dshEntry`, `dshHome`, `electronExecutable`, `pnpmEntry`, `runtimeBinRoot`, `integratedPlugins`, `legacyPluginSpecs`, and `env`.
 - Result contains only package names, status values, and bounded diagnostics; it never contains file contents.
 
-- [ ] Add failing tests for the exact CLI argv/env, preservation of unrelated manifest dependencies, repeated reconciliation, a package-name conflict, and nonzero CLI exit.
-- [ ] Run the focused tests and prove RED against the existing manual link/bundle implementation.
-- [ ] Add exact `pnpm@11.19.0` and `dsh-find-plugin@0.3.6` production dependencies.
-- [ ] Generate an app-owned POSIX/Windows pnpm launcher in `runtimeBinRoot`, prepend it to `PATH`, and invoke the public CLI with `shell: false`.
-- [ ] Make the packaged mode-boost snapshot an official bare-name bundle and apply the same transformation in `fetch-routing-suite.mjs`.
-- [ ] Run an isolated real CLI test and assert official profile dependencies/bundles contain all integrated packages while an unrelated package/bundle survives.
+- [x] Add failing tests for the exact CLI argv/env, preservation of unrelated manifest dependencies, repeated reconciliation, a package-name conflict, and nonzero CLI exit.
+- [x] Run the focused tests and prove RED against the existing manual link/bundle implementation.
+- [x] Add exact `pnpm@11.19.0` and `dsh-find-plugin@0.3.6` production dependencies.
+- [x] Generate an app-owned POSIX/Windows pnpm launcher in `runtimeBinRoot`, prepend it to `PATH`, and invoke the public CLI with `shell: false`.
+- [x] Make the packaged mode-boost snapshot an official bare-name bundle and apply the same transformation in `fetch-routing-suite.mjs`.
+- [x] Run an isolated real CLI test and assert official profile dependencies/bundles contain all integrated packages while an unrelated package/bundle survives.
 
 ### Task 3: Copy-only transactional migration
 

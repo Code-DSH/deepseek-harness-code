@@ -1,4 +1,5 @@
 import {
+  chmod,
   lstat,
   mkdir,
   readFile,
@@ -12,7 +13,8 @@ import {
   writeFile,
 } from "node:fs/promises";
 import { createHash, randomUUID } from "node:crypto";
-import { dirname, join, resolve } from "node:path";
+import { spawnSync } from "node:child_process";
+import { delimiter, dirname, join, resolve } from "node:path";
 
 const DESKTOP_PACKAGE_NAME = "deepseek-harness-desktop-plugin";
 const ANCHORED_PACKAGE_NAME = "dsh-anchored-standard";
@@ -32,6 +34,135 @@ const OFFICIAL_WEB_BUNDLES = [
   "@deepseek-ai/dsh-web-app",
 ];
 const MANAGED_BUNDLES = [DESKTOP_PACKAGE_NAME, ANCHORED_PACKAGE_NAME];
+
+export type IntegratedHarnessPlugin = {
+  packageName: string;
+  packageRoot: string;
+};
+
+export type OfficialCommandOptions = {
+  encoding: "utf8";
+  env: Record<string, string | undefined>;
+  shell: false;
+  windowsHide: true;
+};
+
+export type OfficialCommandResult = {
+  status: number | null;
+  stdout?: string | Buffer | null;
+  stderr?: string | Buffer | null;
+  error?: Error;
+};
+
+export type OfficialCommandRunner = (
+  command: string,
+  args: readonly string[],
+  options: OfficialCommandOptions,
+) => OfficialCommandResult;
+
+export type OfficialHarnessInstallInput = {
+  dshEntry: string;
+  dshHome: string;
+  electronExecutable: string;
+  pnpmEntry: string;
+  runtimeBinRoot: string;
+  integratedPlugins: readonly IntegratedHarnessPlugin[];
+  env?: Record<string, string | undefined>;
+  runCommand?: OfficialCommandRunner;
+};
+
+export type OfficialHarnessInstallResult = {
+  status: "installed";
+  packages: string[];
+};
+
+const POSIX_PNPM_LAUNCHER = `#!/bin/sh
+exec "$DHC_ELECTRON_EXECUTABLE" "$DHC_PNPM_ENTRY" "$@"
+`;
+
+const WINDOWS_PNPM_LAUNCHER = `@echo off\r
+"%DHC_ELECTRON_EXECUTABLE%" "%DHC_PNPM_ENTRY%" %*\r
+`;
+
+async function writePnpmLaunchers(runtimeBinRoot: string): Promise<void> {
+  await mkdir(runtimeBinRoot, { recursive: true, mode: 0o700 });
+  const posixPath = join(runtimeBinRoot, "pnpm");
+  const windowsPath = join(runtimeBinRoot, "pnpm.cmd");
+  await writeFile(posixPath, POSIX_PNPM_LAUNCHER, { mode: 0o700 });
+  await chmod(posixPath, 0o700);
+  await writeFile(windowsPath, WINDOWS_PNPM_LAUNCHER, { mode: 0o600 });
+}
+
+function defaultOfficialCommandRunner(
+  command: string,
+  args: readonly string[],
+  options: OfficialCommandOptions,
+): OfficialCommandResult {
+  const result = spawnSync(command, [...args], options);
+  return {
+    status: result.status,
+    stdout: result.stdout,
+    stderr: result.stderr,
+    ...(result.error === undefined ? {} : { error: result.error }),
+  };
+}
+
+/** Install integrated packages through the public dsh plugin command. */
+export async function ensureOfficialHarnessInstall(
+  input: OfficialHarnessInstallInput,
+): Promise<OfficialHarnessInstallResult> {
+  const plugins: IntegratedHarnessPlugin[] = [];
+  for (const plugin of input.integratedPlugins) {
+    const packageRoot = await realpath(plugin.packageRoot);
+    const manifest = JSON.parse(
+      await readFile(join(packageRoot, "package.json"), "utf8"),
+    ) as { name?: unknown };
+    if (manifest.name !== plugin.packageName) {
+      throw new Error(
+        `Integrated package ${plugin.packageName} does not match ${String(manifest.name)}`,
+      );
+    }
+    plugins.push({ packageName: plugin.packageName, packageRoot });
+  }
+
+  await writePnpmLaunchers(input.runtimeBinRoot);
+  const inheritedEnv = input.env ?? process.env;
+  const existingPath = inheritedEnv.PATH;
+  const env: Record<string, string | undefined> = {
+    ...inheritedEnv,
+    DSH_HOME: input.dshHome,
+    DHC_ELECTRON_EXECUTABLE: input.electronExecutable,
+    DHC_PNPM_ENTRY: input.pnpmEntry,
+    ELECTRON_RUN_AS_NODE: "1",
+    PATH:
+      existingPath === undefined || existingPath === ""
+        ? input.runtimeBinRoot
+        : `${input.runtimeBinRoot}${delimiter}${existingPath}`,
+  };
+  const runCommand = input.runCommand ?? defaultOfficialCommandRunner;
+  for (const plugin of plugins) {
+    const result = runCommand(
+      input.electronExecutable,
+      [input.dshEntry, "plugin", "--profile", "web", "add", plugin.packageRoot],
+      {
+        encoding: "utf8",
+        env,
+        shell: false,
+        windowsHide: true,
+      },
+    );
+    if (result.error !== undefined || result.status !== 0) {
+      const exit = result.status === null ? "spawn" : String(result.status);
+      throw new Error(
+        `official plugin installation failed for ${plugin.packageName} (exit ${exit})`,
+      );
+    }
+  }
+  return {
+    status: "installed",
+    packages: plugins.map((plugin) => plugin.packageName),
+  };
+}
 
 async function existingLinkTarget(
   linkPath: string,

@@ -427,23 +427,40 @@ describe("dsh-routing-suite auto-load pipeline", () => {
     ).rejects.toThrow();
   });
 
-  it("adapts the verified injector entry to profile-relative resolution", async () => {
-    const { adaptInjectorPatchContent } = (await import(
+  it("preserves bare injector resolution and makes mode boost an official bundle", async () => {
+    const {
+      validateInjectorPatchContent,
+      createOfficialModeBoostManifest,
+      MODE_BOOST_BUNDLE_PATCH,
+    } = (await import(
       pathToFileURL(join(process.cwd(), "scripts", "fetch-routing-suite.mjs"))
         .href
     )) as {
-      adaptInjectorPatchContent: (content: string) => string;
+      validateInjectorPatchContent: (content: string) => string;
+      createOfficialModeBoostManifest: (
+        manifest: Record<string, unknown>,
+      ) => Record<string, unknown>;
+      MODE_BOOST_BUNDLE_PATCH: string;
     };
 
-    expect(
-      adaptInjectorPatchContent(
-        "- insert:\n    - id: dsh-super-injector\n      name: '@dsh-external/dsh-super-injector'\n",
-      ),
-    ).toContain(
-      "name: './node_modules/@dsh-external/dsh-super-injector/lib/index.js'",
+    const upstreamInjectorPatch =
+      "- insert:\n    - id: dsh-super-injector\n      name: '@dsh-external/dsh-super-injector'\n";
+    expect(validateInjectorPatchContent(upstreamInjectorPatch)).toBe(
+      upstreamInjectorPatch,
     );
-    expect(() => adaptInjectorPatchContent("- insert: []\n")).toThrow(
+    expect(() => validateInjectorPatchContent("- insert: []\n")).toThrow(
       "expected exactly one audited bare entry",
+    );
+    expect(
+      createOfficialModeBoostManifest({
+        name: "@dsh-external/dsh-mode-boost",
+        version: "0.1.0",
+      }),
+    ).toMatchObject({
+      dsh: { bundle: { patch: "./cordis.patch.yml" } },
+    });
+    expect(MODE_BOOST_BUNDLE_PATCH).toContain(
+      "name: '@dsh-external/dsh-mode-boost'",
     );
   });
 });

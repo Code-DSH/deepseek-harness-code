@@ -11,14 +11,17 @@ import {
 } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { createRequire } from "node:module";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { pathToFileURL } from "node:url";
 import vm from "node:vm";
 
 import { afterEach, describe, expect, it } from "vitest";
 
 import { reserveLoopbackPort } from "../../apps/desktop/src/lifecycle/port-retry.js";
-import { ensureAnchoredStandardPreset } from "../../apps/desktop/src/lifecycle/desktop-plugin-link.js";
+import {
+  ensureAnchoredStandardPreset,
+  ensureOfficialHarnessInstall,
+} from "../../apps/desktop/src/lifecycle/desktop-plugin-link.js";
 
 const repositoryRoot = process.cwd();
 const require = createRequire(join(repositoryRoot, "package.json"));
@@ -221,6 +224,81 @@ async function waitForSessionIdle(
 }
 
 describe("desktop plugin with the real pinned Harness", () => {
+  it("uses the public plugin CLI idempotently without removing unrelated packages", async () => {
+    const root = await mkdtemp(join(tmpdir(), "dsh-official-plugin-real-"));
+    temporaryRoots.add(root);
+    const dshHome = join(root, "home");
+    const runtimeBinRoot = join(root, "app-data", "runtime-bin");
+    const pnpmEntry = join(dirname(require.resolve("pnpm")), "bin", "pnpm.mjs");
+
+    async function createBundle(packageName: string): Promise<string> {
+      const packageRoot = join(root, packageName.replaceAll("/", "-"));
+      await mkdir(packageRoot, { recursive: true });
+      await writeFile(
+        join(packageRoot, "package.json"),
+        `${JSON.stringify({
+          name: packageName,
+          version: "1.0.0",
+          type: "module",
+          main: "index.js",
+          dsh: { bundle: { patch: "./cordis.patch.yml" } },
+        })}\n`,
+      );
+      await writeFile(join(packageRoot, "index.js"), "export default {}\n");
+      await writeFile(
+        join(packageRoot, "cordis.patch.yml"),
+        `- insert:\n    - id: ${packageName.replaceAll("/", "-")}\n      name: '${packageName}'\n`,
+      );
+      return packageRoot;
+    }
+
+    const userPlugin = await createBundle("user-owned-plugin");
+    const managedPlugin = await createBundle("managed-desktop-plugin");
+    const baseInput = {
+      dshEntry,
+      dshHome,
+      electronExecutable: process.execPath,
+      pnpmEntry,
+      runtimeBinRoot,
+      env: process.env,
+    };
+    await ensureOfficialHarnessInstall({
+      ...baseInput,
+      integratedPlugins: [
+        { packageName: "user-owned-plugin", packageRoot: userPlugin },
+      ],
+    });
+    await ensureOfficialHarnessInstall({
+      ...baseInput,
+      integratedPlugins: [
+        { packageName: "managed-desktop-plugin", packageRoot: managedPlugin },
+      ],
+    });
+    await ensureOfficialHarnessInstall({
+      ...baseInput,
+      integratedPlugins: [
+        { packageName: "managed-desktop-plugin", packageRoot: managedPlugin },
+      ],
+    });
+
+    const manifest = JSON.parse(
+      await readFile(join(dshHome, "profiles", "web", "package.json"), "utf8"),
+    ) as {
+      dependencies: Record<string, string>;
+      dsh: { profile: { bundles: string[] } };
+    };
+    expect(Object.keys(manifest.dependencies).sort()).toEqual([
+      "managed-desktop-plugin",
+      "user-owned-plugin",
+    ]);
+    expect(manifest.dsh.profile.bundles).toEqual([
+      "@deepseek-ai/dsh-base",
+      "@deepseek-ai/dsh-web-app",
+      "user-owned-plugin",
+      "managed-desktop-plugin",
+    ]);
+  }, 30_000);
+
   it("is discovered as a healthy optional preset by the pinned rc.6 roster", async () => {
     const root = await mkdtemp(join(tmpdir(), "dsh-anchored-preset-real-"));
     temporaryRoots.add(root);
