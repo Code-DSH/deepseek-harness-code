@@ -1,3 +1,4 @@
+import { normalize } from "node:path";
 import { spawn } from "node:child_process";
 
 import {
@@ -66,7 +67,7 @@ export function launchWatchdog(
       "--log-path",
       logPath,
       "--root-path",
-      options.rootPath,
+      normalize(options.rootPath),
     ],
     {
       detached: true,

@@ -1,4 +1,4 @@
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 
 import { describe, expect, it } from "vitest";
 
@@ -21,7 +21,7 @@ describe("Electron host configuration", () => {
         },
       ),
     ).toEqual({
-      dshHome: "/Users/test/.official-dsh",
+      dshHome: resolve("/Users/test/.official-dsh"),
       legacyHome: join(
         "/Users/test/Library/Application Support/deepseek-harness-desktop",
         "dsh-home",
