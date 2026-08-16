@@ -5,7 +5,7 @@
 - schema_version: 3
 - single_entry: true
 - repository_root: `/Users/trip/TRUE 开发/deepseek/deepseek-harness-desktop`
-- updated_at: `2026-08-16T11:55:59+08:00`
+- updated_at: `2026-08-16T13:20:00+08:00`
 - default_freshness: 10d
 - docs_entry: [docs/index.md](./docs/index.md)
 - project_entry: [docs/project/index.md](./docs/project/index.md)
@@ -16,7 +16,7 @@
 ## Current Project Snapshot
 
 - Goal: ship DeepSeek Harness Code with a cross-platform Electron shell, official-format integrated plugins, and independent watchdog.
-- Current phase: 0.2.0 release candidate is being rebuilt after the Standard-preset closure, official-component settings, and monochrome startup fixes.
+- Current phase: implementing the approved streaming-output dissolve and active ThinkingOrb behavior in the official desktop plugin.
 - Primary constraints: macOS Universal local release plus native Windows/Linux CI, no global Node dependency at runtime, loopback-only Harness, unsigned macOS distribution with ad-hoc signing.
 - Active branch/worktree: `main` in this standalone repository, published at `Open-Less/deepseek-harness-code`.
 - Build/test entry: `npm exec --yes --package=pnpm@11.19.0 -- pnpm test`.
@@ -58,9 +58,10 @@
 
 ## Active Plans
 
-| Plan                        | Status | Current milestone                    | Updated    | Link                                                                 |
-| --------------------------- | ------ | ------------------------------------ | ---------- | -------------------------------------------------------------------- |
-| DeepSeek Harness Code 0.2.0 | active | Native CI and final release verification | 2026-08-16 | [Open](./docs/superpowers/plans/2026-08-16-deepseek-harness-code.md) |
+| Plan                        | Status | Current milestone                        | Updated    | Link                                                                   |
+| --------------------------- | ------ | ---------------------------------------- | ---------- | ---------------------------------------------------------------------- |
+| Streaming output animation  | active | Offline client bundle and TDD model      | 2026-08-16 | [Open](./docs/superpowers/plans/2026-08-16-stream-output-animation.md) |
+| DeepSeek Harness Code 0.2.0 | active | Native CI and final release verification | 2026-08-16 | [Open](./docs/superpowers/plans/2026-08-16-deepseek-harness-code.md)   |
 
 ## Known Risks and Open Questions
 
