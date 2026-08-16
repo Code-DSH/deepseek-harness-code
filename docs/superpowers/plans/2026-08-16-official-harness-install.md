@@ -33,10 +33,10 @@
 - Consumes: `HarnessLaunchInput` and official `resolveDshHome(configured?, env?)`.
 - Produces: `createHarnessLaunchSpec()` with `args[0] === "--expose-internals"` and one resolved Home shared by every lifecycle stage.
 
-- [ ] Write a failing launch-spec assertion for `--expose-internals` before the CLI entry.
-- [ ] Run `pnpm vitest run tests/unit/host-config.test.ts` and prove the assertion fails on the old argument vector.
-- [ ] Add the minimal launch argument and exact `@deepseek-ai/dsh-home-paths@0.1.0-rc.6` production dependency.
-- [ ] Run the focused test and typecheck.
+- [x] Write a failing launch-spec assertion for `--expose-internals` before the CLI entry.
+- [x] Run `pnpm vitest run tests/unit/host-config.test.ts` and prove the assertion fails on the old argument vector.
+- [x] Add the minimal launch argument and exact `@deepseek-ai/dsh-home-paths@0.1.0-rc.6` production dependency.
+- [x] Run the focused test and typecheck.
 
 ### Task 2: Public CLI plugin coordinator with bundled pnpm
 

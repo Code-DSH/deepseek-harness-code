@@ -32,6 +32,7 @@ describe("Electron host configuration", () => {
       command:
         "/Applications/DeepSeek Harness.app/Contents/MacOS/DeepSeek Harness",
       args: [
+        "--expose-internals",
         "/app/node_modules/@deepseek-ai/dsh/lib/bin.js",
         "web",
         "--host",

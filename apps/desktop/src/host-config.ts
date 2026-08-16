@@ -56,6 +56,7 @@ export function createHarnessLaunchSpec(
   return {
     command: input.electronExecutable,
     args: [
+      "--expose-internals",
       input.dshEntry,
       "web",
       "--host",
