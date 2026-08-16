@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1440" height="1020" viewBox="0 0 1440 1020" role="img" aria-labelledby="title desc">
   <title id="title">DeepSeek Harness Code system architecture</title>
-  <desc id="desc">DeepSeek Harness Code uses Electron to host the loopback Harness Web application through two narrow preload capability groups. The desktop Cordis bundle provides settings, transitions, and the native-status ThinkingOrb. The host installs bundled plugins through the official Harness CLI and synchronizes Superpowers Skills and managed presets in the official Harness Home, while an optional Agent Preset starts sessions with a minimal tool schema and progressively exposes discovery and explicitly unlocked tools. An IPC-only watchdog restarts the Electron main process after abnormal exits, while Harness talks to the DeepSeek API and persists official sessions in the official Home.</desc>
+  <desc id="desc">DeepSeek Harness Code uses Electron to host the loopback Harness Web application through two narrow preload capability groups. The desktop Cordis bundle provides settings, transitions, and the native-status ThinkingOrb. The host installs the bundled DSH Routing Suite and Superpowers Skills into the app-owned Harness home, while an optional managed Agent Preset starts sessions with a minimal tool schema and progressively exposes discovery and explicitly unlocked tools. An IPC-only watchdog restarts the Electron main process after abnormal exits, while Harness talks to the DeepSeek API and persists official sessions under application user data.</desc>
   <defs>
     <style>
       :root { color-scheme: light dark; }
@@ -88,9 +88,9 @@
   <text class="small" x="105" y="788">正常 shutdown 握手不重启</text>
 
   <rect class="store box" x="520" y="675" width="455" height="135"/>
-  <text class="label" x="545" y="710">官方 Home 与桌面数据（不写入 .app）</text>
-  <text class="small" x="545" y="740">~/.dsh：设置 / 凭据 / 会话 / 插件 / Presets / Skills</text>
-  <text class="small" x="545" y="764">Electron userData：偏好 / logs / Watchdog</text>
+  <text class="label" x="545" y="710">应用用户数据目录（不写入 .app）</text>
+  <text class="small" x="545" y="740">dsh-home：设置 / 凭据 / 官方会话 / 受管预设与 Skills</text>
+  <text class="small" x="545" y="764">logs：Electron / Harness / Watchdog</text>
   <text class="small" x="545" y="788">10 MB × 5 · 敏感信息脱敏</text>
 
   <rect class="external box" x="1080" y="175" width="300" height="150"/>
