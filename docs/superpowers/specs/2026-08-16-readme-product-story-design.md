@@ -4,7 +4,7 @@ title: Product README Story and Layout
 summary: Defines the bilingual, product-led README structure and evidence boundaries for DeepSeek Harness Code.
 kind: product
 status: canonical
-content_stage: goal-only
+content_stage: final-verified
 scope: [readme, positioning, community]
 triggers: [README, vision, positioning, comparison]
 read_when: [changing the repository landing page or public product claims]
@@ -13,7 +13,13 @@ priority: must
 freshness_class: project
 last_verified: 2026-08-16T12:55:00+08:00
 owners: [primary-agent]
-source_of_truth: [../../../README.md, ../../../README.zh-CN.md, ../../architecture/lifecycle.md, ../../engineering/acceptance-report.md]
+source_of_truth:
+  [
+    ../../../README.md,
+    ../../../README.zh-CN.md,
+    ../../architecture/lifecycle.md,
+    ../../engineering/acceptance-report.md,
+  ]
 related:
   prerequisites: [../../project/intent.md, ../../architecture/overview.md]
   next: [../plans/2026-08-16-readme-product-story.md]
@@ -99,3 +105,4 @@ The freeze statement may say the application detects and recovers from defined W
 ## Change log
 
 - `2026-08-16T12:55:00+08:00` — Approved bilingual product-led README design, including evidence-bounded memory and freeze claims.
+- `2026-08-16T13:00:00+08:00` — Implemented both language editions and verified GitHub rendering, local links, formatting, security contracts, types, lint, and the full test suite.
