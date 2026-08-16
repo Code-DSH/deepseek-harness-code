@@ -1,9 +1,9 @@
 # Project Status
 
-- Phase: DeepSeek Harness Code 0.2.0 Universal release candidate rebuilt; native target-OS visual gates remain
-- Current milestone: run the public repository workflows, rebuild the Universal release, and execute native Windows/Linux CI
+- Phase: Anchored Standard progressive preset integrated and locally release-verified
+- Current milestone: final diff review and branch integration
 - Repository: `https://github.com/Open-Less/deepseek-harness-code` (public)
-- Verified deliverables: self-contained sandbox preload, repaired Standard preset dependency closure, two-capability desktop plugin, localized General settings built with official Harness Button/Menu primitives, native Edit/paste shortcuts, monochrome startup spinner, equal 16-point native macOS traffic-light inset, independent Watchdog, current Universal package inspection, real renderer interaction, adjusted Code icon, and accessible system SVG
+- Verified deliverables: self-contained sandbox preload, repaired Standard preset dependency closure, two-capability desktop plugin, progressive optional Agent Preset with official rc.6 discovery/session creation, atomic conflict-safe preset installation, localized General settings, native Edit/paste shortcuts, monochrome startup spinner, independent Watchdog, Code icon, and accessible system SVG
 - Artifact: `release/DeepSeek-Harness-Code-0.2.0-mac-universal.dmg`
-- Artifact SHA-256: `101c3a317e8ba63d07c5d5fb66661473288901730b64bd00e25f24a4c2baa38b`
-- External limits: Computer Use reports the Mac is locked; live-provider soak is intentionally blocked until the exposed key is revoked and a replacement is entered by the user
+- Artifact SHA-256: `b651c04dfeb5d21de9a8d5dbb10e9f04ab3c07cc789566eb89bcd587ee92c4c9`
+- External limits: native target-OS visual gates remain; V4 Pro paired capability validation is deferred until a safe replacement credential is entered through official settings

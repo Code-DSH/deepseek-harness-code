@@ -1,7 +1,7 @@
 ---
 id: plan.deepseek-harness-desktop
 title: DeepSeek Harness Desktop Implementation
-summary: Active, resumable execution plan for the approved desktop architecture.
+summary: Active, resumable execution plan for the desktop release and progressive Anchored Standard preset integration.
 kind: plan
 status: canonical
 content_stage: partial-implementation
@@ -11,7 +11,7 @@ read_when: [starting or reviewing any milestone]
 skip_when: [isolated documentation typo]
 priority: must
 freshness_class: project
-last_verified: 2026-08-16T11:18:00+08:00
+last_verified: 2026-08-16T13:42:00+08:00
 owners: [primary-agent]
 source_of_truth: [../../../apps, ../../../packages, ../../../tests]
 related:
@@ -37,13 +37,14 @@ Implement and verify the confirmed intent. Do not add auto-update, notarization,
 - [Architecture overview](../../architecture/overview.md) — process/trust boundaries; verified 2026-08-15.
 - [Upstream baseline](../../knowledge/upstream-baseline.md) — pinned versions and official protocol; verified 2026-08-15.
 - [Testing](../../engineering/testing.md) — verification layers; verified 2026-08-15.
+- [Anchored Standard](../../knowledge/anchored-standard.md) — pinned source, progressive state contract, and experiment boundary; verified 2026-08-16.
 
 ## Milestones
 
 1. **Bootstrap and baseline:** workspace, lockfile, official Harness launch, minimal docs, initial tests.
 2. **Desktop host:** secure window/preload, lifecycle controller, close behavior, menu, and navigation policy.
 3. **Watchdog and diagnostics:** IPC disconnect recovery, circuit breaker, health state, rotating redacted logs.
-4. **Official plugin:** standard bundle, conditional desktop settings, theme, transitions, official question compatibility.
+4. **Official plugin and Agent Preset:** desktop Web bundle, close settings, transitions, official question compatibility, and managed progressive `anchored-standard` preset.
 5. **Packaging:** icon, universal app/DMG, ad-hoc signing, targeted quarantine guidance.
 6. **Acceptance:** unit/integration/fault/security/package tests, Terra reviews, Computer Use, live soak if credentials exist.
 
@@ -52,6 +53,8 @@ Implement and verify the confirmed intent. Do not add auto-update, notarization,
 - Cross-architecture packaging may need x64 execution/download support. If an upstream Mach-O is single-arch, produce two clearly labeled equivalent DMGs and record evidence.
 - Live V4 Flash acceptance depends on credentials entered by the user.
 - Harness RC behavior is version-pinned; upgrades require official-source revalidation.
+- A user-authored same-name preset is never overwritten; it produces a bounded conflict notice while Standard remains available.
+- V4 Pro quality gains require a future credentialed paired experiment and are not a package acceptance gate.
 
 ## Test and Acceptance
 
@@ -74,6 +77,9 @@ Follow [testing strategy](../../engineering/testing.md). Every runtime change st
 - 2026-08-15 — Booted the final packaged App with 39 Web client entries and HTTP 200 for the Web root, desktop plugin, and official question UI.
 - 2026-08-15 — Final automated baseline: 18/57 unit, 2/11 plugin, 1/2 package, and 1 Playwright browser test plus typecheck, lint, format, docs, security, and package inspection.
 - 2026-08-16 — Repaired the latest packaged Standard preset failure by pinning compaction/invariants peers, verified real workspace switching/session restoration, migrated plugin controls to official Harness Button/Menu primitives with locale-aware copy and overflow-safe layout, simplified startup to a monochrome system-matched spinner, and added a mandatory runtime dependency preflight.
+- 2026-08-16 — Replaced the anchored Standard fallback Web bundle with the pinned progressive Agent Preset. Added strict two-tool bootstrap, durable promotion/unlock reconstruction, compaction epochs, subagent residency, atomic app-owned installation, conflict preservation, legacy preference migration, installer provenance, and official rc.6 roster/session-create integration tests.
+- 2026-08-16 — Added strict optional-preset isolation so corrupt packaged resources publish an unavailable notice without blocking Standard, then completed 84 unit, 108 vendored, 20 plugin/integration, 4 package-contract, and 1 Playwright tests. The real Harness test uses a loopback mock provider to capture the serialized two-tool first request and five-tool second request.
+- 2026-08-16 — Rebuilt the 271 MiB Universal DMG and verified the pinned preset provenance, dependency resolution, signature, quarantine state, and all 49 Mach-O layouts. Final SHA-256 is `b651c04dfeb5d21de9a8d5dbb10e9f04ab3c07cc789566eb89bcd587ee92c4c9`.
 
 ## Discoveries and Deviations
 
@@ -83,6 +89,7 @@ Follow [testing strategy](../../engineering/testing.md). Every runtime change st
 - The approved “1/2/4-second backoff” and “third crash opens the circuit” cannot both schedule a third restart. The implementation chooses the safer explicit circuit rule: restart after 1 and 2 seconds, then open the circuit on the third abnormal exit within five minutes.
 - Harness package discovery returned an empty client graph from the tested ASAR layout. The verified release uses `asar: false` and an app-owned official bundle manifest, producing 39 entries.
 - Universal assembly preserves paired architecture-qualified native packages; shared Electron and Chromium Mach-O files are true Universal binaries.
+- Harness rc.6 may serve the Web root before Cordis registers `agentPreset.list`; integration readiness now waits on that exact API condition and six consecutive diagnostic repetitions passed.
 - Computer Use remains blocked by the locked Mac/permissions, and live V4 Flash soak remains blocked by absent user-entered credentials. See the [acceptance report](../../engineering/acceptance-report.md).
 
 ## Documentation Write-back

@@ -11,7 +11,7 @@ read_when: [executing or reviewing this scope]
 skip_when: [unrelated documentation]
 priority: must
 freshness_class: project
-last_verified: 2026-08-16T11:18:00+08:00
+last_verified: 2026-08-16T13:06:11+08:00
 owners: [primary-agent]
 source_of_truth: [../../../apps, ../../../packages, ../../../tests]
 related:
@@ -40,13 +40,13 @@ Ship a self-contained DeepSeek Harness Code desktop release that repairs the cur
 1. Reproduce and lock failures: sandbox preload unresolved dependency; Standard preset missing workflow dependency; workspace selection fallback.
 2. Repair host path: self-contained preload, dependency closure, two validated APIs, tray, platform title-bar configuration, migration-safe product rename.
 3. Repair Web experience: monochrome system-matched loading spinner, top-edge layout, official-component General settings, route transition performance, copy/input/workspace regression tests.
-4. Add `dsh-anchored-standard`: official bundle shape, session-scoped diagnostics, explicit safe Standard fallback, and settings toggle. The pinned rc.6 public API cannot safely perform post-tool promotion.
+4. Add `dsh-anchored-standard` as an optional Agent Preset: Minimal-pair bootstrap, event-derived progressive discovery, strict failure, managed lifecycle, and no desktop preference toggle. Standard remains default.
 5. Brand and package: composed icon, integrated plugins, macOS Universal DMG, Windows NSIS, Linux AppImage/deb/CI definitions, unsigned install guide.
 6. Verify and clean: unit/plugin/integration/E2E/security/package tests, performance trace, Computer Use, secret scan, obsolete installed app moved to Trash, GitHub repository creation and push.
 
 ## Risks and rollback
 
-- Dynamic catalog mutation may not have a supported rc.6 seam. Roll back only the experimental plugin and use Standard; never patch private request payloads.
+- Harness upgrades can change preset assembly hooks. Keep rc.6 pinned, rerun request-schema/event/package compatibility tests before upgrading, and leave Standard independent.
 - Cross-platform native artifacts may require OS-native CI. Commit deterministic configurations and a build matrix; do not label unbuilt artifacts as delivered.
 - Rename must not orphan existing sessions. Keep a documented legacy user-data migration and verify before removing the old installed app.
 - The exposed key is considered compromised and excluded from all execution. Live provider acceptance requires a newly rotated key entered by the user through official settings.
@@ -64,6 +64,7 @@ Ship a self-contained DeepSeek Harness Code desktop release that repairs the cur
 - 2026-08-16 — Rejected synthetic Control+V before clipboard IPC, made the anchored setting conditionally update the profile and restart Harness, replaced the generic tray glyph with official brand assets, and moved the product mark closer to the Code wordmark. Final artifact rebuild is in progress.
 - 2026-08-16 — Added the missing compaction/invariants peers, proved Standard workspace switching and session restoration in the real Electron renderer, migrated every visible plugin control to official Harness primitives, verified Chinese/English locale switching and dropdown alignment, and added a mandatory runtime-closure preflight. The repository will be public after secret scanning.
 - 2026-08-16 — Secret scanning found no credential patterns; created the public `Open-Less/deepseek-harness-code` repository and prepared the initial `main` branch publication.
+- 2026-08-16 — Superseded the safe-fallback bundle with the audited community Agent Preset at commit `db4527a2...`; implemented atomic managed installation, progressive tool phases, official rc.6 roster/session creation, packaging provenance, and strict conflict/failure behavior. Live V4 Pro quality gain remains unverified.
 
 ## Completion
 

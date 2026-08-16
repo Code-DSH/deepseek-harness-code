@@ -1,4 +1,4 @@
-import type { RuntimeState } from "../shared/contracts.js";
+import type { RuntimeNotice, RuntimeState } from "../shared/contracts.js";
 
 export interface HarnessChild {
   pid?: number | undefined;
@@ -11,6 +11,7 @@ export interface HarnessRuntimeOptions {
   probeHealth: (origin: string) => Promise<boolean>;
   waitForReady?: (child: HarnessChild, origin: string) => Promise<boolean>;
   isChildAlive?: (child: HarnessChild) => boolean;
+  runtimeNotice?: () => RuntimeNotice | undefined;
   onReady?: (origin: string) => Promise<void> | void;
   onState: (state: RuntimeState) => void;
   reloadRenderer?: () => void;
@@ -67,10 +68,12 @@ export class HarnessRuntimeController {
     }
     if (child === undefined || this.stopRequested) return;
     this.failures = 0;
+    const notice = this.options.runtimeNotice?.();
     this.publish({
       phase: "ready",
       restartCount: this.state.restartCount,
       ...(child.pid === undefined ? {} : { harnessPid: child.pid }),
+      ...(notice === undefined ? {} : { notice }),
     });
   }
 

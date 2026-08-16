@@ -7,14 +7,12 @@ export type CloseBehavior = z.infer<typeof closeBehaviorSchema>;
 export const desktopPreferencesStateSchema = z
   .object({
     closeBehavior: closeBehaviorSchema,
-    anchoredStandard: z.boolean(),
   })
   .strict();
 
 export const desktopPreferencesSchema = z
   .object({
     closeBehavior: setCloseBehaviorSchema,
-    anchoredStandard: z.boolean(),
   })
   .strict();
 
@@ -25,8 +23,22 @@ export type DesktopPreferences = z.infer<typeof desktopPreferencesSchema>;
 
 export const DEFAULT_DESKTOP_PREFERENCES: DesktopPreferencesState = {
   closeBehavior: "ask",
-  anchoredStandard: false,
 };
+
+/** Read the previous settings shape while deliberately discarding retired fields. */
+export function parsePersistedDesktopPreferences(
+  value: unknown,
+): DesktopPreferencesState {
+  if (typeof value !== "object" || value === null) {
+    return { ...DEFAULT_DESKTOP_PREFERENCES };
+  }
+  const closeBehavior = closeBehaviorSchema.safeParse(
+    (value as Record<string, unknown>).closeBehavior,
+  );
+  return closeBehavior.success
+    ? { closeBehavior: closeBehavior.data }
+    : { ...DEFAULT_DESKTOP_PREFERENCES };
+}
 
 export const runtimePhaseSchema = z.enum([
   "starting",
@@ -36,6 +48,11 @@ export const runtimePhaseSchema = z.enum([
   "stopping",
 ]);
 export type RuntimePhase = z.infer<typeof runtimePhaseSchema>;
+export const runtimeNoticeSchema = z.enum([
+  "anchored-preset-conflict",
+  "anchored-preset-unavailable",
+]);
+export type RuntimeNotice = z.infer<typeof runtimeNoticeSchema>;
 
 export const runtimeStateSchema = z
   .object({
@@ -43,6 +60,7 @@ export const runtimeStateSchema = z
     restartCount: z.number().int().nonnegative(),
     harnessPid: z.number().int().positive().optional(),
     lastError: z.string().max(2_000).optional(),
+    notice: runtimeNoticeSchema.optional(),
   })
   .strict();
 

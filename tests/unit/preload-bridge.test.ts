@@ -27,12 +27,10 @@ describe("preload bridge", () => {
     await bridge.runtime.getState();
     await bridge.preferences.set({
       closeBehavior: "minimize",
-      anchoredStandard: true,
     });
     expect(invoke).toHaveBeenCalledWith("runtime:get");
     expect(invoke).toHaveBeenCalledWith("preferences:set", {
       closeBehavior: "minimize",
-      anchoredStandard: true,
     });
   });
 

@@ -3,6 +3,25 @@ import { describe, expect, it, vi } from "vitest";
 import { HarnessRuntimeController } from "../../apps/desktop/src/lifecycle/runtime-controller.js";
 
 describe("HarnessRuntimeController", () => {
+  it("publishes a bounded non-fatal preset conflict notice when ready", async () => {
+    const controller = new HarnessRuntimeController({
+      origin: "http://127.0.0.1:41001",
+      startHarness: vi.fn(async () => ({ pid: 42, kill: vi.fn() })),
+      probeHealth: vi.fn(async () => true),
+      runtimeNotice: () => "anchored-preset-conflict",
+      onState: vi.fn(),
+    });
+
+    await controller.start();
+
+    expect(controller.getState()).toEqual({
+      phase: "ready",
+      restartCount: 0,
+      harnessPid: 42,
+      notice: "anchored-preset-conflict",
+    });
+  });
+
   it("restarts after three consecutive failed health probes", async () => {
     const startHarness = vi.fn(async () => ({ pid: 42, kill: vi.fn() }));
     const controller = new HarnessRuntimeController({

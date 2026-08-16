@@ -62,4 +62,17 @@ export default [
       },
     },
   },
+  {
+    // Preserve the pinned community source style. Its own 108-test suite and
+    // SHA-256 provenance manifest are the primary audit boundary; these two
+    // stylistic rules are not applied retroactively to vendored files.
+    files: ["packages/anchored-standard-plugin/**/*.mjs"],
+    languageOptions: {
+      globals: { crypto: "readonly" },
+    },
+    rules: {
+      "no-empty": "off",
+      "no-unused-vars": "off",
+    },
+  },
 ];

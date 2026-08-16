@@ -52,5 +52,6 @@ Project versions are exact even if newer upstream releases appear. Revalidate be
 
 - `dsh web --host 127.0.0.1 --port <port>` is the verified launch form; `/api/health` and `/api/` return 404 in rc.6.
 - The app-owned profile is stored under `DSH_HOME` and loads the official base/Web bundles before the desktop bundle.
+- The rc.6 Agent Preset roster automatically scans `<DSH_HOME>/.agent-presets`. Preset-local `system-prompt/assemble`, `session/event`, and `agent/pre-step` hooks can implement event-derived schema phases without recompose or private transport mutation.
 - The official Web boot graph in the packaged app contains 39 client entries, including `@deepseek-ai/dsh-client-ui-user-questions` and `deepseek-harness-desktop-plugin`.
 - rc.6 package scanning does not discover this graph from the tested ASAR layout, so the release uses an unpacked application tree.

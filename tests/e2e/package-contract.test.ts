@@ -100,6 +100,9 @@ describe("DeepSeek Harness Code distribution contract", () => {
     const preflightScript = await readProjectFile(
       "scripts/check-runtime-closure.mjs",
     );
+    const anchoredManifest = JSON.parse(
+      await readProjectFile("packages/anchored-standard-plugin/UPSTREAM.json"),
+    ) as { commit: string };
 
     for (const resource of [
       "dist/desktop",
@@ -127,6 +130,12 @@ describe("DeepSeek Harness Code distribution contract", () => {
     expect(verifyScript).toContain("xattr");
     expect(verifyScript).toContain("@deepseek-ai/dsh-compaction/package.json");
     expect(verifyScript).toContain("@deepseek-ai/dsh-invariants/package.json");
+    expect(verifyScript).toContain(
+      "anchored-standard-plugin/preset/agent.cordis.yml",
+    );
+    expect(verifyScript).toContain(
+      "anchored-standard-plugin/UPSTREAM-SHA256SUMS",
+    );
     expect(manifest.scripts["preflight:runtime"]).toContain(
       "check-runtime-closure.mjs",
     );
@@ -136,5 +145,19 @@ describe("DeepSeek Harness Code distribution contract", () => {
     expect(preflightScript).toContain("@deepseek-ai/dsh-invariants");
     expect(preflightScript).toContain("@deepseek-ai/dsh-client-ui-primitives");
     expect(preflightScript).toContain("packages/desktop-plugin/client.js");
+    expect(config).toContain("preset/**/*");
+    expect(config).toContain("UPSTREAM.json");
+    expect(config).toContain("UPSTREAM-SHA256SUMS");
+    expect(config).toContain("LOCAL-PATCHES.md");
+    expect(preflightScript).toContain(
+      "packages/anchored-standard-plugin/preset/agent.cordis.yml",
+    );
+    expect(notices).toContain("dsh-anchored-standard");
+    expect(preflightScript).toContain(
+      "packages/anchored-standard-plugin/UPSTREAM-SHA256SUMS",
+    );
+    expect(anchoredManifest.commit).toBe(
+      "db4527a2a70a9032d3a8525ce3c0ea6ef528d6fc",
+    );
   });
 });

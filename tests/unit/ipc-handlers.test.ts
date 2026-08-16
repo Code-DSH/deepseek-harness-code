@@ -28,7 +28,6 @@ describe("desktop IPC handlers", () => {
         openLogs: vi.fn(async () => undefined),
         getPreferences: () => ({
           closeBehavior: "ask",
-          anchoredStandard: true,
         }),
         setPreferences,
         paste,
@@ -44,17 +43,15 @@ describe("desktop IPC handlers", () => {
     ]);
     await expect(
       handlers.get("preferences:set")!(undefined, {
-        closeBehavior: "ask",
+        closeBehavior: "quit",
         anchoredStandard: true,
       }),
     ).rejects.toThrow();
     await handlers.get("preferences:set")!(undefined, {
       closeBehavior: "quit",
-      anchoredStandard: false,
     });
     expect(setPreferences).toHaveBeenCalledWith({
       closeBehavior: "quit",
-      anchoredStandard: false,
     });
     const sender = { paste: vi.fn() };
     listeners.get("clipboard:paste")!({ sender });

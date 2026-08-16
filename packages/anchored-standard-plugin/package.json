@@ -1,32 +1,26 @@
 {
   "name": "dsh-anchored-standard",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
-  "description": "Fail-closed Standard fallback for experimental anchored mode",
+  "description": "Pinned progressive Anchored Standard agent preset for DeepSeek Harness",
   "type": "module",
-  "main": "./index.js",
-  "types": "./index.d.ts",
-  "exports": {
-    ".": {
-      "types": "./index.d.ts",
-      "default": "./index.js"
-    },
-    "./package.json": "./package.json"
-  },
-  "dsh": {
-    "bundle": {
-      "patch": "./cordis.patch.yml"
-    }
-  },
-  "peerDependencies": {
-    "@deepseek-ai/cordis": "^4.0.1"
+  "license": "MIT",
+  "engines": {
+    "node": ">=22.19.0"
   },
   "files": [
-    "index.js",
-    "index.d.ts",
-    "cordis.patch.yml"
+    "preset",
+    "LICENSE",
+    "NOTICE",
+    "README.md",
+    "README.zh-CN.md",
+    "UPSTREAM.json",
+    "UPSTREAM-SHA256SUMS",
+    "LOCAL-PATCHES.md"
   ],
   "scripts": {
-    "build": "tsup src/index.ts --format esm --platform node --target node24 --out-dir . --dts"
+    "build": "node scripts/sync-modes.mjs --check",
+    "test": "node --test test/*.test.mjs",
+    "check": "node scripts/sync-modes.mjs --check && node --test test/*.test.mjs"
   }
 }

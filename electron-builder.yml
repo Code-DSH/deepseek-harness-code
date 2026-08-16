@@ -29,9 +29,12 @@ extraResources:
     to: anchored-standard-plugin
     filter:
       - package.json
-      - index.js
-      - index.d.ts
-      - cordis.patch.yml
+      - preset/**/*
+      - LICENSE
+      - NOTICE
+      - UPSTREAM.json
+      - UPSTREAM-SHA256SUMS
+      - LOCAL-PATCHES.md
   - from: build/THIRD-PARTY-NOTICES.md
     to: licenses/THIRD-PARTY-NOTICES.md
   - from: build/deepseek-harness-code-tray.png

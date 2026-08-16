@@ -1,7 +1,7 @@
 ---
 id: design.deepseek-harness-code
 title: DeepSeek Harness Code Desktop Design
-summary: Renamed cross-platform desktop shell, official UI plugin integration, self-contained packaging, and a transparent rc.6-safe anchored-standard fallback.
+summary: Cross-platform desktop shell, official UI plugin integration, self-contained packaging, and an optional rc.6 progressive Anchored Standard Agent Preset.
 kind: architecture
 status: canonical
 content_stage: partial-implementation
@@ -11,7 +11,7 @@ read_when: [implementing the 2026-08-16 scope expansion]
 skip_when: [unrelated maintenance]
 priority: must
 freshness_class: project
-last_verified: 2026-08-16T11:18:00+08:00
+last_verified: 2026-08-16T13:06:11+08:00
 owners: [primary-agent]
 source_of_truth: [user request, ../../../apps, ../../../packages]
 related:
@@ -43,7 +43,7 @@ The product and application display name become **DeepSeek Harness Code**. The e
 
 The Web plugin connects to the external Electron host through exactly two capability groups:
 
-1. `desktop.preferences`: read/write validated desktop preferences, initially `closeBehavior` and `anchoredStandard`.
+1. `desktop.preferences`: read/write the validated `closeBehavior` preference. The retired `anchoredStandard` field is discarded from one legacy persisted shape and is not exposed by IPC.
 2. `desktop.runtime`: read/subscribe runtime state and invoke the bounded `restartHarness` and `openLogs` actions.
 
 The preload exposes no shell, arbitrary path, generic IPC, credential, prompt, or response access. Cordis host metadata remains read-only. The official question service and `QuestionComposer` remain untouched.
@@ -62,9 +62,9 @@ Renderer failure still rebuilds only the window, while Harness and Watchdog stay
 
 ## Experimental anchored-standard plugin
 
-`dsh-anchored-standard` is implemented as a separate official-format Harness bundle and is bundled with the app. The General setting conditionally registers or removes the bundle from the app-owned Web profile and restarts Harness so the choice is observable. Source inspection proved that rc.6 `AgentPresets.recompose()` is valid only before an agent has produced output. A successful tool call necessarily crosses that boundary, so the implemented controller may observe a successful result for diagnostics but never mutates the live catalog; `promotionCount` remains zero and the session stays on Standard.
+`dsh-anchored-standard` is integrated as an official Agent Preset, not a Web bundle. The packaged copy is atomically installed into the app-private Harness home. The official new-session preset selector exposes it while Standard stays default. A same-ID user preset or locally edited managed copy is preserved and produces a bounded settings notice.
 
-The official General setting labels the capability experimental and explicitly displays the Standard fallback. The plugin does not inspect, store, rewrite, or claim control of hidden chain-of-thought. The community score claim is treated as unverified experimental motivation, not an acceptance guarantee, and no private transport field is intercepted.
+The preset uses rc.6 `system-prompt/assemble`, `session/event`, and `agent/pre-step` hooks inside the agent plane. A fresh top-level session receives exactly `bash` and `str_replace_editor`; the first durable tool call or assistant message promotes to the bootstrap pair plus resident discovery tools, and `dev_tool_search` unlocks additional capabilities durably. Compaction creates a new controlled epoch and subagents start resident. Missing required tools fail the selected preset instead of exposing Standard. No private request field, hidden reasoning, or cross-device warmed state is captured or replayed, and the community score remains an unverified experimental motivation.
 
 ## Packaging and migration
 
@@ -78,7 +78,7 @@ The official General setting labels the capability experimental and explicitly d
 
 ## Verification
 
-Acceptance requires red-to-green tests for preload bundling, Standard preset dependency closure, two-API validation, close/tray behavior, startup rendering, animation performance, anchored safe fallback, branding, and package matrices. Computer Use verifies input/copy/workspace selection, official settings, close/reopen, and a mock/no-secret workflow before any live-provider test.
+Acceptance requires red-to-green tests for preload bundling, Standard preset dependency closure, two-API validation, close/tray behavior, startup rendering, animation performance, Anchored bootstrap/promotion/resume/compaction/strict failure, managed lifecycle conflicts, branding, and package matrices. The pinned real Harness must list and create a session with the preset while reporting Standard as default. Live-provider quality comparison remains optional and credential-gated.
 
 ## Packaging implementation record
 

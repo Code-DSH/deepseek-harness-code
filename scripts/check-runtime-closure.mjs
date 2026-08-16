@@ -26,8 +26,14 @@ const runtimeArtifacts = [
   "packages/desktop-plugin/index.js",
   "packages/desktop-plugin/cordis.patch.yml",
   "packages/anchored-standard-plugin/package.json",
-  "packages/anchored-standard-plugin/index.js",
-  "packages/anchored-standard-plugin/cordis.patch.yml",
+  "packages/anchored-standard-plugin/preset/agent.cordis.yml",
+  "packages/anchored-standard-plugin/preset/preset.yml",
+  "packages/anchored-standard-plugin/preset/tool-bootstrap.mjs",
+  "packages/anchored-standard-plugin/LICENSE",
+  "packages/anchored-standard-plugin/NOTICE",
+  "packages/anchored-standard-plugin/UPSTREAM.json",
+  "packages/anchored-standard-plugin/UPSTREAM-SHA256SUMS",
+  "packages/anchored-standard-plugin/LOCAL-PATCHES.md",
   "apps/desktop/src/startup.html",
 ];
 

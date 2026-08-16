@@ -5,7 +5,7 @@
 - schema_version: 3
 - single_entry: true
 - repository_root: `/Users/trip/TRUE 开发/deepseek/deepseek-harness-desktop`
-- updated_at: `2026-08-16T11:55:59+08:00`
+- updated_at: `2026-08-16T13:42:00+08:00`
 - default_freshness: 10d
 - docs_entry: [docs/index.md](./docs/index.md)
 - project_entry: [docs/project/index.md](./docs/project/index.md)
@@ -15,20 +15,20 @@
 
 ## Current Project Snapshot
 
-- Goal: ship DeepSeek Harness Code with a cross-platform Electron shell, official-format integrated plugins, and independent watchdog.
-- Current phase: 0.2.0 release candidate is being rebuilt after the Standard-preset closure, official-component settings, and monochrome startup fixes.
+- Goal: ship DeepSeek Harness Code with a cross-platform Electron shell, official-format integrated plugins, an optional progressive Anchored Standard Agent Preset, and an independent watchdog.
+- Current phase: Anchored Standard progressive preset integration and local Universal release verification are complete; final branch review remains.
 - Primary constraints: macOS Universal local release plus native Windows/Linux CI, no global Node dependency at runtime, loopback-only Harness, unsigned macOS distribution with ad-hoc signing.
-- Active branch/worktree: `main` in this standalone repository, published at `Open-Less/deepseek-harness-code`.
+- Active branch/worktree: `feat/anchored-standard-progressive` in an isolated worktree; repository is published at `Open-Less/deepseek-harness-code`.
 - Build/test entry: `npm exec --yes --package=pnpm@11.19.0 -- pnpm test`.
-- Current critical risk: rc.6 does not safely permit post-tool preset recomposition; anchored mode must remain a visible Standard fallback when enabled.
+- Current critical risk: the progressive request-schema mechanism is locally verified, but any V4 Pro quality gain remains unverified without user-entered credentials and a repeated paired experiment.
 
 ## User Intent Status
 
 - status: confirmed
 - confirmed_at: `2026-08-15T00:00:00+08:00`
-- summary: Deliver the renamed DeepSeek Harness Code desktop application with repaired input/workspace behavior, system light/dark monochrome startup UI, a two-capability settings plugin built from official Harness primitives, tray/close behavior, integrated plugins, macOS Universal DMG, and Windows/Linux native packaging definitions.
-- scope: desktop host, lifecycle recovery, plugin UI, integrated packaging, performance, branding, verification.
-- non_goals: auto-update, Apple notarization, private-wire tool mutation, claims of controlling hidden chain-of-thought.
+- summary: Deliver DeepSeek Harness Code plus a bundled optional `anchored-standard` Agent Preset that starts each session with the Minimal tool pair, then progressively exposes resident discovery and explicitly unlocked tools without changing the Standard default.
+- scope: desktop host, lifecycle recovery, plugin UI, progressive Agent Preset, managed installation, integrated packaging, performance, branding, verification.
+- non_goals: auto-update, Apple notarization, cross-device warm state, reasoning-text capture/replay, private-wire mutation, or benchmark guarantees.
 - acceptance: [Project intent](./docs/project/intent.md)
 
 ## Documentation Route Index
@@ -52,22 +52,24 @@
 
 ## Knowledge Topic Index
 
-| Topic             | Summary                                         | Status  | Last verified | Revalidate after | Canonical document                            |
-| ----------------- | ----------------------------------------------- | ------- | ------------- | ---------------- | --------------------------------------------- |
-| Upstream baseline | Official Harness and packaging version baseline | current | 2026-08-15    | 2026-08-16       | [Open](./docs/knowledge/upstream-baseline.md) |
+| Topic             | Summary                                                                                    | Status  | Last verified | Revalidate after | Canonical document                            |
+| ----------------- | ------------------------------------------------------------------------------------------ | ------- | ------------- | ---------------- | --------------------------------------------- |
+| Upstream baseline | Official Harness and packaging version baseline                                            | current | 2026-08-15    | 2026-08-16       | [Open](./docs/knowledge/upstream-baseline.md) |
+| Anchored Standard | Pinned community preset, rc.6 integration contract, local patches, and experiment boundary | current | 2026-08-16    | 2026-08-26       | [Open](./docs/knowledge/anchored-standard.md) |
 
 ## Active Plans
 
-| Plan                        | Status | Current milestone                    | Updated    | Link                                                                 |
-| --------------------------- | ------ | ------------------------------------ | ---------- | -------------------------------------------------------------------- |
-| DeepSeek Harness Code 0.2.0 | active | Native CI and final release verification | 2026-08-16 | [Open](./docs/superpowers/plans/2026-08-16-deepseek-harness-code.md) |
+| Plan                        | Status | Current milestone                        | Updated    | Link                                                    |
+| --------------------------- | ------ | ---------------------------------------- | ---------- | ------------------------------------------------------- |
+| DeepSeek Harness Code 0.2.0 | active | Final diff review and branch integration | 2026-08-16 | [Open](./docs/plans/active/deepseek-harness-desktop.md) |
 
 ## Known Risks and Open Questions
 
-| Item                                         | Impact                                                           | Evidence                                                                  | Next action                                                               | Link                                                                          |
-| -------------------------------------------- | ---------------------------------------------------------------- | ------------------------------------------------------------------------- | ------------------------------------------------------------------------- | ----------------------------------------------------------------------------- |
-| Exposed provider key must be rotated         | Blocks safe live-provider soak                                   | Key appeared in chat and was not used or stored                           | User rotates it and enters the replacement only through official settings | [Testing](./docs/engineering/testing.md)                                      |
-| Dynamic anchored promotion is unsafe on rc.6 | Experimental mode cannot change a live catalog after a tool call | Public `AgentPresets.recompose` requires an agent with no produced output | Fail closed to Standard and show the limitation in General settings       | [Design](./docs/superpowers/specs/2026-08-16-deepseek-harness-code-design.md) |
+| Item                                        | Impact                                                                      | Evidence                                                                              | Next action                                                                    | Link                                                       |
+| ------------------------------------------- | --------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ | ---------------------------------------------------------- |
+| Exposed provider key must be rotated        | Blocks safe live-provider soak                                              | Key appeared in chat and was not used or stored                                       | User rotates it and enters the replacement only through official settings      | [Testing](./docs/engineering/testing.md)                   |
+| V4 Pro capability improvement is unverified | Mechanism can ship without proving the reported 98/99 score band            | No replacement credentials were entered and the community score is benchmark-specific | Run at least 10 paired Standard/Anchored trials when credentials are available | [Anchored Standard](./docs/knowledge/anchored-standard.md) |
+| Preset ID conflict                          | A user-authored `anchored-standard` directory prevents managed installation | Installer deliberately refuses to overwrite unknown or modified content               | Show a bounded conflict notice; Standard remains available                     | [Architecture](./docs/architecture/overview.md)            |
 
 ## Mandatory Rules
 

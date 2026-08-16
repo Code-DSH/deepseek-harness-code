@@ -1,7 +1,7 @@
 ---
 id: architecture.overview
 title: System Architecture
-summary: Implemented DeepSeek Harness Code Electron shell, two-capability plugin bridge, integrated bundles, and watchdog process boundaries.
+summary: Implemented Electron shell, two-capability plugin bridge, managed progressive Agent Preset, and watchdog process boundaries.
 kind: architecture
 status: canonical
 content_stage: implementation-backed
@@ -11,7 +11,7 @@ read_when: [changing process ownership or public interfaces]
 skip_when: [documentation-only wording fixes]
 priority: must
 freshness_class: project
-last_verified: 2026-08-16T11:18:00+08:00
+last_verified: 2026-08-16T13:06:11+08:00
 owners: [project]
 source_of_truth: [../../apps, ../../packages]
 related:
@@ -25,7 +25,9 @@ tags: [architecture, electron]
 
 The implemented Electron main process owns BrowserWindow security policy, close behavior, local Harness lifecycle, and the narrow preload bridge. Harness runs as a child through Electron's embedded Node runtime with `DSH_HOME` at `<userData>/dsh-home`. The official-format plugin augments settings, diagnostics, theme, and transitions without replacing Harness sessions or question protocols; its visible controls reuse the official Harness UI primitives and locale service. The detached Node-mode watchdog observes the desktop process over inherited OS IPC and only restarts after abnormal disconnect.
 
-The host creates an idempotent, app-owned Web profile manifest containing the two official Web bundles plus `deepseek-harness-desktop-plugin`. When the validated `anchoredStandard` preference is enabled, it also links and registers `dsh-anchored-standard`; disabling the setting removes that bundle from the profile and the official settings plugin requests a Harness restart. The production desktop plugin supplies an HMR-compatible no-op registration service because the pinned rc.6 Web profile expects the service even in a packaged build. Anchored Standard publishes an explicit safe-fallback marker; rc.6 does not allow catalog recomposition after an agent has produced output.
+The host creates an idempotent, app-owned Web profile manifest containing the two official Web bundles plus `deepseek-harness-desktop-plugin`. Anchored Standard is not a Web profile bundle: the complete pinned preset is packaged as an extra resource and atomically synchronized to `<DSH_HOME>/.agent-presets/anchored-standard` on Harness startup. A versioned ownership marker and SHA-256 digest allow safe upgrades only when the installed copy is still app-owned and unmodified. An unknown or edited same-name directory is preserved and publishes `anchored-preset-conflict`; an invalid packaged source publishes `anchored-preset-unavailable` and disables only the optional preset. Standard remains available in both cases.
+
+Within a selected Anchored Standard session, `system-prompt/assemble` exposes exactly `bash` and `str_replace_editor` before a durable tool call or assistant message exists. `agent/pre-step` filters only automatic `agent-instructions` and `skill-catalog` messages during that bootstrap phase. Promotion retains the Minimal pair plus `dev_tool_search`, `skill_search`, and `skill_load`; other tools appear only after an explicit `dev_tool_search` unlock recorded in durable session events. Compaction starts a new epoch with a controlled work set, and subagents start resident. Missing phase-required tools fail preset assembly instead of returning the full catalog.
 
 ## Trust Boundaries
 
@@ -47,7 +49,7 @@ The host creates an idempotent, app-owned Web profile manifest containing the tw
 
 ## Public Bridge
 
-The public types are defined in `apps/desktop/src/shared/contracts.ts`. `window.deepseekDesktop.preferences` only reads/writes the validated close/experimental-mode preferences. `window.deepseekDesktop.runtime` only reads/subscribes runtime state and invokes restart/open-logs. The sandbox preload is self-contained: `zod` is bundled and the only runtime external is Electron.
+The public types are defined in `apps/desktop/src/shared/contracts.ts`. `window.deepseekDesktop.preferences` only reads/writes the validated close behavior; the retired `anchoredStandard` field is accepted only while reading one legacy settings version and is removed on the next write. `window.deepseekDesktop.runtime` only reads/subscribes runtime state (including the bounded preset conflict/unavailable enums) and invokes restart/open-logs. The sandbox preload is self-contained: `zod` is bundled and the only runtime external is Electron.
 
 ## Related Documents
 
@@ -57,4 +59,4 @@ The public types are defined in `apps/desktop/src/shared/contracts.ts`. `window.
 
 ## Validation
 
-The current suite passes 21 unit files / 76 tests, 3 plugin files / 15 tests, and 1 package file / 4 tests. A real Electron run proved the grouped preload bridge, Standard workspace creation after compaction-peer repair, editable IME-capable composer, permission-menu persistence, official localized Button/Menu settings, password-field paste, and an idle five-second interval with zero layouts and a 456-byte JS-heap delta. See the [acceptance report](../engineering/acceptance-report.md).
+The current suite passes 22 unit files / 84 tests, 108 vendored preset tests, 3 plugin files / 20 tests, 1 package file / 4 tests, and 1 Playwright test. A real Electron run proved the grouped preload bridge, Standard workspace creation after compaction-peer repair, editable IME-capable composer, permission-menu persistence, official localized Button/Menu settings, password-field paste, and an idle five-second interval with zero layouts and a 456-byte JS-heap delta. See the [acceptance report](../engineering/acceptance-report.md).

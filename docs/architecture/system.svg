@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1440" height="1020" viewBox="0 0 1440 1020" role="img" aria-labelledby="title desc">
   <title id="title">DeepSeek Harness Code system architecture</title>
-  <desc id="desc">DeepSeek Harness Code uses Electron to host the loopback Harness Web application through two narrow preload capability groups. Official Cordis bundles provide desktop settings, cross-platform transitions, and a transparent anchored-mode Standard fallback. An IPC-only watchdog restarts the Electron main process after abnormal exits, while Harness talks to the DeepSeek API and persists official sessions under application user data.</desc>
+  <desc id="desc">DeepSeek Harness Code uses Electron to host the loopback Harness Web application through two narrow preload capability groups. The desktop Cordis bundle provides settings and transitions, while an optional managed Agent Preset starts sessions with a minimal tool schema and progressively exposes discovery and explicitly unlocked tools. An IPC-only watchdog restarts the Electron main process after abnormal exits, while Harness talks to the DeepSeek API and persists official sessions under application user data.</desc>
   <defs>
     <style>
       :root { color-scheme: light dark; }
@@ -77,7 +77,7 @@
   <text class="small" x="545" y="475">desktop-plugin：General 设置与诊断</text>
   <text class="small" x="545" y="499">关闭行为 · 单色启动 UI · 页面过渡</text>
   <text class="small" x="545" y="523">prefers-reduced-motion · 键盘 / IME / A11y</text>
-  <text class="small" x="545" y="547">anchored-standard：rc.6 安全降级为 Standard</text>
+  <text class="small" x="545" y="547">anchored-standard：首轮极简，后续渐进发现</text>
   <text class="small" x="545" y="571">不接管会话 · 不修改私有请求或隐藏思维链</text>
 
   <rect class="guard box" x="80" y="675" width="360" height="135"/>

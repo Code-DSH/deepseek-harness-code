@@ -1,5 +1,5 @@
 import { execFileSync } from "node:child_process";
-import { mkdtemp, readdir, rm, stat } from "node:fs/promises";
+import { access, mkdtemp, readFile, readdir, rm, stat } from "node:fs/promises";
 import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -43,7 +43,31 @@ try {
     dmgPath,
   ]); // hdiutil attach
   const appPath = join(mountPoint, "DeepSeek Harness Code.app");
-  const packagedAppRoot = join(appPath, "Contents", "Resources", "app");
+  const resourcesRoot = join(appPath, "Contents", "Resources");
+  const packagedAppRoot = join(resourcesRoot, "app");
+  const anchoredPresetArtifacts = [
+    "anchored-standard-plugin/package.json",
+    "anchored-standard-plugin/preset/agent.cordis.yml",
+    "anchored-standard-plugin/preset/preset.yml",
+    "anchored-standard-plugin/preset/tool-bootstrap.mjs",
+    "anchored-standard-plugin/LICENSE",
+    "anchored-standard-plugin/NOTICE",
+    "anchored-standard-plugin/UPSTREAM.json",
+    "anchored-standard-plugin/UPSTREAM-SHA256SUMS",
+    "anchored-standard-plugin/LOCAL-PATCHES.md",
+  ].map((relativePath) => join(resourcesRoot, relativePath));
+  await Promise.all(anchoredPresetArtifacts.map((path) => access(path)));
+  const anchoredUpstream = JSON.parse(
+    await readFile(
+      join(resourcesRoot, "anchored-standard-plugin/UPSTREAM.json"),
+      "utf8",
+    ),
+  );
+  if (anchoredUpstream.commit !== "db4527a2a70a9032d3a8525ce3c0ea6ef528d6fc") {
+    throw new Error(
+      `unexpected Anchored Standard upstream commit: ${String(anchoredUpstream.commit)}`,
+    );
+  }
   const requireFromPackagedApp = createRequire(
     join(packagedAppRoot, "package.json"),
   );
@@ -90,7 +114,18 @@ try {
   if (machFiles.length === 0)
     throw new Error("no Mach-O files found in application");
   process.stdout.write(
-    `${JSON.stringify({ dmgPath, appPath, runtimeModules, machFiles }, undefined, 2)}\n`,
+    `${JSON.stringify(
+      {
+        dmgPath,
+        appPath,
+        runtimeModules,
+        anchoredPresetArtifacts,
+        anchoredUpstreamCommit: anchoredUpstream.commit,
+        machFiles,
+      },
+      undefined,
+      2,
+    )}\n`,
   );
 } finally {
   try {

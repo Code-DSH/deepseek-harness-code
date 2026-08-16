@@ -15,7 +15,11 @@ const { JSDOM } = nodeRequire("jsdom") as {
   JSDOM: new (html?: string, options?: { url?: string }) => any;
 };
 
-type RuntimeState = { phase: string; restartCount: number };
+type RuntimeState = {
+  phase: string;
+  restartCount: number;
+  notice?: "anchored-preset-conflict" | "anchored-preset-unavailable";
+};
 
 type Bridge = {
   getRuntimeState(): Promise<RuntimeState>;
@@ -30,12 +34,8 @@ type ModernBridge = {
   preferences: {
     get(): Promise<{
       closeBehavior: "ask" | "minimize" | "quit";
-      anchoredStandard: boolean;
     }>;
-    set(value: {
-      closeBehavior: "minimize" | "quit";
-      anchoredStandard: boolean;
-    }): Promise<void>;
+    set(value: { closeBehavior: "minimize" | "quit" }): Promise<void>;
   };
   runtime: {
     getState(): Promise<RuntimeState>;
@@ -269,13 +269,17 @@ describe("desktop plugin package contract", () => {
       deepseekDesktop: {
         preferences: {
           async get() {
-            return { closeBehavior: "ask", anchoredStandard: false };
+            return { closeBehavior: "ask" };
           },
           async set() {},
         },
         runtime: {
           async getState() {
-            return { phase: "ready", restartCount: 0 };
+            return {
+              phase: "ready",
+              restartCount: 0,
+              notice: "anchored-preset-conflict" as const,
+            };
           },
           async restartHarness() {},
           async openLogs() {},
@@ -325,6 +329,16 @@ describe("desktop plugin package contract", () => {
     const rendered = JSON.stringify(row);
     expect(rendered).toContain("桌面运行状态");
     expect(rendered).toContain("关闭窗口时");
+    expect(zh["notice.anchored-preset-conflict"]).toContain(
+      "同名 Anchored Standard 预设",
+    );
+    expect(zh["notice.anchored-preset-unavailable"]).toContain(
+      "Standard 会话仍可正常使用",
+    );
+    expect(
+      readFileSync(join(pluginRoot, "src/client-runtime.js"), "utf8"),
+    ).toContain("model.state?.notice");
+    expect(rendered).not.toContain("启用 Anchored Standard");
     expect(rendered).not.toContain("Desktop runtime");
     expect(rendered).toContain('"type":"HarnessMenu"');
     expect(rendered).toContain('"type":"HarnessButton"');
@@ -469,22 +483,18 @@ describe("desktop plugin package contract", () => {
     ) => {
       state: RuntimeState | undefined;
       closeBehavior: "ask" | "minimize" | "quit" | undefined;
-      anchoredStandard: boolean | undefined;
       start(): Promise<void>;
       setCloseBehavior(value: "minimize" | "quit"): Promise<void>;
-      setAnchoredStandard(value: boolean): Promise<void>;
     };
     const calls: string[] = [];
     const bridge: ModernBridge = {
       preferences: {
         async get() {
           calls.push("preferences:get");
-          return { closeBehavior: "ask", anchoredStandard: false };
+          return { closeBehavior: "ask" };
         },
         async set(value) {
-          calls.push(
-            `preferences:set:${value.closeBehavior}:${value.anchoredStandard}`,
-          );
+          calls.push(`preferences:set:${value.closeBehavior}`);
         },
       },
       runtime: {
@@ -508,18 +518,14 @@ describe("desktop plugin package contract", () => {
     const model = createModel(bridge);
     await model.start();
     await model.setCloseBehavior("quit");
-    await model.setAnchoredStandard(true);
 
     expect(model.state).toEqual({ phase: "ready", restartCount: 0 });
     expect(model.closeBehavior).toBe("quit");
-    expect(model.anchoredStandard).toBe(true);
     expect(calls).toEqual([
       "runtime:getState",
       "preferences:get",
       "runtime:subscribe",
-      "preferences:set:quit:false",
-      "preferences:set:quit:true",
-      "runtime:restartHarness",
+      "preferences:set:quit",
     ]);
   });
 

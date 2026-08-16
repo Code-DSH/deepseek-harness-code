@@ -1,7 +1,7 @@
 ---
 id: project.intent
 title: DeepSeek Harness Code Intent
-summary: Confirmed scope and acceptance baseline for the renamed cross-platform community coding desktop.
+summary: Confirmed scope and acceptance baseline for the desktop app and optional progressive Anchored Standard Agent Preset.
 kind: product
 status: canonical
 content_stage: implementation-backed
@@ -11,7 +11,7 @@ read_when: [starting or changing implementation]
 skip_when: [performing an isolated test with unchanged scope]
 priority: must
 freshness_class: project
-last_verified: 2026-08-16T11:18:00+08:00
+last_verified: 2026-08-16T13:06:11+08:00
 owners: [project]
 source_of_truth: [user-approved implementation plan]
 related:
@@ -39,13 +39,14 @@ Deliver a distributable DeepSeek Harness Code desktop application that embeds th
 - Safe close behavior, menu recovery, health checks, crash recovery, log rotation, and official session restoration.
 - Official question UI/protocol compatibility across macOS, Linux, and Windows Web environments.
 - System light/dark monochrome startup UI with one centered spinner, underlay title bar, real tray, page transitions without forced layout, official-component desktop settings integration, tests, operations guidance, and an accessible SVG system diagram.
-- Integrated desktop and experimental anchored-standard bundles in every installer.
+- Integrated desktop Web bundle plus the optional `anchored-standard` Agent Preset in every installer. Standard remains the official default.
 
 ## Non-goals
 
 - Apple notarization or claims of an official DeepSeek release.
 - Automatic updates in the first community release.
-- Unsafe live tool-catalog mutation through private transport fields.
+- Replaying, logging, or matching hidden reasoning text such as `we need`.
+- One-time or cross-device model warm state, private-wire request mutation, and immediate full-catalog reinjection.
 - Guarantees about benchmark scores or hidden chain-of-thought wording.
 - A second session store or a replacement user-question protocol.
 
@@ -56,6 +57,8 @@ Deliver a distributable DeepSeek Harness Code desktop application that embeds th
 - macOS 12-27 x64/arm64, Windows and Linux x64 native CI; fail closed rather than mislabel an architecture.
 - Harness binds only to `127.0.0.1`; user data remains outside `.app`.
 - No credential collection or logging by the desktop layer.
+- `anchored-standard` starts a new top-level session with exactly `bash` and `str_replace_editor`, promotes on the first durable tool call or assistant message, and then keeps only resident discovery plus explicitly unlocked tools.
+- Invalid preset configuration or missing required tools fails that selected preset; it never silently expands to Standard. Standard sessions stay operational.
 
 ## Acceptance
 
@@ -63,7 +66,7 @@ Code, tests, package artifacts, signatures, architecture SVG, installation guide
 
 ## Confirmed Assumptions
 
-Architecture A remains approved. The user explicitly delegated the recommended choice for this scope expansion and requested autonomous completion without another confirmation round. Dynamic anchored promotion is unavailable through the safe rc.6 public seam, so the experimental plugin exposes a Standard fallback rather than intercepting private request traffic.
+Architecture A remains approved. The user explicitly approved the progressive preset plan. rc.6 session hooks (`system-prompt/assemble`, `session/event`, and `agent/pre-step`) can shape the visible tool schema within one preset without using `AgentPresets.recompose()` or private request interception. The implementation does not treat historical reasoning as transferable model state and does not promise the community benchmark score.
 
 ## Related Documents
 

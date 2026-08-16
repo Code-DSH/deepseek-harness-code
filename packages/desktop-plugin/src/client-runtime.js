@@ -19,10 +19,10 @@ const DESKTOP_LOCALES = {
     "close.ask": "首次关闭时询问",
     "close.minimize": "最小化到菜单栏",
     "close.quit": "彻底退出应用",
-    "anchored.title": "启用 Anchored Standard（实验性）",
-    "anchored.enabled": "已启用",
-    "anchored.disabled": "未启用",
-    "anchored.fallback": "当前 rc.6 安全模式：所有轮次继续使用 Standard。",
+    "notice.anchored-preset-conflict":
+      "检测到同名 Anchored Standard 预设；为保护本地修改，内置版本未覆盖它。请在 Agent Preset 管理中重命名或移除冲突项。",
+    "notice.anchored-preset-unavailable":
+      "内置 Anchored Standard 预设未能通过安装检查，因此已停用；Standard 会话仍可正常使用。",
     "action.restart": "重启 Harness",
     "action.logs": "打开日志",
   },
@@ -38,10 +38,10 @@ const DESKTOP_LOCALES = {
     "close.ask": "Ask on first close",
     "close.minimize": "Minimize to menu bar",
     "close.quit": "Quit application",
-    "anchored.title": "Use Anchored Standard (experimental)",
-    "anchored.enabled": "Enabled",
-    "anchored.disabled": "Disabled",
-    "anchored.fallback": "Current rc.6 safe mode: Standard for all turns.",
+    "notice.anchored-preset-conflict":
+      "An Anchored Standard preset already exists. The bundled copy was not installed so local changes remain untouched. Rename or remove the conflict in Agent Preset management.",
+    "notice.anchored-preset-unavailable":
+      "The bundled Anchored Standard preset failed its installation checks and is disabled. Standard sessions remain available.",
     "action.restart": "Restart Harness",
     "action.logs": "Open logs",
   },
@@ -76,7 +76,6 @@ function createDesktopSettingsModel(bridge, onChange = () => {}) {
   const model = {
     state: undefined,
     closeBehavior: undefined,
-    anchoredStandard: undefined,
     preferencesSupported: groupedCapabilities,
     error: undefined,
     async start() {
@@ -88,14 +87,12 @@ function createDesktopSettingsModel(bridge, onChange = () => {}) {
             ])
           : await Promise.all([
               bridge.getRuntimeState(),
-              bridge.getCloseBehavior().then((closeBehavior) => ({
-                closeBehavior,
-                anchoredStandard: undefined,
-              })),
+              bridge
+                .getCloseBehavior()
+                .then((closeBehavior) => ({ closeBehavior })),
             ]);
         model.state = state;
         model.closeBehavior = preferences.closeBehavior;
-        model.anchoredStandard = preferences.anchoredStandard;
         const subscribe = groupedCapabilities
           ? bridge.runtime.subscribe
           : bridge.subscribeRuntime;
@@ -138,29 +135,12 @@ function createDesktopSettingsModel(bridge, onChange = () => {}) {
     async setCloseBehavior(value) {
       try {
         if (groupedCapabilities) {
-          await bridge.preferences.set({
-            closeBehavior: value,
-            anchoredStandard: Boolean(model.anchoredStandard),
-          });
+          await bridge.preferences.set({ closeBehavior: value });
         } else {
           await bridge.setCloseBehavior(value);
         }
         model.closeBehavior = value;
         onChange(model);
-      } catch (error) {
-        reportError(error);
-      }
-    },
-    async setAnchoredStandard(value) {
-      if (!groupedCapabilities) return;
-      try {
-        await bridge.preferences.set({
-          closeBehavior: model.closeBehavior === "quit" ? "quit" : "minimize",
-          anchoredStandard: value,
-        });
-        model.anchoredStandard = value;
-        onChange(model);
-        await bridge.runtime.restartHarness();
       } catch (error) {
         reportError(error);
       }
@@ -373,41 +353,11 @@ function DesktopSettingsRow({ t }) {
         }),
       ),
     ),
-    model.preferencesSupported &&
-      React.createElement(
-        "div",
-        { className: "dshDesktopSettingsRow" },
-        React.createElement(
-          "span",
-          { className: "dshDesktopSettingsLabel" },
-          t("anchored.title"),
-        ),
-        React.createElement(
-          "div",
-          { className: "dshDesktopSettingsControl" },
-          React.createElement(
-            Button,
-            {
-              type: "button",
-              variant: model.anchoredStandard ? "primary" : "outline",
-              size: "md",
-              role: "switch",
-              "aria-checked": Boolean(model.anchoredStandard),
-              onClick: () =>
-                void model.setAnchoredStandard(!model.anchoredStandard),
-            },
-            t(
-              model.anchoredStandard ? "anchored.enabled" : "anchored.disabled",
-            ),
-          ),
-        ),
-      ),
-    model.preferencesSupported &&
-      model.anchoredStandard &&
+    model.state?.notice &&
       React.createElement(
         "p",
         { className: "dshDesktopSettingsNote", "aria-live": "polite" },
-        t("anchored.fallback"),
+        t(`notice.${model.state.notice}`),
       ),
     model.error &&
       React.createElement(

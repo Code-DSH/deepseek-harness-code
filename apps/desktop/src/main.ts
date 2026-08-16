@@ -42,16 +42,20 @@ import {
 import { WatchdogHost } from "./lifecycle/watchdog-host.js";
 import { replaceWindowKeepingHostAlive } from "./lifecycle/window-recovery.js";
 import {
-  ensureAnchoredStandardPluginLink,
   ensureDesktopPluginBundle,
   ensureDesktopPluginLink,
+  installAnchoredStandardPresetForStartup,
 } from "./lifecycle/desktop-plugin-link.js";
 import { classifyNavigation } from "./security/navigation-policy.js";
 import type {
   DesktopPreferences,
   DesktopPreferencesState,
+  RuntimeNotice,
 } from "./shared/contracts.js";
-import { DEFAULT_DESKTOP_PREFERENCES } from "./shared/contracts.js";
+import {
+  DEFAULT_DESKTOP_PREFERENCES,
+  parsePersistedDesktopPreferences,
+} from "./shared/contracts.js";
 import {
   createApplicationMenuTemplate,
   isMacControlPaste,
@@ -65,6 +69,7 @@ let watchdogHost: WatchdogHost | undefined;
 let tray: Tray | undefined;
 let quitting = false;
 let preferences: DesktopPreferencesState = { ...DEFAULT_DESKTOP_PREFERENCES };
+let anchoredPresetNotice: RuntimeNotice | undefined;
 
 // Preserve sessions and credentials across the product rename. This is an
 // intentional compatibility path; no user data is copied into the app bundle.
@@ -80,21 +85,7 @@ function settingsPath(): string {
 async function getPreferences(): Promise<DesktopPreferencesState> {
   try {
     const parsed: unknown = JSON.parse(await readFile(settingsPath(), "utf8"));
-    if (
-      typeof parsed === "object" &&
-      parsed !== null &&
-      "closeBehavior" in parsed &&
-      (parsed.closeBehavior === "minimize" || parsed.closeBehavior === "quit")
-    ) {
-      return {
-        closeBehavior: parsed.closeBehavior,
-        anchoredStandard:
-          "anchoredStandard" in parsed &&
-          typeof parsed.anchoredStandard === "boolean"
-            ? parsed.anchoredStandard
-            : DEFAULT_DESKTOP_PREFERENCES.anchoredStandard,
-      };
-    }
+    return parsePersistedDesktopPreferences(parsed);
   } catch {
     // A missing or malformed local preference safely falls back to a prompt.
   }
@@ -290,12 +281,26 @@ async function startHarness(): Promise<HarnessChild> {
     : join(app.getAppPath(), "packages", "anchored-standard-plugin");
   const dshHome = join(app.getPath("userData"), "dsh-home");
   await ensureDesktopPluginLink(dshHome, pluginRoot);
-  if (preferences.anchoredStandard) {
-    await ensureAnchoredStandardPluginLink(dshHome, anchoredPluginRoot);
+  const anchoredPreset = await installAnchoredStandardPresetForStartup(
+    dshHome,
+    anchoredPluginRoot,
+  );
+  anchoredPresetNotice =
+    anchoredPreset.status === "conflict"
+      ? "anchored-preset-conflict"
+      : anchoredPreset.status === "unavailable"
+        ? "anchored-preset-unavailable"
+        : undefined;
+  if (anchoredPreset.status === "conflict") {
+    process.stderr.write(
+      "Anchored Standard preset installation skipped: an unmanaged or locally modified preset already uses that ID.\n",
+    );
+  } else if (anchoredPreset.status === "unavailable") {
+    process.stderr.write(
+      "Anchored Standard preset is unavailable; Standard startup will continue.\n",
+    );
   }
-  await ensureDesktopPluginBundle(dshHome, {
-    anchoredStandard: preferences.anchoredStandard,
-  });
+  await ensureDesktopPluginBundle(dshHome);
   return startWithPortRetries(reserveLoopbackPort, async (port) => {
     harnessOrigin = `http://127.0.0.1:${port}`;
     const spec = createHarnessLaunchSpec({
@@ -416,6 +421,7 @@ async function launch(): Promise<void> {
     waitForReady: async (child, origin) =>
       isHarnessChildAlive(child) && httpOk(origin),
     isChildAlive: isHarnessChildAlive,
+    runtimeNotice: () => anchoredPresetNotice,
     onReady: async (origin) => {
       await mainWindow?.loadURL(origin);
     },

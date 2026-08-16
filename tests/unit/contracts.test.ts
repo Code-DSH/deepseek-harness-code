@@ -4,15 +4,15 @@ import {
   closeBehaviorSchema,
   DEFAULT_DESKTOP_PREFERENCES,
   desktopPreferencesSchema,
+  parsePersistedDesktopPreferences,
   runtimeStateSchema,
   setCloseBehaviorSchema,
 } from "../../apps/desktop/src/shared/contracts.js";
 
 describe("desktop bridge contracts", () => {
-  it("keeps experimental anchored mode disabled for a new installation", () => {
+  it("keeps only the close behavior in desktop preferences", () => {
     expect(DEFAULT_DESKTOP_PREFERENCES).toEqual({
       closeBehavior: "ask",
-      anchoredStandard: false,
     });
   });
 
@@ -27,15 +27,26 @@ describe("desktop bridge contracts", () => {
     expect(
       desktopPreferencesSchema.parse({
         closeBehavior: "minimize",
-        anchoredStandard: true,
       }),
-    ).toEqual({ closeBehavior: "minimize", anchoredStandard: true });
+    ).toEqual({ closeBehavior: "minimize" });
     expect(() =>
       desktopPreferencesSchema.parse({
-        closeBehavior: "ask",
+        closeBehavior: "minimize",
         anchoredStandard: true,
       }),
     ).toThrow();
+  });
+
+  it("reads a legacy anchored preference without exposing it", () => {
+    expect(
+      parsePersistedDesktopPreferences({
+        closeBehavior: "quit",
+        anchoredStandard: true,
+      }),
+    ).toEqual({ closeBehavior: "quit" });
+    expect(
+      parsePersistedDesktopPreferences({ anchoredStandard: true }),
+    ).toEqual(DEFAULT_DESKTOP_PREFERENCES);
   });
 
   it("rejects runtime states with unknown properties", () => {
@@ -46,6 +57,24 @@ describe("desktop bridge contracts", () => {
         harnessPid: 42,
       }),
     ).toEqual({ phase: "ready", restartCount: 0, harnessPid: 42 });
+    expect(
+      runtimeStateSchema.parse({
+        phase: "ready",
+        restartCount: 0,
+        notice: "anchored-preset-conflict",
+      }),
+    ).toEqual({
+      phase: "ready",
+      restartCount: 0,
+      notice: "anchored-preset-conflict",
+    });
+    expect(() =>
+      runtimeStateSchema.parse({
+        phase: "ready",
+        restartCount: 0,
+        notice: "arbitrary-user-text",
+      }),
+    ).toThrow();
     expect(() =>
       runtimeStateSchema.parse({
         phase: "ready",

@@ -92,9 +92,6 @@ importers:
       deepseek-harness-desktop-plugin:
         specifier: workspace:*
         version: link:packages/desktop-plugin
-      dsh-anchored-standard:
-        specifier: workspace:*
-        version: link:packages/anchored-standard-plugin
       eventsource:
         specifier: 3.0.7
         version: 3.0.7
@@ -239,11 +236,7 @@ importers:
         specifier: 0.1.4
         version: 0.1.4
 
-  packages/anchored-standard-plugin:
-    dependencies:
-      '@deepseek-ai/cordis':
-        specifier: ^4.0.1
-        version: 4.0.1(@deepseek-ai/cordis-plugin-include@1.0.6)(@deepseek-ai/cordis-plugin-loader@1.0.2)
+  packages/anchored-standard-plugin: {}
 
   packages/desktop-plugin:
     dependencies:

@@ -1,0 +1,8 @@
+{
+  "repository": "https://github.com/xiaobright/dsh-anchored-standard",
+  "commit": "db4527a2a70a9032d3a8525ce3c0ea6ef528d6fc",
+  "retrievedAt": "2026-08-16T12:00:00+08:00",
+  "license": "MIT",
+  "hashManifest": "UPSTREAM-SHA256SUMS",
+  "integration": "DeepSeek Harness Code 0.2.0 / @deepseek-ai/dsh 0.1.0-rc.6"
+}
