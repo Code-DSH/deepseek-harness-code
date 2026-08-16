@@ -54,6 +54,8 @@ test("animates only appended assistant prose and preserves canonical layout", as
                 return {
                   createElement,
                   useEffect: () => undefined,
+                  useLayoutEffect: () => undefined,
+                  useRef: (value: unknown) => ({ current: value }),
                   useState: (factory: () => unknown) => [
                     factory(),
                     () => undefined,
@@ -82,7 +84,7 @@ test("animates only appended assistant prose and preserves canonical layout", as
     document.body.innerHTML = `
       <div data-chat-flow>
         <div data-chat-flow-kind="assistant-step">
-          <div data-streaming style="width: 420px">
+          <div id="streaming" data-streaming style="width: 420px">
             <p id="answer" style="color: rgb(20, 30, 40); font: 16px/28px sans-serif">Answer <a href="#details">link</a></p>
             <div data-variant="think"><span id="reasoning" style="color: rgb(120, 120, 120); font: 14px/24px sans-serif">Reason</span></div>
             <code id="code">const x = 1</code>
@@ -119,12 +121,12 @@ test("animates only appended assistant prose and preserves canonical layout", as
 
   await expect(page.locator("[data-dsh-stream-glyph]")).toHaveCount(2);
   const result = await page.evaluate(() => ({
-    texts: [...document.querySelectorAll("[data-dsh-stream-glyph]")].map(
+    texts: Array.from(document.querySelectorAll("[data-dsh-stream-glyph]")).map(
       (element) => element.childNodes[0]?.textContent,
     ),
-    colors: [
-      ...document.querySelectorAll<HTMLElement>("[data-dsh-stream-glyph]"),
-    ].map((element) => element.style.color),
+    colors: Array.from(
+      document.querySelectorAll<HTMLElement>("[data-dsh-stream-glyph]"),
+    ).map((element) => element.style.color),
     code: document.querySelector("#code")?.textContent,
     user: document.querySelector("#user")?.textContent,
     links: document.querySelectorAll("#answer a").length,
@@ -149,4 +151,149 @@ test("animates only appended assistant prose and preserves canonical layout", as
     target.streamDispose?.();
   });
   await expect(page.locator("[data-dsh-stream-overlay]")).toHaveCount(0);
+
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.evaluate(() => {
+    const streaming = document.querySelector("#streaming");
+    streaming?.setAttribute("data-streaming", "");
+    const target = window as typeof window & {
+      desktopPlugin: {
+        installStreamOutputEffects(
+          document: Document,
+          window: Window,
+        ): () => void;
+      };
+      streamDispose?: () => void;
+    };
+    target.streamDispose = target.desktopPlugin.installStreamOutputEffects(
+      document,
+      window,
+    );
+    const answer = document.querySelector("#answer")?.firstChild as Text;
+    answer.data += "静";
+  });
+  await page.waitForTimeout(50);
+  await expect(page.locator("[data-dsh-stream-glyph]")).toHaveCount(0);
+  await expect(page.locator("[data-dsh-stream-overlay]")).toHaveCount(0);
+  await page.evaluate(() => {
+    const target = window as typeof window & { streamDispose?: () => void };
+    target.streamDispose?.();
+  });
+});
+
+test("tracks only the localized direct running status and clears on completion", async ({
+  page,
+}) => {
+  await page.goto(origin);
+  await page.evaluate(() => {
+    const createElement = (
+      type: unknown,
+      props: Record<string, unknown>,
+      ...children: unknown[]
+    ) => ({ type, props, children });
+    Object.assign(window, {
+      __ModuleLoader__: {
+        load(definition: {
+          factory: (require: (id: string) => unknown) => unknown;
+        }) {
+          Object.assign(window, {
+            desktopPlugin: definition.factory((id) => {
+              if (id === "react") {
+                return {
+                  createElement,
+                  useEffect: () => undefined,
+                  useLayoutEffect: () => undefined,
+                  useRef: (value: unknown) => ({ current: value }),
+                  useState: (factory: () => unknown) => [
+                    factory(),
+                    () => undefined,
+                  ],
+                };
+              }
+              if (id === "react/jsx-runtime") {
+                return { jsx: createElement, jsxs: createElement };
+              }
+              if (id === "@deepseek-ai/dsh-client-ui-primitives") {
+                return {
+                  Button: () => null,
+                  Menu: () => null,
+                  IconChevronDownOutline14: () => null,
+                };
+              }
+              throw new Error(`unexpected client dependency: ${id}`);
+            }),
+          });
+        },
+      },
+    });
+  });
+  await page.addScriptTag({ path: pluginClient });
+  await page.evaluate(() => {
+    document.body.innerHTML = `
+      <div role="status" aria-live="polite" id="outside">外部状态</div>
+      <div data-chat-flow>
+        <section><div role="status" aria-live="polite">嵌套状态</div></section>
+        <div role="status" aria-live="polite" id="running">正在生成</div>
+      </div>`;
+    const running = document.querySelector("#running") as HTMLElement;
+    running.getBoundingClientRect = () =>
+      ({
+        x: 42,
+        y: 100,
+        left: 42,
+        top: 100,
+        right: 182,
+        bottom: 126,
+        width: 140,
+        height: 26,
+        toJSON: () => ({}),
+      }) as DOMRect;
+    const target = window as typeof window & {
+      desktopPlugin: {
+        installThinkingStatus(
+          document: Document,
+          window: Window,
+          onSnapshot: (snapshot: unknown) => void,
+        ): () => void;
+      };
+      statusSnapshots: unknown[];
+      statusDispose?: () => void;
+    };
+    target.statusSnapshots = [];
+    target.statusDispose = target.desktopPlugin.installThinkingStatus(
+      document,
+      window,
+      (snapshot) =>
+        target.statusSnapshots.push(
+          snapshot
+            ? {
+                id: (snapshot as { anchor: HTMLElement }).anchor.id,
+                left: (snapshot as { left: number }).left,
+                top: (snapshot as { top: number }).top,
+              }
+            : null,
+        ),
+    );
+  });
+
+  await expect
+    .poll(() =>
+      page.evaluate(() =>
+        (
+          window as typeof window & { statusSnapshots: unknown[] }
+        ).statusSnapshots.at(-1),
+      ),
+    )
+    .toEqual({ id: "running", left: 42, top: 103 });
+
+  await page.locator("#running").evaluate((element) => element.remove());
+  await expect
+    .poll(() =>
+      page.evaluate(() =>
+        (
+          window as typeof window & { statusSnapshots: unknown[] }
+        ).statusSnapshots.at(-1),
+      ),
+    )
+    .toBeNull();
 });

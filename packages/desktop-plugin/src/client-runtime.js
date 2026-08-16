@@ -1,8 +1,13 @@
 const React = require("react");
+const { ThinkingOrb } = require("thinking-orbs");
 const {
   createStreamOutputEffectController,
   installStreamOutputEffects,
 } = require("./stream-output-controller.js");
+const {
+  findRunningStatus,
+  installThinkingStatus,
+} = require("./thinking-status.js");
 const {
   Button,
   IconChevronDownOutline14,
@@ -10,6 +15,11 @@ const {
 } = require("@deepseek-ai/dsh-client-ui-primitives");
 let activeDesktopInstallation;
 const DESKTOP_LOCALE_NAMESPACE = "settings.desktop";
+const THINKING_ORB_PROPS = Object.freeze({
+  state: "breathing",
+  size: 20,
+  speed: 2,
+});
 const DESKTOP_LOCALES = {
   zh: {
     "runtime.title": "桌面运行状态",
@@ -446,6 +456,53 @@ function DesktopSettingsRow({ t }) {
   );
 }
 
+function ConversationEffectsOverlay() {
+  const [status, setStatus] = React.useState(null);
+
+  React.useEffect(() => {
+    const disposers = [];
+    try {
+      disposers.push(installStreamOutputEffects(document, window));
+    } catch {
+      // Keep the canonical Harness output visible if enhancements cannot start.
+    }
+    try {
+      disposers.push(installThinkingStatus(document, window, setStatus));
+    } catch {
+      // Keep the native Harness running status visible on adapter failure.
+    }
+    return () => {
+      for (const dispose of disposers.reverse()) dispose();
+    };
+  }, []);
+
+  const anchor = status?.anchor;
+  React.useLayoutEffect(() => {
+    if (!anchor?.isConnected) return undefined;
+    anchor.dataset.dshDesktopThinkingSource = "";
+    return () => {
+      delete anchor.dataset.dshDesktopThinkingSource;
+    };
+  }, [anchor]);
+
+  if (!status) return null;
+  return React.createElement(
+    "div",
+    {
+      "data-dsh-desktop-thinking-orb": "",
+      "aria-hidden": "true",
+      style: {
+        left: status.left,
+        top: status.top,
+      },
+    },
+    React.createElement(ThinkingOrb, {
+      ...THINKING_ORB_PROPS,
+      "aria-hidden": "true",
+    }),
+  );
+}
+
 function apply(ctx) {
   if (!bridgeOf(window)) return () => {};
   if (activeDesktopInstallation) {
@@ -456,7 +513,7 @@ function apply(ctx) {
     DESKTOP_LOCALES,
   );
   const disposeTransitions = installTransitions(document, window);
-  const disposeSlot = ctx.slots.inject("settings.general.item", () =>
+  const disposeSettingsSlot = ctx.slots.inject("settings.general.item", () =>
     ctx.slots.register(
       {
         name: "settings.general.item",
@@ -467,10 +524,21 @@ function apply(ctx) {
       DesktopSettingsRow,
     ),
   );
+  const disposeConversationSlot = ctx.slots.inject("shell.overlay", () =>
+    ctx.slots.register(
+      {
+        name: "shell.overlay",
+        id: "deepseek-harness-desktop-conversation-effects",
+        order: 100,
+      },
+      ConversationEffectsOverlay,
+    ),
+  );
   const installation = {
     references: 0,
     released: false,
-    disposeSlot,
+    disposeSettingsSlot,
+    disposeConversationSlot,
     disposeLocale,
     disposeTransitions,
   };
@@ -487,8 +555,10 @@ function acquireInstallation(installation) {
     installation.references -= 1;
     if (installation.references > 0) return;
     installation.released = true;
-    if (typeof installation.disposeSlot === "function")
-      installation.disposeSlot();
+    if (typeof installation.disposeConversationSlot === "function")
+      installation.disposeConversationSlot();
+    if (typeof installation.disposeSettingsSlot === "function")
+      installation.disposeSettingsSlot();
     if (typeof installation.disposeLocale === "function")
       installation.disposeLocale();
     installation.disposeTransitions();
@@ -503,8 +573,12 @@ function acquireInstallation(installation) {
 exports.inject = ["slots", "locale"];
 exports.apply = apply;
 exports.DesktopSettingsRow = DesktopSettingsRow;
+exports.ConversationEffectsOverlay = ConversationEffectsOverlay;
 exports.DESKTOP_LOCALES = DESKTOP_LOCALES;
+exports.THINKING_ORB_PROPS = THINKING_ORB_PROPS;
 exports.createDesktopSettingsModel = createDesktopSettingsModel;
 exports.installTransitions = installTransitions;
 exports.createStreamOutputEffectController = createStreamOutputEffectController;
 exports.installStreamOutputEffects = installStreamOutputEffects;
+exports.findRunningStatus = findRunningStatus;
+exports.installThinkingStatus = installThinkingStatus;

@@ -384,11 +384,11 @@ git commit -m "feat: animate appended assistant text without layout changes"
 - Consumes: direct status selector `[data-chat-flow] > [role="status"][aria-live="polite"]`, React hooks, bundled `ThinkingOrb`, and `installStreamOutputEffects`.
 - Produces: `findRunningStatus(document)`, `installThinkingStatus(document, window, onSnapshot)`, `THINKING_ORB_PROPS = { state: "breathing", size: 20, speed: 2 }`, and `ConversationEffectsOverlay` registered as `deepseek-harness-desktop-conversation-effects` in `shell.overlay`.
 
-- [ ] **Step 1: Write failing status-adapter tests**
+- [x] **Step 1: Write failing status-adapter tests**
 
 Assert the adapter ignores unrelated live regions, emits only for the direct bottom child, measures `{ left, top: top + (height - 20) / 2 }`, repositions on captured scroll/resize, emits `null` on status removal, removes all listeners/observers on disposal, and never keys lifecycle from the English `Deep diving...` text.
 
-- [ ] **Step 2: Tighten the failing official-plugin contract**
+- [x] **Step 2: Tighten the failing official-plugin contract**
 
 Update the apply test to expect both `settings.general.item` and `shell.overlay`. Assert the layout bundle is present in `dsh.client.inject`, the exact orb props are exported, `thinking-orbs` is absent from runtime `require()` calls, and the overlay registration disposer participates in reference-counted cleanup.
 
@@ -402,11 +402,11 @@ if (id === "react/jsx-runtime") {
 
 The bundled library uses only `react`, `react/jsx-runtime`, and its embedded engine.
 
-- [ ] **Step 3: Add failing browser lifecycle assertions**
+- [x] **Step 3: Add failing browser lifecycle assertions**
 
 Extend the Playwright fixture with a direct bottom `role="status"`. Assert the source becomes transparent only after an orb host render, the host is fixed at the approved coordinates with a 20-by-20 canvas contract, the live region remains in the accessibility tree, and removing the status removes the host and marker. Emulate reduced motion and assert text overlays are absent; inspect the bundled orb props/static behavior rather than expecting continuous frames.
 
-- [ ] **Step 4: Run focused tests to verify failure**
+- [x] **Step 4: Run focused tests to verify failure**
 
 ```bash
 npm exec --yes --package=pnpm@11.19.0 -- pnpm vitest run packages/desktop-plugin/test/thinking-status.test.ts
@@ -416,7 +416,7 @@ npm exec --yes --package=pnpm@11.19.0 -- pnpm exec playwright test tests/playwri
 
 Expected: FAIL because no status adapter, shell overlay registration, or orb host exists.
 
-- [ ] **Step 5: Implement the status adapter**
+- [x] **Step 5: Implement the status adapter**
 
 Use `querySelectorAll()` and choose the last direct status child without matching text. Batch measurements in requestAnimationFrame. Observe child-list changes for authoritative mount/unmount; attach captured scroll and resize handlers only while active. The callback receives either:
 
@@ -426,7 +426,7 @@ Use `querySelectorAll()` and choose the last direct status child without matchin
 
 or `null`. Repeated mutations with the same coordinates and anchor do not emit another snapshot.
 
-- [ ] **Step 6: Mount the bundled orb from the official root slot**
+- [x] **Step 6: Mount the bundled orb from the official root slot**
 
 In `client-runtime.js`:
 
@@ -443,7 +443,7 @@ const THINKING_ORB_PROPS = Object.freeze({
 
 Register the component in `shell.overlay`, add `@deepseek-ai/dsh-client-ui-layout@^0.1.0-rc.6` to plugin peers and `dsh.client.inject` so the seat exists before registration, and dispose both slot registrations during final release.
 
-- [ ] **Step 7: Build and run focused lifecycle tests**
+- [x] **Step 7: Build and run focused lifecycle tests**
 
 ```bash
 npm exec --yes --package=pnpm@11.19.0 -- pnpm --dir packages/desktop-plugin build:client
@@ -454,7 +454,9 @@ npm exec --yes --package=pnpm@11.19.0 -- pnpm exec playwright test tests/playwri
 
 Expected: PASS for running-only presence, exact props, geometry preservation, accessible fallback, all completion paths, reduced motion, and real Harness boot.
 
-- [ ] **Step 8: Commit the ThinkingOrb lifecycle**
+Verified with 9 focused unit tests, 17 official-plugin tests (including the pinned real Harness boot), two Chromium tests, TypeScript, and ESLint. The browser test exercises the real DOM adapter and reduced-motion path; the plugin contract separately executes the React layout-effect boundary to prove the native source is hidden only after host commit. Strict type checking also required colocated declarations for the JavaScript controllers and `@types/jsdom@21.1.7`; these are test/type-only additions and do not enter the runtime bundle.
+
+- [x] **Step 8: Commit the ThinkingOrb lifecycle**
 
 ```bash
 git add packages/desktop-plugin/src/thinking-status.js packages/desktop-plugin/src/client-runtime.js packages/desktop-plugin/src/conversation-effects.css packages/desktop-plugin/package.json packages/desktop-plugin/test/thinking-status.test.ts tests/e2e/plugin-contract.test.ts tests/e2e/plugin-real-harness.test.ts tests/playwright/stream-output-animation.spec.ts packages/desktop-plugin/client.js

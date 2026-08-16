@@ -6,6 +6,18 @@
   contain: strict;
 }
 
+[data-dsh-desktop-thinking-source] {
+  opacity: 0 !important;
+}
+
+[data-dsh-desktop-thinking-orb] {
+  position: fixed;
+  z-index: 31;
+  width: 20px;
+  height: 20px;
+  pointer-events: none;
+}
+
 ::highlight(dsh-desktop-stream-mask) {
   color: transparent;
   -webkit-text-fill-color: transparent;

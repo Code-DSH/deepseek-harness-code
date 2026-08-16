@@ -6,6 +6,8 @@ import { createStreamOutputEffectController } from "../src/stream-output-control
 type FrameWindow = Window & {
   CSS: { highlights: Map<string, Set<Range>> };
   Highlight: new () => Set<Range>;
+  Event: typeof Event;
+  Range: typeof Range;
 };
 
 function fixture(reducedMotion = false) {
@@ -107,11 +109,9 @@ describe("stream output effect controller", () => {
     source.data = "回答中🙂";
     await flush();
 
-    const glyphs = [
-      ...window.document.querySelectorAll<HTMLElement>(
-        "[data-dsh-stream-glyph]",
-      ),
-    ];
+    const glyphs = Array.from(
+      window.document.querySelectorAll<HTMLElement>("[data-dsh-stream-glyph]"),
+    );
     expect(glyphs.map((glyph) => glyph.childNodes[0]?.textContent)).toEqual([
       "中",
       "🙂",
