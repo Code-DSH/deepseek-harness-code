@@ -18,7 +18,7 @@
 - Goal: ship DeepSeek Harness Code with a cross-platform Electron shell, official-format integrated plugins, an immutable DSH Routing Suite, an optional progressive Anchored Standard Agent Preset, native Harness conversation rendering, and an independent watchdog.
 - Current phase: 0.3.0 all-branch integration, clean-install verification, and Universal DMG validation are complete; the artifact is ready for user installation.
 - Primary constraints: macOS Universal local release plus native Windows/Linux CI, no global Node dependency at runtime, loopback-only Harness, unsigned macOS distribution with ad-hoc signing.
-- Active branch/worktree: `release/0.3.0-routing-suite` in `.worktrees/release-routing-suite`; local/remote main and every prior feature head are ancestors of this release head.
+- Active branch/worktree: local `main` in `.worktrees/release-routing-suite`, fast-forwarded from `release/0.3.0-routing-suite`; remote main and every prior feature head are ancestors of this verified integration head.
 - Build/test entry: `pnpm test`; release entry: `pnpm dist:mac` then `pnpm verify:mac release/DeepSeek-Harness-Code-0.3.0-mac-universal.dmg --universal`.
 - Current critical risk: the DMG is ad-hoc signed and not notarized; live-provider soak and any V4 Pro quality gain remain unverified without user-entered replacement credentials.
 
