@@ -60,12 +60,12 @@
 
 ## Active Plans
 
-| Plan                           | Status   | Current milestone                                      | Updated    | Link                                                                            |
-| ------------------------------ | -------- | ------------------------------------------------------ | ---------- | ------------------------------------------------------------------------------- |
-| Merge, release, and install    | active   | Branch integration and clean release verification      | 2026-08-16 | [Open](./docs/plans/active/merge-all-branches-release-install.md)               |
-| DeepSeek Harness Code 0.2.0    | active   | Final Universal packaging and acceptance               | 2026-08-16 | [Open](./docs/plans/active/deepseek-harness-desktop.md)                         |
+| Plan                           | Status   | Current milestone                                      | Updated    | Link                                                                                |
+| ------------------------------ | -------- | ------------------------------------------------------ | ---------- | ----------------------------------------------------------------------------------- |
+| Merge, release, and install    | active   | Branch integration and clean release verification      | 2026-08-16 | [Open](./docs/plans/active/merge-all-branches-release-install.md)                   |
+| DeepSeek Harness Code 0.2.0    | active   | Final Universal packaging and acceptance               | 2026-08-16 | [Open](./docs/plans/active/deepseek-harness-desktop.md)                             |
 | Streaming output animation     | retired  | Reverted to the official renderer after visual defects | 2026-08-16 | [Historical record](./docs/superpowers/plans/2026-08-16-stream-output-animation.md) |
-| Harness Web stream performance | complete | Exact-version rc.6 patch and regression gates verified | 2026-08-16 | [Open](./docs/superpowers/plans/2026-08-16-harness-web-performance.md)          |
+| Harness Web stream performance | complete | Exact-version rc.6 patch and regression gates verified | 2026-08-16 | [Open](./docs/superpowers/plans/2026-08-16-harness-web-performance.md)              |
 
 ## Known Risks and Open Questions
 

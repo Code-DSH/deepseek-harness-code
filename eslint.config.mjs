@@ -6,10 +6,12 @@ export default [
   {
     ignores: [
       ".cache/**",
+      "build/routing-suite/**",
       "dist/**",
       "node_modules/**",
       "release/**",
       "packages/desktop-plugin/client.js",
+      "packages/superpowers-skills/**",
     ],
   },
   eslint.configs.recommended,
@@ -55,6 +57,7 @@ export default [
         console: "readonly",
         document: "readonly",
         exports: "readonly",
+        fetch: "readonly",
         process: "readonly",
         require: "readonly",
         setTimeout: "readonly",

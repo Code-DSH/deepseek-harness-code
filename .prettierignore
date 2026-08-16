@@ -6,6 +6,7 @@ release
 packages/desktop-plugin/client.js
 packages/desktop-plugin/index.d.ts
 packages/desktop-plugin/index.js
+packages/superpowers-skills/**
 packages/anchored-standard-plugin/index.d.ts
 packages/anchored-standard-plugin/index.js
 packages/anchored-standard-plugin/preset/**

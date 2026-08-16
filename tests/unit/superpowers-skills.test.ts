@@ -48,11 +48,7 @@ describe("managed Superpowers skills", () => {
       join(packagedRoot, "package.json"),
       `${JSON.stringify({ name: "superpowers", version: "6.2.0" })}\n`,
     );
-    await createPackagedSkill(
-      packagedRoot,
-      "brainstorming",
-      "brainstorming",
-    );
+    await createPackagedSkill(packagedRoot, "brainstorming", "brainstorming");
     await createPackagedSkill(
       packagedRoot,
       "systematic-debugging",

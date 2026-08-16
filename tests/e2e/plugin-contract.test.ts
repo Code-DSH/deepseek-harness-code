@@ -725,16 +725,17 @@ describe("desktop plugin package contract", () => {
     expect(style?.textContent).not.toContain(
       "[data-dsh-desktop-thinking-source]",
     );
-    expect(style?.textContent).not.toContain(
-      "[data-dsh-desktop-thinking-orb]",
-    );
+    expect(style?.textContent).not.toContain("[data-dsh-desktop-thinking-orb]");
     dispose();
   });
 
   it("keeps macOS page content below the traffic lights", () => {
-    const dom = new JSDOM("<!doctype html><html><head></head><body><main></main></body></html>", {
-      url: "https://harness.test/session",
-    });
+    const dom = new JSDOM(
+      "<!doctype html><html><head></head><body><main></main></body></html>",
+      {
+        url: "https://harness.test/session",
+      },
+    );
     const { module } = loadClientExports(
       dom.window as unknown as Record<string, unknown>,
       dom.window.document,
@@ -750,9 +751,9 @@ describe("desktop plugin package contract", () => {
     );
     dom.window.document.documentElement.dataset.dshDesktopPlatform = "macos";
 
-    expect(dom.window.getComputedStyle(dom.window.document.body).paddingTop).toBe(
-      "40px",
-    );
+    expect(
+      dom.window.getComputedStyle(dom.window.document.body).paddingTop,
+    ).toBe("40px");
     dispose();
   });
 
@@ -786,8 +787,12 @@ describe("desktop plugin package contract", () => {
     await new Promise<void>((resolve) => queueMicrotask(resolve));
 
     expect(document.documentElement.dataset.dshDesktopPage).toBe("workspace");
-    expect(document.documentElement.dataset.dshDesktopTransitionNonce).toBeUndefined();
-    expect(document.documentElement.dataset.dshDesktopAnimation).toBeUndefined();
+    expect(
+      document.documentElement.dataset.dshDesktopTransitionNonce,
+    ).toBeUndefined();
+    expect(
+      document.documentElement.dataset.dshDesktopAnimation,
+    ).toBeUndefined();
 
     dom.reconfigure({ url: "https://harness.test/session" });
     dom.window.dispatchEvent(new dom.window.PopStateEvent("popstate"));
@@ -795,8 +800,12 @@ describe("desktop plugin package contract", () => {
     await new Promise<void>((resolve) => queueMicrotask(resolve));
 
     expect(document.documentElement.dataset.dshDesktopPage).toBe("session");
-    expect(document.documentElement.dataset.dshDesktopTransitionNonce).toBeUndefined();
-    expect(document.documentElement.dataset.dshDesktopAnimation).toBeUndefined();
+    expect(
+      document.documentElement.dataset.dshDesktopTransitionNonce,
+    ).toBeUndefined();
+    expect(
+      document.documentElement.dataset.dshDesktopAnimation,
+    ).toBeUndefined();
     dispose();
   });
 
