@@ -269,7 +269,8 @@ describe("desktop plugin with the real pinned Harness", () => {
     expect(presets).toEqual([
       expect.objectContaining({
         id: "anchored-standard",
-        name: "Anchored Standard (Progressive)",
+        name: "渐进式标准模式 / Anchored Standard (Progressive)",
+        description: expect.stringContaining("Minimal's real tool pair"),
       }),
     ]);
     expect(presets[0]?.broken).toBeUndefined();

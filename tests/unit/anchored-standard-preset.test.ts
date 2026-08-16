@@ -71,7 +71,8 @@ async function createPackagedPreset(
     writeFile(join(presetRoot, "agent.cordis.yml"), composition),
     writeFile(
       join(presetRoot, "preset.yml"),
-      "name: Anchored Standard (Progressive)\n",
+      "name: 渐进式标准模式 / Anchored Standard (Progressive)\n" +
+        "description: 首轮仅提供 Minimal 的真实双工具。 / Progressive Standard mode.\n",
     ),
     writeFile(
       join(presetRoot, "tool-bootstrap.mjs"),
@@ -114,6 +115,10 @@ describe("managed Anchored Standard agent preset", () => {
       sourceVersion: "0.2.0",
     });
     expect(marker.sourceDigest).toMatch(/^[a-f0-9]{64}$/);
+    const metadata = await readFile(join(target, "preset.yml"), "utf8");
+    expect(metadata).toContain("渐进式标准模式");
+    expect(metadata).toContain("Anchored Standard (Progressive)");
+    expect(metadata).toContain("Progressive Standard mode");
   });
 
   it("is idempotent and upgrades only an unmodified managed copy", async () => {

@@ -200,6 +200,10 @@ describe("dsh-routing-suite auto-load pipeline", () => {
     // Authored presets are managed installs with ownership markers.
     for (const presetId of ["router-standard", "router-spec"]) {
       const installed = join(dshHome, ".agent-presets", presetId);
+      const metadata = await readFile(join(installed, "preset.yml"), "utf8");
+      expect(metadata).toContain("/");
+      expect(metadata).not.toContain(`name: ${presetId}`);
+      expect(metadata).not.toContain("暂无描述");
       expect(
         await readFile(join(installed, "agent.cordis.yml"), "utf8"),
       ).toContain("router-core.mjs");
