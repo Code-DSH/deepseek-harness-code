@@ -1,0 +1,101 @@
+appId: community.deepseek.harness.code
+productName: DeepSeek Harness Code
+copyright: Copyright © 2026 DeepSeek Harness Code contributors
+electronVersion: 43.4.0
+artifactName: DeepSeek-Harness-Code-${version}-${os}-${arch}.${ext}
+asar: false
+npmRebuild: false
+directories:
+  output: release
+  buildResources: build
+files:
+  - dist/desktop/**/*
+  - apps/desktop/src/startup.html
+  - package.json
+extraResources:
+  - from: dist/watchdog
+    to: watchdog
+    filter:
+      - "**/*"
+  - from: packages/desktop-plugin
+    to: desktop-plugin
+    filter:
+      - package.json
+      - index.js
+      - index.d.ts
+      - client.js
+      - cordis.patch.yml
+  - from: packages/anchored-standard-plugin
+    to: anchored-standard-plugin
+    filter:
+      - package.json
+      - index.js
+      - index.d.ts
+      - cordis.patch.yml
+  - from: build/THIRD-PARTY-NOTICES.md
+    to: licenses/THIRD-PARTY-NOTICES.md
+  - from: build/deepseek-harness-code-tray.png
+    to: deepseek-harness-code-tray.png
+  - from: build/deepseek-harness-code.png
+    to: deepseek-harness-code.png
+mac:
+  appId: community.deepseek.harness.code
+  category: public.app-category.developer-tools
+  icon: build/deepseek-harness-code.icns
+  identity: "-"
+  hardenedRuntime: false
+  gatekeeperAssess: false
+  minimumSystemVersion: 12.0.0
+  mergeASARs: false
+  # Both temporary apps intentionally contain the same pair of architecture-
+  # qualified native packages. Preserve that runtime-dispatch layout instead
+  # of asking @electron/universal to lipo each thin package binary again.
+  x64ArchFiles: Contents/Resources/app/node_modules/**/*
+  target:
+    - target: dmg
+      arch:
+        - universal
+dmg:
+  title: DeepSeek Harness Code ${version}
+  sign: false
+  contents:
+    - x: 140
+      y: 180
+      type: file
+    - x: 430
+      y: 180
+      type: link
+      path: /Applications
+    - x: 285
+      y: 350
+      type: file
+      path: build/INSTALL-UNSIGNED-macOS.txt
+win:
+  icon: build/deepseek-harness-code.ico
+  target:
+    - target: nsis
+      arch:
+        - x64
+        - arm64
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  artifactName: DeepSeek-Harness-Code-${version}-windows-${arch}-setup.${ext}
+linux:
+  category: Development
+  icon: build/deepseek-harness-code.png
+  target:
+    - target: AppImage
+      arch:
+        - x64
+        - arm64
+    - target: deb
+      arch:
+        - x64
+        - arm64
+appImage:
+  artifactName: DeepSeek-Harness-Code-${version}-linux-${arch}.${ext}
+deb:
+  artifactName: DeepSeek-Harness-Code-${version}-linux-${arch}.${ext}
+publish: null

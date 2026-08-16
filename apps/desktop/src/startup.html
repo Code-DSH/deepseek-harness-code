@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light dark" />
+    <title>DeepSeek Harness Code</title>
+    <style>
+      :root {
+        background: #fff;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        width: 100%;
+        min-height: 100%;
+        margin: 0;
+        overflow: hidden;
+        background: #fff;
+      }
+
+      .titlebar {
+        position: fixed;
+        z-index: 1;
+        inset: 0 0 auto;
+        height: 36px;
+        -webkit-app-region: drag;
+      }
+
+      .stage {
+        width: 100vw;
+        min-height: 100vh;
+        display: grid;
+        place-items: center;
+      }
+
+      .spinner {
+        width: 24px;
+        height: 24px;
+        border: 2px solid rgba(0, 0, 0, 0.16);
+        border-top-color: rgba(0, 0, 0, 0.72);
+        border-radius: 50%;
+        animation: spin 760ms linear infinite;
+      }
+
+      @keyframes spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+
+      @media (prefers-color-scheme: dark) {
+        :root,
+        html,
+        body {
+          background: #000;
+        }
+
+        .spinner {
+          border-color: rgba(255, 255, 255, 0.2);
+          border-top-color: rgba(255, 255, 255, 0.82);
+        }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        .spinner {
+          animation-duration: 1.6s;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header class="titlebar" aria-hidden="true"></header>
+    <main class="stage" aria-live="polite" aria-busy="true">
+      <div class="spinner" role="status" aria-label="Starting"></div>
+    </main>
+  </body>
+</html>

@@ -1,0 +1,86 @@
+import { describe, expect, it } from "vitest";
+
+import {
+  createHarnessLaunchSpec,
+  createStartupPagePath,
+  createSecureWebPreferences,
+  createTrayIconPath,
+  createWindowChromeOptions,
+} from "../../apps/desktop/src/host-config.js";
+
+describe("Electron host configuration", () => {
+  it("creates a sandboxed, isolated renderer with no Node integration", () => {
+    expect(createSecureWebPreferences("/app/preload.cjs")).toEqual({
+      contextIsolation: true,
+      sandbox: true,
+      nodeIntegration: false,
+      preload: "/app/preload.cjs",
+    });
+  });
+
+  it("launches the official dsh web entry through Electron Node mode on loopback", () => {
+    expect(
+      createHarnessLaunchSpec({
+        electronExecutable:
+          "/Applications/DeepSeek Harness.app/Contents/MacOS/DeepSeek Harness",
+        dshEntry: "/app/node_modules/@deepseek-ai/dsh/lib/bin.js",
+        dshHome:
+          "/Users/test/Library/Application Support/DeepSeek Harness/harness",
+        port: 41234,
+      }),
+    ).toEqual({
+      command:
+        "/Applications/DeepSeek Harness.app/Contents/MacOS/DeepSeek Harness",
+      args: [
+        "/app/node_modules/@deepseek-ai/dsh/lib/bin.js",
+        "web",
+        "--host",
+        "127.0.0.1",
+        "--port",
+        "41234",
+      ],
+      env: {
+        DSH_HOME:
+          "/Users/test/Library/Application Support/DeepSeek Harness/harness",
+        ELECTRON_RUN_AS_NODE: "1",
+      },
+    });
+  });
+
+  it("uses the packaged fixed startup page next to the desktop source", () => {
+    expect(createStartupPagePath("/app")).toBe(
+      "/app/apps/desktop/src/startup.html",
+    );
+  });
+
+  it("uses the packaged branded tray resource and the generated development asset", () => {
+    expect(createTrayIconPath("/app", "/resources", true, "darwin")).toBe(
+      "/resources/deepseek-harness-code-tray.png",
+    );
+    expect(createTrayIconPath("/app", "/resources", false, "darwin")).toBe(
+      "/app/build/deepseek-harness-code-tray.png",
+    );
+    expect(createTrayIconPath("/app", "/resources", true, "win32")).toBe(
+      "/resources/deepseek-harness-code.png",
+    );
+    expect(createTrayIconPath("/app", "/resources", false, "linux")).toBe(
+      "/app/build/deepseek-harness-code.png",
+    );
+  });
+
+  it("extends macOS Web content under a title bar that only keeps traffic lights", () => {
+    expect(createWindowChromeOptions("darwin")).toMatchObject({
+      title: "",
+      titleBarStyle: "hiddenInset",
+      trafficLightPosition: { x: 16, y: 6 },
+    });
+    expect(createWindowChromeOptions("win32")).toMatchObject({
+      title: "DeepSeek Harness Code",
+      titleBarStyle: "default",
+    });
+    expect(createWindowChromeOptions("linux")).toMatchObject({
+      title: "DeepSeek Harness Code",
+      titleBarStyle: "default",
+    });
+  });
+});

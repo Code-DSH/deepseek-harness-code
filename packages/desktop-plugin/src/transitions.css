@@ -1,0 +1,184 @@
+:root[data-dsh-desktop-page] {
+  --dsh-desktop-transition-duration: 180ms;
+  --dsh-desktop-titlebar-safe-inset: 0px;
+  --dsh-desktop-titlebar-height: 0px;
+}
+
+:root[data-dsh-desktop-platform="macos"] {
+  --dsh-desktop-titlebar-safe-inset: 78px;
+  --dsh-desktop-titlebar-height: 28px;
+}
+
+:root[data-dsh-desktop-platform="macos"] [data-dsh-desktop-breadcrumb],
+:root[data-dsh-desktop-platform="macos"] header [aria-label*="DeepSeek" i],
+:root[data-dsh-desktop-platform="macos"] header [data-dsh-desktop-title] {
+  margin-left: var(--dsh-desktop-titlebar-safe-inset);
+  padding-top: var(--dsh-desktop-titlebar-height);
+}
+
+:root[data-dsh-desktop-platform] header,
+:root[data-dsh-desktop-platform] [data-dsh-desktop-breadcrumb] {
+  background: color-mix(in srgb, Canvas 78%, transparent);
+  backdrop-filter: blur(14px) saturate(1.08);
+}
+
+[data-dsh-desktop-settings] {
+  color: var(--dsw-alias-label-primary, CanvasText);
+  border-top: 1px solid
+    var(--dsw-alias-border-l2, color-mix(in srgb, CanvasText 14%, transparent));
+  padding: 20px 0 8px;
+}
+
+.dshDesktopSettingsTitle {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 24px;
+}
+
+.dshDesktopSettingsStatus,
+.dshDesktopSettingsNote {
+  color: var(
+    --dsw-alias-label-secondary,
+    color-mix(in srgb, CanvasText 62%, transparent)
+  );
+  margin: 4px 0 12px;
+  font-size: 13px;
+  line-height: 20px;
+}
+
+.dshDesktopSettingsRow {
+  border-bottom: 1px solid
+    var(--dsw-alias-border-l2, color-mix(in srgb, CanvasText 14%, transparent));
+  align-items: center;
+  gap: 16px;
+  min-height: 68px;
+  display: flex;
+}
+
+.dshDesktopSettingsLabel {
+  flex: 1;
+  min-width: 0;
+  font-size: 14px;
+  line-height: 22px;
+}
+
+.dshDesktopSettingsControl {
+  flex: 0 1 280px;
+  min-width: 0;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.dshDesktopSettingsDropdownButton {
+  width: min(100%, 260px);
+  min-width: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.dshDesktopSettingsDropdownLabel {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dshDesktopSettingsDropdownIcon {
+  flex: 0 0 auto;
+}
+
+.dshDesktopSettingsActions {
+  gap: 8px;
+  padding-top: 12px;
+  display: flex;
+  flex-wrap: wrap;
+}
+
+@media (max-width: 760px) {
+  .dshDesktopSettingsRow {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 8px;
+    padding: 12px 0;
+  }
+
+  .dshDesktopSettingsControl {
+    flex: 0 0 auto;
+    justify-content: flex-start;
+  }
+}
+
+:root[data-dsh-desktop-page] main,
+:root[data-dsh-desktop-page] [data-dsh-desktop-breadcrumb],
+:root[data-dsh-desktop-recovery] [role="alert"] {
+  animation: dsh-desktop-enter var(--dsh-desktop-transition-duration) ease-out
+    both;
+}
+
+:root[data-dsh-desktop-recovery="loading"] [aria-busy="true"],
+:root[data-dsh-desktop-recovery="error"] [role="alert"] {
+  animation-duration: 180ms;
+}
+
+:root[data-dsh-desktop-animation="odd"] main,
+:root[data-dsh-desktop-animation="odd"] [data-dsh-desktop-breadcrumb],
+:root[data-dsh-desktop-animation="odd"] [role="alert"],
+:root[data-dsh-desktop-animation="odd"] [aria-busy="true"] {
+  animation-name: dsh-desktop-enter-odd;
+}
+
+:root[data-dsh-desktop-animation="even"] main,
+:root[data-dsh-desktop-animation="even"] [data-dsh-desktop-breadcrumb],
+:root[data-dsh-desktop-animation="even"] [role="alert"],
+:root[data-dsh-desktop-animation="even"] [aria-busy="true"] {
+  animation-name: dsh-desktop-enter-even;
+}
+
+@keyframes dsh-desktop-enter {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes dsh-desktop-enter-odd {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes dsh-desktop-enter-even {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root[data-dsh-desktop-page] main,
+  :root[data-dsh-desktop-page] [data-dsh-desktop-breadcrumb],
+  :root[data-dsh-desktop-recovery] [role="alert"] {
+    animation: none;
+  }
+
+  :root[data-dsh-desktop-platform] header,
+  :root[data-dsh-desktop-platform] [data-dsh-desktop-breadcrumb] {
+    backdrop-filter: none;
+  }
+}

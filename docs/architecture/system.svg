@@ -1,0 +1,135 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="1020" viewBox="0 0 1440 1020" role="img" aria-labelledby="title desc">
+  <title id="title">DeepSeek Harness Code system architecture</title>
+  <desc id="desc">DeepSeek Harness Code uses Electron to host the loopback Harness Web application through two narrow preload capability groups. Official Cordis bundles provide desktop settings, cross-platform transitions, and a transparent anchored-mode Standard fallback. An IPC-only watchdog restarts the Electron main process after abnormal exits, while Harness talks to the DeepSeek API and persists official sessions under application user data.</desc>
+  <defs>
+    <style>
+      :root { color-scheme: light dark; }
+      .bg { fill: #f7f9fc; }
+      .zone { fill: #ffffff; stroke: #9aa8be; stroke-width: 2; }
+      .host { fill: #e7efff; stroke: #315eac; }
+      .web { fill: #e9f8f2; stroke: #23765a; }
+      .runtime { fill: #fff2db; stroke: #a46711; }
+      .guard { fill: #f5eaff; stroke: #7148a6; }
+      .external { fill: #ffecef; stroke: #a9465a; }
+      .store { fill: #edf1f7; stroke: #637083; }
+      .box { stroke-width: 2; rx: 16; }
+      .heading { fill: #17233a; font: 700 24px ui-sans-serif, system-ui, -apple-system, sans-serif; }
+      .label { fill: #17233a; font: 650 17px ui-sans-serif, system-ui, -apple-system, sans-serif; }
+      .small { fill: #45536a; font: 14px ui-sans-serif, system-ui, -apple-system, sans-serif; }
+      .flow { fill: none; stroke: #315eac; stroke-width: 3; marker-end: url(#arrow); }
+      .recover { fill: none; stroke: #7148a6; stroke-width: 3; stroke-dasharray: 9 7; marker-end: url(#arrow-purple); }
+      .shutdown { fill: none; stroke: #a9465a; stroke-width: 3; stroke-dasharray: 4 6; marker-end: url(#arrow-red); }
+      @media (prefers-color-scheme: dark) {
+        .bg { fill: #111827; }
+        .zone { fill: #172033; stroke: #6f7d94; }
+        .host { fill: #1d3763; stroke: #86aef4; }
+        .web { fill: #173e34; stroke: #6fd0ac; }
+        .runtime { fill: #4b3517; stroke: #f0bb62; }
+        .guard { fill: #39234d; stroke: #c59aed; }
+        .external { fill: #4c2430; stroke: #f28da2; }
+        .store { fill: #293448; stroke: #9aa8be; }
+        .heading, .label { fill: #f2f6ff; }
+        .small { fill: #c5d0e3; }
+      }
+    </style>
+    <marker id="arrow" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto"><path d="M0 0 L12 6 L0 12 Z" fill="#315eac"/></marker>
+    <marker id="arrow-purple" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto"><path d="M0 0 L12 6 L0 12 Z" fill="#7148a6"/></marker>
+    <marker id="arrow-red" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto"><path d="M0 0 L12 6 L0 12 Z" fill="#a9465a"/></marker>
+  </defs>
+
+  <rect class="bg" width="1440" height="1020"/>
+  <rect class="zone" x="45" y="18" width="970" height="54" rx="18"/>
+  <text class="heading" x="64" y="53">DeepSeek Harness Code · Electron + 官方插件 + 独立 Watchdog</text>
+
+  <rect class="zone" x="45" y="90" width="970" height="770" rx="24"/>
+  <text class="label" x="70" y="126">DeepSeek Harness Code.app（全部可执行代码与运行时）</text>
+
+  <rect class="host box" x="80" y="165" width="280" height="150"/>
+  <text class="label" x="105" y="200">Electron 主进程</text>
+  <text class="small" x="105" y="230">窗口 / 托盘 / 关闭策略</text>
+  <text class="small" x="105" y="254">Harness 生命周期与健康状态</text>
+  <text class="small" x="105" y="278">外部导航与日志入口</text>
+
+  <rect class="host box" x="420" y="165" width="230" height="150"/>
+  <text class="label" x="445" y="200">安全 preload 桥</text>
+  <text class="small" x="445" y="230">contextIsolation + sandbox</text>
+  <text class="small" x="445" y="254">preferences / runtime 两组 API</text>
+  <text class="small" x="445" y="278">严格 schema · 无 Node / shell / 任意路径</text>
+
+  <rect class="web box" x="710" y="145" width="265" height="190"/>
+  <text class="label" x="735" y="180">BrowserWindow</text>
+  <text class="small" x="735" y="210">Chromium · loopback 页面</text>
+  <text class="small" x="735" y="234">Harness Web UI · 顶部安全区</text>
+  <text class="small" x="735" y="258">QuestionComposer</text>
+  <text class="small" x="735" y="282">设置 / 动画 / 恢复提示</text>
+  <text class="small" x="735" y="306">官方 session history</text>
+
+  <rect class="runtime box" x="80" y="410" width="360" height="190"/>
+  <text class="label" x="105" y="445">Harness 子进程</text>
+  <text class="small" x="105" y="475">Electron 内置 Node 模式</text>
+  <text class="small" x="105" y="499">dsh web · 127.0.0.1 · 动态端口</text>
+  <text class="small" x="105" y="523">官方 Agent / Tool / Session 服务</text>
+  <text class="small" x="105" y="547">ctx.userQuestions</text>
+  <text class="small" x="105" y="571">SIGTERM → 8 秒 → 升级终止</text>
+
+  <rect class="web box" x="520" y="410" width="455" height="190"/>
+  <text class="label" x="545" y="445">官方 Cordis/dsh 插件包</text>
+  <text class="small" x="545" y="475">desktop-plugin：General 设置与诊断</text>
+  <text class="small" x="545" y="499">关闭行为 · 单色启动 UI · 页面过渡</text>
+  <text class="small" x="545" y="523">prefers-reduced-motion · 键盘 / IME / A11y</text>
+  <text class="small" x="545" y="547">anchored-standard：rc.6 安全降级为 Standard</text>
+  <text class="small" x="545" y="571">不接管会话 · 不修改私有请求或隐藏思维链</text>
+
+  <rect class="guard box" x="80" y="675" width="360" height="135"/>
+  <text class="label" x="105" y="710">独立 Watchdog</text>
+  <text class="small" x="105" y="740">OS IPC pipe · 无网络端口</text>
+  <text class="small" x="105" y="764">第 1/2 次：1/2 秒 · 第 3 次/5 分钟熔断</text>
+  <text class="small" x="105" y="788">正常 shutdown 握手不重启</text>
+
+  <rect class="store box" x="520" y="675" width="455" height="135"/>
+  <text class="label" x="545" y="710">系统用户数据目录（不写入 .app）</text>
+  <text class="small" x="545" y="740">dsh-home：设置 / 凭据 / 官方会话</text>
+  <text class="small" x="545" y="764">logs：Electron / Harness / Watchdog</text>
+  <text class="small" x="545" y="788">10 MB × 5 · 敏感信息脱敏</text>
+
+  <rect class="external box" x="1080" y="175" width="300" height="150"/>
+  <text class="label" x="1105" y="210">DeepSeek API</text>
+  <text class="small" x="1105" y="240">默认模型 deepseek-v4-flash</text>
+  <text class="small" x="1105" y="264">凭据由用户在 Harness 设置输入</text>
+  <text class="small" x="1105" y="288">桌面层不读取、不记录、不转发</text>
+
+  <rect class="store box" x="1080" y="410" width="300" height="150"/>
+  <text class="label" x="1105" y="445">用户与桌面系统</text>
+  <text class="small" x="1105" y="475">Dock / 托盘 / 系统浏览器</text>
+  <text class="small" x="1105" y="499">macOS DMG · Windows NSIS</text>
+  <text class="small" x="1105" y="523">Linux AppImage/deb · macOS 定向 xattr</text>
+
+  <path class="flow" d="M360 225 H420"/>
+  <text class="small" x="370" y="212">IPC</text>
+  <path class="flow" d="M650 225 H710"/>
+  <text class="small" x="662" y="212">bridge</text>
+  <path class="flow" d="M842 335 V390 H440 V505"/>
+  <text class="small" x="630" y="378">请求 / SSE 流式响应（loopback）</text>
+  <path class="flow" d="M440 505 H520"/>
+  <text class="small" x="451" y="492">插件</text>
+  <path class="flow" d="M440 550 C720 635 930 370 1080 250"/>
+  <text class="small" x="810" y="615">模型请求 / 流式响应</text>
+  <path class="flow" d="M440 570 C500 620 560 640 650 675"/>
+  <text class="small" x="475" y="635">会话 / 设置</text>
+  <path class="recover" d="M260 675 V620 C260 610 250 610 250 600"/>
+  <text class="small" x="105" y="644">异常恢复</text>
+  <path class="recover" d="M260 675 C40 635 35 275 80 250"/>
+  <text class="small" x="52" y="545" transform="rotate(-90 52 545)">主进程异常断链后重启</text>
+  <path class="shutdown" d="M180 315 V390"/>
+  <text class="small" x="92" y="360">停止握手</text>
+  <path class="shutdown" d="M360 280 C730 360 930 430 1080 480"/>
+  <text class="small" x="755" y="400">关闭 / 隐藏 / 系统打开</text>
+
+  <rect class="zone" x="45" y="895" width="1335" height="85" rx="18"/>
+  <text class="label" x="70" y="927">图例</text>
+  <line class="flow" x1="155" y1="923" x2="225" y2="923"/><text class="small" x="240" y="928">启动 / 请求 / 响应</text>
+  <line class="recover" x1="450" y1="923" x2="520" y2="923"/><text class="small" x="535" y="928">异常恢复</text>
+  <line class="shutdown" x1="700" y1="923" x2="770" y2="923"/><text class="small" x="785" y="928">正常关闭</text>
+  <text class="small" x="965" y="928">跨平台宿主与 Web：macOS · Linux · Windows</text>
+  <text class="small" x="70" y="957">恢复原则：renderer 仅重建 UI；Harness 健康时不重放模型请求；重启后读取官方持久化 session history。</text>
+</svg>

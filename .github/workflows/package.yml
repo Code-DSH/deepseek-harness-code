@@ -1,0 +1,46 @@
+name: Package DeepSeek Harness Code
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: read
+
+jobs:
+  package:
+    name: ${{ matrix.label }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - label: macos-universal
+            os: macos-15
+            command: pnpm exec electron-builder --mac --universal
+          - label: windows-x64
+            os: windows-2025
+            command: pnpm exec electron-builder --win nsis --x64
+          - label: linux-x64
+            os: ubuntu-24.04
+            command: pnpm exec electron-builder --linux AppImage deb --x64
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.19.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24.18.0
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+      - run: pnpm build:icon
+      - run: ${{ matrix.command }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.label }}
+          path: release/**
+          if-no-files-found: error

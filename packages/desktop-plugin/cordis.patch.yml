@@ -1,0 +1,3 @@
+- insert:
+    - id: deepseek-harness-desktop
+      name: "deepseek-harness-desktop-plugin"

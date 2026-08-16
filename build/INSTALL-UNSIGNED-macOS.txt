@@ -1,0 +1,12 @@
+DeepSeek Harness Code 安装说明
+
+本应用是独立社区封装（community wrapper），并非 DeepSeek 官方发布，也未经过 Apple 公证。
+
+1. 将“DeepSeek Harness Code.app”拖入“应用程序”文件夹。
+2. 若 macOS 因互联网下载隔离属性阻止打开，请仅对本应用执行：
+
+xattr -dr com.apple.quarantine "/Applications/DeepSeek Harness Code.app"
+
+3. 然后从“应用程序”重新打开。
+
+安全提示：请先确认 DMG 来源及校验值。不要全局关闭或绕过 Gatekeeper。

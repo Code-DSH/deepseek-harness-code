@@ -1,0 +1,10 @@
+node_modules/
+dist/
+release/
+test-results/
+playwright-report/
+coverage/
+.cache/
+.mimosa/
+*.log
+.DS_Store
