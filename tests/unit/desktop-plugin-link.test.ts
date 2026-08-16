@@ -8,7 +8,7 @@ import {
   writeFile,
 } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join, resolve } from "node:path";
+import { delimiter, join, resolve } from "node:path";
 
 import { describe, expect, it, vi } from "vitest";
 
@@ -126,7 +126,7 @@ describe("official Harness plugin installation", () => {
         ELECTRON_RUN_AS_NODE: "1",
       },
     });
-    expect(options?.env.PATH?.split(":")?.[0]).toBe(runtimeBinRoot);
+    expect(options?.env.PATH?.split(delimiter)?.[0]).toBe(runtimeBinRoot);
     expect(await readFile(join(runtimeBinRoot, "pnpm"), "utf8")).toContain(
       'exec "$DHC_ELECTRON_EXECUTABLE" "$DHC_PNPM_ENTRY" "$@"',
     );
@@ -235,12 +235,17 @@ describe("legacy Harness Home migration", () => {
     expect(
       await readFile(join(dshHome, "sessions", "shared.jsonl"), "utf8"),
     ).toBe("official\n");
-    expect((await stat(join(dshHome, ".credentials.yaml"))).mode & 0o777).toBe(
-      0o600,
-    );
-    expect(
-      (await stat(join(dshHome, "skills", "bundled", "SKILL.md"))).mode & 0o777,
-    ).toBe(0o744);
+    // POSIX permission bits are not meaningful on Windows (Node reports the
+    // default writable mode), so the ownership assertions run only on POSIX.
+    if (process.platform !== "win32") {
+      expect(
+        (await stat(join(dshHome, ".credentials.yaml"))).mode & 0o777,
+      ).toBe(0o600);
+      expect(
+        (await stat(join(dshHome, "skills", "bundled", "SKILL.md"))).mode &
+          0o777,
+      ).toBe(0o744);
+    }
 
     const second = await migrateLegacyHarnessHome({ legacyHome, dshHome });
     expect(second).toMatchObject({

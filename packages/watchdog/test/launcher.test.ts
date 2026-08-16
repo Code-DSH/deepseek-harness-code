@@ -1,4 +1,5 @@
 import { EventEmitter } from "node:events";
+import { normalize } from "node:path";
 
 import { describe, expect, it } from "vitest";
 
@@ -55,21 +56,35 @@ describe("host watchdog launcher contract", () => {
 
     expect(spawns).toEqual([
       [
-        "/Applications/DeepSeek Harness.app/Contents/MacOS/DeepSeek Harness",
-        [
-          "/Applications/DeepSeek Harness.app/Contents/Resources/watchdog/entry.cjs",
-          "--target-executable",
+        normalize(
           "/Applications/DeepSeek Harness.app/Contents/MacOS/DeepSeek Harness",
+        ),
+        [
+          normalize(
+            "/Applications/DeepSeek Harness.app/Contents/Resources/watchdog/entry.cjs",
+          ),
+          "--target-executable",
+          normalize(
+            "/Applications/DeepSeek Harness.app/Contents/MacOS/DeepSeek Harness",
+          ),
           "--target-args-json",
           '["--restore-session"]',
           "--state-path",
-          "/Users/person/Library/Application Support/DeepSeek Harness/watchdog-crashes.json",
+          normalize(
+            "/Users/person/Library/Application Support/DeepSeek Harness/watchdog-crashes.json",
+          ),
           "--marker-path",
-          "/Users/person/Library/Application Support/DeepSeek Harness/crash-loop.json",
+          normalize(
+            "/Users/person/Library/Application Support/DeepSeek Harness/crash-loop.json",
+          ),
           "--log-path",
-          "/Users/person/Library/Application Support/DeepSeek Harness/watchdog.log",
+          normalize(
+            "/Users/person/Library/Application Support/DeepSeek Harness/watchdog.log",
+          ),
           "--root-path",
-          "/Users/person/Library/Application Support/DeepSeek Harness",
+          normalize(
+            "/Users/person/Library/Application Support/DeepSeek Harness",
+          ),
         ],
         {
           detached: true,

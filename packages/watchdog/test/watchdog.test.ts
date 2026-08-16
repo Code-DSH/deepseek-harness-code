@@ -1,6 +1,6 @@
 import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join, normalize } from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
 
@@ -53,9 +53,11 @@ describe("watchdog process contract", () => {
     const directory = await temporaryDirectory();
     const launches: Array<{ executable: string; args: readonly string[] }> = [];
     const scheduled: number[] = [];
+    const executable = normalize(
+      "/Applications/DeepSeek Harness.app/Contents/MacOS/DeepSeek Harness",
+    );
     const watchdog = new Watchdog({
-      executable:
-        "/Applications/DeepSeek Harness.app/Contents/MacOS/DeepSeek Harness",
+      executable,
       args: ["--restore-session", "--profile", "default"],
       crashStore: new CrashStore(join(directory, "crashes.json")),
       now: () => 1_000,
@@ -63,7 +65,8 @@ describe("watchdog process contract", () => {
         scheduled.push(delayMs);
         callback();
       },
-      launch: (executable, args) => launches.push({ executable, args }),
+      launch: (launchedExecutable, args) =>
+        launches.push({ executable: launchedExecutable, args }),
     });
 
     watchdog.disconnect();
@@ -71,8 +74,7 @@ describe("watchdog process contract", () => {
     expect(scheduled).toEqual([1_000]);
     expect(launches).toEqual([
       {
-        executable:
-          "/Applications/DeepSeek Harness.app/Contents/MacOS/DeepSeek Harness",
+        executable,
         args: ["--restore-session", "--profile", "default"],
       },
     ]);

@@ -1,3 +1,5 @@
+import { join } from "node:path";
+
 import { describe, expect, it, vi } from "vitest";
 
 import {
@@ -15,19 +17,20 @@ const baseContext: WatchdogLaunchContext = {
   isPackaged: false,
 };
 
+const watchdogRoot = join(
+  "/Users/test/Library/Application Support/DeepSeek Harness",
+  "watchdog",
+);
+
 describe("desktop watchdog host adapter", () => {
   it("uses development paths and passes the app path to the restarted target", () => {
     expect(createWatchdogLaunchOptions(baseContext)).toMatchObject({
-      watchdogEntry: "/repo/dist/watchdog/entry.js",
+      watchdogEntry: join("/repo", "dist", "watchdog", "entry.js"),
       target: { executable: baseContext.electronExecutable, args: ["/repo"] },
-      rootPath:
-        "/Users/test/Library/Application Support/DeepSeek Harness/watchdog",
-      statePath:
-        "/Users/test/Library/Application Support/DeepSeek Harness/watchdog/state/watchdog.json",
-      markerPath:
-        "/Users/test/Library/Application Support/DeepSeek Harness/watchdog/state/abnormal-exit.marker",
-      logPath:
-        "/Users/test/Library/Application Support/DeepSeek Harness/watchdog/logs/watchdog.log",
+      rootPath: watchdogRoot,
+      statePath: join(watchdogRoot, "state", "watchdog.json"),
+      markerPath: join(watchdogRoot, "state", "abnormal-exit.marker"),
+      logPath: join(watchdogRoot, "logs", "watchdog.log"),
     });
   });
 
@@ -35,7 +38,7 @@ describe("desktop watchdog host adapter", () => {
     expect(
       createWatchdogLaunchOptions({ ...baseContext, isPackaged: true }),
     ).toMatchObject({
-      watchdogEntry: "/resources/watchdog/entry.js",
+      watchdogEntry: join("/resources", "watchdog", "entry.js"),
       target: { executable: baseContext.electronExecutable, args: [] },
     });
   });

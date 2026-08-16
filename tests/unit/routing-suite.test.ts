@@ -299,8 +299,9 @@ describe("dsh-routing-suite auto-load pipeline", () => {
       createOfficialModeBoostManifest,
       MODE_BOOST_BUNDLE_PATCH,
     } = (await import(
-      pathToFileURL(join(process.cwd(), "scripts", "fetch-routing-suite.mjs"))
-        .href
+      pathToFileURL(
+        join(process.cwd(), "scripts", "routing-suite-contract.mjs"),
+      ).href
     )) as {
       validateInjectorPatchContent: (content: string) => string;
       createOfficialModeBoostManifest: (

@@ -31,16 +31,23 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { execFileSync } from "node:child_process";
 
+import {
+  INJECTOR_BARE_ENTRY,
+  MODE_BOOST_BUNDLE_PATCH,
+  createOfficialModeBoostManifest,
+  validateInjectorPatchContent,
+} from "./routing-suite-contract.mjs";
+
+export {
+  INJECTOR_BARE_ENTRY,
+  MODE_BOOST_BUNDLE_PATCH,
+  createOfficialModeBoostManifest,
+  validateInjectorPatchContent,
+};
+
 const scriptDir = dirname(fileURLToPath(import.meta.url));
 const projectRoot = resolve(scriptDir, "..");
 const DEFAULT_OUT = join(projectRoot, "build", "routing-suite");
-const INJECTOR_BARE_ENTRY = "name: '@dsh-external/dsh-super-injector'";
-
-export const MODE_BOOST_BUNDLE_PATCH = `- insert:
-    - id: mode-boost
-      name: '@dsh-external/dsh-mode-boost'
-      config: {}
-`;
 
 const ROUTING_PRESET_METADATA = {
   "router-standard": {
@@ -101,35 +108,6 @@ function verifyArchive(source, bytes) {
     );
   }
   return actualSha256;
-}
-
-/**
- * Validate the verified upstream injector patch without changing its official
- * bare-package entry. The packaged Electron child enables Node internals so
- * the pinned loader can use the same native resolution path as standalone dsh.
- */
-export function validateInjectorPatchContent(content) {
-  const occurrences = content.split(INJECTOR_BARE_ENTRY).length - 1;
-  if (occurrences !== 1) {
-    throw new Error(
-      `fetch-routing-suite: injector patch expected exactly one audited bare entry, found ${occurrences}`,
-    );
-  }
-  return content;
-}
-
-export function createOfficialModeBoostManifest(manifest) {
-  const dsh =
-    typeof manifest.dsh === "object" && manifest.dsh !== null
-      ? manifest.dsh
-      : {};
-  return {
-    ...manifest,
-    dsh: {
-      ...dsh,
-      bundle: { patch: "./cordis.patch.yml" },
-    },
-  };
 }
 
 function parseArgs(argv) {

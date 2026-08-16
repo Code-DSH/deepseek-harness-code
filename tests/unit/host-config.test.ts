@@ -1,3 +1,5 @@
+import { join } from "node:path";
+
 import { describe, expect, it } from "vitest";
 
 import {
@@ -20,8 +22,10 @@ describe("Electron host configuration", () => {
       ),
     ).toEqual({
       dshHome: "/Users/test/.official-dsh",
-      legacyHome:
-        "/Users/test/Library/Application Support/deepseek-harness-desktop/dsh-home",
+      legacyHome: join(
+        "/Users/test/Library/Application Support/deepseek-harness-desktop",
+        "dsh-home",
+      ),
     });
   });
 
@@ -66,22 +70,22 @@ describe("Electron host configuration", () => {
 
   it("uses the packaged fixed startup page next to the desktop source", () => {
     expect(createStartupPagePath("/app")).toBe(
-      "/app/apps/desktop/src/startup.html",
+      join("/app", "apps", "desktop", "src", "startup.html"),
     );
   });
 
   it("uses the packaged branded tray resource and the generated development asset", () => {
     expect(createTrayIconPath("/app", "/resources", true, "darwin")).toBe(
-      "/resources/deepseek-harness-code-tray.png",
+      join("/resources", "deepseek-harness-code-tray.png"),
     );
     expect(createTrayIconPath("/app", "/resources", false, "darwin")).toBe(
-      "/app/build/deepseek-harness-code-tray.png",
+      join("/app", "build", "deepseek-harness-code-tray.png"),
     );
     expect(createTrayIconPath("/app", "/resources", true, "win32")).toBe(
-      "/resources/deepseek-harness-code.png",
+      join("/resources", "deepseek-harness-code.png"),
     );
     expect(createTrayIconPath("/app", "/resources", false, "linux")).toBe(
-      "/app/build/deepseek-harness-code.png",
+      join("/app", "build", "deepseek-harness-code.png"),
     );
   });
 
