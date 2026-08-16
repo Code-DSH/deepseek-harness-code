@@ -1,0 +1,146 @@
+/**
+ * Layout push: when a panel is open it OCCUPIES the layout instead of
+ * floating over it — the app shell (#root, the AppFrame three-column grid)
+ * gives up space. Only the center column is flexible (1fr), so the right
+ * panel's width squeeze (margin-right on #root) lands exactly on the
+ * conversation output and the input bar, like a VSCode sidebar.
+ *
+ * The bottom panel squeezes ONLY the center column — it must not cover the
+ * app's own left sidebar or the right panel. DSH 0.1.x wraps slot hosts in
+ * [data-slot] containers, so the AppFrame grid lives one level deeper:
+ * #root > div[data-slot="root"] > div (the frame). Its grid items are
+ * (frame > div:nth-child(1..3)): sidebarCol, centerCol, detailsCol, so the
+ * vertical push lands on the center column alone. The fixed panels cover
+ * the vacated strips, which looks seamless because #root's background is
+ * the theme base.
+ *
+ * The sizes ride CSS variables updated by the Sidebar shell (0 while
+ * collapsed); expand/collapse animates both the margins and the panel
+ * slides on the same theme duration. Drags disable the transition so the
+ * layout tracks the pointer.
+ */
+#root {
+  margin-right: var(--dsh-sidebar-width, 0px);
+  transition: margin-right var(--ds-transition-duration-slow) var(--ds-ease-in-out);
+}
+
+/* The AppFrame's grid items are sidebarCol, centerCol, detailsCol (children
+   1-3 of #root > div[data-slot="root"] > div) — nth-child(2) is the center
+   column. A stretched grid item shrinks by its margins, so the conversation
+   content (output + input bar) lifts without touching the sidebars. */
+#root > div[data-slot="root"] > div > div:nth-child(2) {
+  margin-bottom: var(--dsh-sidebar-height, 0px);
+  transition: margin-bottom var(--ds-transition-duration-slow) var(--ds-ease-in-out);
+}
+
+/* When the sidebar is collapsed, the toggle cluster reclaims the top-right
+   corner. Push the DSH session header's right padding out so its right-aligned
+   utilities (the "Session log" download capsule) yield the corner instead of
+   hiding under the cluster. The header default right-pads 28px; the 2-button
+   cluster spans right 10→70px, so 78px clears it with an 8px gap. Anchor on
+   the header's slot host wrapper ([data-slot="conversation.session.header"])
+   rather than a positional path: DSH 0.1.x nests the header several levels
+   under the center column. The Sidebar shell toggles the body attribute with
+   the panel open state. */
+body[data-dsh-sidebar-collapsed] [data-slot="conversation.session.header"] > header {
+  padding-right: 78px;
+}
+
+/* ── macOS desktop safe area (DeepSeek Harness Code hidden title bar) ──── */
+
+/* The desktop app hides the native macOS title bar: the top ~40px of the
+   page is the window's drag region, so every top-of-page control is
+   unclickable. The desktop-plugin marks `:root[data-dsh-desktop-platform]`
+   on macOS. The conversation header's title row is 12→44px and its
+   对话/轨迹 tab row starts at 48px; the sidebar (see sidebar.module.css)
+   drops to that line. The session header's right-aligned utilities (the
+   "Session log" download capsule, which the title row otherwise carries at
+   12→44px — inside the drag region) follows to the same 48px line: Y only,
+   X unchanged (right: 28px reproduces the in-flow position measured from
+   the header's padding edge; when the sidebar is collapsed the header is
+   wider, so the existing padding-right: 78px yield becomes right: 78px —
+   the capsule still clears the toggle cluster). */
+:root[data-dsh-desktop-platform='macos'] {
+  /* The right panel's top edge: level with the top of the 对话/轨迹 tab
+     row (48px) so the strip above the sidebar is empty. */
+  --dsh-desktop-sidebar-safe-top: 48px;
+  /* Center line the sidebar's top-right buttons align to: the 对话/轨迹
+     tab row's center is 61.5px (48 + 27/2), nudged up 4px (57.5) so the
+     buttons sit slightly above the tab text instead of dead center —
+     visually lighter against the tab row. */
+  --dsh-desktop-sidebar-safe-center: 57.5px;
+}
+
+:root[data-dsh-desktop-platform='macos'] [data-slot='conversation.session.header'] > header [class*='headerUtilities'] {
+  position: absolute;
+  /* Center the text-height (20px line-height) Session-log label on the
+     raised center line: 57.5 - 20/2 = 47.5. X is preserved: right: 28px
+     reproduces the in-flow position. */
+  top: calc(var(--dsh-desktop-sidebar-safe-center, 57.5px) - 10px);
+  right: 28px;
+}
+
+/* The left rail's brand row ("DeepSeek Harness" + the collapse toggle)
+   hangs below the tab-row line: with the macOS rail inset its center sits
+   at 76px in BOTH the expanded rail (brand + toggle) and the collapsed
+   rail (36px toggle only). Lift it by 18.5px (76 - 57.5) so the brand's
+   center and the collapse toggle's center land on the same raised center
+   line as the sidebar's top-right buttons — one continuous line across
+   the top, expanded or collapsed. */
+:root[data-dsh-desktop-platform='macos'] [class*='hHd-Xa_root'] [class*='hHd-Xa_logoRow'] {
+  position: relative;
+  top: -18.5px;
+}
+
+/* The official Session-log download capsule (1px border, 111px×32px pill)
+   is too heavy sitting on the tab row — its border collides with the
+   content underneath. Strip the pill shell so only the label (+ small
+   download glyph) remains, and drop the hover fill so the bare text stays
+   clean over the tab row. */
+:root[data-dsh-desktop-platform='macos'] [data-slot='conversation.session.header'] > header [class*='sessionLogButton'] {
+  border: none;
+  background: transparent;
+  min-width: 0;
+  height: auto;
+  border-radius: 0;
+  padding: 0;
+}
+
+:root[data-dsh-desktop-platform='macos'] [data-slot='conversation.session.header'] > header [class*='sessionLogButton']:hover:not(:disabled) {
+  background: transparent;
+}
+
+:root[data-dsh-desktop-platform='macos'] body[data-dsh-sidebar-collapsed] [data-slot='conversation.session.header'] > header [class*='headerUtilities'] {
+  right: 78px;
+}
+
+body[data-dsh-sidebar-dragging] #root,
+body[data-dsh-sidebar-dragging] #root > div[data-slot="root"] > div > div:nth-child(2) {
+  transition: none;
+}
+
+/* DSH 0.1.x gives external settings sections a generic gear and exposes no
+   icon field in the settings.section contract. settings-nav-icon.ts marks
+   only this plugin's localized row; render the requested Lucide
+   gallery-horizontal-end SVG as a currentColor mask so it follows the native
+   nav hover/active colors without changing the shell's 16px icon rhythm. */
+[data-dsh-better-sidebar-settings-nav] > svg:first-child {
+  display: none;
+}
+
+[data-dsh-better-sidebar-settings-nav]::before {
+  content: '';
+  flex: none;
+  width: 16px;
+  height: 16px;
+  background: currentColor;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M2 7v10'/%3E%3Cpath d='M6 5v14'/%3E%3Crect width='12' height='18' x='10' y='3' rx='2'/%3E%3C/svg%3E") center / contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M2 7v10'/%3E%3Cpath d='M6 5v14'/%3E%3Crect width='12' height='18' x='10' y='3' rx='2'/%3E%3C/svg%3E") center / contain no-repeat;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #root,
+  #root > div[data-slot="root"] > div > div:nth-child(2) {
+    transition: none;
+  }
+}
