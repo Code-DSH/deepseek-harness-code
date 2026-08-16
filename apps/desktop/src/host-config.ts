@@ -55,7 +55,7 @@ export function createTrayIconPath(
 }
 
 export interface HarnessLaunchInput {
-  electronExecutable: string;
+  nodeExecutable: string;
   dshEntry: string;
   dshHome: string;
   port: number;
@@ -64,14 +64,14 @@ export interface HarnessLaunchInput {
 export interface HarnessLaunchSpec {
   command: string;
   args: string[];
-  env: Record<"DSH_HOME" | "ELECTRON_RUN_AS_NODE", string>;
+  env: Record<"DSH_HOME", string>;
 }
 
 export function createHarnessLaunchSpec(
   input: HarnessLaunchInput,
 ): HarnessLaunchSpec {
   return {
-    command: input.electronExecutable,
+    command: input.nodeExecutable,
     args: [
       "--expose-internals",
       input.dshEntry,
@@ -83,7 +83,6 @@ export function createHarnessLaunchSpec(
     ],
     env: {
       DSH_HOME: input.dshHome,
-      ELECTRON_RUN_AS_NODE: "1",
     },
   };
 }

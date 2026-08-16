@@ -56,8 +56,9 @@ export type OfficialCommandRunner = (
 export type OfficialHarnessInstallInput = {
   dshEntry: string;
   dshHome: string;
-  electronExecutable: string;
+  nodeExecutable: string;
   pnpmEntry: string;
+  pnpmStoreDir: string;
   runtimeBinRoot: string;
   integratedPlugins: readonly IntegratedHarnessPlugin[];
   legacyPluginSpecs?: readonly LegacyPluginSpec[];
@@ -90,11 +91,11 @@ export type HarnessMigrationResult = {
 };
 
 const POSIX_PNPM_LAUNCHER = `#!/bin/sh
-exec "$DHC_ELECTRON_EXECUTABLE" "$DHC_PNPM_ENTRY" "$@"
+exec "$DHC_NODE_EXECUTABLE" "$DHC_PNPM_ENTRY" --store-dir "$DHC_PNPM_STORE_DIR" "$@"
 `;
 
 const WINDOWS_PNPM_LAUNCHER = `@echo off\r
-"%DHC_ELECTRON_EXECUTABLE%" "%DHC_PNPM_ENTRY%" %*\r
+"%DHC_NODE_EXECUTABLE%" "%DHC_PNPM_ENTRY%" --store-dir "%DHC_PNPM_STORE_DIR%" %*\r
 `;
 
 async function writePnpmLaunchers(runtimeBinRoot: string): Promise<void> {
@@ -167,9 +168,9 @@ export async function ensureOfficialHarnessInstall(
   const env: Record<string, string | undefined> = {
     ...inheritedEnv,
     DSH_HOME: input.dshHome,
-    DHC_ELECTRON_EXECUTABLE: input.electronExecutable,
+    DHC_NODE_EXECUTABLE: input.nodeExecutable,
     DHC_PNPM_ENTRY: input.pnpmEntry,
-    ELECTRON_RUN_AS_NODE: "1",
+    DHC_PNPM_STORE_DIR: input.pnpmStoreDir,
     PATH:
       existingPath === undefined || existingPath === ""
         ? input.runtimeBinRoot
@@ -178,7 +179,7 @@ export async function ensureOfficialHarnessInstall(
   const runCommand = input.runCommand ?? defaultOfficialCommandRunner;
   for (const request of installRequests) {
     const result = runCommand(
-      input.electronExecutable,
+      input.nodeExecutable,
       [
         input.dshEntry,
         "plugin",

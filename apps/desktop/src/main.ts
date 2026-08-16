@@ -41,6 +41,13 @@ import {
   startupFailureFromDiagnostics,
 } from "./lifecycle/startup-diagnostics.js";
 import { WatchdogHost } from "./lifecycle/watchdog-host.js";
+import {
+  ensureNodeRuntime,
+  getPortableNodeArchive,
+  inspectNodeRuntime,
+  resolveNodeRuntimePaths,
+  type NodeRuntimePaths,
+} from "./lifecycle/node-runtime.js";
 import { replaceWindowKeepingHostAlive } from "./lifecycle/window-recovery.js";
 import {
   ensureOfficialHarnessInstall,
@@ -77,6 +84,7 @@ let quitting = false;
 let preferences: DesktopPreferencesState = { ...DEFAULT_DESKTOP_PREFERENCES };
 let anchoredPresetNotice: RuntimeNotice | undefined;
 let routingSuiteNotice: RuntimeNotice | undefined;
+let nodeRuntimePaths: NodeRuntimePaths | undefined;
 
 // Preserve sessions and credentials across the product rename. This is an
 // intentional compatibility path; no user data is copied into the app bundle.
@@ -278,8 +286,100 @@ async function retireFailedStartupChild(child: HarnessChild): Promise<void> {
   if (!(await waitForChildExit(child, 8_000))) child.kill("SIGKILL");
 }
 
+function nodeRuntimeResourcePath(): string {
+  return app.isPackaged
+    ? join(process.resourcesPath, "node-runtime")
+    : join(app.getAppPath(), "config", "node-runtime");
+}
+
+async function showNodeRuntimeChoice(
+  archive: ReturnType<typeof getPortableNodeArchive>,
+  failedError?: Error,
+): Promise<"download" | "open-link" | "quit"> {
+  const options: Electron.MessageBoxOptions = {
+    type: failedError === undefined ? "question" : "error",
+    buttons:
+      failedError === undefined
+        ? ["Download Node.js automatically", "Open download page", "Quit"]
+        : ["Retry automatic download", "Open download page", "Quit"],
+    defaultId: 0,
+    cancelId: 2,
+    title: "Node.js runtime required",
+    message:
+      failedError === undefined
+        ? "DeepSeek Harness Code needs Node.js 24 to run the local Harness."
+        : "The portable Node.js runtime could not be installed.",
+    detail:
+      failedError === undefined
+        ? `The installer no longer bundles Node.js to keep its size small. You can download it now or open ${archive.url} in your browser.`
+        : `${failedError.message.slice(0, 2_000)}\n\nAutomatic download: ${archive.url}`,
+  };
+  const result =
+    mainWindow === undefined || mainWindow.isDestroyed()
+      ? await dialog.showMessageBox(options)
+      : await dialog.showMessageBox(mainWindow, options);
+  return (
+    (["download", "open-link", "quit"] as const)[result.response] ?? "quit"
+  );
+}
+
+async function prepareManagedNodeRuntime(): Promise<NodeRuntimePaths> {
+  const userDataPath = app.getPath("userData");
+  const runtimeResourcePath = nodeRuntimeResourcePath();
+  const archive = getPortableNodeArchive();
+  const readiness = await inspectNodeRuntime(userDataPath, runtimeResourcePath);
+  if (readiness.ready) {
+    nodeRuntimePaths = resolveNodeRuntimePaths(userDataPath);
+    return nodeRuntimePaths;
+  }
+
+  const initialChoice = await showNodeRuntimeChoice(archive);
+  if (initialChoice === "open-link") {
+    await shell.openExternal(archive.url);
+    throw new Error(
+      `Node.js ${archive.fileName} was not downloaded. Open ${archive.url}, install Node.js, or relaunch and choose automatic download.`,
+    );
+  }
+  if (initialChoice === "quit") {
+    throw new Error("Node.js runtime is required for the local Harness.");
+  }
+
+  for (;;) {
+    try {
+      const installed = await ensureNodeRuntime({
+        userDataPath,
+        runtimeResourcePath,
+      });
+      nodeRuntimePaths = installed.paths;
+      if (installed.installed) {
+        process.stderr.write(
+          `Installed portable Node.js runtime and pinned Harness packages under ${userDataPath}/node-runtime.\n`,
+        );
+      }
+      return nodeRuntimePaths;
+    } catch (error) {
+      const failedError =
+        error instanceof Error ? error : new Error("Unknown runtime error");
+      const choice = await showNodeRuntimeChoice(archive, failedError);
+      if (choice === "open-link") {
+        await shell.openExternal(archive.url);
+        throw failedError;
+      }
+      if (choice === "quit") throw failedError;
+    }
+  }
+}
+
+function managedNodeRuntimePaths(): NodeRuntimePaths {
+  if (nodeRuntimePaths === undefined) {
+    throw new Error("Managed Node.js runtime is not prepared");
+  }
+  return nodeRuntimePaths;
+}
+
 async function startHarness(): Promise<HarnessChild> {
-  const dshEntry = require.resolve("@deepseek-ai/dsh/lib/bin.js");
+  const runtime = managedNodeRuntimePaths();
+  const dshEntry = runtime.dshEntry;
   const pluginRoot = app.isPackaged
     ? join(process.resourcesPath, "desktop-plugin")
     : join(app.getAppPath(), "packages", "desktop-plugin");
@@ -312,12 +412,12 @@ async function startHarness(): Promise<HarnessChild> {
       `Legacy Harness migration skipped symbolic links: ${migration.skippedSymlinks.join(", ")}\n`,
     );
   }
-  const pnpmPackageRoot = dirname(require.resolve("pnpm"));
   await ensureOfficialHarnessInstall({
     dshEntry,
     dshHome,
-    electronExecutable: process.execPath,
-    pnpmEntry: join(pnpmPackageRoot, "bin", "pnpm.mjs"),
+    nodeExecutable: runtime.nodeExecutable,
+    pnpmEntry: join(nodeRuntimeResourcePath(), "pnpm.mjs"),
+    pnpmStoreDir: runtime.pnpmStoreDir,
     runtimeBinRoot: join(app.getPath("userData"), "runtime-bin"),
     integratedPlugins: [
       {
@@ -342,7 +442,7 @@ async function startHarness(): Promise<HarnessChild> {
       },
       {
         packageName: "dsh-find-plugin",
-        packageRoot: dirname(require.resolve("dsh-find-plugin/package.json")),
+        packageRoot: runtime.dshFindPluginRoot,
       },
     ],
     legacyPluginSpecs: migration.legacyPluginSpecs,
@@ -402,7 +502,7 @@ async function startHarness(): Promise<HarnessChild> {
   return startWithPortRetries(reserveLoopbackPort, async (port) => {
     harnessOrigin = `http://127.0.0.1:${port}`;
     const spec = createHarnessLaunchSpec({
-      electronExecutable: process.execPath,
+      nodeExecutable: runtime.nodeExecutable,
       dshEntry,
       dshHome,
       port,
@@ -512,6 +612,7 @@ async function launch(): Promise<void> {
     );
   }
   createWindow();
+  await prepareManagedNodeRuntime();
   controller = new HarnessRuntimeController({
     origin: () => harnessOrigin,
     startHarness,

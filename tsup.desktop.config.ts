@@ -10,9 +10,12 @@ export default defineConfig({
   target: "node24",
   outDir: "dist/desktop",
   external: ["electron"],
-  // Electron sandbox preloads cannot resolve arbitrary npm packages. Bundle
-  // validation code into preload.js so only Electron remains external.
-  noExternal: ["zod"],
+  // The packaged app carries no node_modules: the portable Node runtime and
+  // pinned Harness packages live in user data, so the desktop host must be
+  // fully self-contained. Bundle every npm dependency (validation code for
+  // the sandbox preload and the Harness home-path resolver for the main
+  // process) into the emitted files; only Electron remains external.
+  noExternal: [/^@deepseek-ai\//, /^zod$/],
   splitting: false,
   sourcemap: true,
 });

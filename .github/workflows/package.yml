@@ -22,6 +22,15 @@ jobs:
           - label: windows-arm64
             os: windows-2025
             command: pnpm exec electron-builder --win nsis --arm64
+          - label: macos-universal
+            os: macos-latest
+            command: pnpm exec electron-builder --mac dmg --universal
+          - label: linux-x64
+            os: ubuntu-latest
+            command: pnpm exec electron-builder --linux AppImage deb --x64
+          - label: linux-arm64
+            os: ubuntu-latest
+            command: pnpm exec electron-builder --linux AppImage deb --arm64
     runs-on: ${{ matrix.os }}
     timeout-minutes: 60
     steps:
@@ -36,6 +45,7 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm build
       - run: pnpm build:icon
+      - run: pnpm preflight:runtime
       - run: ${{ matrix.command }}
       - uses: actions/upload-artifact@v4
         with:

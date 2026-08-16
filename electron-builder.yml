@@ -12,11 +12,24 @@ files:
   - dist/desktop/**/*
   - apps/desktop/src/startup.html
   - package.json
+  # The packaged app carries no node_modules. The first launch offers to
+  # download the portable Node.js runtime and installs the pinned Harness
+  # packages into the user-data directory.
+  - "!node_modules/**/*"
+  - "!**/node_modules/**/*"
 extraResources:
   - from: dist/watchdog
     to: watchdog
     filter:
       - "**/*"
+  - from: build/node-runtime
+    to: node-runtime
+    filter:
+      - package.json
+      - pnpm-lock.yaml
+      - pnpm-workspace.yaml
+      - pnpm.mjs
+      - patches/**/*
   - from: packages/desktop-plugin
     to: desktop-plugin
     filter:
@@ -76,10 +89,6 @@ mac:
   gatekeeperAssess: false
   minimumSystemVersion: 12.0.0
   mergeASARs: false
-  # Both temporary apps intentionally contain the same pair of architecture-
-  # qualified native packages. Preserve that runtime-dispatch layout instead
-  # of asking @electron/universal to lipo each thin package binary again.
-  x64ArchFiles: Contents/Resources/app/node_modules/**/*
   target:
     - target: dmg
       arch:

@@ -44,7 +44,7 @@ Deliver an all-in-one, modernized DeepSeek Harness Code desktop distribution tha
 - First-class official V4 Pro/Flash model selection and reasoning controls, with the literal `We need` intent trigger tracked as the next public-seam implementation requirement.
 - One packaged Harness toolchain covering Skills, tools, Goal, Plan, Workflow, Todo, Jobs, user questions/approval, and subagents.
 - One official Harness Home resolved by the pinned upstream helper, with first-launch copy-only migration from the retired app-specific Home.
-- Official `dsh plugin --profile web add` reconciliation for every bundled Web plugin through an application-bundled pnpm runtime.
+- Official `dsh plugin --profile web add` reconciliation for every bundled Web plugin through a portable Node.js runtime (downloaded on first launch, SHA-256-pinned) and its bundled pnpm runtime.
 - Installed local Web plugin snapshots `dsh-ui-motion@1.0.0` and `dsh-model2-selector@1.0.0`, with their compiled client closures and official bare-name patches, in every `0.3.3` installer.
 
 ## Non-goals

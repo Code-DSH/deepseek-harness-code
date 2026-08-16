@@ -97,8 +97,72 @@ for (const [name, expectedVersion] of criticalRuntimeVersions) {
 }
 
 const pnpmPackagePath = requireFromProject.resolve("pnpm");
-const pnpmEntry = join(dirname(pnpmPackagePath), "bin", "pnpm.mjs");
-await access(pnpmEntry); // bin/pnpm.mjs is invoked through the app-owned launcher.
+const pnpmStandaloneEntry = join(
+  dirname(pnpmPackagePath),
+  "artifacts",
+  "exe",
+  "dist",
+  "pnpm.mjs",
+);
+await access(pnpmStandaloneEntry); // copied to build/node-runtime for first launch.
+
+const nodeRuntimeResourceRoot = join(projectRoot, "build", "node-runtime");
+for (const relativePath of ["package.json", "pnpm-lock.yaml", "pnpm.mjs"]) {
+  await access(join(nodeRuntimeResourceRoot, relativePath));
+}
+const nodeRuntimePackage = JSON.parse(
+  await readFile(join(nodeRuntimeResourceRoot, "package.json"), "utf8"),
+);
+if (
+  nodeRuntimePackage.dependencies?.["@deepseek-ai/dsh"] !== "0.1.0-rc.6" ||
+  nodeRuntimePackage.dependencies?.["dsh-find-plugin"] !== "0.3.6"
+) {
+  throw new Error(
+    "build/node-runtime must pin @deepseek-ai/dsh@0.1.0-rc.6 and dsh-find-plugin@0.3.6",
+  );
+}
+const packagedPnpmLock = await readFile(
+  join(nodeRuntimeResourceRoot, "pnpm-lock.yaml"),
+  "utf8",
+);
+if (
+  !packagedPnpmLock.includes("'@deepseek-ai/dsh':") ||
+  !packagedPnpmLock.includes("dsh-find-plugin:")
+) {
+  throw new Error(
+    "build/node-runtime lockfile is missing the pinned Harness runtime packages",
+  );
+}
+
+const builderConfig = await readFile(
+  join(projectRoot, "electron-builder.yml"),
+  "utf8",
+);
+if (
+  !builderConfig.includes('"!node_modules/**/*"') ||
+  builderConfig.includes("x64ArchFiles") ||
+  !builderConfig.includes("build/node-runtime")
+) {
+  throw new Error(
+    "electron-builder must exclude app node_modules and include the node-runtime resource",
+  );
+}
+
+const desktopMainSource = await readFile(
+  join(projectRoot, "apps", "desktop", "src", "main.ts"),
+  "utf8",
+);
+for (const retiredPath of [
+  'require.resolve("@deepseek-ai/dsh/lib/bin.js")',
+  'require.resolve("pnpm")',
+  'require.resolve("dsh-find-plugin/package.json")',
+]) {
+  if (desktopMainSource.includes(retiredPath)) {
+    throw new Error(
+      `packaged-runtime path remains in desktop main: ${retiredPath}`,
+    );
+  }
+}
 
 const findPluginManifestPath = requireFromProject.resolve(
   "dsh-find-plugin/package.json",
@@ -212,6 +276,7 @@ for (const source of manualAssemblySources) {
     "ensureDesktopPluginBundle",
     "ensureDesktopPluginLink",
     'profiles", "web", "node_modules',
+    "DHC_ELECTRON_EXECUTABLE",
   ]) {
     if (source.includes(retiredName)) {
       throw new Error(

@@ -7,6 +7,7 @@ export default [
     ignores: [
       ".cache/**",
       ".worktrees/**",
+      "build/node-runtime/**",
       "build/routing-suite/**",
       "dist/**",
       "node_modules/**",

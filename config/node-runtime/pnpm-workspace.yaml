@@ -1,0 +1,19 @@
+# Mirrors the repository root workspace configuration so the first-launch
+# install approves the same native build scripts (node-pty, koffi, ...) the
+# development tree runs. Without allowBuilds, pnpm 10+ ignores postinstall
+# scripts and the portable runtime would miss its native binaries.
+allowBuilds:
+  "@deepseek-ai/dsh-subprocess-local": true
+  "@google/genai": false
+  koffi: true
+  node-pty: true
+  protobufjs: true
+
+supportedArchitectures:
+  cpu:
+    - arm64
+    - x64
+
+patchedDependencies:
+  "@deepseek-ai/dsh-client-ui-conversation@0.1.0-rc.6": patches/@deepseek-ai__dsh-client-ui-conversation@0.1.0-rc.6.patch
+  "@deepseek-ai/dsh-client-ui-sidebar@0.1.0-rc.6": patches/@deepseek-ai__dsh-client-ui-sidebar@0.1.0-rc.6.patch

@@ -9,27 +9,38 @@ const requireFromProject = createRequire(join(projectRoot, "package.json"));
 const pluginRoot = join(projectRoot, "packages", "desktop-plugin");
 
 describe("packaged runtime dependency closure", () => {
-  it("pins and resolves the official plugin installation runtime", async () => {
+  it("pins the portable Node runtime package set and pnpm launcher", async () => {
     const manifest = JSON.parse(
       await readFile(join(projectRoot, "package.json"), "utf8"),
     ) as { dependencies: Record<string, string> };
     expect(manifest.dependencies["@deepseek-ai/dsh-home-paths"]).toBe(
       "0.1.0-rc.6",
     );
-    expect(manifest.dependencies["dsh-find-plugin"]).toBe("0.3.6");
     expect(manifest.dependencies.pnpm).toBe("11.19.0");
 
-    const pnpmRoot = join(requireFromProject.resolve("pnpm"), "..");
-    await expect(
-      readFile(join(pnpmRoot, "bin", "pnpm.mjs"), "utf8"),
-    ).resolves.toContain("pnpm");
-    const findPluginRoot = join(
-      requireFromProject.resolve("dsh-find-plugin/package.json"),
-      "..",
+    const runtimeManifest = JSON.parse(
+      await readFile(
+        join(projectRoot, "config", "node-runtime", "package.json"),
+        "utf8",
+      ),
+    ) as { dependencies: Record<string, string> };
+    expect(runtimeManifest.dependencies["@deepseek-ai/dsh"]).toBe("0.1.0-rc.6");
+    expect(runtimeManifest.dependencies["dsh-find-plugin"]).toBe("0.3.6");
+    const runtimeLock = await readFile(
+      join(projectRoot, "config", "node-runtime", "pnpm-lock.yaml"),
+      "utf8",
     );
-    await expect(
-      readFile(join(findPluginRoot, "cordis.patch.yml"), "utf8"),
-    ).resolves.toContain("name: 'dsh-find-plugin'");
+    expect(runtimeLock).toContain("'@deepseek-ai/dsh':");
+    expect(runtimeLock).toContain("dsh-find-plugin:");
+
+    const prepareScript = await readFile(
+      join(projectRoot, "scripts", "prepare-node-runtime.mjs"),
+      "utf8",
+    );
+    expect(prepareScript).toContain("pnpmStandaloneEntry");
+    expect(prepareScript).toContain('"pnpm.mjs"');
+    expect(prepareScript).toContain('pnpmManifest.version !== "11.19.0"');
+    expect(prepareScript).toContain("build/node-runtime");
   });
 
   it("keeps integrated plugin patches on official bare package names", async () => {
@@ -101,7 +112,7 @@ describe("packaged runtime dependency closure", () => {
     );
   });
 
-  it("bundles preload validation instead of requiring zod in the sandbox", async () => {
+  it("bundles preload validation and the host dependencies into the desktop bundle", async () => {
     const manifest = JSON.parse(
       await readFile(join(projectRoot, "package.json"), "utf8"),
     ) as { scripts: Record<string, string> };
@@ -112,7 +123,13 @@ describe("packaged runtime dependency closure", () => {
       join(projectRoot, "tsup.desktop.config.ts"),
       "utf8",
     );
-    expect(config).toContain('noExternal: ["zod"]');
+    // The packaged app carries no node_modules, so the sandbox preload
+    // bundles its validation code (zod) and the main process bundles the
+    // Harness home-path resolver; only Electron stays external.
+    expect(config).toContain("noExternal");
+    expect(config).toContain("/^zod$/");
+    expect(config).toContain("/^@deepseek-ai\\//");
+    expect(config).toContain('external: ["electron"]');
   });
 
   it("bundles only the inline thinking status enhancement", async () => {

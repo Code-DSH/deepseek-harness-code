@@ -130,13 +130,13 @@ describe("DeepSeek Harness Code distribution contract", () => {
       "packages/anchored-standard-plugin",
       "apps/desktop/src/startup.html",
       "build/THIRD-PARTY-NOTICES.md",
+      "build/node-runtime",
     ]) {
       expect(config).toContain(resource);
     }
     expect(config).toContain("asar: false");
-    expect(config).toContain(
-      "x64ArchFiles: Contents/Resources/app/node_modules/**/*",
-    );
+    expect(config).toContain('"!node_modules/**/*"');
+    expect(config).not.toContain("x64ArchFiles");
     expect(installerReadme).toContain(
       'xattr -dr com.apple.quarantine "/Applications/DeepSeek Harness Code.app"',
     );
@@ -148,8 +148,12 @@ describe("DeepSeek Harness Code distribution contract", () => {
     expect(verifyScript).toContain("lipo -archs");
     expect(verifyScript).toContain("hdiutil attach");
     expect(verifyScript).toContain("xattr");
-    expect(verifyScript).toContain("@deepseek-ai/dsh-compaction/package.json");
-    expect(verifyScript).toContain("@deepseek-ai/dsh-invariants/package.json");
+    expect(verifyScript).toContain("node-runtime/package.json");
+    expect(verifyScript).toContain("node-runtime/pnpm-lock.yaml");
+    expect(verifyScript).toContain("node-runtime/pnpm.mjs");
+    expect(verifyScript).toContain(
+      "packaged application still contains node_modules",
+    );
     expect(verifyScript).toContain(
       "anchored-standard-plugin/preset/agent.cordis.yml",
     );
@@ -183,13 +187,15 @@ describe("DeepSeek Harness Code distribution contract", () => {
     expect(preflightScript).toContain("thinking-status.js");
     expect(preflightScript).toContain('["pnpm", "11.19.0"]');
     expect(preflightScript).toContain('["dsh-find-plugin", "0.3.6"]');
-    expect(preflightScript).toContain("bin/pnpm.mjs");
+    expect(preflightScript).toContain("build/node-runtime");
+    expect(preflightScript).toContain("pnpmStandaloneEntry");
+    expect(preflightScript).toContain("pnpm.mjs");
     expect(preflightScript).toContain("name: 'dsh-find-plugin'");
     expect(preflightScript).toContain(
       "name: '@dsh-external/dsh-super-injector'",
     );
     expect(preflightScript).toContain("name: '@dsh-external/dsh-mode-boost'");
-    expect(verifyScript).toContain("dsh-find-plugin/package.json");
-    expect(verifyScript).toContain("pnpm/bin/pnpm.mjs");
+    expect(verifyScript).toContain("node-runtime/package.json");
+    expect(verifyScript).toContain("node-runtime/pnpm.mjs");
   });
 });

@@ -41,7 +41,7 @@ async function createPlugin(
 }
 
 describe("official Harness plugin installation", () => {
-  it("invokes the public dsh plugin command with bundled pnpm on PATH", async () => {
+  it("invokes the public dsh plugin command with the managed pnpm launcher on PATH", async () => {
     const root = await mkdtemp(join(tmpdir(), "dsh-plugin-official-"));
     const dshHome = join(root, "home");
     const runtimeBinRoot = join(root, "app-data", "runtime-bin");
@@ -62,10 +62,12 @@ describe("official Harness plugin installation", () => {
     }));
 
     const result = await ensureOfficialHarnessInstall({
-      dshEntry: "/app/node_modules/@deepseek-ai/dsh/lib/bin.js",
+      dshEntry:
+        "/user-data/node-runtime/packages/node_modules/@deepseek-ai/dsh/lib/bin.js",
       dshHome,
-      electronExecutable: "/Applications/DeepSeek Harness Code.app/Electron",
-      pnpmEntry: "/app/node_modules/pnpm/bin/pnpm.cjs",
+      nodeExecutable: "/user-data/node-runtime/node-v24.18.0/bin/node",
+      pnpmEntry: "/resources/node-runtime/pnpm.mjs",
+      pnpmStoreDir: "/user-data/node-runtime/pnpm-store",
       runtimeBinRoot,
       integratedPlugins: [
         {
@@ -97,7 +99,7 @@ describe("official Harness plugin installation", () => {
     });
     expect(runCommand).toHaveBeenCalledTimes(3);
     expect(runCommand.mock.calls[0]?.[1]).toEqual([
-      "/app/node_modules/@deepseek-ai/dsh/lib/bin.js",
+      "/user-data/node-runtime/packages/node_modules/@deepseek-ai/dsh/lib/bin.js",
       "plugin",
       "--profile",
       "web",
@@ -105,9 +107,9 @@ describe("official Harness plugin installation", () => {
       "legacy-user-plugin@1.2.3",
     ]);
     expect(runCommand.mock.calls[1]?.slice(0, 2)).toEqual([
-      "/Applications/DeepSeek Harness Code.app/Electron",
+      "/user-data/node-runtime/node-v24.18.0/bin/node",
       [
-        "/app/node_modules/@deepseek-ai/dsh/lib/bin.js",
+        "/user-data/node-runtime/packages/node_modules/@deepseek-ai/dsh/lib/bin.js",
         "plugin",
         "--profile",
         "web",
@@ -120,18 +122,17 @@ describe("official Harness plugin installation", () => {
       shell: false,
       env: {
         DSH_HOME: dshHome,
-        DHC_ELECTRON_EXECUTABLE:
-          "/Applications/DeepSeek Harness Code.app/Electron",
-        DHC_PNPM_ENTRY: "/app/node_modules/pnpm/bin/pnpm.cjs",
-        ELECTRON_RUN_AS_NODE: "1",
+        DHC_NODE_EXECUTABLE: "/user-data/node-runtime/node-v24.18.0/bin/node",
+        DHC_PNPM_ENTRY: "/resources/node-runtime/pnpm.mjs",
+        DHC_PNPM_STORE_DIR: "/user-data/node-runtime/pnpm-store",
       },
     });
     expect(options?.env.PATH?.split(delimiter)?.[0]).toBe(runtimeBinRoot);
     expect(await readFile(join(runtimeBinRoot, "pnpm"), "utf8")).toContain(
-      'exec "$DHC_ELECTRON_EXECUTABLE" "$DHC_PNPM_ENTRY" "$@"',
+      'exec "$DHC_NODE_EXECUTABLE" "$DHC_PNPM_ENTRY" --store-dir "$DHC_PNPM_STORE_DIR" "$@"',
     );
     expect(await readFile(join(runtimeBinRoot, "pnpm.cmd"), "utf8")).toContain(
-      '"%DHC_ELECTRON_EXECUTABLE%" "%DHC_PNPM_ENTRY%" %*',
+      '"%DHC_NODE_EXECUTABLE%" "%DHC_PNPM_ENTRY%" --store-dir "%DHC_PNPM_STORE_DIR%" %*',
     );
   });
 
@@ -148,8 +149,9 @@ describe("official Harness plugin installation", () => {
       ensureOfficialHarnessInstall({
         dshEntry: "/app/dsh.js",
         dshHome: join(root, "home"),
-        electronExecutable: process.execPath,
-        pnpmEntry: "/app/pnpm.cjs",
+        nodeExecutable: process.execPath,
+        pnpmEntry: "/app/pnpm.mjs",
+        pnpmStoreDir: join(root, "pnpm-store"),
         runtimeBinRoot: join(root, "runtime-bin"),
         integratedPlugins: [
           { packageName: "expected-package", packageRoot: mismatched },
@@ -167,8 +169,9 @@ describe("official Harness plugin installation", () => {
       ensureOfficialHarnessInstall({
         dshEntry: "/app/dsh.js",
         dshHome: join(root, "home"),
-        electronExecutable: process.execPath,
-        pnpmEntry: "/app/pnpm.cjs",
+        nodeExecutable: process.execPath,
+        pnpmEntry: "/app/pnpm.mjs",
+        pnpmStoreDir: join(root, "pnpm-store"),
         runtimeBinRoot: join(root, "runtime-bin"),
         integratedPlugins: [
           { packageName: "expected-package", packageRoot: mismatched },

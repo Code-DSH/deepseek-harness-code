@@ -244,7 +244,13 @@ describe("desktop plugin with the real pinned Harness", () => {
     temporaryRoots.add(root);
     const dshHome = join(root, "home");
     const runtimeBinRoot = join(root, "app-data", "runtime-bin");
-    const pnpmEntry = join(dirname(require.resolve("pnpm")), "bin", "pnpm.mjs");
+    const pnpmEntry = join(
+      dirname(require.resolve("pnpm")),
+      "artifacts",
+      "exe",
+      "dist",
+      "pnpm.mjs",
+    );
 
     async function createBundle(packageName: string): Promise<string> {
       const packageRoot = join(root, packageName.replaceAll("/", "-"));
@@ -272,8 +278,9 @@ describe("desktop plugin with the real pinned Harness", () => {
     const baseInput = {
       dshEntry,
       dshHome,
-      electronExecutable: process.execPath,
+      nodeExecutable: process.execPath,
       pnpmEntry,
+      pnpmStoreDir: join(root, "pnpm-store"),
       runtimeBinRoot,
       env: process.env,
     };
@@ -454,8 +461,15 @@ describe("desktop plugin with the real pinned Harness", () => {
     await ensureOfficialHarnessInstall({
       dshEntry: bootDshEntry,
       dshHome,
-      electronExecutable: bootElectronExecutable,
-      pnpmEntry: join(dirname(bootRequire.resolve("pnpm")), "bin", "pnpm.mjs"),
+      nodeExecutable: process.execPath,
+      pnpmEntry: join(
+        dirname(bootRequire.resolve("pnpm")),
+        "artifacts",
+        "exe",
+        "dist",
+        "pnpm.mjs",
+      ),
+      pnpmStoreDir: join(root, "pnpm-store"),
       runtimeBinRoot: join(root, "runtime-bin"),
       integratedPlugins: [
         {

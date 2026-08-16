@@ -1,8 +1,7 @@
 import { execFileSync } from "node:child_process";
 import { access, mkdtemp, readFile, readdir, rm, stat } from "node:fs/promises";
-import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
-import { dirname, join } from "node:path";
+import { join } from "node:path";
 
 const dmgPath = process.argv[2];
 if (!dmgPath)
@@ -68,21 +67,50 @@ try {
       `unexpected Anchored Standard upstream commit: ${String(anchoredUpstream.commit)}`,
     );
   }
-  const requireFromPackagedApp = createRequire(
-    join(packagedAppRoot, "package.json"),
+  const nodeRuntimeResources = [
+    "node-runtime/package.json",
+    "node-runtime/pnpm-lock.yaml",
+    "node-runtime/pnpm.mjs",
+  ].map((relativePath) => join(resourcesRoot, relativePath));
+  await Promise.all(nodeRuntimeResources.map((path) => access(path)));
+  let packagedNodeModulesPresent = true;
+  try {
+    await access(join(packagedAppRoot, "node_modules"));
+  } catch {
+    packagedNodeModulesPresent = false;
+  }
+  if (packagedNodeModulesPresent) {
+    throw new Error(
+      "packaged application still contains node_modules; the Node runtime must be installed into user data",
+    );
+  }
+  const nodeRuntimePackage = JSON.parse(
+    await readFile(join(resourcesRoot, "node-runtime", "package.json"), "utf8"),
   );
-  const runtimeModules = [
-    "@deepseek-ai/dsh-compaction/package.json",
-    "@deepseek-ai/dsh-invariants/package.json",
-    "dsh-find-plugin/package.json",
-  ].map((specifier) => ({
-    specifier,
-    path: requireFromPackagedApp.resolve(specifier),
+  if (
+    nodeRuntimePackage.dependencies?.["@deepseek-ai/dsh"] !== "0.1.0-rc.6" ||
+    nodeRuntimePackage.dependencies?.["dsh-find-plugin"] !== "0.3.6"
+  ) {
+    throw new Error(
+      "packaged node-runtime manifest does not contain the pinned Harness packages",
+    );
+  }
+  const packagedPnpmLock = await readFile(
+    join(resourcesRoot, "node-runtime", "pnpm-lock.yaml"),
+    "utf8",
+  );
+  if (
+    !packagedPnpmLock.includes("'@deepseek-ai/dsh':") ||
+    !packagedPnpmLock.includes("dsh-find-plugin:")
+  ) {
+    throw new Error(
+      "packaged node-runtime lockfile is missing the pinned Harness packages",
+    );
+  }
+  const runtimeModules = nodeRuntimeResources.map((path) => ({
+    specifier: path.slice(resourcesRoot.length + 1),
+    path,
   }));
-  const pnpmManifestPath = requireFromPackagedApp.resolve("pnpm");
-  const pnpmEntry = join(dirname(pnpmManifestPath), "bin", "pnpm.mjs");
-  await access(pnpmEntry); // packaged contract: pnpm/bin/pnpm.mjs
-  runtimeModules.push({ specifier: "pnpm/bin/pnpm.mjs", path: pnpmEntry });
   const integratedPluginArtifacts = [
     "dsh-ui-motion/package.json",
     "dsh-ui-motion/index.js",

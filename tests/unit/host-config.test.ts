@@ -38,22 +38,23 @@ describe("Electron host configuration", () => {
     });
   });
 
-  it("launches the official dsh web entry through Electron Node mode on loopback", () => {
+  it("launches the official dsh web entry through the managed Node runtime on loopback", () => {
     expect(
       createHarnessLaunchSpec({
-        electronExecutable:
-          "/Applications/DeepSeek Harness.app/Contents/MacOS/DeepSeek Harness",
-        dshEntry: "/app/node_modules/@deepseek-ai/dsh/lib/bin.js",
+        nodeExecutable:
+          "/Users/test/Library/Application Support/deepseek-harness-desktop/node-runtime/node-v24.18.0-darwin-arm64/bin/node",
+        dshEntry:
+          "/Users/test/Library/Application Support/deepseek-harness-desktop/node-runtime/packages/node_modules/@deepseek-ai/dsh/lib/bin.js",
         dshHome:
           "/Users/test/Library/Application Support/DeepSeek Harness/harness",
         port: 41234,
       }),
     ).toEqual({
       command:
-        "/Applications/DeepSeek Harness.app/Contents/MacOS/DeepSeek Harness",
+        "/Users/test/Library/Application Support/deepseek-harness-desktop/node-runtime/node-v24.18.0-darwin-arm64/bin/node",
       args: [
         "--expose-internals",
-        "/app/node_modules/@deepseek-ai/dsh/lib/bin.js",
+        "/Users/test/Library/Application Support/deepseek-harness-desktop/node-runtime/packages/node_modules/@deepseek-ai/dsh/lib/bin.js",
         "web",
         "--host",
         "127.0.0.1",
@@ -63,7 +64,6 @@ describe("Electron host configuration", () => {
       env: {
         DSH_HOME:
           "/Users/test/Library/Application Support/DeepSeek Harness/harness",
-        ELECTRON_RUN_AS_NODE: "1",
       },
     });
   });
