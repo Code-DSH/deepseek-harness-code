@@ -182,7 +182,7 @@ These are implemented controls, not a synthetic “X% less memory” claim. A re
 | Agent Presets    | Standard remains default; optional `anchored-standard` plus managed `router-standard`/`router-spec`   |
 | Recovery         | Health probes, process restart, renderer replacement, port retry, session restoration                 |
 | Watchdog         | Independent IPC process, bounded restart policy, persistent crash-loop marker                         |
-| Plugins          | Desktop settings/transition bundle, Anchored Standard bundle, and auto-loaded Routing suite           |
+| Plugins          | Desktop integration, UI Motion, Model2 Selector, Find Plugin, Routing Suite, and Anchored Standard    |
 | Diagnostics      | Startup evidence, runtime state, redacted rotating logs, open-logs action                             |
 | Security         | Sandboxed renderer, no Node integration, validated IPC, navigation policy                             |
 | Packaging        | macOS Universal DMG; Windows NSIS and Linux AppImage/deb definitions                                  |
@@ -193,7 +193,7 @@ DeepSeek Harness Code bundles the community [dsh-routing-suite](https://github.c
 
 - **Offline snapshot** - the installer ships a pinned snapshot of the suite's three components (the @dsh-external/dsh-super-injector bundle layer, the @dsh-external/dsh-mode-boost host-plane boost, and the router-standard + router-spec agent presets) inside the app resources.
 - **Pinned baseline** - the bundled snapshot records injector `0.3.3`, mode-boost `0.1.0`, router preset `0.2.0` at commit `eff787e95132d6c7104214542104a84d656b497e`, with SHA-256 digests in `build/routing-suite/versions.json`.
-- **Official installation** - on startup the desktop host runs the public `dsh plugin --profile web add` flow with its bundled pnpm runtime for the desktop bundle, Super Injector, Mode Boost, and `dsh-find-plugin`. Harness owns the profile manifest, dependency location, bundle list, and patch loading; the desktop host only manages router presets and Skills outside that CLI.
+- **Official installation** - on startup the desktop host runs the public `dsh plugin --profile web add` flow with its bundled pnpm runtime for the desktop bundle, `dsh-ui-motion`, `dsh-model2-selector`, Super Injector, Mode Boost, and `dsh-find-plugin`. Harness owns the profile manifest, dependency location, bundle list, and patch loading; the desktop host only manages router presets and Skills outside that CLI.
 - **Reviewed updates** - routing components update only with a new reviewed app release. The build verifies the exact SHA-256 of every pinned archive before extraction; the installed app never downloads or executes mutable routing code in the background.
 - **Ownership-safe** - existing unrelated plugins remain in the official profile, user-owned presets are never overwritten, and the retired app-specific Home remains intact after copy-only migration.
 

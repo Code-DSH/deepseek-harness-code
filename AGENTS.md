@@ -5,7 +5,7 @@
 - schema_version: 3
 - single_entry: true
 - repository_root: `/Users/trip/TRUE 开发/deepseek/deepseek-harness-desktop`
-- updated_at: `2026-08-16T19:39:00+08:00`
+- updated_at: `2026-08-16T20:22:00+08:00`
 - default_freshness: 10d
 - docs_entry: [docs/index.md](./docs/index.md)
 - project_entry: [docs/project/index.md](./docs/project/index.md)
@@ -16,11 +16,11 @@
 ## Current Project Snapshot
 
 - Goal: ship DeepSeek Harness Code with a cross-platform Electron shell, official-format integrated plugins, an immutable DSH Routing Suite, an optional progressive Anchored Standard Agent Preset, native Harness conversation rendering, and an independent watchdog.
-- Current phase: every local branch/worktree change is consolidated on `main`; the APP-only TypeScript/Node build is verified, the current plugin is snapshotted, and plugin/installer packaging is deferred by user direction.
+- Current phase: release `0.3.3` packages the two newly installed local Web plugins alongside the existing official-format integration set; Universal DMG production and mounted-artifact verification are in progress.
 - Primary constraints: macOS Universal local release plus native Windows/Linux CI, no global Node dependency at runtime, loopback-only Harness, unsigned macOS distribution with ad-hoc signing.
-- Active branch/worktree: `main` in `.worktrees/release-routing-suite`; the plugin snapshot is retained at `archive/desktop-plugin-before-app-merge-20260816`.
-- Build/test entry: `pnpm test`; release entry: `pnpm dist:mac` then `pnpm verify:mac release/DeepSeek-Harness-Code-0.3.2-mac-universal.dmg --universal`.
-- Current critical risk: migrated legacy registry plugins can require network access if they are absent from the official Home; the intact legacy Home remains the rollback source and installation is retried on the next launch.
+- Active branch/worktree: `release/0.3.3-integrated-plugins` in `.worktrees/release-routing-suite`; the earlier plugin snapshot remains at `archive/desktop-plugin-before-app-merge-20260816`.
+- Build/test entry: `pnpm test`; release entry: `pnpm dist:mac` then `pnpm verify:mac release/DeepSeek-Harness-Code-0.3.3-mac-universal.dmg --universal`.
+- Current critical risk: the two local plugin snapshots update only with reviewed app releases; user data and unrelated plugins remain outside the application and are never cleared by reinstall.
 
 ## User Intent Status
 
@@ -63,6 +63,7 @@
 
 | Plan                            | Status     | Current milestone                                      | Updated    | Link                                                                                |
 | ------------------------------- | ---------- | ------------------------------------------------------ | ---------- | ----------------------------------------------------------------------------------- |
+| Integrated Plugin Release 0.3.3 | active     | Universal DMG build and mounted-artifact verification  | 2026-08-16 | [Open](./docs/superpowers/plans/2026-08-16-integrated-plugin-release.md)            |
 | Official Harness installation   | active     | Final package closure and documentation gates          | 2026-08-16 | [Open](./docs/superpowers/plans/2026-08-16-official-harness-install.md)             |
 | DSH Routing Suite 0.3.0 release | complete   | Verified Universal DMG ready for user installation     | 2026-08-16 | [Open](./docs/superpowers/plans/2026-08-16-routing-suite-release.md)                |
 | Merge, release, and install     | superseded | Replaced by the 0.3.0 all-branch release plan          | 2026-08-16 | [Historical](./docs/plans/active/merge-all-branches-release-install.md)             |

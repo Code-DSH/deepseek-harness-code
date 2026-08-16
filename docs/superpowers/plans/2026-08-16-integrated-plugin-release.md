@@ -42,10 +42,10 @@
 - Modify: `scripts/check-runtime-closure.mjs`
 - Modify: `scripts/verify-macos-artifact.mjs`
 
-- [ ] Add release-preflight expectations for both plugin roots, manifests, entry files, client bundles, and bare-name patches; run preflight and observe the expected missing-artifact failure.
-- [ ] Snapshot the exact installed compiled plugin closures into the repository.
-- [ ] Package both roots as `extraResources` and reconcile them with the public plugin CLI on every startup.
-- [ ] Extend mounted-DMG verification to assert both plugin closures and patch names.
+- [x] Add release-preflight expectations for both plugin roots, manifests, entry files, client bundles, and bare-name patches; run preflight and observe the expected missing-artifact failure.
+- [x] Snapshot the exact installed compiled plugin closures into the repository.
+- [x] Package both roots as `extraResources` and reconcile them with the public plugin CLI on every startup.
+- [x] Extend mounted-DMG verification to assert both plugin closures and patch names.
 
 ### Task 3: Release metadata and documentation
 
@@ -59,8 +59,8 @@
 - Modify: `docs/operations/harness-home-migration.md`
 - Modify: `docs/plans/index.md`
 
-- [ ] Bump the local integrated release to `0.3.3`.
-- [ ] Document the seven-plugin first-launch set and ownership/preservation rules.
+- [x] Bump the local integrated release to `0.3.3`.
+- [x] Document the six-Web-plugin first-launch set plus the Anchored Standard preset and ownership/preservation rules.
 - [ ] Record the local-plugin snapshot provenance and final build evidence without including private user data.
 
 ### Task 4: Build, verify, and publish the PR
