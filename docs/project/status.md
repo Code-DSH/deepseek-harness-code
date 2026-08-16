@@ -16,7 +16,7 @@
 - Built-in modes: Standard (default), progressive `anchored-standard`, managed `router-standard` and
   `router-spec` presets; plus native two-level model selector and UI-motion integration
 - Release artifact: `release/DeepSeek-Harness-Code-0.1.0-BETA1-mac-universal.dmg`
-  (220,788,842 bytes; SHA-256 `65a0499705de58bee65aa5cb8a5e50388867f70c44faccc4fc9e13de092f18e5`; portable Node.js 24 downloaded on first launch instead of bundling node_modules)
+  (221,137,033 bytes; SHA-256 `62d381c75e0c20713dae77c6c376f6de6f2d736c422447009f19b442e3b0e75e`; portable Node.js 24 downloaded on first launch instead of bundling node_modules; Windows x64 setup `2694b7fcff41b02af068ff5db4ab292928434098432df05b38b8dbfc793223c1`)
 - Build evidence: `pnpm dist:mac` exited 0; `pnpm verify:mac release/DeepSeek-Harness-Code-0.1.0-BETA1-mac-universal.dmg --universal`
   exited 0 after mounted-image plugin/runtime/signature/architecture checks; Windows NSIS installers
   built on native Windows runners through the tag-triggered packaging workflow
