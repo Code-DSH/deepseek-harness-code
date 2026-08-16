@@ -1,7 +1,7 @@
 <div align="center">
   <img src="./build/deepseek-harness-code.png" width="136" alt="DeepSeek Harness Code icon" />
   <h1>DeepSeek Harness Code</h1>
-  <h3>The complete, modern DeepSeek Harness assembled desktop integration distribution.</h3>
+  <h3>The complete, modern DeepSeek Harness assembled desktop integration distribution — users should not have to assemble a fragile toolchain themselves; Official Harness provides the building blocks, DHC provides the assembled product.</h3>
   <p>DeepSeek Harness Code brings the full Harness runtime, plugins, Skills, tools, agent workflows, a hardened desktop host, and an independent Watchdog together in one integrated package.</p>
   <p><a href="./README.md">English</a> · <a href="./README.zh-CN.md">简体中文</a></p>
   <p><a href="#the-dhc-integration-philosophy">Integration philosophy</a> · <a href="#vision">Vision</a> · <a href="#one-complete-deepseek-harness-distribution">Complete Harness</a> · <a href="#modernizing-the-beta1-experience">BETA1 improvements</a> · <a href="#beyond-a-web-wrapper">Why it is different</a> · <a href="#built-for-long-running-work">Reliability</a> · <a href="#architecture">Architecture</a> · <a href="#build-from-source">Build</a></p>

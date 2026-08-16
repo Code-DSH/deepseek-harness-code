@@ -1,7 +1,7 @@
 <div align="center">
   <img src="./build/deepseek-harness-code.png" width="136" alt="DeepSeek Harness Code 图标" />
   <h1>DeepSeek Harness Code</h1>
-  <h3>完整、现代化的 DeepSeek Harness 组装集成桌面发行版。</h3>
+  <h3>完整、现代化的 DeepSeek Harness 组装集成桌面发行版——用户不需要自己组装一套脆弱的工具链。官方 Harness 给的是积木，DHC 给的是拼好的成品。</h3>
   <p>DeepSeek Harness Code 把完整 Harness 运行时、插件、Skills、工具、Agent 工作流、强化桌面宿主和独立 Watchdog 整合成一套开箱即用的产品。</p>
   <p><a href="./README.md">English</a> · <a href="./README.zh-CN.md">简体中文</a></p>
   <p><a href="#dhc-的集成理念">集成理念</a> · <a href="#愿景">愿景</a> · <a href="#一整套-deepseek-harness-发行版">完整 Harness</a> · <a href="#让-beta1-体验更加现代化">BETA1 改进</a> · <a href="#不只是网页套壳">为什么不同</a> · <a href="#为长期运行而设计">长期稳定性</a> · <a href="#架构">架构</a> · <a href="#从源码构建">构建</a></p>
