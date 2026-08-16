@@ -1,12 +1,12 @@
 ---
 id: knowledge.upstream-baseline
 title: Upstream Baseline
-summary: Version and official-contract evidence for Harness, packaging, and bundled conversation effects.
+summary: Version and official-contract evidence for Harness, packaging, and native conversation-rendering ownership.
 kind: knowledge
 status: canonical
 content_stage: implementation-backed
-scope: [dependencies, harness, electron, conversation-effects]
-triggers: [upgrade, upstream, plugin, questions, thinking-orbs, esbuild]
+scope: [dependencies, harness, electron, renderer]
+triggers: [upgrade, upstream, plugin, questions, renderer, esbuild]
 read_when: [changing pinned versions or official integration behavior]
 skip_when: [editing app-local styling only]
 priority: must
@@ -18,8 +18,6 @@ source_of_truth:
   - https://github.com/deepseek-ai/deepseek-harness
   - https://www.npmjs.com/package/@deepseek-ai/dsh
   - https://www.electronjs.org/docs/latest/
-  - https://github.com/Jakubantalik/thinking-orbs
-  - https://github.com/kasturikhanke/generative-loaders
   - https://esbuild.github.io/api/
 related:
   prerequisites: [../project/intent.md]
@@ -32,7 +30,7 @@ tags: [research, versions]
 
 ## Current Conclusion
 
-Pin `@deepseek-ai/dsh@0.1.0-rc.6`, Electron `43.4.0`, electron-builder `26.15.3`, `thinking-orbs@0.3.1`, and esbuild `0.25.12`. ReactDOM `18.3.1` is pinned only as a development dependency for real React overlay mounting tests. Harness supplies the official user-question packages and Cordis bundle mechanism; this project composes them rather than defining replacements. `generative-loaders@0.1.1` is an MIT-licensed visual reference only and is not a runtime dependency.
+Pin `@deepseek-ai/dsh@0.1.0-rc.6`, Electron `43.4.0`, electron-builder `26.15.3`, and esbuild `0.25.12`. Harness supplies the official user-question packages, Cordis bundle mechanism, and conversation UI; this project composes the official UI rather than adding a thinking/status overlay.
 
 ## Evidence
 
@@ -42,10 +40,7 @@ Pin `@deepseek-ai/dsh@0.1.0-rc.6`, Electron `43.4.0`, electron-builder `26.15.3`
 | 2026-08-15   | [npm: @deepseek-ai/dsh](https://www.npmjs.com/package/@deepseek-ai/dsh)                                        | 0.1.0-rc.6                                                                   | CLI package baseline                                                                              | high       |
 | 2026-08-15   | [Electron releases](https://releases.electronjs.org/)                                                          | 43.4.0                                                                       | Chromium desktop runtime baseline                                                                 | high       |
 | 2026-08-15   | [electron-builder](https://www.electron.build/)                                                                | 26.15.3                                                                      | macOS universal and DMG packaging baseline                                                        | high       |
-| 2026-08-16   | [thinking-orbs repository](https://github.com/Jakubantalik/thinking-orbs) and npm registry metadata            | 0.3.1                                                                        | 20-pixel preset, speed multiplier, automatic theme, reduced-motion static frame, MIT license      | high       |
-| 2026-08-16   | [generative-loaders repository](https://github.com/kasturikhanke/generative-loaders) and npm registry metadata | 0.1.1                                                                        | MIT-licensed dissolve visual reference; the plain-text component is not bundled                   | high       |
 | 2026-08-16   | [esbuild bundle API](https://esbuild.github.io/api/) and workspace lock                                        | 0.25.12                                                                      | Recursively bundles local/third-party client code while preserving the declared Harness externals | high       |
-| 2026-08-16   | Workspace manifest and lock                                                                                    | ReactDOM 18.3.1                                                              | Development-only real `createRoot` browser test runtime; not shipped as a plugin runtime external | high       |
 | 2026-08-16   | Pinned installed Harness packages                                                                              | `@deepseek-ai/dsh-llm-deepseek`, `dsh-base`, and `dsh-web-app` 0.1.0-rc.6    | V4 Pro/Flash catalog, official reasoning efforts, Skills, tools, workflows, and supporting UI     | high       |
 
 ## V4 Pro and Integrated Toolchain
@@ -71,6 +66,4 @@ Project versions are exact even if newer upstream releases appear. Revalidate be
 - The rc.6 Agent Preset roster automatically scans `<DSH_HOME>/.agent-presets`. Preset-local `system-prompt/assemble`, `session/event`, and `agent/pre-step` hooks can implement event-derived schema phases without recompose or private transport mutation.
 - The official Web boot graph in the packaged app contains 39 client entries, including `@deepseek-ai/dsh-client-ui-user-questions` and `deepseek-harness-desktop-plugin`.
 - rc.6 package scanning does not discover this graph from the tested ASAR layout, so the release uses an unpacked application tree.
-- The desktop client bundle inlines `thinking-orbs` and local conversation controllers. Its only related runtime externals are Harness-provided React, `react/jsx-runtime`, and UI primitives; preflight rejects unresolved animation imports.
-- `thinking-orbs` renders a monochrome canvas, supports the approved 20-pixel breathing configuration, and provides its own reduced-motion static behavior. The plugin hides that canvas from accessibility because the native Harness polite status remains authoritative.
-- Full MIT text for `thinking-orbs` and the adapted `generative-loaders` visual reference ships in `desktop-plugin/THIRD_PARTY_NOTICES.md`.
+- The desktop client does not add conversation paint. The only related runtime externals are Harness-provided React, `react/jsx-runtime`, and UI primitives; preflight rejects retired animation imports.

@@ -8,9 +8,6 @@ const manifest = JSON.parse(
   await readFile(join(projectRoot, "package.json"), "utf8"),
 );
 const requireFromProject = createRequire(join(projectRoot, "package.json"));
-const requireFromDesktopPlugin = createRequire(
-  join(projectRoot, "packages", "desktop-plugin", "package.json"),
-);
 
 const criticalRuntimeVersions = new Map([
   ["@deepseek-ai/dsh", "0.1.0-rc.6"],
@@ -20,8 +17,6 @@ const criticalRuntimeVersions = new Map([
   ["@deepseek-ai/dsh-client-ui-primitives", "0.1.0-rc.6"],
 ]);
 
-const criticalBundledPluginVersions = new Map([["thinking-orbs", "0.3.1"]]);
-
 const runtimeArtifacts = [
   "dist/desktop/main.js",
   "dist/desktop/preload.js",
@@ -30,7 +25,6 @@ const runtimeArtifacts = [
   "packages/desktop-plugin/client.js",
   "packages/desktop-plugin/index.js",
   "packages/desktop-plugin/cordis.patch.yml",
-  "packages/desktop-plugin/THIRD_PARTY_NOTICES.md",
   "packages/anchored-standard-plugin/package.json",
   "packages/anchored-standard-plugin/preset/agent.cordis.yml",
   "packages/anchored-standard-plugin/preset/preset.yml",
@@ -73,25 +67,13 @@ for (const [name, expectedVersion] of criticalRuntimeVersions) {
   }
 }
 
-for (const [name, expectedVersion] of criticalBundledPluginVersions) {
-  const packagePath = requireFromDesktopPlugin.resolve(`${name}/package.json`);
-  const installed = JSON.parse(await readFile(packagePath, "utf8"));
-  if (installed.version !== expectedVersion) {
-    throw new Error(
-      `${name} bundled plugin version ${installed.version} does not match ${expectedVersion}`,
-    );
-  }
-}
-
 const pluginClient = await readFile(
   join(projectRoot, "packages", "desktop-plugin", "client.js"),
   "utf8",
 );
 for (const unresolved of [
-  'require("thinking-orbs")',
   'require("./stream-output-model.js")',
   'require("./stream-output-controller.js")',
-  'require("./thinking-status.js")',
 ]) {
   if (pluginClient.includes(unresolved)) {
     throw new Error(
@@ -105,6 +87,6 @@ process.stdout.write(
     runtimeArtifacts: runtimeArtifacts.length,
     productionDependencies: resolvedDependencies.length,
     criticalRuntimePackages: criticalRuntimeVersions.size,
-    bundledPluginPackages: criticalBundledPluginVersions.size,
+    bundledPluginPackages: 0,
   })}\n`,
 );

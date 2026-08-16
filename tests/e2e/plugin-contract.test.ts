@@ -193,29 +193,21 @@ describe("desktop plugin package contract", () => {
     });
     expect(manifest.exports?.["./client"]?.default).toBe("./client.js");
     expect(manifest.exports?.["./package.json"]).toBe("./package.json");
-    expect(manifest.dependencies?.["thinking-orbs"]).toBe("0.3.1");
+    expect(manifest.dependencies?.["thinking-orbs"]).toBeUndefined();
     expect(manifest.devDependencies?.esbuild).toBe("0.25.12");
-    expect(manifest.files).toContain("THIRD_PARTY_NOTICES.md");
+    expect(manifest.files).not.toContain("THIRD_PARTY_NOTICES.md");
     expect(patch).toMatch(new RegExp(`name: ["']${packageName}["']`));
     expect(registration.id).toBe(packageName);
-    expect(client).not.toContain('require("thinking-orbs")');
+    expect(client).not.toContain("ThinkingOrb");
+    expect(client).not.toContain("data-dsh-desktop-thinking-orb");
     expect(Object.keys(module).sort()).toEqual([
-      "ConversationEffectsOverlay",
       "DESKTOP_LOCALES",
       "DesktopSettingsRow",
-      "THINKING_ORB_PROPS",
       "apply",
       "createDesktopSettingsModel",
-      "findRunningStatus",
       "inject",
-      "installThinkingStatus",
       "installTransitions",
     ]);
-    expect(module.THINKING_ORB_PROPS).toEqual({
-      state: "breathing",
-      size: 20,
-      speed: 2,
-    });
     expect(module.inject).toEqual(["slots", "locale"]);
     expect(manifest.dsh?.client?.inject).toContain(
       "@deepseek-ai/dsh-client-locale",
@@ -274,7 +266,7 @@ describe("desktop plugin package contract", () => {
     expect(questionClient).toContain("PendingQuestion = class");
   });
 
-  it("registers settings and conversation overlays only in the desktop shell", () => {
+  it("registers desktop settings without a global conversation overlay", () => {
     const { module } = loadClientExports();
     const apply = module.apply as ClientApply;
     const injects: string[] = [];
@@ -298,54 +290,19 @@ describe("desktop plugin package contract", () => {
 
     const desktop = loadClientExports({ deepseekDesktop: {} });
     (desktop.module.apply as ClientApply)(ctx);
-    expect(injects).toEqual(["settings.general.item", "shell.overlay"]);
+    expect(injects).toEqual(["settings.general.item"]);
   });
 
-  it("hides the native status only after the breathing orb commits", () => {
-    const dom = new JSDOM(
-      `<!doctype html><html><body><div data-chat-flow>
-        <div role="status" aria-live="polite" id="running">正在生成</div>
-      </div></body></html>`,
-      { url: "https://harness.test/session" },
-    );
-    const anchor = dom.window.document.querySelector("#running") as HTMLElement;
-    const layoutEffects: Array<() => void | (() => void)> = [];
-    const snapshot = { anchor, left: 42, top: 103 };
-    const { module } = loadClientExports(
-      dom.window as unknown as Record<string, unknown>,
-      dom.window.document,
-      {
-        useState: () => [snapshot, () => undefined],
-        useEffect: () => undefined,
-        useLayoutEffect: (effect: () => void | (() => void)) => {
-          layoutEffects.push(effect);
-        },
-      },
+  it("leaves the native thinking state inside the official chat flow", () => {
+    const source = readFileSync(
+      join(pluginRoot, "src", "client-runtime.js"),
+      "utf8",
     );
 
-    const rendered = (
-      module.ConversationEffectsOverlay as () => {
-        props: Record<string, unknown>;
-        children: Array<{ props: Record<string, unknown> }>;
-      }
-    )();
-    expect(anchor.hasAttribute("data-dsh-desktop-thinking-source")).toBe(false);
-    expect(rendered.props).toMatchObject({
-      "data-dsh-desktop-thinking-orb": "",
-      "aria-hidden": "true",
-      style: { left: 42, top: 103 },
-    });
-    expect(rendered.children[0]?.props).toMatchObject({
-      state: "breathing",
-      size: 20,
-      speed: 2,
-      "aria-hidden": "true",
-    });
-
-    const cleanup = layoutEffects[0]?.();
-    expect(anchor.hasAttribute("data-dsh-desktop-thinking-source")).toBe(true);
-    cleanup?.();
-    expect(anchor.hasAttribute("data-dsh-desktop-thinking-source")).toBe(false);
+    expect(source).not.toContain('name: "shell.overlay"');
+    expect(source).not.toContain("data-dsh-desktop-thinking-source");
+    expect(source).not.toContain("data-dsh-desktop-thinking-orb");
+    expect(source).not.toContain("position: fixed");
   });
 
   it("uses the official locale service for balanced Chinese and English settings copy", () => {
@@ -488,7 +445,7 @@ describe("desktop plugin package contract", () => {
     const wrappedPushState = desktopWindow.history.pushState;
     const second = apply(ctx);
 
-    expect(registrations).toBe(2);
+    expect(registrations).toBe(1);
     expect(desktopWindow.history.pushState).toBe(wrappedPushState);
     expect(listeners.get("popstate")?.size).toBe(1);
     first();
@@ -499,7 +456,7 @@ describe("desktop plugin package contract", () => {
     expect(desktopWindow.history.pushState).toBe(pushState);
     expect(desktopWindow.history.replaceState).toBe(replaceState);
     expect(listeners.get("popstate")?.size).toBe(0);
-    expect(slotDisposals).toBe(2);
+    expect(slotDisposals).toBe(1);
   });
 
   it("runs only the bridge actions and cleans up its runtime subscription", async () => {
@@ -740,7 +697,7 @@ describe("desktop plugin package contract", () => {
     expect(root.dataset.dshDesktopTransition).toBe("css");
   });
 
-  it("installs only non-text conversation effects with the desktop styles", () => {
+  it("installs desktop chrome styles without a conversation overlay", () => {
     const dom = new JSDOM(
       "<!doctype html><html><head></head><body></body></html>",
       {
@@ -765,8 +722,12 @@ describe("desktop plugin package contract", () => {
     );
 
     expect(style?.textContent).not.toContain("[data-dsh-stream-overlay]");
-    expect(style?.textContent).toContain("[data-dsh-desktop-thinking-source]");
-    expect(style?.textContent).toContain("[data-dsh-desktop-thinking-orb]");
+    expect(style?.textContent).not.toContain(
+      "[data-dsh-desktop-thinking-source]",
+    );
+    expect(style?.textContent).not.toContain(
+      "[data-dsh-desktop-thinking-orb]",
+    );
     dispose();
   });
 

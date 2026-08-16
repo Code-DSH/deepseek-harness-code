@@ -49,7 +49,6 @@
 | Electron         | 43.4.0          | Desktop Chromium host     | active | 2026-08-15 | [Upstream baseline](./docs/knowledge/upstream-baseline.md) |
 | DeepSeek Harness | 0.1.0-rc.6      | Web app and agent runtime | active | 2026-08-15 | [Upstream baseline](./docs/knowledge/upstream-baseline.md) |
 | electron-builder | 26.15.3         | App and DMG packaging     | active | 2026-08-15 | [Upstream baseline](./docs/knowledge/upstream-baseline.md) |
-| thinking-orbs    | 0.3.1           | Active generation canvas  | active | 2026-08-16 | [Upstream baseline](./docs/knowledge/upstream-baseline.md) |
 | esbuild          | 0.25.12         | Offline plugin bundling   | active | 2026-08-16 | [Upstream baseline](./docs/knowledge/upstream-baseline.md) |
 
 ## Knowledge Topic Index
@@ -65,7 +64,7 @@
 | --------------------------- | -------- | ------------------------------------------------- | ---------- | ---------------------------------------------------------------------- |
 | Merge, release, and install | active   | Branch integration and clean release verification | 2026-08-16 | [Open](./docs/plans/active/merge-all-branches-release-install.md)      |
 | DeepSeek Harness Code 0.2.0 | active   | Final Universal packaging and acceptance          | 2026-08-16 | [Open](./docs/plans/active/deepseek-harness-desktop.md)                |
-| Streaming output animation  | complete | Integrated into the all-branch release candidate  | 2026-08-16 | [Open](./docs/superpowers/plans/2026-08-16-stream-output-animation.md) |
+| Streaming output animation  | retired | Reverted to the official renderer after stream and layering defects | 2026-08-16 | [Historical record](./docs/superpowers/plans/2026-08-16-stream-output-animation.md) |
 
 ## Known Risks and Open Questions
 

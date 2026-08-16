@@ -11,10 +11,6 @@ const runtimeSource = await readFile(
   "utf8",
 );
 const transitions = await readFile(join(sourceRoot, "transitions.css"), "utf8");
-const conversationEffects = await readFile(
-  join(sourceRoot, "conversation-effects.css"),
-  "utf8",
-);
 const result = await build({
   absWorkingDir: packageRoot,
   stdin: {
@@ -35,7 +31,6 @@ const result = await build({
   ],
   define: {
     TRANSITION_STYLES: JSON.stringify(transitions),
-    CONVERSATION_EFFECT_STYLES: JSON.stringify(conversationEffects),
   },
   legalComments: "none",
 });

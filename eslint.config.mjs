@@ -50,7 +50,6 @@ export default [
       globals: {
         Buffer: "readonly",
         TRANSITION_STYLES: "readonly",
-        CONVERSATION_EFFECT_STYLES: "readonly",
         URL: "readonly",
         clearTimeout: "readonly",
         console: "readonly",

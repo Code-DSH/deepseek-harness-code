@@ -8,20 +8,19 @@ Live acceptance is separate: credentials are entered in the Harness UI by the us
 
 ## Current Desktop Rendering Contract
 
-The desktop bundle leaves streamed prose and reasoning to the official Harness DOM. It does not install a text mask, fixed-position glyph overlay, particle effect, or DOM-mutation-driven page animation. On macOS it reserves a 40-pixel top content inset for native traffic lights. Superpowers 6.2.0 is copied from the packaged resource into the app-owned `DSH_HOME/skills` root at startup; an unmarked same-named skill directory remains untouched.
+The desktop bundle leaves streamed prose, Think disclosures, and running status to the official Harness DOM. It does not install a text mask, fixed-position glyph overlay, particle effect, fixed-position thinking indicator, native-status mutation, or DOM-mutation-driven page animation. On macOS it reserves a 40-pixel top content inset for native traffic lights. Superpowers 6.2.0 is copied from the packaged resource into the app-owned `DSH_HOME/skills` root at startup; an unmarked same-named skill directory remains untouched.
 
 ## Verified on 2026-08-16
 
-- Unit/state/security and conversation DOM behavior: 25 files, 97 tests covering the desktop host, watchdog, progressive preset installer, stream-output model/controller, and ThinkingOrb lifecycle.
+- Unit/state/security and plugin contracts cover the desktop host, watchdog, progressive preset installer, native conversation-rendering boundary, and absence of a global thinking overlay.
 - Vendored Anchored Standard implementation: 108 upstream and local-patch tests.
 - Anchored Standard coverage includes exact two-tool bootstrap, both promotion events, automatic-context filtering, explicit unlock recovery, session isolation, subagent residency, compaction epochs, strict missing-tool failures, official rc.6 discovery/session creation, conflict preservation, and atomic upgrades.
 - Package contract: 1 file, 4 tests.
 - Plugin and real-Harness integration: 3 files, 22 tests covering the official plugin contract, deterministic client build, progressive preset roster/session creation, serialized two-tool and resident five-tool requests, and the real pinned-Harness boot graph. The readiness helper retries only route-level 404 responses because rc.6 can serve the Web root before Cordis registers `agentPreset.list`.
-- Playwright browser acceptance: 5 Chromium tests. One mounts the generated plugin with real React 18 `createRoot` and the bundled `ThinkingOrb`, proving canvas-first native-status hiding, exact 20-pixel placement, reduced-motion frame quiescence, completion cleanup, and React unmount cleanup. Three cover appended prose/reasoning dissolve, exclusion boundaries, sampled source colors, unchanged geometry, localized running-status lifecycle, and five-second post-generation quiescence; one covers desktop slot registration, route-transition commit, and cleanup.
-- Controller regressions cover attachment-time hydration baselines, emoji modifier/ZWJ append boundaries, a 120-live-glyph/72-particle-node ceiling, and fail-open visibility for a 300-grapheme burst.
+- Browser acceptance covers desktop slot registration, route-transition commit, and cleanup. Custom text and thinking animation acceptance tests were retired with those overlays; official Harness owns those states.
 - TypeScript, ESLint, Prettier, 31-file documentation-link validation, and the 7-control static security contract pass as release gates.
-- Runtime closure verifies 12 local artifacts, 32 production dependencies, five critical Harness packages, `thinking-orbs@0.3.1`, plugin license notices, and the absence of unresolved animation-module imports in `client.js`.
-- The conversation idle sample recorded no additional animation frames and retained no plugin overlay, CSS Highlight, Orb, or status marker for five seconds after completion.
+- Runtime closure verifies the local runtime artifacts and critical Harness packages, and rejects unresolved retired animation-module imports in `client.js`.
+- The desktop plugin has no conversation overlay, CSS Highlight, Orb, or status marker to retain after completion.
 - Fault injection recovered a killed Harness in nine seconds. Killing the renderer rebuilt the window while preserving the Electron main and Harness PIDs.
 - The 0.2.0 Universal package was mounted and signature-checked; the pinned preset/provenance resource set was present and 49 Mach-O files passed Universal/architecture-qualified inspection.
 - A real Electron run verified the grouped preload API, text input and full selection, Standard workspace creation after the compaction-peer repair, permission-menu persistence, localized General settings, official Harness Button/Menu rendering with no raw select/checkbox, close-preference persistence, and `Control+V` paste into the official password field without reading a credential.
