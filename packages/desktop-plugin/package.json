@@ -61,6 +61,7 @@
     "build:client": "node ./scripts/build-client.mjs"
   },
   "devDependencies": {
-    "esbuild": "0.25.12"
+    "esbuild": "0.25.12",
+    "react-dom": "18.3.1"
   }
 }

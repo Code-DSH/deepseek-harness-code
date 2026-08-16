@@ -9,6 +9,8 @@ const HIGHLIGHT_NAME = "dsh-desktop-stream-mask";
 const DISSOLVE_DURATION_MS = 460;
 const MAX_STAGGER_MS = 200;
 const CLEANUP_DEADLINE_MS = 700;
+const MAX_LIVE_GLYPHS = 120;
+const MAX_PARTICLE_GLYPHS = 24;
 
 function mediaQueryOf(win) {
   return typeof win.matchMedia === "function"
@@ -22,6 +24,15 @@ function textNodesIn(node) {
   return [];
 }
 
+function streamingRootsIn(node) {
+  const roots = [];
+  if (node?.nodeType === 1 && node.matches(STREAMING_ASSISTANT_SELECTOR))
+    roots.push(node);
+  if (typeof node?.querySelectorAll === "function")
+    roots.push(...node.querySelectorAll(STREAMING_ASSISTANT_SELECTOR));
+  return roots;
+}
+
 export function createStreamOutputEffectController({
   document: doc,
   window: win,
@@ -33,7 +44,9 @@ export function createStreamOutputEffectController({
   let started = false;
   let disposed = false;
   let snapshots = new WeakMap();
+  let knownStreamingRoots = new WeakSet();
   let pending = [];
+  let activeParticleGlyphs = 0;
   const activeEffects = new Set();
   const effectsBySource = new Map();
   const reducedMotion = mediaQueryOf(win);
@@ -63,6 +76,7 @@ export function createStreamOutputEffectController({
     win.clearTimeout(effect.timer);
     highlight?.delete(effect.range);
     effect.glyph.remove();
+    if (effect.hasParticles) activeParticleGlyphs -= 1;
     const sourceEffects = effectsBySource.get(effect.source);
     sourceEffects?.delete(effect);
     if (sourceEffects?.size === 0) effectsBySource.delete(effect.source);
@@ -113,7 +127,7 @@ export function createStreamOutputEffectController({
     }
   };
 
-  const createGlyph = (entry, range, rect, computed) => {
+  const createGlyph = (entry, range, rect, computed, withParticles) => {
     const glyph = doc.createElement("span");
     glyph.dataset.dshStreamGlyph = "";
     glyph.appendChild(doc.createTextNode(entry.text));
@@ -125,7 +139,8 @@ export function createStreamOutputEffectController({
     const delay = Math.min(entry.order * 20, MAX_STAGGER_MS);
     glyph.style.setProperty("--dsh-stream-delay", `${delay}ms`);
     copyTypography(glyph, computed);
-    if (!/^\s+$/u.test(entry.text)) {
+    const hasParticles = withParticles && !/^\s+$/u.test(entry.text);
+    if (hasParticles) {
       for (let index = 0; index < 3; index += 1) {
         const particle = doc.createElement("i");
         particle.dataset.dshStreamParticle = String(index);
@@ -139,12 +154,14 @@ export function createStreamOutputEffectController({
       range,
       glyph,
       timer: 0,
+      hasParticles,
     };
     effect.timer = win.setTimeout(
       () => removeEffect(effect),
       Math.min(CLEANUP_DEADLINE_MS, DISSOLVE_DURATION_MS + delay),
     );
     activeEffects.add(effect);
+    if (hasParticles) activeParticleGlyphs += 1;
     const sourceEffects = effectsBySource.get(entry.source) ?? new Set();
     sourceEffects.add(effect);
     effectsBySource.set(entry.source, sourceEffects);
@@ -159,6 +176,7 @@ export function createStreamOutputEffectController({
     const batch = pending;
     pending = [];
     for (const entry of batch) {
+      if (activeEffects.size >= MAX_LIVE_GLYPHS) break;
       if (
         !entry.source.isConnected ||
         !isEligibleStreamTextNode(entry.source) ||
@@ -173,7 +191,13 @@ export function createStreamOutputEffectController({
         const rect = range.getBoundingClientRect();
         const parent = entry.source.parentElement;
         if (!parent || rect.width <= 0 || rect.height <= 0) continue;
-        createGlyph(entry, range, rect, win.getComputedStyle(parent));
+        createGlyph(
+          entry,
+          range,
+          rect,
+          win.getComputedStyle(parent),
+          activeParticleGlyphs < MAX_PARTICLE_GLYPHS,
+        );
       } catch {
         cancelSource(entry.source);
       }
@@ -183,6 +207,8 @@ export function createStreamOutputEffectController({
   const schedule = (entries) => {
     if (entries.length === 0 || !animationAllowed()) return;
     pending.push(...entries);
+    if (pending.length > MAX_LIVE_GLYPHS)
+      pending = pending.slice(-MAX_LIVE_GLYPHS);
     if (frameId === undefined)
       frameId = win.requestAnimationFrame(flushPending);
   };
@@ -203,9 +229,8 @@ export function createStreamOutputEffectController({
   };
 
   const baseline = (root = doc) => {
-    for (const streamingRoot of root.querySelectorAll(
-      STREAMING_ASSISTANT_SELECTOR,
-    )) {
+    for (const streamingRoot of streamingRootsIn(root)) {
+      knownStreamingRoots.add(streamingRoot);
       for (const node of eligibleTextNodes(streamingRoot))
         snapshots.set(node, node.data);
     }
@@ -223,18 +248,24 @@ export function createStreamOutputEffectController({
       if (record.type === "attributes") {
         cancelAll();
         snapshots = new WeakMap();
-        if (record.target.hasAttribute("data-streaming"))
-          baseline(record.target);
+        knownStreamingRoots = new WeakSet();
+        baseline();
         continue;
       }
       for (const removed of record.removedNodes) {
+        for (const streamingRoot of streamingRootsIn(removed))
+          knownStreamingRoots.delete(streamingRoot);
         for (const source of textNodesIn(removed)) cancelSource(source);
       }
       const replacement = record.removedNodes.length > 0;
       for (const added of record.addedNodes) {
+        for (const streamingRoot of streamingRootsIn(added)) {
+          if (!knownStreamingRoots.has(streamingRoot)) baseline(streamingRoot);
+        }
         for (const source of textNodesIn(added)) {
           if (!isEligibleStreamTextNode(source)) continue;
-          if (replacement) snapshots.set(source, source.data);
+          if (replacement || snapshots.has(source))
+            snapshots.set(source, source.data);
           else processText(source, "");
         }
       }
@@ -253,6 +284,7 @@ export function createStreamOutputEffectController({
     cancelAll();
     releasePaintResources();
     snapshots = new WeakMap();
+    knownStreamingRoots = new WeakSet();
     baseline();
     if (!reducedMotion?.matches) ensurePaintResources();
   };

@@ -24,6 +24,11 @@ describe("stream output model", () => {
     expect(findAppendedGraphemes("", "\u0301")).toBeNull();
   });
 
+  it("rejects appends that extend the preceding emoji grapheme", () => {
+    expect(findAppendedGraphemes("👋", "👋🏽")).toBeNull();
+    expect(findAppendedGraphemes("👩", "👩‍💻")).toBeNull();
+  });
+
   it("accepts only prose and reasoning text in a streaming assistant row", () => {
     const dom = new JSDOM(`<!doctype html><body>
       <div data-chat-flow-kind="assistant-step">

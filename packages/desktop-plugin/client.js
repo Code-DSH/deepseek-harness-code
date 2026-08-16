@@ -455,13 +455,17 @@ var require_dist = __commonJS({
 // src/stream-output-model.js
 function findAppendedGraphemes(previous, next, segmenter = graphemeSegmenter) {
   if (!next.startsWith(previous)) return null;
-  const suffix = next.slice(previous.length);
-  const parts = [...segmenter.segment(suffix)];
-  if (parts[0]?.index === 0 && /^\p{Mark}/u.test(parts[0].segment)) return null;
-  return parts.map((part, order) => ({
+  if (next === previous) return [];
+  const parts = [...segmenter.segment(next)];
+  const appendStartsAtBoundary = previous.length === 0 || parts.some((part) => part.index === previous.length);
+  if (!appendStartsAtBoundary) return null;
+  const appended = parts.filter((part) => part.index >= previous.length);
+  if (previous.length === 0 && appended[0]?.index === 0 && /^\p{Mark}/u.test(appended[0].segment))
+    return null;
+  return appended.map((part, order) => ({
     text: part.segment,
-    start: previous.length + part.index,
-    end: previous.length + part.index + part.segment.length,
+    start: part.index,
+    end: part.index + part.segment.length,
     order
   }));
 }
@@ -521,6 +525,14 @@ function textNodesIn(node) {
   if (node?.nodeType === 1) return eligibleTextNodes(node);
   return [];
 }
+function streamingRootsIn(node) {
+  const roots = [];
+  if (node?.nodeType === 1 && node.matches(STREAMING_ASSISTANT_SELECTOR))
+    roots.push(node);
+  if (typeof node?.querySelectorAll === "function")
+    roots.push(...node.querySelectorAll(STREAMING_ASSISTANT_SELECTOR));
+  return roots;
+}
 function createStreamOutputEffectController({
   document: doc,
   window: win
@@ -532,7 +544,9 @@ function createStreamOutputEffectController({
   let started = false;
   let disposed = false;
   let snapshots = /* @__PURE__ */ new WeakMap();
+  let knownStreamingRoots = /* @__PURE__ */ new WeakSet();
   let pending = [];
+  let activeParticleGlyphs = 0;
   const activeEffects = /* @__PURE__ */ new Set();
   const effectsBySource = /* @__PURE__ */ new Map();
   const reducedMotion = mediaQueryOf(win);
@@ -556,6 +570,7 @@ function createStreamOutputEffectController({
     win.clearTimeout(effect.timer);
     highlight?.delete(effect.range);
     effect.glyph.remove();
+    if (effect.hasParticles) activeParticleGlyphs -= 1;
     const sourceEffects = effectsBySource.get(effect.source);
     sourceEffects?.delete(effect);
     if (sourceEffects?.size === 0) effectsBySource.delete(effect.source);
@@ -601,7 +616,7 @@ function createStreamOutputEffectController({
       if (computed[property]) target.style[property] = computed[property];
     }
   };
-  const createGlyph = (entry, range, rect, computed) => {
+  const createGlyph = (entry, range, rect, computed, withParticles) => {
     const glyph = doc.createElement("span");
     glyph.dataset.dshStreamGlyph = "";
     glyph.appendChild(doc.createTextNode(entry.text));
@@ -613,7 +628,8 @@ function createStreamOutputEffectController({
     const delay = Math.min(entry.order * 20, MAX_STAGGER_MS);
     glyph.style.setProperty("--dsh-stream-delay", `${delay}ms`);
     copyTypography(glyph, computed);
-    if (!/^\s+$/u.test(entry.text)) {
+    const hasParticles = withParticles && !/^\s+$/u.test(entry.text);
+    if (hasParticles) {
       for (let index = 0; index < 3; index += 1) {
         const particle = doc.createElement("i");
         particle.dataset.dshStreamParticle = String(index);
@@ -626,13 +642,15 @@ function createStreamOutputEffectController({
       source: entry.source,
       range,
       glyph,
-      timer: 0
+      timer: 0,
+      hasParticles
     };
     effect.timer = win.setTimeout(
       () => removeEffect(effect),
       Math.min(CLEANUP_DEADLINE_MS, DISSOLVE_DURATION_MS + delay)
     );
     activeEffects.add(effect);
+    if (hasParticles) activeParticleGlyphs += 1;
     const sourceEffects = effectsBySource.get(entry.source) ?? /* @__PURE__ */ new Set();
     sourceEffects.add(effect);
     effectsBySource.set(entry.source, sourceEffects);
@@ -646,6 +664,7 @@ function createStreamOutputEffectController({
     const batch = pending;
     pending = [];
     for (const entry of batch) {
+      if (activeEffects.size >= MAX_LIVE_GLYPHS) break;
       if (!entry.source.isConnected || !isEligibleStreamTextNode(entry.source) || entry.source.data.slice(entry.start, entry.end) !== entry.text) {
         continue;
       }
@@ -656,7 +675,13 @@ function createStreamOutputEffectController({
         const rect = range.getBoundingClientRect();
         const parent = entry.source.parentElement;
         if (!parent || rect.width <= 0 || rect.height <= 0) continue;
-        createGlyph(entry, range, rect, win.getComputedStyle(parent));
+        createGlyph(
+          entry,
+          range,
+          rect,
+          win.getComputedStyle(parent),
+          activeParticleGlyphs < MAX_PARTICLE_GLYPHS
+        );
       } catch {
         cancelSource(entry.source);
       }
@@ -665,6 +690,8 @@ function createStreamOutputEffectController({
   const schedule = (entries) => {
     if (entries.length === 0 || !animationAllowed()) return;
     pending.push(...entries);
+    if (pending.length > MAX_LIVE_GLYPHS)
+      pending = pending.slice(-MAX_LIVE_GLYPHS);
     if (frameId === void 0)
       frameId = win.requestAnimationFrame(flushPending);
   };
@@ -683,9 +710,8 @@ function createStreamOutputEffectController({
     schedule(appended.map((entry) => ({ ...entry, source })));
   };
   const baseline = (root = doc) => {
-    for (const streamingRoot of root.querySelectorAll(
-      STREAMING_ASSISTANT_SELECTOR
-    )) {
+    for (const streamingRoot of streamingRootsIn(root)) {
+      knownStreamingRoots.add(streamingRoot);
       for (const node of eligibleTextNodes(streamingRoot))
         snapshots.set(node, node.data);
     }
@@ -702,18 +728,24 @@ function createStreamOutputEffectController({
       if (record.type === "attributes") {
         cancelAll();
         snapshots = /* @__PURE__ */ new WeakMap();
-        if (record.target.hasAttribute("data-streaming"))
-          baseline(record.target);
+        knownStreamingRoots = /* @__PURE__ */ new WeakSet();
+        baseline();
         continue;
       }
       for (const removed of record.removedNodes) {
+        for (const streamingRoot of streamingRootsIn(removed))
+          knownStreamingRoots.delete(streamingRoot);
         for (const source of textNodesIn(removed)) cancelSource(source);
       }
       const replacement = record.removedNodes.length > 0;
       for (const added of record.addedNodes) {
+        for (const streamingRoot of streamingRootsIn(added)) {
+          if (!knownStreamingRoots.has(streamingRoot)) baseline(streamingRoot);
+        }
         for (const source of textNodesIn(added)) {
           if (!isEligibleStreamTextNode(source)) continue;
-          if (replacement) snapshots.set(source, source.data);
+          if (replacement || snapshots.has(source))
+            snapshots.set(source, source.data);
           else processText(source, "");
         }
       }
@@ -731,6 +763,7 @@ function createStreamOutputEffectController({
     cancelAll();
     releasePaintResources();
     snapshots = /* @__PURE__ */ new WeakMap();
+    knownStreamingRoots = /* @__PURE__ */ new WeakSet();
     baseline();
     if (!reducedMotion?.matches) ensurePaintResources();
   };
@@ -776,7 +809,7 @@ function installStreamOutputEffects(doc = document, win = window) {
   controller.start();
   return () => controller.dispose();
 }
-var HIGHLIGHT_NAME, DISSOLVE_DURATION_MS, MAX_STAGGER_MS, CLEANUP_DEADLINE_MS;
+var HIGHLIGHT_NAME, DISSOLVE_DURATION_MS, MAX_STAGGER_MS, CLEANUP_DEADLINE_MS, MAX_LIVE_GLYPHS, MAX_PARTICLE_GLYPHS;
 var init_stream_output_controller = __esm({
   "src/stream-output-controller.js"() {
     "use strict";
@@ -785,6 +818,8 @@ var init_stream_output_controller = __esm({
     DISSOLVE_DURATION_MS = 460;
     MAX_STAGGER_MS = 200;
     CLEANUP_DEADLINE_MS = 700;
+    MAX_LIVE_GLYPHS = 120;
+    MAX_PARTICLE_GLYPHS = 24;
   }
 });
 

@@ -8,10 +8,11 @@ Live acceptance is separate: credentials are entered in the Harness UI by the us
 
 ## Verified on 2026-08-16
 
-- Unit/state/security and conversation DOM behavior: 24 files, 86 tests.
+- Unit/state/security and conversation DOM behavior: 24 files, 89 tests.
 - Official plugin contract, anchored safe fallback, deterministic client build, and real pinned-Harness boot graph: 3 files, 17 tests.
 - Package contract: 1 file, 4 tests.
-- Playwright browser acceptance: 4 Chromium tests. Three cover appended prose/reasoning dissolve, exclusion boundaries, sampled source colors, unchanged geometry, reduced motion, localized running-status lifecycle, and five-second post-generation quiescence; one covers desktop slot registration, route-transition commit, and cleanup.
+- Playwright browser acceptance: 5 Chromium tests. One mounts the generated plugin with real React 18 `createRoot` and the bundled `ThinkingOrb`, proving canvas-first native-status hiding, exact 20-pixel placement, reduced-motion frame quiescence, completion cleanup, and React unmount cleanup. Three cover appended prose/reasoning dissolve, exclusion boundaries, sampled source colors, unchanged geometry, localized running-status lifecycle, and five-second post-generation quiescence; one covers desktop slot registration, route-transition commit, and cleanup.
+- Controller regressions cover attachment-time hydration baselines, emoji modifier/ZWJ append boundaries, a 120-live-glyph/72-particle-node ceiling, and fail-open visibility for a 300-grapheme burst.
 - TypeScript, ESLint, Prettier, documentation links, and static security contract are release gates.
 - Runtime closure verifies 12 local artifacts, 32 production dependencies, five critical Harness packages, `thinking-orbs@0.3.1`, plugin license notices, and the absence of unresolved animation-module imports in `client.js`.
 - The conversation idle sample recorded no additional animation frames and retained no plugin overlay, CSS Highlight, Orb, or status marker for five seconds after completion.

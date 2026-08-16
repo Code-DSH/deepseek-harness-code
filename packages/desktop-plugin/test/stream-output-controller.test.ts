@@ -171,6 +171,69 @@ describe("stream output effect controller", () => {
     ).toBeNull();
   });
 
+  it("baselines a newly mounted streaming conversation before animating later appends", async () => {
+    const { window, flush } = fixture();
+    window.document.body.innerHTML = "";
+    const controller = createStreamOutputEffectController({
+      document: window.document,
+      window,
+    });
+    controller.start();
+
+    window.document.body.insertAdjacentHTML(
+      "beforeend",
+      `<div data-chat-flow>
+        <div data-chat-flow-kind="assistant-step">
+          <div data-streaming><p id="hydrated">hydrated answer</p></div>
+        </div>
+      </div>`,
+    );
+    await flush();
+    expect(
+      window.document.querySelectorAll("[data-dsh-stream-glyph]"),
+    ).toHaveLength(0);
+
+    const hydrated = window.document.querySelector("#hydrated")
+      ?.firstChild as Text;
+    hydrated.data += "!";
+    await flush();
+    expect(
+      Array.from(
+        window.document.querySelectorAll<HTMLElement>(
+          "[data-dsh-stream-glyph]",
+        ),
+      ).map((glyph) => glyph.childNodes[0]?.textContent),
+    ).toEqual(["!"]);
+
+    controller.dispose();
+  });
+
+  it("bounds live overlay nodes while leaving a large canonical append visible", async () => {
+    const { window, answer, flush } = fixture();
+    const controller = createStreamOutputEffectController({
+      document: window.document,
+      window,
+    });
+    controller.start();
+
+    const source = answer.firstChild as Text;
+    source.data += "a".repeat(300);
+    await flush();
+
+    expect(source.data).toBe(`回答${"a".repeat(300)}`);
+    expect(
+      window.document.querySelectorAll("[data-dsh-stream-glyph]").length,
+    ).toBeLessThanOrEqual(120);
+    expect(
+      window.document.querySelectorAll("[data-dsh-stream-particle]").length,
+    ).toBeLessThanOrEqual(72);
+
+    controller.dispose();
+    expect(
+      window.document.querySelector("[data-dsh-stream-overlay]"),
+    ).toBeNull();
+  });
+
   it("reveals canonical text and clears effects on rewrite, completion, scroll, and disposal", async () => {
     vi.useFakeTimers();
     const { window, answer, flush, frames } = fixture();

@@ -1,5 +1,6 @@
 import { createServer, type Server } from "node:http";
-import { join } from "node:path";
+import { createRequire } from "node:module";
+import { dirname, join } from "node:path";
 
 import { expect, test } from "@playwright/test";
 
@@ -8,6 +9,19 @@ const pluginClient = join(
   "packages",
   "desktop-plugin",
   "client.js",
+);
+const pluginRequire = createRequire(
+  join(process.cwd(), "packages", "desktop-plugin", "package.json"),
+);
+const reactDevelopment = join(
+  dirname(pluginRequire.resolve("react/package.json")),
+  "umd",
+  "react.development.js",
+);
+const reactDomDevelopment = join(
+  dirname(pluginRequire.resolve("react-dom/package.json")),
+  "umd",
+  "react-dom.development.js",
 );
 let server: Server;
 let origin: string;
@@ -30,6 +44,231 @@ test.beforeAll(async () => {
 test.afterAll(async () => {
   await new Promise<void>((resolve, reject) =>
     server.close((error) => (error ? reject(error) : resolve())),
+  );
+});
+
+test("mounts the real ThinkingOrb and cleans up its committed status marker", async ({
+  page,
+}) => {
+  await page.goto(origin);
+  await page.addScriptTag({ path: reactDevelopment });
+  await page.addScriptTag({ path: reactDomDevelopment });
+  await page.evaluate(() => {
+    type ReactApi = {
+      createElement: (...args: unknown[]) => unknown;
+    };
+    type ReactRoot = {
+      render(element: unknown): void;
+      unmount(): void;
+    };
+    type PluginApi = {
+      ConversationEffectsOverlay: () => unknown;
+      installTransitions(document: Document, window: Window): () => void;
+    };
+    const target = window as typeof window & {
+      React: ReactApi;
+      ReactDOM: { createRoot(element: Element): ReactRoot };
+      __ModuleLoader__: {
+        load(definition: {
+          factory: (require: (id: string) => unknown) => PluginApi;
+        }): void;
+      };
+      desktopPlugin?: PluginApi;
+      overlayRoot?: ReactRoot;
+      disposeStyles?: () => void;
+      detachedStatus?: HTMLElement;
+      animationFrameCount: number;
+      commitOrderViolation: boolean;
+    };
+    const nullComponent = () => null;
+    target.__ModuleLoader__ = {
+      load(definition) {
+        target.desktopPlugin = definition.factory((id) => {
+          if (id === "react") return target.React;
+          if (id === "react/jsx-runtime") {
+            return {
+              jsx: target.React.createElement,
+              jsxs: target.React.createElement,
+            };
+          }
+          if (id === "@deepseek-ai/dsh-client-ui-primitives") {
+            return {
+              Button: nullComponent,
+              Menu: nullComponent,
+              IconChevronDownOutline14: nullComponent,
+            };
+          }
+          throw new Error(`unexpected client dependency: ${id}`);
+        });
+      },
+    };
+  });
+  await page.addScriptTag({ path: pluginClient });
+  await page.evaluate(() => {
+    type ReactApi = {
+      createElement: (...args: unknown[]) => unknown;
+    };
+    type ReactRoot = {
+      render(element: unknown): void;
+      unmount(): void;
+    };
+    type PluginApi = {
+      ConversationEffectsOverlay: () => unknown;
+      installTransitions(document: Document, window: Window): () => void;
+    };
+    const target = window as typeof window & {
+      React: ReactApi;
+      ReactDOM: { createRoot(element: Element): ReactRoot };
+      desktopPlugin: PluginApi;
+      overlayRoot?: ReactRoot;
+      disposeStyles?: () => void;
+      animationFrameCount: number;
+      commitOrderViolation: boolean;
+    };
+    document.body.innerHTML = `
+      <div id="overlay-root"></div>
+      <div data-chat-flow>
+        <div role="status" aria-live="polite" id="running"
+          style="position: fixed; left: 42px; top: 100px; width: 140px; height: 26px">
+          正在生成
+        </div>
+      </div>`;
+    const nativeRequestAnimationFrame =
+      window.requestAnimationFrame.bind(window);
+    target.animationFrameCount = 0;
+    window.requestAnimationFrame = (callback) => {
+      target.animationFrameCount += 1;
+      return nativeRequestAnimationFrame(callback);
+    };
+    target.commitOrderViolation = false;
+    const status = document.querySelector("#running") as HTMLElement;
+    new MutationObserver(() => {
+      if (
+        status.hasAttribute("data-dsh-desktop-thinking-source") &&
+        !document.querySelector("[data-dsh-desktop-thinking-orb] canvas")
+      ) {
+        target.commitOrderViolation = true;
+      }
+    }).observe(status, { attributes: true });
+    target.disposeStyles = target.desktopPlugin.installTransitions(
+      document,
+      window,
+    );
+    const mount = document.querySelector("#overlay-root");
+    if (!mount) throw new Error("overlay root missing");
+    target.overlayRoot = target.ReactDOM.createRoot(mount);
+    target.overlayRoot.render(
+      target.React.createElement(
+        target.desktopPlugin.ConversationEffectsOverlay,
+      ),
+    );
+  });
+
+  const orb = page.locator("[data-dsh-desktop-thinking-orb]");
+  const canvas = orb.locator("canvas");
+  await expect(canvas).toHaveCount(1);
+  await expect(page.locator("#running")).toHaveAttribute(
+    "data-dsh-desktop-thinking-source",
+    "",
+  );
+  await expect(page.locator("#running")).toHaveCSS("opacity", "0");
+  expect(await orb.boundingBox()).toMatchObject({
+    x: 42,
+    y: 103,
+    width: 20,
+    height: 20,
+  });
+  expect(await canvas.boundingBox()).toMatchObject({ width: 20, height: 20 });
+  expect(
+    await page.evaluate(() => {
+      const target = window as typeof window & {
+        commitOrderViolation: boolean;
+      };
+      const element = document.querySelector("canvas");
+      if (!(element instanceof HTMLCanvasElement))
+        throw new Error("ThinkingOrb canvas missing");
+      return {
+        commitOrderViolation: target.commitOrderViolation,
+        width: element.width,
+        height: element.height,
+      };
+    }),
+  ).toEqual({ commitOrderViolation: false, width: 20, height: 20 });
+
+  const framesWhileGenerating = await page.evaluate(
+    () =>
+      (window as typeof window & { animationFrameCount: number })
+        .animationFrameCount,
+  );
+  await page.waitForTimeout(100);
+  expect(
+    await page.evaluate(
+      () =>
+        (window as typeof window & { animationFrameCount: number })
+          .animationFrameCount,
+    ),
+  ).toBeGreaterThan(framesWhileGenerating);
+
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.waitForTimeout(250);
+  const framesAfterReduction = await page.evaluate(
+    () =>
+      (window as typeof window & { animationFrameCount: number })
+        .animationFrameCount,
+  );
+  await page.waitForTimeout(250);
+  expect(
+    await page.evaluate(
+      () =>
+        (window as typeof window & { animationFrameCount: number })
+          .animationFrameCount,
+    ),
+  ).toBe(framesAfterReduction);
+  await expect(canvas).toHaveCount(1);
+
+  await page.evaluate(() => {
+    const target = window as typeof window & {
+      detachedStatus?: HTMLElement;
+    };
+    target.detachedStatus = document.querySelector("#running") as HTMLElement;
+    target.detachedStatus.remove();
+  });
+  await expect(orb).toHaveCount(0);
+  expect(
+    await page.evaluate(
+      () =>
+        !(
+          window as typeof window & { detachedStatus?: HTMLElement }
+        ).detachedStatus?.hasAttribute("data-dsh-desktop-thinking-source"),
+    ),
+  ).toBe(true);
+
+  await page.evaluate(() => {
+    document.querySelector("[data-chat-flow]")?.insertAdjacentHTML(
+      "beforeend",
+      `<div role="status" aria-live="polite" id="running-again"
+        style="position: fixed; left: 42px; top: 100px; width: 140px; height: 26px">
+        继续生成
+      </div>`,
+    );
+  });
+  await expect(orb).toHaveCount(1);
+  await expect(page.locator("#running-again")).toHaveAttribute(
+    "data-dsh-desktop-thinking-source",
+    "",
+  );
+  await page.evaluate(() => {
+    const target = window as typeof window & {
+      overlayRoot?: { unmount(): void };
+      disposeStyles?: () => void;
+    };
+    target.overlayRoot?.unmount();
+    target.disposeStyles?.();
+  });
+  await expect(orb).toHaveCount(0);
+  await expect(page.locator("#running-again")).not.toHaveAttribute(
+    "data-dsh-desktop-thinking-source",
+    "",
   );
 });
 

@@ -32,7 +32,7 @@ tags: [research, versions]
 
 ## Current Conclusion
 
-Pin `@deepseek-ai/dsh@0.1.0-rc.6`, Electron `43.4.0`, electron-builder `26.15.3`, `thinking-orbs@0.3.1`, and esbuild `0.25.12`. Harness supplies the official user-question packages and Cordis bundle mechanism; this project composes them rather than defining replacements. `generative-loaders@0.1.1` is an MIT-licensed visual reference only and is not a runtime dependency.
+Pin `@deepseek-ai/dsh@0.1.0-rc.6`, Electron `43.4.0`, electron-builder `26.15.3`, `thinking-orbs@0.3.1`, and esbuild `0.25.12`. ReactDOM `18.3.1` is pinned only as a development dependency for real React overlay mounting tests. Harness supplies the official user-question packages and Cordis bundle mechanism; this project composes them rather than defining replacements. `generative-loaders@0.1.1` is an MIT-licensed visual reference only and is not a runtime dependency.
 
 ## Evidence
 
@@ -45,6 +45,7 @@ Pin `@deepseek-ai/dsh@0.1.0-rc.6`, Electron `43.4.0`, electron-builder `26.15.3`
 | 2026-08-16   | [thinking-orbs repository](https://github.com/Jakubantalik/thinking-orbs) and npm registry metadata            | 0.3.1                                                                        | 20-pixel preset, speed multiplier, automatic theme, reduced-motion static frame, MIT license      | high       |
 | 2026-08-16   | [generative-loaders repository](https://github.com/kasturikhanke/generative-loaders) and npm registry metadata | 0.1.1                                                                        | MIT-licensed dissolve visual reference; the plain-text component is not bundled                   | high       |
 | 2026-08-16   | [esbuild bundle API](https://esbuild.github.io/api/) and workspace lock                                        | 0.25.12                                                                      | Recursively bundles local/third-party client code while preserving the declared Harness externals | high       |
+| 2026-08-16   | Workspace manifest and lock                                                                                    | ReactDOM 18.3.1                                                              | Development-only real `createRoot` browser test runtime; not shipped as a plugin runtime external | high       |
 
 ## Official Question Contract
 

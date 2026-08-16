@@ -27,13 +27,23 @@ export function findAppendedGraphemes(
   segmenter = graphemeSegmenter,
 ) {
   if (!next.startsWith(previous)) return null;
-  const suffix = next.slice(previous.length);
-  const parts = [...segmenter.segment(suffix)];
-  if (parts[0]?.index === 0 && /^\p{Mark}/u.test(parts[0].segment)) return null;
-  return parts.map((part, order) => ({
+  if (next === previous) return [];
+  const parts = [...segmenter.segment(next)];
+  const appendStartsAtBoundary =
+    previous.length === 0 ||
+    parts.some((part) => part.index === previous.length);
+  if (!appendStartsAtBoundary) return null;
+  const appended = parts.filter((part) => part.index >= previous.length);
+  if (
+    previous.length === 0 &&
+    appended[0]?.index === 0 &&
+    /^\p{Mark}/u.test(appended[0].segment)
+  )
+    return null;
+  return appended.map((part, order) => ({
     text: part.segment,
-    start: previous.length + part.index,
-    end: previous.length + part.index + part.segment.length,
+    start: part.index,
+    end: part.index + part.segment.length,
     order,
   }));
 }
