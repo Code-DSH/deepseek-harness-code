@@ -15,5 +15,6 @@ supportedArchitectures:
     - x64
 
 patchedDependencies:
+  "@deepseek-ai/dsh": patches/@deepseek-ai__dsh.patch
   "@deepseek-ai/dsh-client-ui-conversation@0.1.0-rc.6": patches/@deepseek-ai__dsh-client-ui-conversation@0.1.0-rc.6.patch
   "@deepseek-ai/dsh-client-ui-sidebar@0.1.0-rc.6": patches/@deepseek-ai__dsh-client-ui-sidebar@0.1.0-rc.6.patch

@@ -164,6 +164,11 @@ function configureWindowNavigation(
 function createWindow(showStartupPage = true): BrowserWindow {
   const window = new BrowserWindow({
     ...createWindowChromeOptions(process.platform),
+    // Windows/Linux have no macOS-style global menu bar: the Electron
+    // application menu would render as an extra black bar under the native
+    // title bar. Keep the menu installed (its Edit roles power clipboard
+    // accelerators) but hide the bar; Alt reveals it temporarily.
+    autoHideMenuBar: process.platform !== "darwin",
     width: 1280,
     height: 860,
     minWidth: 920,

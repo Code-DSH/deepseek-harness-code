@@ -1,0 +1,24 @@
+diff --git a/lib/plugin-9h8shc4d.js b/lib/plugin-9h8shc4d.js
+index 1d7b74d19fd0fc4d3d577b2254d5fabf6349eabc..ac1748545ca227d0f31994457ddacfa2b054bc70 100644
+--- a/lib/plugin-9h8shc4d.js
++++ b/lib/plugin-9h8shc4d.js
+@@ -104,8 +104,18 @@ function runPlugin(profile, args) {
+ 		initProfile(dir, PROFILE_TEMPLATES[profile] ?? DEFAULT_PROFILE_BUNDLES);
+ 		process.stderr.write(`${NAME}: initialized profile ${profile} at ${dir}\n`);
+ 	}
++	function shellQuote(argument) {
++		// Windows runs pnpm through cmd.exe (shell: true) because pnpm is a
++		// .cmd launcher there. Node joins argv with spaces without quoting,
++		// so paths containing spaces (e.g. "C:\Program Files\...") would be
++		// split into separate arguments. Quote any argument that needs it and
++		// double embedded quotes the way cmd.exe expects.
++		if (!/[\s"]/.test(argument)) return argument;
++		return `"${argument.replace(/"/g, '""')}"`;
++	}
+ 	const before = readProfileManifest(NAME, dir);
+-	const result = spawnSync("pnpm", args.map((argument) => anchorPathSpec(argument, process.cwd())), {
++	const spawnArgs = args.map((argument) => anchorPathSpec(argument, process.cwd()));
++	const result = spawnSync("pnpm", process.platform === "win32" ? spawnArgs.map(shellQuote) : spawnArgs, {
+ 		cwd: dir,
+ 		stdio: "inherit",
+ 		shell: process.platform === "win32"

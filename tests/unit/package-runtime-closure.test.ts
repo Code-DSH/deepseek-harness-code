@@ -41,6 +41,28 @@ describe("packaged runtime dependency closure", () => {
     expect(prepareScript).toContain("worker.js");
     expect(prepareScript).toContain('pnpmManifest.version !== "11.19.0"');
     expect(prepareScript).toContain("build/node-runtime");
+
+    // The dsh plugin forwarder must quote space-containing paths when it
+    // spawns pnpm through cmd.exe on Windows; without the patch a plugin
+    // under "C:\Program Files\..." is split into separate arguments.
+    const dshPatch = await readFile(
+      join(projectRoot, "patches", "@deepseek-ai__dsh.patch"),
+      "utf8",
+    );
+    expect(dshPatch).toContain("shellQuote");
+    expect(dshPatch).toContain('shell: process.platform === "win32"');
+    const installedForwarder = await readFile(
+      join(
+        projectRoot,
+        "node_modules",
+        "@deepseek-ai",
+        "dsh",
+        "lib",
+        "plugin-9h8shc4d.js",
+      ),
+      "utf8",
+    );
+    expect(installedForwarder).toContain("shellQuote");
   });
 
   it("keeps integrated plugin patches on official bare package names", async () => {

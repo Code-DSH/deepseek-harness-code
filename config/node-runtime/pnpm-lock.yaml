@@ -5,6 +5,7 @@ settings:
   excludeLinksFromLockfile: false
 
 patchedDependencies:
+  '@deepseek-ai/dsh': fad28ef41e0a33bc789dc3d6957891d50b6da52ce8f0cd696e9bee8384ad12e2
   '@deepseek-ai/dsh-client-ui-conversation@0.1.0-rc.6': 487284e3ec4334ff395a3a74611cf415cff6b24d06c471c1d2673b7e5b4a028c
   '@deepseek-ai/dsh-client-ui-sidebar@0.1.0-rc.6': ce101623b503258a9c326c5c44e13c36d6922157db1f447d006d00e135ef9b6a
 
@@ -14,7 +15,7 @@ importers:
     dependencies:
       '@deepseek-ai/dsh':
         specifier: 0.1.0-rc.6
-        version: 0.1.0-rc.6(22ab0a374f68a8d2fdc47735c7855a65)
+        version: 0.1.0-rc.6(patch_hash=fad28ef41e0a33bc789dc3d6957891d50b6da52ce8f0cd696e9bee8384ad12e2)(22ab0a374f68a8d2fdc47735c7855a65)
       dsh-find-plugin:
         specifier: 0.3.6
         version: 0.3.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-tools@0.1.0-rc.6(f8724372086ccc1457fc84e7becee2e0))
@@ -6186,7 +6187,7 @@ snapshots:
       '@deepseek-ai/dsh-storage-domain': 0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1))(@deepseek-ai/dsh-storage@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)))
       zod: 4.4.3
 
-  '@deepseek-ai/dsh@0.1.0-rc.6(22ab0a374f68a8d2fdc47735c7855a65)':
+  '@deepseek-ai/dsh@0.1.0-rc.6(patch_hash=fad28ef41e0a33bc789dc3d6957891d50b6da52ce8f0cd696e9bee8384ad12e2)(22ab0a374f68a8d2fdc47735c7855a65)':
     dependencies:
       '@deepseek-ai/cordis': 4.0.1(@deepseek-ai/cordis-plugin-include@1.0.6)(@deepseek-ai/cordis-plugin-loader@1.0.2)
       '@deepseek-ai/cordis-plugin-hmr': 1.0.16(@deepseek-ai/cordis-plugin-timer@1.1.3(@deepseek-ai/cordis@4.0.1))(@deepseek-ai/cordis@4.0.1)
