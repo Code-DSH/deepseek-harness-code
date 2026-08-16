@@ -5,6 +5,8 @@ import {
   readFile,
   readlink,
   realpath,
+  stat,
+  symlink,
   writeFile,
 } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -16,6 +18,7 @@ import {
   ensureDesktopPluginBundle,
   ensureDesktopPluginLink,
   ensureOfficialHarnessInstall,
+  migrateLegacyHarnessHome,
   type OfficialCommandRunner,
 } from "../../apps/desktop/src/lifecycle/desktop-plugin-link.js";
 
@@ -240,5 +243,147 @@ describe("official Harness plugin installation", () => {
     ).rejects.toThrow(
       "official plugin installation failed for expected-package (exit 17)",
     );
+  });
+});
+
+describe("legacy Harness Home migration", () => {
+  it("is a no-op when the legacy Home does not exist", async () => {
+    const root = await mkdtemp(join(tmpdir(), "dsh-migration-absent-"));
+
+    await expect(
+      migrateLegacyHarnessHome({
+        legacyHome: join(root, "legacy"),
+        dshHome: join(root, "official"),
+      }),
+    ).resolves.toEqual({
+      status: "not-needed",
+      copied: [],
+      conflicts: [],
+      skippedSymlinks: [],
+      legacyPluginSpecs: [],
+    });
+  });
+
+  it("merges target-absent data, preserves conflicts, and is idempotent", async () => {
+    const root = await mkdtemp(join(tmpdir(), "dsh-migration-merge-"));
+    const legacyHome = join(root, "legacy");
+    const dshHome = join(root, "official");
+    await mkdir(join(legacyHome, "sessions"), { recursive: true });
+    await mkdir(join(legacyHome, "skills", "bundled"), { recursive: true });
+    await mkdir(join(dshHome, "sessions"), { recursive: true });
+    await writeFile(join(legacyHome, "sessions", "new.jsonl"), "legacy-new\n");
+    await writeFile(join(legacyHome, "sessions", "shared.jsonl"), "legacy\n");
+    await writeFile(join(dshHome, "sessions", "shared.jsonl"), "official\n");
+    await writeFile(
+      join(legacyHome, "skills", "bundled", "SKILL.md"),
+      "# Bundled\n",
+      { mode: 0o744 },
+    );
+    await writeFile(join(legacyHome, ".credentials.yaml"), "secret: value\n", {
+      mode: 0o644,
+    });
+    await writeFile(join(legacyHome, "settings.yaml"), "legacy: true\n");
+    await writeFile(join(dshHome, "settings.yaml"), "official: true\n");
+
+    const first = await migrateLegacyHarnessHome({ legacyHome, dshHome });
+
+    expect(first.status).toBe("migrated");
+    expect(first.copied).toEqual([
+      ".credentials.yaml",
+      join("sessions", "new.jsonl"),
+      join("skills", "bundled", "SKILL.md"),
+    ]);
+    expect(first.conflicts).toEqual([
+      join("sessions", "shared.jsonl"),
+      "settings.yaml",
+    ]);
+    expect(
+      await readFile(join(dshHome, "sessions", "shared.jsonl"), "utf8"),
+    ).toBe("official\n");
+    expect((await stat(join(dshHome, ".credentials.yaml"))).mode & 0o777).toBe(
+      0o600,
+    );
+    expect(
+      (await stat(join(dshHome, "skills", "bundled", "SKILL.md"))).mode & 0o777,
+    ).toBe(0o744);
+
+    const second = await migrateLegacyHarnessHome({ legacyHome, dshHome });
+    expect(second).toMatchObject({
+      status: "unchanged",
+      copied: [],
+      conflicts: [join("sessions", "shared.jsonl"), "settings.yaml"],
+    });
+  });
+
+  it("skips symlinks and normalizes only missing legacy plugin specs", async () => {
+    const root = await mkdtemp(join(tmpdir(), "dsh-migration-plugin-"));
+    const legacyHome = join(root, "legacy");
+    const dshHome = join(root, "official");
+    const legacyProfile = join(legacyHome, "profiles", "web");
+    const officialProfile = join(dshHome, "profiles", "web");
+    await mkdir(join(legacyHome, "sessions"), { recursive: true });
+    await mkdir(legacyProfile, { recursive: true });
+    await mkdir(officialProfile, { recursive: true });
+    await symlink(
+      join(root, "outside"),
+      join(legacyHome, "sessions", "outside-link"),
+    );
+    await writeFile(
+      join(legacyProfile, "package.json"),
+      `${JSON.stringify({
+        dependencies: {
+          "existing-plugin": "1.0.0",
+          "linked-plugin": "link:../../../plugins/linked-plugin",
+          "registry-plugin": "0.3.6",
+        },
+      })}\n`,
+    );
+    await writeFile(
+      join(officialProfile, "package.json"),
+      `${JSON.stringify({ dependencies: { "existing-plugin": "2.0.0" } })}\n`,
+    );
+
+    const result = await migrateLegacyHarnessHome({ legacyHome, dshHome });
+
+    expect(result.skippedSymlinks).toEqual([join("sessions", "outside-link")]);
+    expect(result.legacyPluginSpecs).toEqual([
+      {
+        packageName: "linked-plugin",
+        installSpec: `link:${resolve(legacyProfile, "../../../plugins/linked-plugin")}`,
+      },
+      { packageName: "registry-plugin", installSpec: "registry-plugin@0.3.6" },
+    ]);
+  });
+
+  it("rolls back only files created by a failed migration attempt", async () => {
+    const root = await mkdtemp(join(tmpdir(), "dsh-migration-rollback-"));
+    const legacyHome = join(root, "legacy");
+    const dshHome = join(root, "official");
+    await mkdir(join(legacyHome, "sessions"), { recursive: true });
+    await mkdir(join(dshHome, "sessions"), { recursive: true });
+    await writeFile(join(legacyHome, "sessions", "a.jsonl"), "a\n");
+    await writeFile(join(legacyHome, "sessions", "b.jsonl"), "b\n");
+    await writeFile(join(dshHome, "sessions", "existing.jsonl"), "keep\n");
+    let copies = 0;
+
+    await expect(
+      migrateLegacyHarnessHome({
+        legacyHome,
+        dshHome,
+        copyFileOperation: async (source, target) => {
+          copies += 1;
+          if (copies === 2) throw new Error("injected copy failure");
+          await import("node:fs/promises").then(({ copyFile }) =>
+            copyFile(source, target),
+          );
+        },
+      }),
+    ).rejects.toThrow("injected copy failure");
+    await expect(
+      readFile(join(dshHome, "sessions", "a.jsonl"), "utf8"),
+    ).rejects.toThrow();
+    expect(
+      await readFile(join(dshHome, "sessions", "existing.jsonl"), "utf8"),
+    ).toBe("keep\n");
   });
 });

@@ -76,11 +76,11 @@
 - Produces: `migrateLegacyHarnessHome(input): Promise<HarnessMigrationResult>`.
 - Result exposes `status`, copied relative paths, conflict relative paths, skipped symlinks, and normalized missing legacy plugin specs.
 
-- [ ] Add failing table tests for absent legacy Home, legacy-only, official-only, both nonconflicting, scalar conflicts, modified presets/skills, symlink rejection, permission preservation, rerun idempotence, and injected mid-copy failure rollback.
-- [ ] Run the migration tests and prove RED.
-- [ ] Implement allow-listed recursive copy with no symlink following, `0600` scalar-secret modes, `0700` created directories, target-wins conflicts, and current-attempt rollback.
-- [ ] Parse legacy Web profile dependencies without copying profile state; normalize relative `file:`/`link:` specs against the legacy profile directory.
-- [ ] Run the focused migration tests and security contract.
+- [x] Add failing table tests for absent legacy Home, legacy-only, official-only, both nonconflicting, scalar conflicts, modified presets/skills, symlink rejection, permission preservation, rerun idempotence, and injected mid-copy failure rollback.
+- [x] Run the migration tests and prove RED.
+- [x] Implement allow-listed recursive copy with no symlink following, `0600` scalar-secret modes, `0700` created directories, target-wins conflicts, and current-attempt rollback.
+- [x] Parse legacy Web profile dependencies without copying profile state; normalize relative `file:`/`link:` specs against the legacy profile directory.
+- [x] Run the focused migration tests and security contract.
 
 ### Task 4: Replace startup manual assembly
 

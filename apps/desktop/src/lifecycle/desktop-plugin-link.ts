@@ -1,5 +1,6 @@
 import {
   chmod,
+  copyFile,
   lstat,
   mkdir,
   readFile,
@@ -8,10 +9,12 @@ import {
   realpath,
   rename,
   rm,
+  rmdir,
   symlink,
   unlink,
   writeFile,
 } from "node:fs/promises";
+import { createReadStream } from "node:fs";
 import { createHash, randomUUID } from "node:crypto";
 import { spawnSync } from "node:child_process";
 import { delimiter, dirname, join, resolve } from "node:path";
@@ -74,6 +77,25 @@ export type OfficialHarnessInstallInput = {
 export type OfficialHarnessInstallResult = {
   status: "installed";
   packages: string[];
+};
+
+export type LegacyPluginSpec = {
+  packageName: string;
+  installSpec: string;
+};
+
+export type HarnessMigrationInput = {
+  legacyHome: string;
+  dshHome: string;
+  copyFileOperation?: (source: string, target: string) => Promise<void>;
+};
+
+export type HarnessMigrationResult = {
+  status: "not-needed" | "migrated" | "unchanged";
+  copied: string[];
+  conflicts: string[];
+  skippedSymlinks: string[];
+  legacyPluginSpecs: LegacyPluginSpec[];
 };
 
 const POSIX_PNPM_LAUNCHER = `#!/bin/sh
@@ -161,6 +183,256 @@ export async function ensureOfficialHarnessInstall(
   return {
     status: "installed",
     packages: plugins.map((plugin) => plugin.packageName),
+  };
+}
+
+const LEGACY_DATA_ENTRIES = [
+  ".credentials.yaml",
+  ".anonymous-user-id",
+  "settings.yaml",
+  "cordis.patch.yml",
+  "mode-boost-activity.jsonl",
+  "sessions",
+  "attachments",
+  "storages",
+  "skills",
+  ".agent-presets",
+  "super-injector",
+] as const;
+
+const PRIVATE_SCALAR_FILES = new Set([".credentials.yaml", "settings.yaml"]);
+
+async function digestPath(path: string): Promise<string> {
+  const digest = createHash("sha256");
+  for await (const chunk of createReadStream(path)) digest.update(chunk);
+  return digest.digest("hex");
+}
+
+async function filesMatch(source: string, target: string): Promise<boolean> {
+  const [sourceStat, targetStat] = await Promise.all([
+    lstat(source),
+    lstat(target),
+  ]);
+  if (
+    !sourceStat.isFile() ||
+    !targetStat.isFile() ||
+    sourceStat.size !== targetStat.size
+  ) {
+    return false;
+  }
+  const [sourceDigest, targetDigest] = await Promise.all([
+    digestPath(source),
+    digestPath(target),
+  ]);
+  return sourceDigest === targetDigest;
+}
+
+function normalizedLegacyInstallSpec(
+  packageName: string,
+  spec: string,
+  legacyProfileRoot: string,
+): LegacyPluginSpec | undefined {
+  if (
+    packageName.length === 0 ||
+    spec.length === 0 ||
+    packageName.includes("\0") ||
+    spec.includes("\0") ||
+    spec.length > 2_048
+  ) {
+    return undefined;
+  }
+  for (const protocol of ["link:", "file:"] as const) {
+    if (!spec.startsWith(protocol)) continue;
+    const configuredPath = spec.slice(protocol.length);
+    if (configuredPath.length === 0) return undefined;
+    return {
+      packageName,
+      installSpec: `${protocol}${resolve(legacyProfileRoot, configuredPath)}`,
+    };
+  }
+  if (
+    /^(?:github:|git:|git\+|https?:|npm:)/.test(spec) ||
+    spec.startsWith("/")
+  ) {
+    return { packageName, installSpec: spec };
+  }
+  if (spec.startsWith("workspace:")) return undefined;
+  return { packageName, installSpec: `${packageName}@${spec}` };
+}
+
+async function readManifestDependencies(
+  manifestPath: string,
+): Promise<Record<string, string>> {
+  try {
+    const manifest = JSON.parse(await readFile(manifestPath, "utf8")) as {
+      dependencies?: unknown;
+    };
+    if (
+      typeof manifest.dependencies !== "object" ||
+      manifest.dependencies === null
+    ) {
+      return {};
+    }
+    return Object.fromEntries(
+      Object.entries(manifest.dependencies).filter(
+        (entry): entry is [string, string] => typeof entry[1] === "string",
+      ),
+    );
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") return {};
+    throw error;
+  }
+}
+
+async function missingLegacyPluginSpecs(
+  legacyHome: string,
+  dshHome: string,
+): Promise<LegacyPluginSpec[]> {
+  const legacyProfileRoot = join(legacyHome, "profiles", "web");
+  const legacy = await readManifestDependencies(
+    join(legacyProfileRoot, "package.json"),
+  );
+  const target = await readManifestDependencies(
+    join(dshHome, "profiles", "web", "package.json"),
+  );
+  return Object.entries(legacy)
+    .filter(([packageName]) => !(packageName in target))
+    .map(([packageName, spec]) =>
+      normalizedLegacyInstallSpec(packageName, spec, legacyProfileRoot),
+    )
+    .filter((value): value is LegacyPluginSpec => value !== undefined)
+    .sort((left, right) => left.packageName.localeCompare(right.packageName));
+}
+
+/** Copy legacy Harness data into the official Home without overwriting it. */
+export async function migrateLegacyHarnessHome(
+  input: HarnessMigrationInput,
+): Promise<HarnessMigrationResult> {
+  const legacyHome = resolve(input.legacyHome);
+  const dshHome = resolve(input.dshHome);
+  const emptyResult = {
+    copied: [],
+    conflicts: [],
+    skippedSymlinks: [],
+    legacyPluginSpecs: [],
+  };
+  if (legacyHome === dshHome) return { status: "not-needed", ...emptyResult };
+  try {
+    if (!(await lstat(legacyHome)).isDirectory()) {
+      return { status: "not-needed", ...emptyResult };
+    }
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") {
+      return { status: "not-needed", ...emptyResult };
+    }
+    throw error;
+  }
+
+  const copied: string[] = [];
+  const conflicts: string[] = [];
+  const skippedSymlinks: string[] = [];
+  const createdFiles: string[] = [];
+  const createdDirectories: string[] = [];
+  const copyFileOperation = input.copyFileOperation ?? copyFile;
+
+  async function ensureTargetDirectory(path: string): Promise<void> {
+    try {
+      const entry = await lstat(path);
+      if (!entry.isDirectory() || entry.isSymbolicLink()) {
+        throw new Error(`Harness migration target is not a directory: ${path}`);
+      }
+      return;
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+    }
+    const parent = dirname(path);
+    if (parent !== path) await ensureTargetDirectory(parent);
+    await mkdir(path, { mode: 0o700 });
+    createdDirectories.push(path);
+  }
+
+  async function mergeEntry(relativePath: string): Promise<void> {
+    const source = join(legacyHome, relativePath);
+    const target = join(dshHome, relativePath);
+    let sourceStat;
+    try {
+      sourceStat = await lstat(source);
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === "ENOENT") return;
+      throw error;
+    }
+    if (sourceStat.isSymbolicLink()) {
+      skippedSymlinks.push(relativePath);
+      return;
+    }
+    let targetStat;
+    try {
+      targetStat = await lstat(target);
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+    }
+
+    if (sourceStat.isDirectory()) {
+      if (
+        targetStat !== undefined &&
+        (!targetStat.isDirectory() || targetStat.isSymbolicLink())
+      ) {
+        conflicts.push(relativePath);
+        return;
+      }
+      if (targetStat === undefined) await ensureTargetDirectory(target);
+      const entries = await readdir(source, { withFileTypes: true });
+      for (const entry of entries.sort((left, right) =>
+        left.name.localeCompare(right.name),
+      )) {
+        await mergeEntry(join(relativePath, entry.name));
+      }
+      return;
+    }
+    if (!sourceStat.isFile()) {
+      skippedSymlinks.push(relativePath);
+      return;
+    }
+    if (targetStat !== undefined) {
+      if (!(await filesMatch(source, target))) conflicts.push(relativePath);
+      return;
+    }
+    await ensureTargetDirectory(dirname(target));
+    createdFiles.push(target);
+    await copyFileOperation(source, target);
+    const topLevel = relativePath.split(/[\\/]/, 1)[0] ?? relativePath;
+    await chmod(
+      target,
+      PRIVATE_SCALAR_FILES.has(topLevel) ? 0o600 : sourceStat.mode & 0o777,
+    );
+    copied.push(relativePath);
+  }
+
+  try {
+    for (const entry of LEGACY_DATA_ENTRIES) await mergeEntry(entry);
+  } catch (error) {
+    for (const file of createdFiles.reverse()) {
+      await rm(file, { force: true });
+    }
+    for (const directory of createdDirectories.reverse()) {
+      await rmdir(directory).catch(() => undefined);
+    }
+    throw error;
+  }
+
+  const legacyPluginSpecs = await missingLegacyPluginSpecs(legacyHome, dshHome);
+  copied.sort();
+  conflicts.sort();
+  skippedSymlinks.sort();
+  return {
+    status:
+      copied.length > 0 || legacyPluginSpecs.length > 0
+        ? "migrated"
+        : "unchanged",
+    copied,
+    conflicts,
+    skippedSymlinks,
+    legacyPluginSpecs,
   };
 }
 
