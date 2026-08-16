@@ -11,8 +11,8 @@ read_when: [changing pinned versions or official integration behavior]
 skip_when: [editing app-local styling only]
 priority: must
 freshness_class: rapid
-last_verified: 2026-08-16T13:37:00+08:00
-revalidate_after: 2026-08-17T13:37:00+08:00
+last_verified: 2026-08-16T13:56:03+08:00
+revalidate_after: 2026-08-17T13:56:03+08:00
 owners: [project]
 source_of_truth:
   - https://github.com/deepseek-ai/deepseek-harness
@@ -46,6 +46,15 @@ Pin `@deepseek-ai/dsh@0.1.0-rc.6`, Electron `43.4.0`, electron-builder `26.15.3`
 | 2026-08-16   | [generative-loaders repository](https://github.com/kasturikhanke/generative-loaders) and npm registry metadata | 0.1.1                                                                        | MIT-licensed dissolve visual reference; the plain-text component is not bundled                   | high       |
 | 2026-08-16   | [esbuild bundle API](https://esbuild.github.io/api/) and workspace lock                                        | 0.25.12                                                                      | Recursively bundles local/third-party client code while preserving the declared Harness externals | high       |
 | 2026-08-16   | Workspace manifest and lock                                                                                    | ReactDOM 18.3.1                                                              | Development-only real `createRoot` browser test runtime; not shipped as a plugin runtime external | high       |
+| 2026-08-16   | Pinned installed Harness packages                                                                              | `@deepseek-ai/dsh-llm-deepseek`, `dsh-base`, and `dsh-web-app` 0.1.0-rc.6    | V4 Pro/Flash catalog, official reasoning efforts, Skills, tools, workflows, and supporting UI     | high       |
+
+## V4 Pro and Integrated Toolchain
+
+- The pinned official DeepSeek adapter publishes `deepseek-v4-pro` and `deepseek-v4-flash`, a 1,000,000-token model catalog, and `off`, `high`, and `max` reasoning efforts.
+- Official `high` and `max` settings activate the adapter's supported thinking mode through the public `reasoning_effort` request field. Tool-call reasoning passback is handled inside the adapter.
+- The public per-request `agent/request` seam can override reasoning effort. The literal `We need` intent policy is not implemented or tested yet and must remain a roadmap claim until that work exists.
+- The pinned base and Web bundles contain the Skills runtime and UI, filesystem Skill discovery, Goal, Plan, Todo, Jobs, Workflow, checkpoints, sessions, questions, approvals, subagents, feedback, shell and filesystem tools, Web tools, plugin inventory, and provider/model settings.
+- The desktop profile loads the official base and Web bundles together with the desktop and Anchored Standard bundles. This supports an integrated-distribution claim, not a claim that model weights are shipped in the application.
 
 ## Official Question Contract
 

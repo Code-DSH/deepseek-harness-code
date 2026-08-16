@@ -4,7 +4,7 @@ title: Product README Story and Layout
 summary: Defines the bilingual, product-led README structure and evidence boundaries for DeepSeek Harness Code.
 kind: product
 status: canonical
-content_stage: goal-only
+content_stage: final-verified
 scope: [readme, positioning, community]
 triggers: [README, vision, positioning, comparison]
 read_when: [changing the repository landing page or public product claims]
@@ -13,7 +13,13 @@ priority: must
 freshness_class: project
 last_verified: 2026-08-16T12:55:00+08:00
 owners: [primary-agent]
-source_of_truth: [../../../README.md, ../../../README.zh-CN.md, ../../architecture/lifecycle.md, ../../engineering/acceptance-report.md]
+source_of_truth:
+  [
+    ../../../README.md,
+    ../../../README.zh-CN.md,
+    ../../architecture/lifecycle.md,
+    ../../engineering/acceptance-report.md,
+  ]
 related:
   prerequisites: [../../project/intent.md, ../../architecture/overview.md]
   next: [../plans/2026-08-16-readme-product-story.md]
@@ -36,7 +42,9 @@ Turn the GitHub landing page into a bilingual product narrative that explains wh
 
 ## Narrative
 
-The central vision is: **turn DeepSeek from a browser page into a dependable desktop coding environment for long-running work**.
+The central vision is: **turn the complete DeepSeek Harness experience into a modern, all-in-one desktop coding environment for long-running work**.
+
+The product story centers the packaged official Harness runtime, plugins, Skills, tools, Goal, Plan, Workflow, question/approval, subagent foundations, desktop experience, and BETA1 reliability improvements. V4 Pro/Flash selection and supported reasoning efforts are important current capabilities within that whole. The literal `We need` automatic reasoning trigger is labeled as a model-enhancement roadmap item until implemented and tested through the public per-request seam.
 
 The README may state that the project is not a simple Web wrapper. It must compare product categories and capabilities rather than insult or name individual community maintainers. The comparison should distinguish:
 
@@ -48,12 +56,15 @@ The README may state that the project is not a simple Web wrapper. It must compa
 
 1. Centered hero with product icon, name, one-sentence vision, language switch, navigation links, and badges.
 2. Vision statement and concise explanation of why the project exists.
-3. “Beyond a wrapper” capability comparison table.
-4. Long-running reliability and memory-pressure section.
-5. Modern desktop experience and integrated Harness capabilities.
-6. Architecture image and security boundary.
-7. Supported platforms and release state.
-8. Installation, source build, verification, documentation, roadmap, contribution, license, and disclaimer.
+3. Complete integrated Harness distribution and capability stack.
+4. BETA1 modernization scope: memory pressure, Web freezes, lifecycle, packaging, and desktop experience.
+5. V4 Pro as one enhanced capability, including the `We need` reasoning-trigger boundary.
+6. “Beyond a wrapper” capability comparison table.
+7. Long-running reliability and memory-pressure section.
+8. Modern desktop experience and integrated Harness capabilities.
+9. Architecture image and security boundary.
+10. Supported platforms and release state.
+11. Installation, source build, verification, documentation, roadmap, contribution, license, and disclaimer.
 
 The existing product icon at `build/deepseek-harness-code.png` and architecture diagram at `docs/architecture/system.svg` are reused. No speculative screenshots, download links, release badges, or community links are invented.
 
@@ -74,6 +85,8 @@ The README may describe implemented mechanisms:
 The memory statement must be mechanism-based: the application controls long-session memory pressure by bounding log growth, avoiding overlapping probes, replacing failed renderers, and owning process retirement. It must not claim a measured percentage reduction or universal elimination of leaks until a reproducible memory benchmark exists.
 
 The freeze statement may say the application detects and recovers from defined Web/Harness failure modes. It must not promise that every possible hang is impossible.
+
+The README may claim that the pinned official adapter publishes V4 Pro/Flash plus `off`, `high`, and `max` reasoning efforts, and that the official base/Web bundles carry the integrated Skills and agent toolchain. It must not claim that the literal `We need` trigger ships in 0.2.0 or that official reasoning controls expose hidden chain-of-thought.
 
 ## Tone
 
@@ -99,3 +112,6 @@ The freeze statement may say the application detects and recovers from defined W
 ## Change log
 
 - `2026-08-16T12:55:00+08:00` — Approved bilingual product-led README design, including evidence-bounded memory and freeze claims.
+- `2026-08-16T13:00:00+08:00` — Implemented both language editions and verified GitHub rendering, local links, formatting, security contracts, types, lint, and the full test suite.
+- `2026-08-16T13:15:00+08:00` — Expanded the approved story to a V4 Pro-first integrated distribution and documented the unshipped `We need` automatic reasoning trigger as the next core requirement.
+- `2026-08-16T13:30:00+08:00` — Corrected the hierarchy: complete Harness modernization and BETA1 problem-solving are the product center; V4 Pro is one important capability improved by the integrated foundation.

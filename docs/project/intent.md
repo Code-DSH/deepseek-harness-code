@@ -29,7 +29,7 @@ tags: [intent, confirmed]
 
 ## Goal
 
-Deliver a distributable DeepSeek Harness Code desktop application that embeds the official DeepSeek Harness Web experience, adds a two-capability Electron host bridge, official-format integrated plugins, and an independent watchdog.
+Deliver an all-in-one, modernized DeepSeek Harness Code desktop distribution that embeds the complete official Harness Web experience, plugin and Skills foundation, agent tools, a two-capability Electron host bridge, and an independent watchdog. V4 Pro is one improved capability within this wider Harness modernization, not the product's center.
 
 ## Required Deliverables
 
@@ -40,6 +40,8 @@ Deliver a distributable DeepSeek Harness Code desktop application that embeds th
 - Official question UI/protocol compatibility across macOS, Linux, and Windows Web environments.
 - System light/dark monochrome startup UI with one centered spinner, underlay title bar, real tray, page transitions without forced layout, official-component desktop settings integration, tests, operations guidance, and an accessible SVG system diagram.
 - Integrated desktop and experimental anchored-standard bundles in every installer.
+- First-class official V4 Pro/Flash model selection and reasoning controls, with the literal `We need` intent trigger tracked as the next public-seam implementation requirement.
+- One packaged Harness toolchain covering Skills, tools, Goal, Plan, Workflow, Todo, Jobs, user questions/approval, and subagents.
 
 ## Non-goals
 
@@ -47,6 +49,7 @@ Deliver a distributable DeepSeek Harness Code desktop application that embeds th
 - Automatic updates in the first community release.
 - Unsafe live tool-catalog mutation through private transport fields.
 - Guarantees about benchmark scores or hidden chain-of-thought wording.
+- Representing the literal `We need` trigger as shipped before its public per-request implementation and tests exist.
 - A second session store or a replacement user-question protocol.
 
 ## Constraints
