@@ -11,7 +11,7 @@ read_when: [integrating the 2026-08-16 release candidate]
 skip_when: [unrelated feature work]
 priority: must
 freshness_class: project
-last_verified: 2026-08-16T14:26:00+08:00
+last_verified: 2026-08-16T19:17:07+08:00
 owners: [primary-agent]
 source_of_truth:
   [../../../.git, ../../../package.json, ../../../electron-builder.yml]
@@ -31,6 +31,8 @@ tags: [execplan, release, installation]
 > **For agentic workers:** REQUIRED SUB-SKILL: use `superpowers:executing-plans` to execute this plan task-by-task in the existing isolated worktree.
 
 **Goal:** Put every committed branch and all in-progress Anchored Standard changes into local `main`, produce a freshly verified Universal DMG, and install its app in `/Applications` while retaining the existing Electron/Harness user data.
+
+**Current status (2026-08-16):** the primary worktree is now `feat/routing-suite`, which already contains the Routing Suite auto-load integration, bundled Superpowers Skills, bilingual preset localization, and the progressive Anchored Standard work. The clean DMG rebuild and `/Applications` replacement tasks remain open; see [acceptance report](../../engineering/acceptance-report.md) for the current partial browser/lint gates.
 
 **Architecture:** The dirty feature worktree is the integration boundary. Its current changes are committed first, then local `main` is merged into that branch so conflict resolution and verification happen away from `main`; the verified integration head is then fast-forwarded into `main`. Packaging starts from a clean local-output state, installation uses the app mounted from the verified DMG, and the existing application plus user-data directories receive recoverable backups before replacement.
 

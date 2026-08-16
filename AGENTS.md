@@ -44,15 +44,15 @@
 
 ## Technology Stack Index
 
-| Technology       | Project version | Purpose                   | Status | Verified   | Details                                                    |
-| ---------------- | --------------- | ------------------------- | ------ | ---------- | ---------------------------------------------------------- |
-| Electron         | 43.4.0          | Desktop Chromium host     | active | 2026-08-15 | [Upstream baseline](./docs/knowledge/upstream-baseline.md) |
-| DeepSeek Harness | 0.1.0-rc.6      | Web app and agent runtime | active | 2026-08-15 | [Upstream baseline](./docs/knowledge/upstream-baseline.md) |
-| electron-builder | 26.15.3         | App and DMG packaging     | active | 2026-08-15 | [Upstream baseline](./docs/knowledge/upstream-baseline.md) |
-| thinking-orbs    | 0.3.1           | Native running-status Orb | active | 2026-08-16 | [Upstream baseline](./docs/knowledge/upstream-baseline.md) |
-| esbuild          | 0.25.12         | Offline plugin bundling   | active | 2026-08-16 | [Upstream baseline](./docs/knowledge/upstream-baseline.md) |
-| DSH Routing Suite | pinned snapshot | Routing bundles and presets | active | 2026-08-16 | [Upstream baseline](./docs/knowledge/upstream-baseline.md) |
-| Superpowers Skills | 6.2.0          | Bundled skill collection  | active | 2026-08-16 | [Upstream baseline](./docs/knowledge/upstream-baseline.md) |
+| Technology         | Project version | Purpose                     | Status | Verified   | Details                                                    |
+| ------------------ | --------------- | --------------------------- | ------ | ---------- | ---------------------------------------------------------- |
+| Electron           | 43.4.0          | Desktop Chromium host       | active | 2026-08-15 | [Upstream baseline](./docs/knowledge/upstream-baseline.md) |
+| DeepSeek Harness   | 0.1.0-rc.6      | Web app and agent runtime   | active | 2026-08-15 | [Upstream baseline](./docs/knowledge/upstream-baseline.md) |
+| electron-builder   | 26.15.3         | App and DMG packaging       | active | 2026-08-15 | [Upstream baseline](./docs/knowledge/upstream-baseline.md) |
+| thinking-orbs      | 0.3.1           | Native running-status Orb   | active | 2026-08-16 | [Upstream baseline](./docs/knowledge/upstream-baseline.md) |
+| esbuild            | 0.25.12         | Offline plugin bundling     | active | 2026-08-16 | [Upstream baseline](./docs/knowledge/upstream-baseline.md) |
+| DSH Routing Suite  | pinned snapshot | Routing bundles and presets | active | 2026-08-16 | [Upstream baseline](./docs/knowledge/upstream-baseline.md) |
+| Superpowers Skills | 6.2.0           | Bundled skill collection    | active | 2026-08-16 | [Upstream baseline](./docs/knowledge/upstream-baseline.md) |
 
 ## Knowledge Topic Index
 
@@ -63,22 +63,23 @@
 
 ## Active Plans
 
-| Plan                        | Status     | Current milestone                                                        | Updated    | Link                                                                   |
-| --------------------------- | ---------- | ------------------------------------------------------------------------ | ---------- | ---------------------------------------------------------------------- |
-| Merge, release, and install | active     | Branch integration and clean release verification                        | 2026-08-16 | [Open](./docs/plans/active/merge-all-branches-release-install.md)      |
-| DeepSeek Harness Code 0.2.0 | active     | Final Universal packaging and acceptance                                 | 2026-08-16 | [Open](./docs/plans/active/deepseek-harness-desktop.md)                |
-| Bundled preset localization | complete   | Bilingual names/descriptions for all three managed presets               | 2026-08-16 | [Open](./docs/superpowers/plans/2026-08-16-localize-agent-presets.md)  |
-| Streaming output animation  | superseded | Text dissolve removed; the localized native-status ThinkingOrb remains   | 2026-08-16 | [Historical](./docs/superpowers/plans/2026-08-16-stream-output-animation.md) |
+| Plan                        | Status     | Current milestone                                                      | Updated    | Link                                                                         |
+| --------------------------- | ---------- | ---------------------------------------------------------------------- | ---------- | ---------------------------------------------------------------------------- |
+| Merge, release, and install | active     | Branch integration and clean release verification                      | 2026-08-16 | [Open](./docs/plans/active/merge-all-branches-release-install.md)            |
+| DeepSeek Harness Code 0.2.0 | active     | Final Universal packaging and acceptance                               | 2026-08-16 | [Open](./docs/plans/active/deepseek-harness-desktop.md)                      |
+| Bundled preset localization | complete   | Bilingual names/descriptions for all three managed presets             | 2026-08-16 | [Open](./docs/superpowers/plans/2026-08-16-localize-agent-presets.md)        |
+| Streaming output animation  | superseded | Text dissolve removed; the localized native-status ThinkingOrb remains | 2026-08-16 | [Historical](./docs/superpowers/plans/2026-08-16-stream-output-animation.md) |
 
 ## Known Risks and Open Questions
 
-| Item                                        | Impact                                                                      | Evidence                                                                              | Next action                                                                    | Link                                                       |
-| ------------------------------------------- | --------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ | ---------------------------------------------------------- |
-| Exposed provider key must be rotated        | Blocks safe live-provider soak                                              | Key appeared in chat and was not used or stored                                       | User rotates it and enters the replacement only through official settings      | [Testing](./docs/engineering/testing.md)                   |
-| V4 Pro capability improvement is unverified | Mechanism can ship without proving the reported 98/99 score band            | No replacement credentials were entered and the community score is benchmark-specific | Run at least 10 paired Standard/Anchored trials when credentials are available | [Anchored Standard](./docs/knowledge/anchored-standard.md) |
-| Preset ID conflict                          | A user-authored `anchored-standard` directory prevents managed installation | Installer deliberately refuses to overwrite unknown or modified content               | Show a bounded conflict notice; Standard remains available                     | [Architecture](./docs/architecture/overview.md)            |
-| Routing preset refresh follows mutable main | A background refresh can install unreviewed upstream router-preset changes | `routing-suite-update.ts` fetches `dsh-router-standard/main` once per day at most | Replace the mutable-main refresh with reviewed pinned updates before a public release | [Upstream](./docs/knowledge/upstream-baseline.md)          |
-| Legacy browser tests are stale              | `pnpm test` is not fully green and acceptance claims must stay qualified   | 3 Playwright tests still call the removed `installStreamOutputEffects` hook          | Repair or remove the three legacy stream-animation tests, then rerun `pnpm test` | [Testing](./docs/engineering/testing.md)                   |
+| Item                                        | Impact                                                                           | Evidence                                                                              | Next action                                                                           | Link                                                       |
+| ------------------------------------------- | -------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- | ---------------------------------------------------------- |
+| Exposed provider key must be rotated        | Blocks safe live-provider soak                                                   | Key appeared in chat and was not used or stored                                       | User rotates it and enters the replacement only through official settings             | [Testing](./docs/engineering/testing.md)                   |
+| V4 Pro capability improvement is unverified | Mechanism can ship without proving the reported 98/99 score band                 | No replacement credentials were entered and the community score is benchmark-specific | Run at least 10 paired Standard/Anchored trials when credentials are available        | [Anchored Standard](./docs/knowledge/anchored-standard.md) |
+| Preset ID conflict                          | A user-authored `anchored-standard` directory prevents managed installation      | Installer deliberately refuses to overwrite unknown or modified content               | Show a bounded conflict notice; Standard remains available                            | [Architecture](./docs/architecture/overview.md)            |
+| Routing preset refresh follows mutable main | A background refresh can install unreviewed upstream router-preset changes       | `routing-suite-update.ts` fetches `dsh-router-standard/main` once per day at most     | Replace the mutable-main refresh with reviewed pinned updates before a public release | [Upstream](./docs/knowledge/upstream-baseline.md)          |
+| Legacy browser tests are stale              | `pnpm test` is not fully green and acceptance claims must stay qualified         | 3 Playwright tests still call the removed `installStreamOutputEffects` hook           | Repair or remove the three legacy stream-animation tests, then rerun `pnpm test`      | [Testing](./docs/engineering/testing.md)                   |
+| Nested worktree outputs pollute lint        | A clean repository-wide `pnpm lint` claim is not reproducible from this worktree | ESLint reports generated `dist/` and vendored files under `.worktrees/*`              | Scope lint to owned sources or remove worktree outputs before the release gate        | [Testing](./docs/engineering/testing.md)                   |
 
 ## Mandatory Rules
 

@@ -5,7 +5,17 @@ summary: Active, resumable execution plan for the desktop release, Routing Suite
 kind: plan
 status: canonical
 content_stage: partial-implementation
-scope: [repository, desktop, watchdog, plugin, routing-suite, skills, packaging, validation]
+scope:
+  [
+    repository,
+    desktop,
+    watchdog,
+    plugin,
+    routing-suite,
+    skills,
+    packaging,
+    validation,
+  ]
 triggers: [resume, milestone, implementation plan]
 read_when: [starting or reviewing any milestone]
 skip_when: [isolated documentation typo]

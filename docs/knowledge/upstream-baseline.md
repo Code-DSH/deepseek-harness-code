@@ -5,8 +5,19 @@ summary: Version and official-contract evidence for Harness, packaging, DSH Rout
 kind: knowledge
 status: canonical
 content_stage: implementation-backed
-scope: [dependencies, harness, electron, routing-suite, skills, conversation-effects]
-triggers: [upgrade, upstream, plugin, routing, skills, questions, thinking-orbs, esbuild]
+scope:
+  [dependencies, harness, electron, routing-suite, skills, conversation-effects]
+triggers:
+  [
+    upgrade,
+    upstream,
+    plugin,
+    routing,
+    skills,
+    questions,
+    thinking-orbs,
+    esbuild,
+  ]
 read_when: [changing pinned versions or official integration behavior]
 skip_when: [editing app-local styling only]
 priority: must
@@ -40,21 +51,21 @@ Pin `@deepseek-ai/dsh@0.1.0-rc.6`, Electron `43.4.0`, electron-builder `26.15.3`
 
 ## Evidence
 
-| Retrieved at | Source                                                                                                         | Version/date                                                                 | Key evidence                                                                                      | Confidence |
-| ------------ | -------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- | ---------- |
-| 2026-08-15   | [DeepSeek Harness repository](https://github.com/deepseek-ai/deepseek-harness)                                 | inspected commit `47f943859bef60e4160492346772ded9b24f765a` plus npm release | Official packages, `dsh web`, Cordis `apply(ctx)`, bundle patches, question tool and client UI    | high       |
-| 2026-08-15   | [npm: @deepseek-ai/dsh](https://www.npmjs.com/package/@deepseek-ai/dsh)                                        | 0.1.0-rc.6                                                                   | CLI package baseline                                                                              | high       |
-| 2026-08-15   | [Electron releases](https://releases.electronjs.org/)                                                          | 43.4.0                                                                       | Chromium desktop runtime baseline                                                                 | high       |
-| 2026-08-15   | [electron-builder](https://www.electron.build/)                                                                | 26.15.3                                                                      | macOS universal and DMG packaging baseline                                                        | high       |
-| 2026-08-16   | [thinking-orbs repository](https://github.com/Jakubantalik/thinking-orbs) and npm registry metadata            | 0.3.1                                                                        | 20-pixel preset, speed multiplier, automatic theme, reduced-motion static frame, MIT license      | high       |
-| 2026-08-16   | [generative-loaders repository](https://github.com/kasturikhanke/generative-loaders) and npm registry metadata | 0.1.1                                                                        | MIT-licensed dissolve visual reference; the plain-text component is not bundled                   | high       |
-| 2026-08-16   | [esbuild bundle API](https://esbuild.github.io/api/) and workspace lock                                        | 0.25.12                                                                      | Recursively bundles local/third-party client code while preserving the declared Harness externals | high       |
-| 2026-08-16   | Workspace manifest and lock                                                                                    | ReactDOM 18.3.1                                                              | Development-only real `createRoot` browser test runtime; not shipped as a plugin runtime external | high       |
-| 2026-08-16   | [DSH Routing Suite](https://github.com/yjh051108/dsh-routing-suite)                                             | suite submodule refs; snapshot `build/routing-suite/versions.json`           | Install chain identifies injector, mode boost, and router preset components; bundled SHA-256s are recorded | high       |
-| 2026-08-16   | [Super Injector](https://github.com/yjh051108/dsh-super-injector) and [Mode Boost](https://github.com/yjh051108/dsh-mode-boost) | release `0.3.3` / `0.1.0` | Release tarballs are the offline snapshot sources used by `fetch-routing-suite.mjs`                             | high       |
-| 2026-08-16   | [Router Standard](https://github.com/yjh051108/dsh-router-standard)                                              | `0.2.0` at commit `eff787e95132d6c7104214542104a84d656b497e`                  | The bundled snapshot pins the commit archive; the daily refresh currently follows `main`                     | high       |
-| 2026-08-16   | [Superpowers repository](https://github.com/obra/superpowers)                                                    | `6.2.0`                                                                      | MIT-licensed skill collection bundled under `packages/superpowers-skills`                                   | high       |
-| 2026-08-16   | Pinned installed Harness packages                                                                              | `@deepseek-ai/dsh-llm-deepseek`, `dsh-base`, and `dsh-web-app` 0.1.0-rc.6    | V4 Pro/Flash catalog, official reasoning efforts, Skills, tools, workflows, and supporting UI     | high       |
+| Retrieved at | Source                                                                                                                          | Version/date                                                                 | Key evidence                                                                                               | Confidence |
+| ------------ | ------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- | ---------- |
+| 2026-08-15   | [DeepSeek Harness repository](https://github.com/deepseek-ai/deepseek-harness)                                                  | inspected commit `47f943859bef60e4160492346772ded9b24f765a` plus npm release | Official packages, `dsh web`, Cordis `apply(ctx)`, bundle patches, question tool and client UI             | high       |
+| 2026-08-15   | [npm: @deepseek-ai/dsh](https://www.npmjs.com/package/@deepseek-ai/dsh)                                                         | 0.1.0-rc.6                                                                   | CLI package baseline                                                                                       | high       |
+| 2026-08-15   | [Electron releases](https://releases.electronjs.org/)                                                                           | 43.4.0                                                                       | Chromium desktop runtime baseline                                                                          | high       |
+| 2026-08-15   | [electron-builder](https://www.electron.build/)                                                                                 | 26.15.3                                                                      | macOS universal and DMG packaging baseline                                                                 | high       |
+| 2026-08-16   | [thinking-orbs repository](https://github.com/Jakubantalik/thinking-orbs) and npm registry metadata                             | 0.3.1                                                                        | 20-pixel preset, speed multiplier, automatic theme, reduced-motion static frame, MIT license               | high       |
+| 2026-08-16   | [generative-loaders repository](https://github.com/kasturikhanke/generative-loaders) and npm registry metadata                  | 0.1.1                                                                        | MIT-licensed dissolve visual reference; the plain-text component is not bundled                            | high       |
+| 2026-08-16   | [esbuild bundle API](https://esbuild.github.io/api/) and workspace lock                                                         | 0.25.12                                                                      | Recursively bundles local/third-party client code while preserving the declared Harness externals          | high       |
+| 2026-08-16   | Workspace manifest and lock                                                                                                     | ReactDOM 18.3.1                                                              | Development-only real `createRoot` browser test runtime; not shipped as a plugin runtime external          | high       |
+| 2026-08-16   | [DSH Routing Suite](https://github.com/yjh051108/dsh-routing-suite)                                                             | suite submodule refs; snapshot `build/routing-suite/versions.json`           | Install chain identifies injector, mode boost, and router preset components; bundled SHA-256s are recorded | high       |
+| 2026-08-16   | [Super Injector](https://github.com/yjh051108/dsh-super-injector) and [Mode Boost](https://github.com/yjh051108/dsh-mode-boost) | release `0.3.3` / `0.1.0`                                                    | Release tarballs are the offline snapshot sources used by `fetch-routing-suite.mjs`                        | high       |
+| 2026-08-16   | [Router Standard](https://github.com/yjh051108/dsh-router-standard)                                                             | `0.2.0` at commit `eff787e95132d6c7104214542104a84d656b497e`                 | The bundled snapshot pins the commit archive; the daily refresh currently follows `main`                   | high       |
+| 2026-08-16   | [Superpowers repository](https://github.com/obra/superpowers)                                                                   | `6.2.0`                                                                      | MIT-licensed skill collection bundled under `packages/superpowers-skills`                                  | high       |
+| 2026-08-16   | Pinned installed Harness packages                                                                                               | `@deepseek-ai/dsh-llm-deepseek`, `dsh-base`, and `dsh-web-app` 0.1.0-rc.6    | V4 Pro/Flash catalog, official reasoning efforts, Skills, tools, workflows, and supporting UI              | high       |
 
 ## V4 Pro and Integrated Toolchain
 

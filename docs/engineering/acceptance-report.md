@@ -48,18 +48,18 @@ tags: [acceptance, release, evidence]
 
 ## Automated verification
 
-| Gate              | Result                                                                                                      |
-| ----------------- | ----------------------------------------------------------------------------------------------------------- |
-| Unit suite        | 27 files / 103 tests passed, including Routing Suite, Skills, and bilingual-preset regressions              |
-| Upstream preset   | 108 vendored upstream and local-patch tests passed                                                          |
-| Official plugins  | 3 files / 23 tests passed, including pinned rc.6 roster, session creation, and boot                        |
-| Package contract  | 1 file / 4 tests passed                                                                                     |
-| Browser E2E       | 2 of 5 Playwright tests passed; three legacy stream-animation tests fail against the removed test hook      |
-| TypeScript        | `tsc --noEmit` passed                                                                                       |
-| Static gates      | ESLint, Prettier, documentation-link validation, and 7-control security contract passed                     |
-| Dependency audit  | Production audit reported no known vulnerabilities at high severity or above                                |
-| Runtime preflight | Clean all-branch package rerun remains pending                                                              |
-| macOS package     | Clean all-branch Universal DMG rerun remains pending; existing DMG predates bilingual preset metadata       |
+| Gate              | Result                                                                                                                                                                                                |
+| ----------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Unit suite        | 27 files / 103 tests passed, including Routing Suite, Skills, and bilingual-preset regressions                                                                                                        |
+| Upstream preset   | 108 vendored upstream and local-patch tests passed                                                                                                                                                    |
+| Official plugins  | 3 files / 23 tests passed, including pinned rc.6 roster, session creation, and boot                                                                                                                   |
+| Package contract  | 1 file / 4 tests passed                                                                                                                                                                               |
+| Browser E2E       | 2 of 5 Playwright tests passed; three legacy stream-animation tests fail against the removed test hook                                                                                                |
+| TypeScript        | `tsc --noEmit` passed                                                                                                                                                                                 |
+| Static gates      | `tsc --noEmit`, `verify:docs` (32 files), and 7-control security contract pass; `pnpm lint` still traverses generated files under nested `.worktrees` and must be scoped before a clean release claim |
+| Dependency audit  | `pnpm audit --prod` reports no known vulnerabilities                                                                                                                                                  |
+| Runtime preflight | Clean all-branch package rerun remains pending                                                                                                                                                        |
+| macOS package     | Clean all-branch Universal DMG rerun remains pending; existing DMG predates bilingual preset metadata                                                                                                 |
 
 ## Real renderer and performance evidence
 
@@ -95,6 +95,7 @@ The user-supplied community claim is experimental and is not a benchmark guarant
 
 - The equal 16-point traffic-light contract is verified in source, test, and the packaged main process. Native visual inspection on macOS 15 and macOS 26 remains an external gate; the local packaging host is macOS 27 and cannot substitute for those runs.
 - The browser gate is currently partial: three legacy Playwright tests still target the removed `installStreamOutputEffects` hook and must be repaired before a full `pnpm test` pass can be claimed.
+- `pnpm lint` from this primary worktree currently reports generated files under the nested `.worktrees` directory. The lint scope must exclude or remove those worktree outputs before claiming a clean static-gate pass.
 - The key pasted in chat was not used, stored, printed, or forwarded. It must be revoked. A 45-minute live-provider soak is intentionally deferred until a replacement is entered by the user through official Harness settings.
 - V4 Pro/Flash selection and the official `off` / `high` / `max` reasoning controls are available in the pinned adapter. The literal `We need` automatic reasoning trigger is documented as a next requirement and is not represented as shipped until its public per-request implementation and tests exist.
 - The routing-suite background refresh follows `dsh-router-standard/main` for preset updates. Until that path is changed to reviewed immutable pins, the public release should not claim a fully pinned routing supply chain.
