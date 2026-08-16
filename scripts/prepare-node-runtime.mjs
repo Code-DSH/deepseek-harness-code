@@ -9,12 +9,11 @@ const sourceRoot = join(projectRoot, "config", "node-runtime");
 const targetRoot = join(projectRoot, "build", "node-runtime");
 
 const pnpmPackagePath = requireFromProject.resolve("pnpm");
-const pnpmStandaloneEntry = join(
+const pnpmStandaloneRoot = join(
   dirname(pnpmPackagePath),
   "artifacts",
   "exe",
   "dist",
-  "pnpm.mjs",
 );
 const pnpmManifest = JSON.parse(await readFile(pnpmPackagePath, "utf8"));
 if (pnpmManifest.version !== "11.19.0") {
@@ -52,7 +51,11 @@ await copyFile(
 await cp(join(sourceRoot, "patches"), join(targetRoot, "patches"), {
   recursive: true,
 });
-await copyFile(pnpmStandaloneEntry, join(targetRoot, "pnpm.mjs"));
+// The standalone pnpm launcher is not a single file: its install pipeline
+// spawns worker threads (worker.js) and needs node-gyp-bin, templates, and
+// vendor assets from the same directory. Copy the whole dist tree so the
+// portable runtime installs packages exactly like the development tree.
+await cp(pnpmStandaloneRoot, targetRoot, { recursive: true });
 
 process.stdout.write(
   `${JSON.stringify({

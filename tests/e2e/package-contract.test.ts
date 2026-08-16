@@ -188,8 +188,9 @@ describe("DeepSeek Harness Code distribution contract", () => {
     expect(preflightScript).toContain('["pnpm", "11.19.0"]');
     expect(preflightScript).toContain('["dsh-find-plugin", "0.3.6"]');
     expect(preflightScript).toContain("build/node-runtime");
-    expect(preflightScript).toContain("pnpmStandaloneEntry");
+    expect(preflightScript).toContain("pnpmStandaloneRoot");
     expect(preflightScript).toContain("pnpm.mjs");
+    expect(preflightScript).toContain("worker.js");
     expect(preflightScript).toContain("name: 'dsh-find-plugin'");
     expect(preflightScript).toContain(
       "name: '@dsh-external/dsh-super-injector'",

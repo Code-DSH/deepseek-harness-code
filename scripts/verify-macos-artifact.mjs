@@ -71,6 +71,7 @@ try {
     "node-runtime/package.json",
     "node-runtime/pnpm-lock.yaml",
     "node-runtime/pnpm.mjs",
+    "node-runtime/worker.js",
   ].map((relativePath) => join(resourcesRoot, relativePath));
   await Promise.all(nodeRuntimeResources.map((path) => access(path)));
   let packagedNodeModulesPresent = true;

@@ -37,8 +37,8 @@ describe("packaged runtime dependency closure", () => {
       join(projectRoot, "scripts", "prepare-node-runtime.mjs"),
       "utf8",
     );
-    expect(prepareScript).toContain("pnpmStandaloneEntry");
-    expect(prepareScript).toContain('"pnpm.mjs"');
+    expect(prepareScript).toContain("pnpmStandaloneRoot");
+    expect(prepareScript).toContain("worker.js");
     expect(prepareScript).toContain('pnpmManifest.version !== "11.19.0"');
     expect(prepareScript).toContain("build/node-runtime");
   });

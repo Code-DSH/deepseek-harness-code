@@ -97,17 +97,23 @@ for (const [name, expectedVersion] of criticalRuntimeVersions) {
 }
 
 const pnpmPackagePath = requireFromProject.resolve("pnpm");
-const pnpmStandaloneEntry = join(
+const pnpmStandaloneRoot = join(
   dirname(pnpmPackagePath),
   "artifacts",
   "exe",
   "dist",
-  "pnpm.mjs",
 );
-await access(pnpmStandaloneEntry); // copied to build/node-runtime for first launch.
+for (const entry of ["pnpm.mjs", "worker.js"]) {
+  await access(join(pnpmStandaloneRoot, entry));
+}
 
 const nodeRuntimeResourceRoot = join(projectRoot, "build", "node-runtime");
-for (const relativePath of ["package.json", "pnpm-lock.yaml", "pnpm.mjs"]) {
+for (const relativePath of [
+  "package.json",
+  "pnpm-lock.yaml",
+  "pnpm.mjs",
+  "worker.js",
+]) {
   await access(join(nodeRuntimeResourceRoot, relativePath));
 }
 const nodeRuntimePackage = JSON.parse(

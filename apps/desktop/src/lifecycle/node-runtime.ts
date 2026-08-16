@@ -5,6 +5,7 @@ import {
   access,
   chmod,
   copyFile,
+  cp,
   mkdir,
   readFile,
   rename,
@@ -350,6 +351,19 @@ export const installRuntimePackages: InstallRuntimePackages = async ({
   await copyFile(
     join(runtimeResourceDir, "pnpm-lock.yaml"),
     join(paths.packagesDir, "pnpm-lock.yaml"),
+  );
+  // pnpm resolves patchedDependencies and allowBuilds from the workspace
+  // file; without it a frozen install rejects the lockfile's patch hashes.
+  await copyFile(
+    join(runtimeResourceDir, "pnpm-workspace.yaml"),
+    join(paths.packagesDir, "pnpm-workspace.yaml"),
+  );
+  await cp(
+    join(runtimeResourceDir, "patches"),
+    join(paths.packagesDir, "patches"),
+    {
+      recursive: true,
+    },
   );
   const result = spawnSync(
     nodeExecutable,
