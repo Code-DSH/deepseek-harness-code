@@ -1,24 +1,28 @@
 ---
 id: knowledge.upstream-baseline
 title: Upstream Baseline
-summary: Version and official-contract evidence for Harness, packaging, native conversation-rendering ownership, and the exact rc.6 turn-tail projection patch.
+summary: Version and official-contract evidence for Harness, packaging, DSH Routing Suite pins, native conversation-rendering ownership, and the exact rc.6 turn-tail projection patch.
 kind: knowledge
 status: canonical
 content_stage: implementation-backed
-scope: [dependencies, harness, electron, renderer]
-triggers: [upgrade, upstream, plugin, questions, renderer, esbuild]
+scope: [dependencies, harness, electron, routing-suite, renderer]
+triggers: [upgrade, upstream, plugin, routing, questions, renderer, esbuild]
 read_when: [changing pinned versions or official integration behavior]
 skip_when: [editing app-local styling only]
 priority: must
 freshness_class: rapid
-last_verified: 2026-08-16T13:56:03+08:00
-revalidate_after: 2026-08-17T13:56:03+08:00
+last_verified: 2026-08-16T16:38:10+08:00
+revalidate_after: 2026-08-17T16:38:10+08:00
 owners: [project]
 source_of_truth:
   - https://github.com/deepseek-ai/deepseek-harness
   - https://www.npmjs.com/package/@deepseek-ai/dsh
   - https://www.electronjs.org/docs/latest/
   - https://esbuild.github.io/api/
+  - https://github.com/yjh051108/dsh-routing-suite
+  - https://github.com/yjh051108/dsh-super-injector
+  - https://github.com/yjh051108/dsh-mode-boost
+  - https://github.com/yjh051108/dsh-router-standard
 related:
   prerequisites: [../project/intent.md]
   next: [../architecture/overview.md]
@@ -30,19 +34,22 @@ tags: [research, versions]
 
 ## Current Conclusion
 
-Pin `@deepseek-ai/dsh@0.1.0-rc.6`, Electron `43.4.0`, electron-builder `26.15.3`, and esbuild `0.25.12`. The peer-qualified `@deepseek-ai/dsh-client-ui-conversation@0.1.0-rc.6` is reproducibly patched through pnpm to avoid an open-turn quadratic `turn-tail` scan while preserving the official canonical event path and fail-open fallback. Harness supplies the official user-question packages, Cordis bundle mechanism, and conversation UI; this project composes the official UI rather than adding a thinking/status overlay.
+Pin `@deepseek-ai/dsh@0.1.0-rc.6`, Electron `43.4.0`, electron-builder `26.15.3`, and esbuild `0.25.12`. The peer-qualified `@deepseek-ai/dsh-client-ui-conversation@0.1.0-rc.6` is reproducibly patched through pnpm to avoid an open-turn quadratic `turn-tail` scan while preserving the official canonical event path and fail-open fallback. The DSH Routing Suite snapshot pins injector `0.3.3`, mode boost `0.1.0`, and router preset commit `eff787e95132d6c7104214542104a84d656b497e`; reviewed SHA-256 values are required before extraction, and the installed app has no mutable routing-code updater. Harness supplies the official user-question packages, Cordis bundle mechanism, and conversation UI; this project composes the official UI rather than adding a thinking/status overlay.
 
 ## Evidence
 
-| Retrieved at | Source                                                                         | Version/date                                                                 | Key evidence                                                                                      | Confidence |
-| ------------ | ------------------------------------------------------------------------------ | ---------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- | ---------- |
-| 2026-08-15   | [DeepSeek Harness repository](https://github.com/deepseek-ai/deepseek-harness) | inspected commit `47f943859bef60e4160492346772ded9b24f765a` plus npm release | Official packages, `dsh web`, Cordis `apply(ctx)`, bundle patches, question tool and client UI    | high       |
-| 2026-08-15   | [npm: @deepseek-ai/dsh](https://www.npmjs.com/package/@deepseek-ai/dsh)        | 0.1.0-rc.6                                                                   | CLI package baseline                                                                              | high       |
-| 2026-08-15   | [Electron releases](https://releases.electronjs.org/)                          | 43.4.0                                                                       | Chromium desktop runtime baseline                                                                 | high       |
-| 2026-08-15   | [electron-builder](https://www.electron.build/)                                | 26.15.3                                                                      | macOS universal and DMG packaging baseline                                                        | high       |
-| 2026-08-16   | [esbuild bundle API](https://esbuild.github.io/api/) and workspace lock        | 0.25.12                                                                      | Recursively bundles local/third-party client code while preserving the declared Harness externals | high       |
-| 2026-08-16   | Pinned installed Harness packages                                              | `@deepseek-ai/dsh-llm-deepseek`, `dsh-base`, and `dsh-web-app` 0.1.0-rc.6    | V4 Pro/Flash catalog, official reasoning efforts, Skills, tools, workflows, and supporting UI     | high       |
-| 2026-08-16   | Installed rc.6 conversation bundle, pnpm patch, and real-bundle regression     | `@deepseek-ai/dsh-client-ui-conversation@0.1.0-rc.6`                         | Open-turn match inspections: 50,015,000 before, zero after; exact 10,000-delta text retained      | high       |
+| Retrieved at | Source                                                                                                                          | Version/date                                                                 | Key evidence                                                                                      | Confidence |
+| ------------ | ------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- | ---------- |
+| 2026-08-15   | [DeepSeek Harness repository](https://github.com/deepseek-ai/deepseek-harness)                                                  | inspected commit `47f943859bef60e4160492346772ded9b24f765a` plus npm release | Official packages, `dsh web`, Cordis `apply(ctx)`, bundle patches, question tool and client UI    | high       |
+| 2026-08-15   | [npm: @deepseek-ai/dsh](https://www.npmjs.com/package/@deepseek-ai/dsh)                                                         | 0.1.0-rc.6                                                                   | CLI package baseline                                                                              | high       |
+| 2026-08-15   | [Electron releases](https://releases.electronjs.org/)                                                                           | 43.4.0                                                                       | Chromium desktop runtime baseline                                                                 | high       |
+| 2026-08-15   | [electron-builder](https://www.electron.build/)                                                                                 | 26.15.3                                                                      | macOS universal and DMG packaging baseline                                                        | high       |
+| 2026-08-16   | [esbuild bundle API](https://esbuild.github.io/api/) and workspace lock                                                         | 0.25.12                                                                      | Recursively bundles local/third-party client code while preserving the declared Harness externals | high       |
+| 2026-08-16   | Pinned installed Harness packages                                                                                               | `@deepseek-ai/dsh-llm-deepseek`, `dsh-base`, and `dsh-web-app` 0.1.0-rc.6    | V4 Pro/Flash catalog, official reasoning efforts, Skills, tools, workflows, and supporting UI     | high       |
+| 2026-08-16   | Installed rc.6 conversation bundle, pnpm patch, and real-bundle regression                                                      | `@deepseek-ai/dsh-client-ui-conversation@0.1.0-rc.6`                         | Open-turn match inspections: 50,015,000 before, zero after; exact 10,000-delta text retained      | high       |
+| 2026-08-16   | [DSH Routing Suite](https://github.com/yjh051108/dsh-routing-suite)                                                             | suite main `a09eb0ade28e6ec3b8e5eb22985a14f6bfa1fbe5`                        | Install chain and submodule refs identify injector, mode boost, and router preset components      | high       |
+| 2026-08-16   | [Super Injector](https://github.com/yjh051108/dsh-super-injector) and [Mode Boost](https://github.com/yjh051108/dsh-mode-boost) | tags `0.3.3` / `0.1.0` at `f4ef59f` / `a9a666a`                              | Release refs match the pinned prebuilt archives used by the offline snapshot                      | high       |
+| 2026-08-16   | [Router Standard](https://github.com/yjh051108/dsh-router-standard)                                                             | suite gitlink/tag `0.2.0` at `eff787e`; main `f9667f7`                       | The immutable suite gitlink is used instead of mutable main; README version wording is not a pin  | high       |
 
 ## V4 Pro and Integrated Toolchain
 
@@ -58,7 +65,7 @@ Retain `@deepseek-ai/dsh-tool-ask-user`, `@deepseek-ai/dsh-user-questions`, and 
 
 ## Applicability
 
-Project versions are exact even if newer upstream releases appear. Revalidate before dependency upgrades, package publication, or compatibility claims.
+Project versions are exact even if newer upstream releases appear. Revalidate before dependency upgrades, package publication, or compatibility claims. The Routing Suite README describes router preset `0.3.0`, but its checked submodule ref and the router repository's published tags identify `0.2.0` at `eff787e`; this release therefore records the exact commit as authoritative and does not infer an unpublished version.
 
 ## Pinned Runtime Findings
 
@@ -69,3 +76,4 @@ Project versions are exact even if newer upstream releases appear. Revalidate be
 - rc.6 package scanning does not discover this graph from the tested ASAR layout, so the release uses an unpacked application tree.
 - The desktop client does not add conversation paint. The only related runtime externals are Harness-provided React, `react/jsx-runtime`, and UI primitives; preflight rejects retired animation imports.
 - The rc.6 conversation patch changes only `turn-tail.tailData()`: normal Definition state proves whether `turn/end` exists in O(1); an unexpectedly absent state executes the original match scan. Assistant chunk ingestion, ordering, RAF/immediate publication selection, final-token handling, and structural completion remain official rc.6 behavior. Rollback removes the exact `patchedDependencies` mapping and regenerates the frozen lockfile, but must not proceed unless the focused regression remains green against the replacement upstream version.
+- Routing Suite archive SHA-256 values are injector `355238fa8e51bc45c0801066af51e0e122f3b21411b193f601ee54e534391f48`, mode boost `72836d64bc465bc7c915e1bbc810d15ae0825dd4448350bcbf42c6e76efca12b`, and router preset `a8f3616fe4f5ed3951118dbc508239cf61dfcd5c763ed1ec9baafea886126676`. A mismatch is fatal to the build before `tar`; missing packaged routing resources remain fail-open for Standard startup.

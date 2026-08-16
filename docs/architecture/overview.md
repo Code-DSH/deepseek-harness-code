@@ -1,7 +1,7 @@
 ---
 id: architecture.overview
 title: System Architecture
-summary: Implemented Electron shell, two-capability plugin bridge, managed progressive Agent Preset, watchdog process boundaries, and native conversation-rendering ownership.
+summary: Implemented Electron shell, two-capability plugin bridge, checksum-pinned Routing Suite, managed progressive Agent Preset, watchdog process boundaries, and native conversation-rendering ownership.
 kind: architecture
 status: canonical
 content_stage: implementation-backed
@@ -11,7 +11,7 @@ read_when: [changing process ownership or public interfaces]
 skip_when: [documentation-only wording fixes]
 priority: must
 freshness_class: project
-last_verified: 2026-08-16T15:20:00+08:00
+last_verified: 2026-08-16T16:38:10+08:00
 owners: [project]
 source_of_truth: [../../apps, ../../packages]
 related:
@@ -27,6 +27,8 @@ The implemented Electron main process owns BrowserWindow security policy, close 
 
 The host creates an idempotent, app-owned Web profile manifest containing the two official Web bundles plus `deepseek-harness-desktop-plugin`. Anchored Standard is not a Web profile bundle: the complete pinned preset is packaged as an extra resource and atomically synchronized to `<DSH_HOME>/.agent-presets/anchored-standard` on Harness startup. A versioned ownership marker and SHA-256 digest allow safe upgrades only when the installed copy is still app-owned and unmodified. An unknown or edited same-name directory is preserved and publishes `anchored-preset-conflict`; an invalid packaged source publishes `anchored-preset-unavailable` and disables only the optional preset. Standard remains available in both cases.
 
+The DSH Routing Suite is another immutable app resource. The build fetches exact injector `0.3.3`, mode-boost `0.1.0`, and router preset commit `eff787e95132d6c7104214542104a84d656b497e`, rejects any archive whose SHA-256 differs before extraction, and packages the verified tree. Startup adds the injector after the host bundle, links mode-boost through the app-owned patch layer, and manages `router-standard` plus `router-spec` with the same ownership-preserving installer boundary. The installed app has no Routing Suite network updater; routing code changes only with a reviewed app release. Missing or conflicting optional resources publish bounded notices while Standard startup continues.
+
 Within a selected Anchored Standard session, `system-prompt/assemble` exposes exactly `bash` and `str_replace_editor` before a durable tool call or assistant message exists. `agent/pre-step` filters only automatic `agent-instructions` and `skill-catalog` messages during that bootstrap phase. Promotion retains the Minimal pair plus `dev_tool_search`, `skill_search`, and `skill_load`; other tools appear only after an explicit `dev_tool_search` unlock recorded in durable session events. Compaction starts a new epoch with a controlled work set, and subagents start resident. Missing phase-required tools fail preset assembly instead of returning the full catalog.
 
 ## Trust Boundaries
@@ -35,6 +37,7 @@ Within a selected Anchored Standard session, `system-prompt/assemble` exposes ex
 - Preload: exactly two allow-listed capability groups and validated payloads.
 - Main: process and filesystem authority limited to app-owned data and fixed actions.
 - Harness: loopback-only HTTP server and official plugin host.
+- Routing Suite: exact app-bundled snapshot only; no mutable runtime download or execution path.
 - Watchdog: can relaunch only the validated fixed application executable/argument vector; exposes no network listener; removes `ELECTRON_RUN_AS_NODE` before relaunch.
 
 ## Implemented Host Contract
@@ -78,4 +81,4 @@ BrowserWindow web contents
 
 ## Validation
 
-Targeted post-removal verification passes 23 plugin/real-Harness tests, four package-contract tests, five runtime-closure tests, TypeScript type checking, and whitespace validation. It proves that the official bundle no longer exports or registers a conversation overlay, has no thinking/status mutation markers, carries no `thinking-orbs` runtime dependency, and still serves through the pinned rc.6 boot graph. A prior real Electron run separately proved the grouped preload bridge, Standard workspace creation after compaction-peer repair, editable IME-capable composer, permission-menu persistence, official localized Button/Menu settings, password-field paste, and its host-level idle probe. Artifact evidence is recorded in the [acceptance report](../engineering/acceptance-report.md).
+Final verification passes 103 unit/security tests, 108 Anchored Standard tests, 23 plugin/real-Harness tests, four package-contract tests, one Chromium browser test, TypeScript type checking, lint, formatting, documentation, security, production dependency audit, runtime closure, and Universal DMG inspection. It proves that the official bundle no longer exports or registers a conversation overlay, the routing archives fail closed before extraction on digest mismatch, user-owned presets are preserved, and the official client still serves through the pinned rc.6 boot graph. A prior real Electron run separately proved the grouped preload bridge, Standard workspace creation after compaction-peer repair, editable IME-capable composer, permission-menu persistence, official localized Button/Menu settings, password-field paste, and its host-level idle probe. Artifact evidence is recorded in the [acceptance report](../engineering/acceptance-report.md).

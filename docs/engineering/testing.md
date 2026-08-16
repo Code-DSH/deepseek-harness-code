@@ -12,18 +12,19 @@ The desktop bundle leaves streamed prose, Think disclosures, and running status 
 
 ## Verified on 2026-08-16
 
-- Unit/state/security and plugin contracts cover the desktop host, watchdog, progressive preset installer, native conversation-rendering boundary, and absence of a global thinking overlay.
+- Unit/state/security and plugin contracts: 27 files / 103 tests cover the desktop host, watchdog, progressive preset installer, checksum-pinned Routing Suite assembly, native conversation-rendering boundary, and absence of a global thinking overlay.
+- Four Routing Suite tests cover startup assembly, idempotency, fail-open absence, and rejection of a structurally valid substituted archive before executable extraction. Temporarily disabling only the SHA-256 comparison makes the security regression fail.
 - The rc.6 stream-performance regression executes the actual packaged Assistant and turn-tail Definitions. Across 10,000 ordered deltas it independently accumulates the expected text, verifies the `[7pr]` final token, reasoning/final/structural synchronous publication, hydration/reconnect, two interleaved session assemblers, and fail-open behavior. Open-turn match inspections fell from 50,015,000 on the unpatched bundle to zero with the exact-version patch.
 - Vendored Anchored Standard implementation: 108 upstream and local-patch tests.
 - Anchored Standard coverage includes exact two-tool bootstrap, both promotion events, automatic-context filtering, explicit unlock recovery, session isolation, subagent residency, compaction epochs, strict missing-tool failures, official rc.6 discovery/session creation, conflict preservation, and atomic upgrades.
 - Package contract: 1 file, 4 tests.
-- Plugin and real-Harness integration: 3 files, 22 tests covering the official plugin contract, deterministic client build, progressive preset roster/session creation, serialized two-tool and resident five-tool requests, and the real pinned-Harness boot graph. The readiness helper retries only route-level 404 responses because rc.6 can serve the Web root before Cordis registers `agentPreset.list`.
+- Plugin and real-Harness integration: 3 files, 23 tests covering the official plugin contract, deterministic client build, progressive preset roster/session creation, serialized two-tool and resident five-tool requests, and the real pinned-Harness boot graph. The readiness helper retries only route-level 404 responses because rc.6 can serve the Web root before Cordis registers `agentPreset.list`.
 - Browser acceptance covers desktop slot registration, route-transition commit, and cleanup. Custom text and thinking animation acceptance tests were retired with those overlays; official Harness owns those states.
-- TypeScript, ESLint, Prettier, 31-file documentation-link validation, and the 7-control static security contract pass as release gates.
+- TypeScript, ESLint, Prettier, 34-file documentation-link validation, the 7-control/3-forbidden static security contract, and the production dependency audit pass as release gates. Generated checksum-pinned Routing Suite files and the vendored Superpowers tree are outside owned-source lint/format scope.
 - Runtime closure verifies the local runtime artifacts and critical Harness packages, and rejects unresolved retired animation-module imports in `client.js`.
 - The desktop plugin has no conversation overlay, CSS Highlight, Orb, or status marker to retain after completion.
 - Fault injection recovered a killed Harness in nine seconds. Killing the renderer rebuilt the window while preserving the Electron main and Harness PIDs.
-- The 0.2.0 Universal package was mounted and signature-checked; the pinned preset/provenance resource set was present and 49 Mach-O files passed Universal/architecture-qualified inspection.
+- The 0.3.0 Universal package was mounted and signature-checked; both managed preset resource sets were present and 49 Mach-O files passed Universal/architecture-qualified inspection. The Routing Suite manifest and all four expected executable/preset entry points were also checked in the packaged resources.
 - A real Electron run verified the grouped preload API, text input and full selection, Standard workspace creation after the compaction-peer repair, permission-menu persistence, localized General settings, official Harness Button/Menu rendering with no raw select/checkbox, close-preference persistence, and `Control+V` paste into the official password field without reading a credential.
 - An idle five-second performance sample recorded zero layouts, 1.631 ms total task time, and a 456-byte JS-heap delta. The plugin no longer uses `offsetWidth` or an always-running animation.
 

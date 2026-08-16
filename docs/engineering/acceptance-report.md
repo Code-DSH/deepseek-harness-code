@@ -1,17 +1,17 @@
 ---
 id: engineering.acceptance-report
-title: DeepSeek Harness Code 0.2.0 Acceptance Report
-summary: Executed all-branch source, renderer, and rc.6 long-stream projection evidence; final clean Universal macOS package evidence is being refreshed.
+title: DeepSeek Harness Code 0.3.0 Acceptance Report
+summary: Final source, Routing Suite, rc.6 long-stream projection, clean-install, and Universal macOS package evidence for the integrated 0.3.0 release.
 kind: engineering
 status: canonical
-content_stage: partial-implementation
-scope: [desktop, watchdog, plugin, packaging]
+content_stage: final-verified
+scope: [desktop, watchdog, plugin, routing-suite, packaging]
 triggers: [release, acceptance, verification, DMG]
 read_when: [reviewing release readiness or reproducing validation]
 skip_when: [isolated source edits before release]
 priority: must
 freshness_class: project
-last_verified: 2026-08-16T14:26:00+08:00
+last_verified: 2026-08-16T16:38:10+08:00
 owners: [primary-agent]
 source_of_truth: [../../apps, ../../packages, ../../tests, ../../release]
 related:
@@ -21,13 +21,15 @@ supersedes: []
 tags: [acceptance, release, evidence]
 ---
 
-# DeepSeek Harness Code 0.2.0 Acceptance Report
+# DeepSeek Harness Code 0.3.0 Acceptance Report
 
 ## Artifact
 
-- DMG: `release/DeepSeek-Harness-Code-0.2.0-mac-universal.dmg`
+- DMG: `release/DeepSeek-Harness-Code-0.3.0-mac-universal.dmg`
 - App: `release/mac-universal/DeepSeek Harness Code.app`
-- The pre-integration artifact passed signature, quarantine, preset-provenance, and architecture verification. Its checksum is superseded and will be replaced only after the all-branch source gate produces and verifies a clean DMG.
+- Size: 284,134,947 bytes (271 MiB displayed by `ls`)
+- SHA-256: `c4d94cbe36b01152083f9eb5606fb85f2d5b80b155b4a5ecbe7946d37054314f`
+- `verify:mac --universal` mounted the DMG read-only, verified the runtime dependency closure, Anchored Standard provenance, ad-hoc signature, and 49 Universal/architecture-qualified Mach-O files. A separate `codesign --verify --deep --strict` completed without error.
 
 ## Root-cause and repair evidence
 
@@ -40,26 +42,27 @@ tags: [acceptance, release, evidence]
 7. The former anchored preference and fallback Web bundle were removed. The audited preset is now an optional Agent Preset installed atomically under the app-private Harness home. Unknown or locally modified same-name presets are never overwritten; invalid packaged resources disable only the optional preset, so Standard startup continues. The desktop runtime emits bounded conflict/unavailable enums. The old persisted field is ignored for one migration version and disappears on the next preference write.
 8. The generic menu-bar glyph was replaced by a transparent template image generated from the official mark; Windows and Linux use the full Code product icon. The official mark in the main application icon was moved down toward the Code wordmark.
 9. The General-settings controls formerly used raw HTML select, checkbox, and buttons. They now use the official `@deepseek-ai/dsh-client-ui-primitives` Button/Menu/Icon components. A live layout audit found zero raw selects/checkboxes, matching trigger/menu right edges, and an ellipsis-safe label. The plugin follows the official locale service in both Chinese and English.
-10. The startup surface formerly used gradients and a frosted card. It now renders only a system light/dark pure background and one centered 24 px monochrome spinner. `preflight:runtime` resolves every production dependency, verifies 17 runtime artifacts including the preset/provenance set, and pins five critical runtime packages before any builder command runs.
+10. The startup surface formerly used gradients and a frosted card. It now renders only a system light/dark pure background and one centered 24 px monochrome spinner. `preflight:runtime` resolves every production dependency, verifies 22 runtime artifacts including both preset/provenance sets, and pins five critical runtime packages before any builder command runs.
 11. The macOS traffic-light group previously used `{ x: 16, y: 6 }`, placing the red button closer to the top edge than the left edge. The native BrowserWindow position is now `{ x: 16, y: 16 }`; no Web title bar, spacer, or renderer offset was added.
 12. The rc.6 `turn-tail.tailData()` fallback searched the complete growing Context match list on every open-turn derived flush because `state.end` is intentionally absent before `turn/end`. A 10,000-delta real-bundle regression measured 50,015,000 match inspections. The exact-version pnpm patch now reads the Definition-owned state directly during normal operation (zero inspections), retains the original scan only when state is unexpectedly absent, and leaves canonical chunk ingestion and Assistant publication cadence unchanged.
+13. The merged Routing Suite branch originally downloaded release archives plus a mutable router `main` archive in the background, recorded their digests only after download, and executed the resulting cache on the next launch. The release now bundles exact injector `0.3.3`, mode-boost `0.1.0`, and router preset commit `eff787e95132d6c7104214542104a84d656b497e`; each archive is compared with a reviewed SHA-256 before any `tar` extraction. The runtime updater was removed, and an intentionally valid but substituted archive fixture proves the check fails before executable output is created.
 
 ## Automated verification
 
-| Gate              | Result                                                                              |
-| ----------------- | ----------------------------------------------------------------------------------- |
-| Unit suite        | 27 files / 102 tests passed, including 4 real-bundle stream regressions             |
-| Upstream preset   | 108 vendored upstream and local-patch tests passed                                  |
-| Official plugins  | 3 files / 23 tests passed, including pinned rc.6 roster, session creation, and boot |
-| Package contract  | 1 file / 4 tests passed                                                             |
-| Browser E2E       | 3/5 passed; two known `installStreamOutputEffects` baseline failures remain         |
-| TypeScript        | `tsc --noEmit` passed                                                               |
-| Static gates      | ESLint, Prettier, 31 documentation files, and 7-control security contract passed    |
-| Dependency audit  | Production audit reported no known vulnerabilities at high severity or above        |
-| Runtime preflight | Clean all-branch package rerun follows the verified source integration              |
-| macOS package     | Clean all-branch Universal DMG rerun follows the verified source integration        |
+| Gate              | Result                                                                                       |
+| ----------------- | -------------------------------------------------------------------------------------------- |
+| Unit suite        | 27 files / 103 tests passed, including 4 Routing Suite and 4 real-bundle stream regressions  |
+| Upstream preset   | 108 vendored upstream and local-patch tests passed                                           |
+| Official plugins  | 3 files / 23 tests passed, including pinned rc.6 roster, session creation, and boot          |
+| Package contract  | 1 file / 4 tests passed                                                                      |
+| Browser E2E       | 1/1 passed; asserts only `settings.general.item`, route commit, and disposal                 |
+| TypeScript        | `tsc --noEmit` passed                                                                        |
+| Static gates      | ESLint, Prettier, 34 documentation files, and 7-control/3-forbidden security contract passed |
+| Dependency audit  | `pnpm audit --prod` reported no known vulnerabilities                                        |
+| Runtime preflight | 22 artifacts, 32 production dependencies, and 5 critical Harness packages verified           |
+| macOS package     | 0.3.0 Universal DMG mounted, signature/resource closure checked, and SHA-256 recorded        |
 
-The patched dependency was rebuilt from a moved-aside `node_modules` tree with `pnpm install --frozen-lockfile`; the installed peer-qualified package contained the patch and the focused suite passed 4/4. Reverting only the installed optimization reproduced the 50,015,000-inspection failure, then restoring it returned the suite to green. `pnpm build`, typecheck, runtime preflight, docs links, security, unit, Anchored, real-Harness plugin, and package-contract gates passed. The full Playwright run retained exactly the two documented `installStreamOutputEffects is not a function` baseline failures (3/5 passed). Full-repository lint/format remain blocked by pre-existing vendored Superpowers files and unrelated formatting drift; changed TypeScript passed targeted ESLint.
+The patched dependency was rebuilt from a moved-aside `node_modules` tree with `pnpm install --frozen-lockfile`; the installed peer-qualified package contained the patch and the focused stream suite passed 4/4. Reverting only the installed optimization reproduced the 50,015,000-inspection failure, then restoring it returned the suite to green. The Routing Suite checksum test was also mutation-checked: disabling only the comparison made the substituted archive test fail, restoring it returned all four routing tests to green. The final frozen install, full tests, build, typecheck, runtime preflight, lint, formatting, documentation links, security contract, production audit, Universal packaging, artifact verification, and deep signature check all passed.
 
 ## Real renderer and performance evidence
 

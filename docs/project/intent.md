@@ -1,17 +1,17 @@
 ---
 id: project.intent
 title: DeepSeek Harness Code Intent
-summary: Confirmed scope and acceptance baseline for the desktop app and optional progressive Anchored Standard Agent Preset.
+summary: Confirmed scope and acceptance baseline for the desktop app, immutable DSH Routing Suite, and optional progressive Anchored Standard Agent Preset.
 kind: product
 status: canonical
 content_stage: implementation-backed
-scope: [desktop, plugin, watchdog, packaging]
+scope: [desktop, plugin, routing-suite, watchdog, packaging]
 triggers: [scope, acceptance, product intent]
 read_when: [starting or changing implementation]
 skip_when: [performing an isolated test with unchanged scope]
 priority: must
 freshness_class: project
-last_verified: 2026-08-16T13:06:11+08:00
+last_verified: 2026-08-16T16:38:10+08:00
 owners: [project]
 source_of_truth: [user-approved implementation plan]
 related:
@@ -40,6 +40,7 @@ Deliver an all-in-one, modernized DeepSeek Harness Code desktop distribution tha
 - Official question UI/protocol compatibility across macOS, Linux, and Windows Web environments.
 - System light/dark monochrome startup UI with one centered spinner, underlay title bar, real tray, page transitions without forced layout, official-component desktop settings integration, tests, operations guidance, and an accessible SVG system diagram.
 - Integrated desktop Web bundle plus the optional `anchored-standard` Agent Preset in every installer. Standard remains the official default.
+- Integrated DSH Routing Suite injector, mode boost, and router presets as a checksum-pinned offline app resource with ownership-safe startup assembly and no runtime code updater.
 - First-class official V4 Pro/Flash model selection and reasoning controls, with the literal `We need` intent trigger tracked as the next public-seam implementation requirement.
 - One packaged Harness toolchain covering Skills, tools, Goal, Plan, Workflow, Todo, Jobs, user questions/approval, and subagents.
 
@@ -62,6 +63,7 @@ Deliver an all-in-one, modernized DeepSeek Harness Code desktop distribution tha
 - No credential collection or logging by the desktop layer.
 - `anchored-standard` starts a new top-level session with exactly `bash` and `str_replace_editor`, promotes on the first durable tool call or assistant message, and then keeps only resident discovery plus explicitly unlocked tools.
 - Invalid preset configuration or missing required tools fails that selected preset; it never silently expands to Standard. Standard sessions stay operational.
+- Routing archives must match reviewed exact SHA-256 values before extraction; missing or conflicting optional routing resources must not block Standard startup or overwrite user-owned presets.
 
 ## Acceptance
 
