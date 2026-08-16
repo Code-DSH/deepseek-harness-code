@@ -544,7 +544,7 @@ git commit -m "test: gate conversation animation runtime closure"
 - Consumes: verified implementation paths, exact dependency versions, test counts, browser results, and final Git diff.
 - Produces: implementation-backed design/architecture/testing facts and a completed recoverable plan record.
 
-- [ ] **Step 1: Run the complete verification matrix from a clean generated state**
+- [x] **Step 1: Run the complete verification matrix from a clean generated state**
 
 ```bash
 npm exec --yes --package=pnpm@11.19.0 -- pnpm build
@@ -559,7 +559,9 @@ npm exec --yes --package=pnpm@11.19.0 -- pnpm preflight:runtime
 
 Expected: every command exits 0. Record exact test file/test counts and distinguish any host-limited manual visual check from automated evidence.
 
-- [ ] **Step 2: Write back only verified facts**
+Verified from a clean generated state: build, 24 unit files / 86 tests, 3 plugin files / 17 tests, 1 package file / 4 tests, 4 Chromium tests, TypeScript, ESLint, documentation links, security contracts, and runtime closure all pass. The repository-wide Prettier command still reports two pre-existing product-story documents that are concurrently modified in the user's local main worktree; every feature and documentation file touched by this plan passes targeted Prettier. Those unrelated user-owned files were intentionally not rewritten. A credentialed live-model visual pass was not run.
+
+- [x] **Step 2: Write back only verified facts**
 
 - Mark the design `content_stage: implementation-backed` and add the actual controller/build/test paths.
 - Add the root overlay, DOM compatibility adapter, fail-closed behavior, and no-content-logging boundary to architecture.
@@ -568,7 +570,7 @@ Expected: every command exits 0. Record exact test file/test counts and distingu
 - Add this plan to `AGENTS.md` while active; mark it completed and update the current snapshot only after final verification.
 - Check every plan checkbox and record any deviation with its evidence rather than rewriting history.
 
-- [ ] **Step 3: Format, link-check, and inspect the final scope**
+- [x] **Step 3: Format, link-check, and inspect the final scope**
 
 ```bash
 npm exec --yes --package=pnpm@11.19.0 -- pnpm exec prettier --write AGENTS.md docs/architecture/overview.md docs/engineering/testing.md docs/knowledge/upstream-baseline.md docs/superpowers/specs/2026-08-16-stream-output-animation-design.md docs/superpowers/plans/2026-08-16-stream-output-animation.md
@@ -580,14 +582,14 @@ git diff --stat
 
 Expected: no formatting/link/diff errors and no unrelated file changes.
 
-- [ ] **Step 4: Commit documentation and verified completion evidence**
+- [x] **Step 4: Commit documentation and verified completion evidence**
 
 ```bash
 git add AGENTS.md docs/architecture/overview.md docs/engineering/testing.md docs/knowledge/upstream-baseline.md docs/superpowers/specs/2026-08-16-stream-output-animation-design.md docs/superpowers/plans/2026-08-16-stream-output-animation.md
 git commit -m "docs: record verified conversation animations"
 ```
 
-- [ ] **Step 5: Perform the final clean-tree audit**
+- [x] **Step 5: Perform the final clean-tree audit**
 
 ```bash
 git status --short --branch
@@ -609,3 +611,7 @@ Expected: the feature worktree is clean; all implementation commits are visible;
 - 2026-08-16 — Task 1 complete: exact dependencies, MIT notices, warning-free esbuild client bundling, stylesheet composition, and plugin contract are green.
 - 2026-08-16 — Task 2 complete: strict appended-grapheme ranges and the semantic prose/reasoning classifier are green for CJK, emoji, combining marks, history, code, tool, status, and user exclusions.
 - 2026-08-16 — Task 3 complete: CSS Highlight masking and the fixed dissolve overlay preserve canonical Markdown geometry while copying primary/reasoning typography and clearing on every tested lifecycle boundary.
+- 2026-08-16 — Task 4 complete: the official `shell.overlay` renders the exact breathing 20-pixel Orb only for the authoritative direct running status, with commit-ordered native fallback and active-only viewport listeners.
+- 2026-08-16 — Task 5 complete: package closure ships MIT notices, rejects unresolved client imports, and proves five seconds of zero-frame post-generation quiescence with no retained paint DOM.
+- 2026-08-16 — Task 6 verification complete: all feature tests, build, type, lint, docs, security, and runtime gates pass; the unrelated baseline product-story Prettier exception and unexecuted credentialed visual pass are recorded explicitly.
+- 2026-08-16 — Final feature-worktree audit was clean with seven implementation/verification commits above the approved design and plan baseline; cloud PR and local-main integration remain the delivery workflow outside this implementation checklist.

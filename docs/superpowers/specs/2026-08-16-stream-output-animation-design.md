@@ -4,7 +4,7 @@ title: Streaming Output and Thinking Indicator Animation Design
 summary: Add layout-neutral dissolve effects to newly streamed assistant prose and reasoning, and replace the active bottom status with a breathing ThinkingOrb through the official desktop plugin.
 kind: architecture
 status: canonical
-content_stage: goal-only
+content_stage: implementation-backed
 scope: [desktop-plugin, conversation, streaming-output, accessibility]
 triggers:
   [streaming text, dissolve, generative-loaders, thinking-orbs, ThinkingOrb]
@@ -13,7 +13,7 @@ read_when:
 skip_when: [changing non-conversation desktop chrome or backend lifecycle]
 priority: must
 freshness_class: project
-last_verified: 2026-08-16T13:00:00+08:00
+last_verified: 2026-08-16T13:37:00+08:00
 owners: [primary-agent]
 source_of_truth:
   [
@@ -76,7 +76,7 @@ The plugin therefore adapts the `dissolve` visual treatment into a namespaced, n
 The existing client plugin registers one additive controller in the official `shell.overlay` slot. The controller owns two independent services:
 
 1. `StreamTextEffectController` observes eligible text changes under the currently streaming assistant step and manages transient dissolve masks and overlays.
-2. `ThinkingStatusController` observes the current conversation's bottom running status and portals a bundled `ThinkingOrb` into a plugin-owned sibling host.
+2. `ThinkingStatusController` observes the current conversation's bottom running status and renders a bundled `ThinkingOrb` in the plugin-owned root overlay.
 
 The controller does not shadow `conversation.chat.node`, duplicate the built-in assistant renderer, or depend on a private React component export. Compatibility with the pinned Harness renderer is isolated to a small DOM classifier and status-anchor adapter. If either adapter does not recognize the current DOM, it fails closed and leaves native Harness behavior intact.
 
@@ -141,20 +141,20 @@ The plugin does not infer completion from timers or token inactivity. Aborts, er
 ## Performance and cleanup
 
 - Idle cost is zero polling and zero animation frames; observers only enqueue work after relevant mutations.
-- Mutation handling is scoped to the active chat flow, and unrelated subtrees are rejected before measurement.
+- Mutation handling observes the dynamic document body so newly mounted chat flows are discoverable, but the classifier rejects nodes outside the active streaming assistant selector before measurement.
 - Reads and writes are frame-batched to avoid layout thrashing.
 - The overlay has a bounded number of live glyph/particle nodes. Backpressure may reduce particle density or coalesce timing, but it may not skip the glyph reveal or alter canonical output.
 - Every effect has an abort handle and a hard cleanup deadline.
-- Route changes, conversation changes, plugin disposal, and renderer teardown disconnect observers, cancel frames, clear CSS highlights, unmount portals, and remove plugin-owned DOM.
+- Route changes, conversation changes, plugin disposal, and renderer teardown disconnect observers, cancel frames, clear CSS highlights, unmount fixed hosts, and remove plugin-owned DOM.
 - The controller never logs, stores, or sends response text.
 
 ## Dependencies, packaging, and attribution
 
-| Item                 | Project state                                                         | Design decision                                                                                                                                             |
-| -------------------- | --------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `thinking-orbs`      | Target `0.3.1`                                                        | Add as a pinned plugin client dependency and bundle its browser code into `client.js`; React remains a Harness-provided external.                           |
-| `generative-loaders` | Reference `0.1.1`                                                     | Adapt only the dissolve visual behavior required for rich Harness DOM; do not ship the plain-string `TextLoader` renderer or add an unused runtime package. |
-| Client bundler       | To be selected in the implementation plan from the existing toolchain | Produce one offline plugin client artifact and fail the build on unresolved third-party runtime imports.                                                    |
+| Item                 | Project state            | Design decision                                                                                                                                             |
+| -------------------- | ------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `thinking-orbs`      | Pinned `0.3.1`           | Bundled into `client.js`; React and `react/jsx-runtime` remain Harness-provided externals.                                                                  |
+| `generative-loaders` | Reference `0.1.1`        | Only the dissolve visual behavior is adapted for rich Harness DOM; the plain-string `TextLoader` and package are not bundled.                               |
+| Client bundler       | Pinned esbuild `0.25.12` | Produces one deterministic offline client artifact from any working directory; preflight fails on unresolved third-party or local animation-module imports. |
 
 The packaged application must not fetch either library from a CDN or resolve it from a developer checkout at runtime. The plugin package's file list and desktop runtime-closure tests must cover the bundled artifact. A third-party notices file records the MIT licenses and upstream project URLs.
 
@@ -163,12 +163,14 @@ The packaged application must not fetch either library from a CDN or resolve it 
 - Feature setup is isolated: a text-effect failure must not disable the orb, settings integration, page transitions, or the rest of the plugin.
 - Missing CSS Highlight support disables the dissolve effect and leaves canonical text visible. It does not fall back to wrapping or rewriting React-owned text nodes.
 - A changed or ambiguous Harness selector disables only the affected adapter and leaves native rendering/status visible.
-- An exception during measurement or animation first clears every associated mask, then reports a bounded diagnostic without response content.
+- An exception during measurement or animation first clears every associated mask and fails open without emitting response content.
 - Pinned-Harness integration tests treat a selector mismatch as a compatibility failure before packaging.
 
 ## Testing and acceptance
 
 Implementation follows TDD and must cover these layers:
+
+Automated implementation evidence now covers the unit/DOM, plugin contract, pinned-Harness boot, package closure, Chromium geometry/color/reduced-motion, and five-second idle gates below. A credentialed live-model visual pass through the actual Harness conversation renderer remains a separate manual acceptance activity; no provider credential was used for this implementation.
 
 ### Unit and DOM tests
 
@@ -232,3 +234,4 @@ These facts apply to the pinned target versions only. A version change requires 
 ## Change log
 
 - `2026-08-16T13:00:00+08:00` — Recorded the user-approved official-plugin overlay design, dissolve scope, exact active-orb configuration, completion cleanup, and fail-open compatibility behavior.
+- `2026-08-16T13:37:00+08:00` — Marked the design implementation-backed after deterministic bundling, TDD controller/status coverage, pinned-Harness boot, runtime closure, and Chromium geometry/idle verification.
