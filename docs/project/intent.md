@@ -29,7 +29,7 @@ tags: [intent, confirmed]
 
 ## Goal
 
-Deliver a V4 Pro-first, all-in-one DeepSeek Harness Code desktop distribution that embeds the official Harness Web experience, plugin and Skills foundation, agent tools, a two-capability Electron host bridge, and an independent watchdog.
+Deliver an all-in-one, modernized DeepSeek Harness Code desktop distribution that embeds the complete official Harness Web experience, plugin and Skills foundation, agent tools, a two-capability Electron host bridge, and an independent watchdog. V4 Pro is one improved capability within this wider Harness modernization, not the product's center.
 
 ## Required Deliverables
 

@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Replace the minimal repository README with complete, equivalent English and Simplified Chinese product landing pages that explain the V4 Pro-first integrated-product vision, wrapper distinction, long-running reliability, and verifiable memory-pressure controls.
+**Goal:** Replace the minimal repository README with complete, equivalent English and Simplified Chinese product landing pages that explain the complete Harness-modernization vision, BETA1 improvements, wrapper distinction, long-running reliability, and verifiable memory-pressure controls.
 
 **Architecture:** Keep public product messaging in two top-level Markdown files with reciprocal language links. Reuse the checked-in product icon and architecture SVG, and trace reliability claims to the canonical lifecycle, architecture, testing, and acceptance documents instead of inventing benchmark numbers.
 
@@ -155,11 +155,12 @@ git status --short --branch
 
 Expected: the repository is public, the default branch is `main`, and the local branch is synchronized with `origin/main`.
 
-### Scope extension: V4 Pro-first integrated distribution
+### Scope extension: integrated Harness modernization
 
-- [x] Add the V4 Pro-first product direction to both heroes and vision sections.
+- [x] Center both heroes and vision sections on the complete, modernized Harness distribution.
 - [x] Document the bundled Harness plugins, Skills, agent workflow, tools, and desktop reliability layers as one integrated workbench.
-- [x] State the current V4 Pro/Flash and reasoning-effort capabilities from the pinned adapter.
-- [x] Define literal `We need` automatic reasoning activation as the next core capability without representing it as shipped.
+- [x] Explain the BETA1 memory-pressure, Web-freeze, lifecycle, packaging, and desktop-experience problems addressed by the product.
+- [x] State the current V4 Pro/Flash and reasoning-effort capabilities as one important enhancement rather than the product center.
+- [x] Define literal `We need` automatic reasoning activation as a model-enhancement roadmap item without representing it as shipped.
 - [x] Record the supporting pinned-package evidence in the upstream baseline and acceptance report.
 - [x] Re-run publication verification, commit, push, and confirm the public branch state.

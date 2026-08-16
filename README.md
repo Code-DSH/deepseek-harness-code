@@ -1,10 +1,10 @@
 <div align="center">
   <img src="./build/deepseek-harness-code.png" width="136" alt="DeepSeek Harness Code icon" />
   <h1>DeepSeek Harness Code</h1>
-  <h3>The V4 Pro-first, all-in-one DeepSeek coding environment — built for work that lasts longer than a browser tab.</h3>
-  <p>DeepSeek Harness Code brings V4 Pro integration, the official Harness runtime, plugins, Skills, tools, a hardened desktop host, and an independent Watchdog together in one modern distribution.</p>
+  <h3>The complete, modern DeepSeek Harness desktop distribution — built for work that lasts longer than a browser tab.</h3>
+  <p>DeepSeek Harness Code brings the full Harness runtime, plugins, Skills, tools, agent workflows, a hardened desktop host, and an independent Watchdog together in one integrated package.</p>
   <p><a href="./README.md">English</a> · <a href="./README.zh-CN.md">简体中文</a></p>
-  <p><a href="#vision">Vision</a> · <a href="#deepseek-v4-pro-at-the-center">V4 Pro</a> · <a href="#one-integrated-deepseek-workbench">Integrated workbench</a> · <a href="#beyond-a-web-wrapper">Why it is different</a> · <a href="#built-for-long-running-work">Reliability</a> · <a href="#architecture">Architecture</a> · <a href="#build-from-source">Build</a></p>
+  <p><a href="#vision">Vision</a> · <a href="#one-complete-deepseek-harness-distribution">Complete Harness</a> · <a href="#modernizing-the-beta1-experience">BETA1 improvements</a> · <a href="#beyond-a-web-wrapper">Why it is different</a> · <a href="#built-for-long-running-work">Reliability</a> · <a href="#architecture">Architecture</a> · <a href="#build-from-source">Build</a></p>
   <p>
     <img src="https://img.shields.io/badge/version-0.2.0-2563eb?style=flat-square" alt="Version 0.2.0" />
     <img src="https://img.shields.io/badge/license-MIT-16a34a?style=flat-square" alt="MIT License" />
@@ -26,26 +26,13 @@
 
 DeepSeek should be more than a conversation trapped inside a browser page. It should be a dependable working environment: one that can stay open through long coding sessions, own its runtime, recover from defined failures, preserve sessions, expose useful diagnostics, and feel at home on the desktop.
 
-Our goal is to turn the official DeepSeek Harness experience into that environment without replacing its session model or inventing a parallel agent protocol. We are building an integrated DeepSeek work distribution: V4 Pro and V4 Flash model support, the complete Harness plugin and Skills foundation, agent tools, desktop integration, and tested recovery in one install.
+Our goal is to modernize the complete DeepSeek Harness experience without replacing its session model or inventing a parallel agent protocol. We package the Harness runtime, plugins, Skills, agent tools, workflows, desktop integration, diagnostics, and tested recovery as one coherent product instead of asking users to assemble them piece by piece.
 
 **This project is not about putting a website inside a window. It is about making DeepSeek Harness sustainable for real, long-running work.**
 
-## DeepSeek V4 Pro at the center
+## One complete DeepSeek Harness distribution
 
-DeepSeek V4 Pro is the reasoning core this project is designed around. The pinned official Harness adapter already publishes both `deepseek-v4-pro` and `deepseek-v4-flash` to the model selector, with a 1,000,000-token context catalog and supported `off`, `high`, and `max` reasoning efforts. V4 Flash remains available for fast, economical tasks; V4 Pro is the direction for demanding planning, architecture, debugging, and long-horizon coding work.
-
-This application bundles the integration and runtime—not the model weights. Provider credentials stay in official Harness settings, and requests continue through the official DeepSeek provider boundary.
-
-### `We need` automatic reasoning activation
-
-Our next core capability is an intent-aware reasoning trigger. When a user explicitly frames a task with **`We need`**, the integration will use Harness's public per-request seam to select an appropriate supported V4 Pro reasoning effort instead of relying on users to switch modes manually.
-
-> [!NOTE]
-> V4 Pro selection and official `off` / `high` / `max` reasoning controls are available in the pinned Harness runtime today. The literal `We need` automatic trigger is a product requirement and roadmap item, not a shipped 0.2.0 claim. It will activate official reasoning controls; it will not expose hidden chain-of-thought or patch private request fields.
-
-## One integrated DeepSeek workbench
-
-The vision is a complete, coherent distribution—not a folder of unrelated add-ons. The official Harness base and Web bundles bring the useful parts of the DeepSeek agent stack into one application:
+The product is a complete, coherent Harness distribution—not a model launcher and not a folder of unrelated add-ons. The official Harness base and Web bundles bring the useful parts of the DeepSeek agent stack into one application:
 
 - **Models and reasoning** — V4 Pro and V4 Flash catalog, model selection, provider settings, reasoning effort, retry policy, and streaming protocol handling.
 - **Skills system** — Skills runtime, filesystem discovery, Skills UI, badges, and the official Skill tool.
@@ -55,6 +42,31 @@ The vision is a complete, coherent distribution—not a folder of unrelated add-
 - **Desktop reliability** — native lifecycle, secure bridge, health recovery, rotating diagnostics, and independent Watchdog.
 
 Everything is pinned, packaged, and validated as one product boundary so users do not have to assemble a fragile toolchain by hand.
+
+## Modernizing the BETA1 experience
+
+DeepSeek Harness BETA1 provides the foundation, but an early Web-first developer experience still leaves important product problems to the user. DeepSeek Harness Code builds a modern application layer around that foundation and targets the issues that become most visible during real, sustained work:
+
+- **Long-session memory pressure** — bound known desktop-side growth paths, rotate diagnostics, prevent overlapping recovery work, and retire superseded processes.
+- **Web UI freezes** — detect a persistently unresponsive renderer and replace the window without destroying a healthy Harness service.
+- **Fragile process lifecycle** — own startup, readiness, serialized restart, bounded shutdown, port retry, and session-aware recovery.
+- **Fragmented capabilities** — ship the runtime, plugins, Skills, tools, workflows, questions, approvals, and desktop extensions as one tested package.
+- **Desktop experience gaps** — add native menus, tray behavior, close preferences, system appearance, shortcuts, transitions, settings, and accessible diagnostics.
+
+The aim is not to fork Harness into a competing protocol. It is to preserve the official Harness model while making the overall experience more complete, modern, resilient, and ready for daily use.
+
+## A more complete V4 Pro experience
+
+V4 Pro is one of the important capabilities improved by this integrated foundation—not the product's sole center. The pinned official Harness adapter publishes both `deepseek-v4-pro` and `deepseek-v4-flash` to the model selector, with a 1,000,000-token context catalog and supported `off`, `high`, and `max` reasoning efforts. V4 Flash remains available for fast, economical tasks, while V4 Pro can be used for demanding planning, architecture, debugging, and long-horizon coding work.
+
+This application bundles the integration and runtime—not the model weights. Provider credentials stay in official Harness settings, and requests continue through the official DeepSeek provider boundary.
+
+### `We need` automatic reasoning activation
+
+One planned V4 Pro enhancement is an intent-aware reasoning trigger. When a user explicitly frames a task with **`We need`**, the integration will use Harness's public per-request seam to select an appropriate supported reasoning effort instead of relying on users to switch modes manually.
+
+> [!NOTE]
+> V4 Pro selection and official `off` / `high` / `max` reasoning controls are available in the pinned Harness runtime today. The literal `We need` automatic trigger is a roadmap item, not a shipped 0.2.0 claim. It is one part of the wider Harness modernization effort and will activate official reasoning controls without exposing hidden chain-of-thought or patching private request fields.
 
 ## Beyond a Web wrapper
 
@@ -231,9 +243,9 @@ node scripts/verify-macos-artifact.mjs \
 
 ## Roadmap
 
-- Implement and verify the literal `We need` intent trigger through Harness's public per-request reasoning-effort seam.
 - Publish reproducible memory and long-session soak benchmarks across supported platforms.
 - Build and verify Windows and Linux packages on native CI runners.
+- Implement and verify the literal `We need` intent trigger through Harness's public per-request reasoning-effort seam.
 - Continue tracking the rapidly evolving official Harness plugin API behind pinned compatibility boundaries.
 - Expand fault-injection coverage without replaying user requests or weakening the security model.
 

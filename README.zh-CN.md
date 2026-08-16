@@ -1,10 +1,10 @@
 <div align="center">
   <img src="./build/deepseek-harness-code.png" width="136" alt="DeepSeek Harness Code 图标" />
   <h1>DeepSeek Harness Code</h1>
-  <h3>以 V4 Pro 为核心的 DeepSeek 一体化编码环境——为比浏览器标签页更长久的工作而生。</h3>
-  <p>DeepSeek Harness Code 把 V4 Pro 集成、官方 Harness 运行时、插件、Skills、工具、强化桌面宿主和独立 Watchdog 整合为一个现代化发行版。</p>
+  <h3>完整、现代化的 DeepSeek Harness 桌面发行版——为比浏览器标签页更长久的工作而生。</h3>
+  <p>DeepSeek Harness Code 把完整 Harness 运行时、插件、Skills、工具、Agent 工作流、强化桌面宿主和独立 Watchdog 整合成一套开箱即用的产品。</p>
   <p><a href="./README.md">English</a> · <a href="./README.zh-CN.md">简体中文</a></p>
-  <p><a href="#愿景">愿景</a> · <a href="#以-deepseek-v4-pro-为核心">V4 Pro</a> · <a href="#一整套-deepseek-工作台">一体化工作台</a> · <a href="#不只是网页套壳">为什么不同</a> · <a href="#为长期运行而设计">长期稳定性</a> · <a href="#架构">架构</a> · <a href="#从源码构建">构建</a></p>
+  <p><a href="#愿景">愿景</a> · <a href="#一整套-deepseek-harness-发行版">完整 Harness</a> · <a href="#让-beta1-体验更加现代化">BETA1 改进</a> · <a href="#不只是网页套壳">为什么不同</a> · <a href="#为长期运行而设计">长期稳定性</a> · <a href="#架构">架构</a> · <a href="#从源码构建">构建</a></p>
   <p>
     <img src="https://img.shields.io/badge/version-0.2.0-2563eb?style=flat-square" alt="版本 0.2.0" />
     <img src="https://img.shields.io/badge/license-MIT-16a34a?style=flat-square" alt="MIT 许可证" />
@@ -26,26 +26,13 @@
 
 DeepSeek 不应只是被困在浏览器页面里的一段对话。它应该成为一个可靠的工作环境：能够陪伴长时间编码任务，管理自己的运行时，从已知故障中恢复，保留会话，提供真正有用的诊断信息，并自然融入桌面系统。
 
-我们的目标是在不替换 Harness 会话模型、不另造一套 Agent 协议的前提下，把官方 DeepSeek Harness 体验变成这样的环境。我们正在构建一套完整的 DeepSeek 工作发行版：V4 Pro 与 V4 Flash 模型支持、完整 Harness 插件与 Skills 基础、Agent 工具、桌面集成和经过测试的恢复机制，一次安装全部获得。
+我们的目标是在不替换 Harness 会话模型、不另造一套 Agent 协议的前提下，让整套 DeepSeek Harness 体验更加现代化。我们把 Harness 运行时、插件、Skills、Agent 工具、工作流、桌面集成、诊断和经过测试的恢复机制整合成一个连贯产品，用户不必再逐项手工拼装。
 
 **这个项目不是把网页塞进一个窗口，而是让 DeepSeek Harness 真正适合持续、真实、长期的工作。**
 
-## 以 DeepSeek V4 Pro 为核心
+## 一整套 DeepSeek Harness 发行版
 
-DeepSeek V4 Pro 是本项目围绕构建的推理核心。当前固定的官方 Harness 适配器已经把 `deepseek-v4-pro` 与 `deepseek-v4-flash` 同时提供给模型选择器，公布 1,000,000 Token 上下文目录，并支持 `off`、`high`、`max` 三档推理强度。V4 Flash 继续承担快速、经济的任务；V4 Pro 则面向高强度规划、架构、调试和长周期编码工作。
-
-应用打包的是完整集成与运行时，而不是模型权重。Provider 凭据继续保存在官方 Harness 设置中，请求继续经过官方 DeepSeek Provider 边界。
-
-### `We need` 自动激活推理
-
-我们的下一项核心能力是意图感知的推理触发器。当用户用 **`We need`** 明确描述任务时，集成层将通过 Harness 公开的逐请求接口自动选择合适的 V4 Pro 推理强度，不再要求用户手动切换模式。
-
-> [!NOTE]
-> V4 Pro 模型选择以及官方 `off` / `high` / `max` 推理控制已经存在于当前固定的 Harness 运行时中。字面量 `We need` 自动触发器是明确的产品需求和路线图项目，并非 0.2.0 已交付声明。它只会激活官方推理控制，不会暴露隐藏思维链，也不会修改私有请求字段。
-
-## 一整套 DeepSeek 工作台
-
-我们的愿景是一套完整、连贯的发行版，而不是一堆互不相关的附加组件。官方 Harness Base 与 Web Bundle 已把 DeepSeek Agent 体系中真正有用的部分带进同一个应用：
+这是一套完整、连贯的 Harness 发行版，而不是模型启动器，也不是一堆互不相关的附加组件。官方 Harness Base 与 Web Bundle 已把 DeepSeek Agent 体系中真正有用的部分带进同一个应用：
 
 - **模型与推理**——V4 Pro/V4 Flash 目录、模型选择、Provider 设置、推理强度、重试策略和流式协议处理。
 - **Skills 系统**——Skills 运行时、文件系统发现、Skills UI、徽章以及官方 Skill 工具。
@@ -55,6 +42,31 @@ DeepSeek V4 Pro 是本项目围绕构建的推理核心。当前固定的官方 
 - **桌面可靠性**——原生生命周期、安全桥接、健康恢复、轮转诊断和独立 Watchdog。
 
 所有能力都以同一个产品边界固定版本、完成打包并接受验证，用户不必再手工拼装脆弱的工具链。
+
+## 让 BETA1 体验更加现代化
+
+DeepSeek Harness BETA1 提供了基础，但早期以 Web 为中心的开发体验仍把一些重要的产品问题留给用户自行处理。DeepSeek Harness Code 围绕这个基础构建现代化应用层，并重点治理在真实、长期使用中最明显的问题：
+
+- **长会话内存压力**——限制桌面侧已知增长路径、轮转诊断、防止恢复任务重叠，并回收已经被替代的进程。
+- **Web 界面卡死**——检测持续无响应的渲染器，在不销毁健康 Harness 服务的前提下替换窗口。
+- **脆弱的进程生命周期**——完整管理启动、就绪、串行重启、有界退出、端口重试和会话感知恢复。
+- **能力分散**——把运行时、插件、Skills、工具、工作流、提问、审批和桌面扩展打包成一套经过测试的产品。
+- **桌面体验缺口**——补充原生菜单、托盘行为、关闭偏好、系统外观、快捷键、转场、设置与可访问诊断。
+
+我们的目标不是把 Harness 分叉成一套竞争协议，而是在保留官方 Harness 模型的同时，让整套体验更加完整、现代、可靠，真正适合日常使用。
+
+## 更完整地使用 V4 Pro
+
+V4 Pro 是这套整合基础所增强的重要能力之一，而不是产品的唯一中心。当前固定的官方 Harness 适配器已经把 `deepseek-v4-pro` 与 `deepseek-v4-flash` 同时提供给模型选择器，公布 1,000,000 Token 上下文目录，并支持 `off`、`high`、`max` 三档推理强度。V4 Flash 继续承担快速、经济的任务；V4 Pro 则可以用于高强度规划、架构、调试和长周期编码工作。
+
+应用打包的是完整集成与运行时，而不是模型权重。Provider 凭据继续保存在官方 Harness 设置中，请求继续经过官方 DeepSeek Provider 边界。
+
+### `We need` 自动激活推理
+
+我们计划提供的一项 V4 Pro 增强能力是意图感知的推理触发器。当用户用 **`We need`** 明确描述任务时，集成层将通过 Harness 公开的逐请求接口自动选择合适的推理强度，不再要求用户手动切换模式。
+
+> [!NOTE]
+> V4 Pro 模型选择以及官方 `off` / `high` / `max` 推理控制已经存在于当前固定的 Harness 运行时中。字面量 `We need` 自动触发器是路线图项目，并非 0.2.0 已交付声明。它只是整个 Harness 现代化工程的一部分，并且只会激活官方推理控制，不会暴露隐藏思维链，也不会修改私有请求字段。
 
 ## 不只是网页套壳
 
@@ -231,9 +243,9 @@ node scripts/verify-macos-artifact.mjs \
 
 ## 路线图
 
-- 通过 Harness 公开的逐请求推理强度接口，实现并验证字面量 `We need` 意图触发器。
 - 在所有支持平台发布可复现的内存与长期运行压力基准。
 - 在原生 CI Runner 上构建并验证 Windows 与 Linux 安装包。
+- 通过 Harness 公开的逐请求推理强度接口，实现并验证字面量 `We need` 意图触发器。
 - 通过固定的兼容边界持续跟进快速演进的官方 Harness 插件 API。
 - 在不自动重放用户请求、不削弱安全模型的前提下扩展故障注入覆盖。
 

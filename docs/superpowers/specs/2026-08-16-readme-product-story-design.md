@@ -42,9 +42,9 @@ Turn the GitHub landing page into a bilingual product narrative that explains wh
 
 ## Narrative
 
-The central vision is: **turn DeepSeek from a browser page into a V4 Pro-first, all-in-one desktop coding environment for long-running work**.
+The central vision is: **turn the complete DeepSeek Harness experience into a modern, all-in-one desktop coding environment for long-running work**.
 
-The product story includes the packaged official Harness plugin, Skills, tools, Goal, Plan, Workflow, question/approval, and subagent foundations. V4 Pro/Flash selection and supported reasoning efforts are current pinned-runtime capabilities. The literal `We need` automatic reasoning trigger is labeled as a core roadmap requirement until implemented and tested through the public per-request seam.
+The product story centers the packaged official Harness runtime, plugins, Skills, tools, Goal, Plan, Workflow, question/approval, subagent foundations, desktop experience, and BETA1 reliability improvements. V4 Pro/Flash selection and supported reasoning efforts are important current capabilities within that whole. The literal `We need` automatic reasoning trigger is labeled as a model-enhancement roadmap item until implemented and tested through the public per-request seam.
 
 The README may state that the project is not a simple Web wrapper. It must compare product categories and capabilities rather than insult or name individual community maintainers. The comparison should distinguish:
 
@@ -56,13 +56,15 @@ The README may state that the project is not a simple Web wrapper. It must compa
 
 1. Centered hero with product icon, name, one-sentence vision, language switch, navigation links, and badges.
 2. Vision statement and concise explanation of why the project exists.
-3. V4 Pro-first model direction, `We need` reasoning-trigger boundary, and integrated Harness workbench.
-4. “Beyond a wrapper” capability comparison table.
-5. Long-running reliability and memory-pressure section.
-6. Modern desktop experience and integrated Harness capabilities.
-7. Architecture image and security boundary.
-8. Supported platforms and release state.
-9. Installation, source build, verification, documentation, roadmap, contribution, license, and disclaimer.
+3. Complete integrated Harness distribution and capability stack.
+4. BETA1 modernization scope: memory pressure, Web freezes, lifecycle, packaging, and desktop experience.
+5. V4 Pro as one enhanced capability, including the `We need` reasoning-trigger boundary.
+6. “Beyond a wrapper” capability comparison table.
+7. Long-running reliability and memory-pressure section.
+8. Modern desktop experience and integrated Harness capabilities.
+9. Architecture image and security boundary.
+10. Supported platforms and release state.
+11. Installation, source build, verification, documentation, roadmap, contribution, license, and disclaimer.
 
 The existing product icon at `build/deepseek-harness-code.png` and architecture diagram at `docs/architecture/system.svg` are reused. No speculative screenshots, download links, release badges, or community links are invented.
 
@@ -112,3 +114,4 @@ The README may claim that the pinned official adapter publishes V4 Pro/Flash plu
 - `2026-08-16T12:55:00+08:00` — Approved bilingual product-led README design, including evidence-bounded memory and freeze claims.
 - `2026-08-16T13:00:00+08:00` — Implemented both language editions and verified GitHub rendering, local links, formatting, security contracts, types, lint, and the full test suite.
 - `2026-08-16T13:15:00+08:00` — Expanded the approved story to a V4 Pro-first integrated distribution and documented the unshipped `We need` automatic reasoning trigger as the next core requirement.
+- `2026-08-16T13:30:00+08:00` — Corrected the hierarchy: complete Harness modernization and BETA1 problem-solving are the product center; V4 Pro is one important capability improved by the integrated foundation.
