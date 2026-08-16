@@ -52,7 +52,7 @@ tags: [acceptance, release, evidence]
 | Upstream preset   | 108 vendored upstream and local-patch tests passed                                  |
 | Official plugins  | 3 files / 23 tests passed, including pinned rc.6 roster, session creation, and boot |
 | Package contract  | 1 file / 4 tests passed                                                             |
-| Browser E2E       | 5 Playwright Chromium tests passed                                                  |
+| Browser E2E       | 3/5 passed; two known `installStreamOutputEffects` baseline failures remain         |
 | TypeScript        | `tsc --noEmit` passed                                                               |
 | Static gates      | ESLint, Prettier, 31 documentation files, and 7-control security contract passed    |
 | Dependency audit  | Production audit reported no known vulnerabilities at high severity or above        |
