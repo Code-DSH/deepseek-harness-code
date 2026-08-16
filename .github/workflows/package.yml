@@ -7,7 +7,7 @@ on:
       - "v*"
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   package:
@@ -16,16 +16,14 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - label: macos-universal
-            os: macos-15
-            command: pnpm exec electron-builder --mac --universal
           - label: windows-x64
             os: windows-2025
             command: pnpm exec electron-builder --win nsis --x64
-          - label: linux-x64
-            os: ubuntu-24.04
-            command: pnpm exec electron-builder --linux AppImage deb --x64
+          - label: windows-arm64
+            os: windows-2025
+            command: pnpm exec electron-builder --win nsis --arm64
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -44,3 +42,35 @@ jobs:
           name: ${{ matrix.label }}
           path: release/**
           if-no-files-found: error
+
+  release:
+    name: Publish GitHub pre-release
+    needs: package
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          VERSION="${GITHUB_REF_NAME#v}"
+          NOTES="docs/releases/${VERSION}.md"
+          test -f "$NOTES" || NOTES=""
+          args=(--prerelease --title "DeepSeek Harness Code (DHSC) ${VERSION} (Preview)")
+          if [ -n "$NOTES" ]; then
+            args+=(--notes-file "$NOTES")
+          fi
+          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+            gh release upload "$GITHUB_REF_NAME" artifacts/* --clobber
+          else
+            gh release create "$GITHUB_REF_NAME" artifacts/* "${args[@]}"
+          fi

@@ -6,7 +6,7 @@
   <p><a href="./README.md">English</a> · <a href="./README.zh-CN.md">简体中文</a></p>
   <p><a href="#dhc-的集成理念">集成理念</a> · <a href="#愿景">愿景</a> · <a href="#一整套-deepseek-harness-发行版">完整 Harness</a> · <a href="#让-beta1-体验更加现代化">BETA1 改进</a> · <a href="#不只是网页套壳">为什么不同</a> · <a href="#为长期运行而设计">长期稳定性</a> · <a href="#架构">架构</a> · <a href="#从源码构建">构建</a></p>
   <p>
-    <img src="https://img.shields.io/badge/version-0.3.0-2563eb?style=flat-square" alt="版本 0.3.0" />
+    <img src="https://img.shields.io/badge/version-0.1.0_BETA1-2563eb?style=flat-square" alt="版本 0.1.0-BETA1" />
     <img src="https://img.shields.io/badge/license-MIT-16a34a?style=flat-square" alt="MIT 许可证" />
     <img src="https://img.shields.io/badge/macOS-12%2B-111827?style=flat-square&amp;logo=apple" alt="macOS 12+" />
     <img src="https://img.shields.io/badge/Windows-10%2B-0078D4?style=flat-square&amp;logo=windows" alt="Windows 10+" />
@@ -212,13 +212,13 @@ Electron 主进程负责窗口、本地 Harness 子进程、就绪检查和窄�
 
 ## 平台状态
 
-| 平台    | 目标                              | 当前状态                                            |
-| ------- | --------------------------------- | --------------------------------------------------- |
-| macOS   | macOS 12+，Intel 与 Apple Silicon | Universal 应用与未签名/ad-hoc 签名 DMG 已在本地验证 |
-| Windows | Windows 10+，x64 与 arm64         | 原生 NSIS 打包配置与 CI 目标                        |
-| Linux   | x64 与 arm64                      | AppImage/deb 打包配置与原生 CI 目标                 |
+| 平台    | 目标                              | 当前状态                                                          |
+| ------- | --------------------------------- | ----------------------------------------------------------------- |
+| macOS   | macOS 12+，Intel 与 Apple Silicon | Universal 应用与未签名/ad-hoc 签名 DMG 已验证，随 0.1.0-BETA1 发布 |
+| Windows | Windows 10+，x64 与 arm64         | 原生 NSIS 安装包在 Windows Runner 构建，随 0.1.0-BETA1 发布       |
+| Linux   | x64 与 arm64                      | AppImage/deb 打包配置已就绪，原生构建在后续版本推出              |
 
-跨平台配置已经进入仓库，但只有在对应原生 Runner 上完成构建和验证的产物才会被视为正式发行。
+跨平台配置已经进入仓库，只有经过对应原生 Runner 构建与验证的产物才会被视为正式发行。首个公开预览版为 **DeepSeek Harness Code（DHSC）0.1.0-BETA1**——预览版覆盖 macOS 与 Windows，Linux 构建稍后推出。
 
 ## 在 macOS 上安装
 
@@ -239,7 +239,7 @@ xattr -dr com.apple.quarantine "/Applications/DeepSeek Harness Code.app"
 - 目标操作系统对应的原生打包工具
 
 ```bash
-git clone https://github.com/Open-Less/deepseek-harness-code.git
+git clone https://github.com/Code-DSH/deepseek-harness-code.git
 cd deepseek-harness-code
 npm exec --yes --package=pnpm@11.19.0 -- pnpm install --frozen-lockfile
 npm exec --yes --package=pnpm@11.19.0 -- pnpm test
@@ -274,7 +274,7 @@ npm exec --yes --package=pnpm@11.19.0 -- pnpm verify:security
 
 # Universal macOS 产物检查
 node scripts/verify-macos-artifact.mjs \
-  release/DeepSeek-Harness-Code-0.3.0-mac-universal.dmg --universal
+  release/DeepSeek-Harness-Code-0.1.0-BETA1-mac-universal.dmg --universal
 ```
 
 ## 文档
@@ -290,7 +290,7 @@ node scripts/verify-macos-artifact.mjs \
 ## 路线图
 
 - 在所有支持平台发布可复现的内存与长期运行压力基准。
-- 在原生 CI Runner 上构建并验证 Windows 与 Linux 安装包。
+- 推出原生 Linux AppImage/deb 安装包（打包配置已就绪，不包含在 0.1.0-BETA1 预览版中）。
 - 在支持的 Harness 会话中完成并验证 V4 Pro 首轮工具面锚定与动态晋升流程。
 - 通过固定的兼容边界持续跟进快速演进的官方 Harness 插件 API。
 - 在不自动重放用户请求、不削弱安全模型的前提下扩展故障注入覆盖。

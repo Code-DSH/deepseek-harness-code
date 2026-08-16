@@ -6,7 +6,7 @@
   <p><a href="./README.md">English</a> · <a href="./README.zh-CN.md">简体中文</a></p>
   <p><a href="#the-dhc-integration-philosophy">Integration philosophy</a> · <a href="#vision">Vision</a> · <a href="#one-complete-deepseek-harness-distribution">Complete Harness</a> · <a href="#modernizing-the-beta1-experience">BETA1 improvements</a> · <a href="#beyond-a-web-wrapper">Why it is different</a> · <a href="#built-for-long-running-work">Reliability</a> · <a href="#architecture">Architecture</a> · <a href="#build-from-source">Build</a></p>
   <p>
-    <img src="https://img.shields.io/badge/version-0.3.0-2563eb?style=flat-square" alt="Version 0.3.0" />
+    <img src="https://img.shields.io/badge/version-0.1.0_BETA1-2563eb?style=flat-square" alt="Version 0.1.0-BETA1" />
     <img src="https://img.shields.io/badge/license-MIT-16a34a?style=flat-square" alt="MIT License" />
     <img src="https://img.shields.io/badge/macOS-12%2B-111827?style=flat-square&amp;logo=apple" alt="macOS 12+" />
     <img src="https://img.shields.io/badge/Windows-10%2B-0078D4?style=flat-square&amp;logo=windows" alt="Windows 10+" />
@@ -219,13 +219,13 @@ The experimental Anchored Standard setting does not intercept private model traf
 
 ## Platform status
 
-| Platform | Target                             | Current status                                                        |
-| -------- | ---------------------------------- | --------------------------------------------------------------------- |
-| macOS    | macOS 12+, Intel and Apple Silicon | Universal application and unsigned/ad-hoc-signed DMG verified locally |
-| Windows  | Windows 10+, x64 and arm64         | Native NSIS packaging definition and CI target                        |
-| Linux    | x64 and arm64                      | AppImage/deb packaging definition and native CI target                |
+| Platform | Target                             | Current status                                                                          |
+| -------- | ---------------------------------- | --------------------------------------------------------------------------------------- |
+| macOS    | macOS 12+, Intel and Apple Silicon | Universal application and unsigned/ad-hoc-signed DMG verified; shipped in 0.1.0-BETA1    |
+| Windows  | Windows 10+, x64 and arm64         | Native NSIS installers built on Windows runners; shipped in 0.1.0-BETA1                  |
+| Linux    | x64 and arm64                      | AppImage/deb packaging definition ready; native builds follow in a later release        |
 
-Cross-platform definitions are checked into the repository, but an artifact is only considered released after it has been built and verified on its native runner.
+Cross-platform definitions are checked into the repository, and an artifact is only considered released after it has been built and verified on its native runner. The first public preview release is **DeepSeek Harness Code (DHSC) 0.1.0-BETA1** — a preview covering macOS and Windows, with Linux builds to follow.
 
 ## Install on macOS
 
@@ -246,7 +246,7 @@ Do not disable Gatekeeper globally. Read the [complete unsigned installation gui
 - Platform-native packaging tools for the target operating system
 
 ```bash
-git clone https://github.com/Open-Less/deepseek-harness-code.git
+git clone https://github.com/Code-DSH/deepseek-harness-code.git
 cd deepseek-harness-code
 npm exec --yes --package=pnpm@11.19.0 -- pnpm install --frozen-lockfile
 npm exec --yes --package=pnpm@11.19.0 -- pnpm test
@@ -281,7 +281,7 @@ npm exec --yes --package=pnpm@11.19.0 -- pnpm verify:security
 
 # Universal macOS artifact inspection
 node scripts/verify-macos-artifact.mjs \
-  release/DeepSeek-Harness-Code-0.3.0-mac-universal.dmg --universal
+  release/DeepSeek-Harness-Code-0.1.0-BETA1-mac-universal.dmg --universal
 ```
 
 ## Documentation
@@ -297,7 +297,7 @@ node scripts/verify-macos-artifact.mjs \
 ## Roadmap
 
 - Publish reproducible memory and long-session soak benchmarks across supported platforms.
-- Build and verify Windows and Linux packages on native CI runners.
+- Ship native Linux AppImage/deb packages (defined and CI-ready; not included in the 0.1.0-BETA1 preview).
 - Complete and validate the V4 Pro first-request tool-surface anchoring and dynamic-promotion path across supported Harness sessions.
 - Continue tracking the rapidly evolving official Harness plugin API behind pinned compatibility boundaries.
 - Expand fault-injection coverage without replaying user requests or weakening the security model.
