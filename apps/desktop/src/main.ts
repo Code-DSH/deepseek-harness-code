@@ -1,6 +1,6 @@
-import { spawn, type ChildProcess } from "node:child_process";
+import { spawn, spawnSync, type ChildProcess } from "node:child_process";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
-import { dirname, join } from "node:path";
+import { delimiter, dirname, join } from "node:path";
 import { pathToFileURL } from "node:url";
 
 import {
@@ -42,12 +42,20 @@ import {
 } from "./lifecycle/startup-diagnostics.js";
 import { WatchdogHost } from "./lifecycle/watchdog-host.js";
 import {
-  ensureNodeRuntime,
-  getPortableNodeArchive,
-  inspectNodeRuntime,
-  resolveNodeRuntimePaths,
+  ensureRuntimePackages,
   type NodeRuntimePaths,
 } from "./lifecycle/node-runtime.js";
+import {
+  adoptBundledGlobalAgentPrompt,
+  installGlobalAgentPromptForStartup,
+} from "./lifecycle/global-agent-prompt-link.js";
+import { ensureGlobalDshCli } from "./lifecycle/global-cli-link.js";
+import {
+  MINIMUM_NODE_VERSION,
+  NODE_DOWNLOAD_PAGE_URL,
+  resolveSystemNode,
+  type ResolvedSystemNode,
+} from "./lifecycle/system-node.js";
 import { replaceWindowKeepingHostAlive } from "./lifecycle/window-recovery.js";
 import {
   ensureOfficialHarnessInstall,
@@ -85,6 +93,7 @@ let preferences: DesktopPreferencesState = { ...DEFAULT_DESKTOP_PREFERENCES };
 let anchoredPresetNotice: RuntimeNotice | undefined;
 let routingSuiteNotice: RuntimeNotice | undefined;
 let nodeRuntimePaths: NodeRuntimePaths | undefined;
+let systemNodeRuntime: ResolvedSystemNode | undefined;
 
 // Preserve sessions and credentials across the product rename. This is an
 // intentional compatibility path; no user data is copied into the app bundle.
@@ -92,6 +101,14 @@ app.setPath(
   "userData",
   join(app.getPath("appData"), "deepseek-harness-desktop"),
 );
+
+// One window per user data directory. Without the lock, every relaunch while
+// a stale instance is stuck would spawn another Harness child against the
+// same profile, and the pile-up makes the app appear to hang.
+const hasSingleInstanceLock = app.requestSingleInstanceLock();
+if (!hasSingleInstanceLock) {
+  app.quit();
+}
 
 function settingsPath(): string {
   return join(app.getPath("userData"), "desktop-settings.json");
@@ -294,80 +311,95 @@ async function retireFailedStartupChild(child: HarnessChild): Promise<void> {
 function nodeRuntimeResourcePath(): string {
   return app.isPackaged
     ? join(process.resourcesPath, "node-runtime")
-    : join(app.getAppPath(), "config", "node-runtime");
+    : join(app.getAppPath(), "build", "node-runtime");
 }
 
-async function showNodeRuntimeChoice(
-  archive: ReturnType<typeof getPortableNodeArchive>,
+async function showNodeRequiredDialog(
   failedError?: Error,
-): Promise<"download" | "open-link" | "quit"> {
+): Promise<"retry" | "open-page" | "quit"> {
   const options: Electron.MessageBoxOptions = {
     type: failedError === undefined ? "question" : "error",
-    buttons:
-      failedError === undefined
-        ? ["Download Node.js automatically", "Open download page", "Quit"]
-        : ["Retry automatic download", "Open download page", "Quit"],
+    buttons: ["Retry detection", "Open nodejs.org download page", "Quit"],
     defaultId: 0,
     cancelId: 2,
-    title: "Node.js runtime required",
+    title: "Node.js required",
     message:
       failedError === undefined
-        ? "DeepSeek Harness Code needs Node.js 24 to run the local Harness."
-        : "The portable Node.js runtime could not be installed.",
+        ? "DeepSeek Harness Code needs an official Node.js installation to run the local Harness."
+        : "The pinned Harness packages could not be installed.",
     detail:
       failedError === undefined
-        ? `The installer no longer bundles Node.js to keep its size small. You can download it now or open ${archive.url} in your browser.`
-        : `${failedError.message.slice(0, 2_000)}\n\nAutomatic download: ${archive.url}`,
+        ? `No usable Node.js installation was detected. Install the official Node.js ${MINIMUM_NODE_VERSION} or newer from ${NODE_DOWNLOAD_PAGE_URL}, then choose "Retry detection". Common install locations (nodejs.org installer, Homebrew, nvm, Volta, fnm, mise, nvm-windows, Scoop) are detected automatically.`
+        : `${failedError.message.slice(0, 2_000)}\n\nOfficial Node.js download: ${NODE_DOWNLOAD_PAGE_URL}`,
   };
   const result =
     mainWindow === undefined || mainWindow.isDestroyed()
       ? await dialog.showMessageBox(options)
       : await dialog.showMessageBox(mainWindow, options);
-  return (
-    (["download", "open-link", "quit"] as const)[result.response] ?? "quit"
-  );
+  return (["retry", "open-page", "quit"] as const)[result.response] ?? "quit";
 }
 
-async function prepareManagedNodeRuntime(): Promise<NodeRuntimePaths> {
+async function prepareSystemNodeRuntime(): Promise<void> {
   const userDataPath = app.getPath("userData");
   const runtimeResourcePath = nodeRuntimeResourcePath();
-  const archive = getPortableNodeArchive();
-  const readiness = await inspectNodeRuntime(userDataPath, runtimeResourcePath);
-  if (readiness.ready) {
-    nodeRuntimePaths = resolveNodeRuntimePaths(userDataPath);
-    return nodeRuntimePaths;
-  }
-
-  const initialChoice = await showNodeRuntimeChoice(archive);
-  if (initialChoice === "open-link") {
-    await shell.openExternal(archive.url);
-    throw new Error(
-      `Node.js ${archive.fileName} was not downloaded. Open ${archive.url}, install Node.js, or relaunch and choose automatic download.`,
-    );
-  }
-  if (initialChoice === "quit") {
-    throw new Error("Node.js runtime is required for the local Harness.");
-  }
-
   for (;;) {
-    try {
-      const installed = await ensureNodeRuntime({
-        userDataPath,
-        runtimeResourcePath,
-      });
-      nodeRuntimePaths = installed.paths;
-      if (installed.installed) {
-        process.stderr.write(
-          `Installed portable Node.js runtime and pinned Harness packages under ${userDataPath}/node-runtime.\n`,
+    const node = resolveSystemNode();
+    if (node === undefined) {
+      const choice = await showNodeRequiredDialog();
+      if (choice === "open-page") {
+        await shell.openExternal(NODE_DOWNLOAD_PAGE_URL);
+        throw new Error(
+          `No usable Node.js installation was detected. Install the official Node.js ${MINIMUM_NODE_VERSION} or newer from ${NODE_DOWNLOAD_PAGE_URL} and relaunch.`,
         );
       }
-      return nodeRuntimePaths;
+      if (choice === "quit") {
+        throw new Error(
+          "An official Node.js installation is required for the local Harness.",
+        );
+      }
+      continue;
+    }
+    process.stderr.write(
+      `Using system Node.js ${node.version === null ? "(unknown version)" : `v${node.version}`} from ${node.executable} (${node.source}).\n`,
+    );
+    try {
+      const ensured = await ensureRuntimePackages({
+        userDataPath,
+        runtimeResourcePath,
+        systemNode: node,
+      });
+      nodeRuntimePaths = ensured.paths;
+      systemNodeRuntime = node;
+      if (ensured.installed) {
+        process.stderr.write(
+          `Installed pinned Harness packages under ${userDataPath}/node-runtime.\n`,
+        );
+      }
+      // Best-effort official CLI availability: never block startup on it.
+      const globalCli = await ensureGlobalDshCli({
+        nodeExecutable: node.executable,
+        runtimeResourcePath,
+      }).catch((error: unknown): { status: "failed"; message?: string } => ({
+        status: "failed",
+        message: error instanceof Error ? error.message : String(error),
+      }));
+      if (globalCli.status === "installed") {
+        process.stderr.write(
+          `Installed the official dsh@${globalCli.pinnedVersion} command globally; it is available in new terminal sessions.\n`,
+        );
+      } else if (
+        globalCli.status !== "present" &&
+        globalCli.message !== undefined
+      ) {
+        process.stderr.write(`Global dsh CLI: ${globalCli.message}\n`);
+      }
+      return;
     } catch (error) {
       const failedError =
         error instanceof Error ? error : new Error("Unknown runtime error");
-      const choice = await showNodeRuntimeChoice(archive, failedError);
-      if (choice === "open-link") {
-        await shell.openExternal(archive.url);
+      const choice = await showNodeRequiredDialog(failedError);
+      if (choice === "open-page") {
+        await shell.openExternal(NODE_DOWNLOAD_PAGE_URL);
         throw failedError;
       }
       if (choice === "quit") throw failedError;
@@ -380,6 +412,13 @@ function managedNodeRuntimePaths(): NodeRuntimePaths {
     throw new Error("Managed Node.js runtime is not prepared");
   }
   return nodeRuntimePaths;
+}
+
+function systemNodeExecutable(): string {
+  if (systemNodeRuntime === undefined) {
+    throw new Error("System Node.js runtime is not prepared");
+  }
+  return systemNodeRuntime.executable;
 }
 
 async function startHarness(): Promise<HarnessChild> {
@@ -397,12 +436,19 @@ async function startHarness(): Promise<HarnessChild> {
   const modelSelectorPluginRoot = app.isPackaged
     ? join(process.resourcesPath, "dsh-model-two-level-selector")
     : join(app.getAppPath(), "packages", "dsh-model-two-level-selector");
+  const promptPrinciplesRoot = app.isPackaged
+    ? join(process.resourcesPath, "prompt-principles-plugin")
+    : join(app.getAppPath(), "packages", "prompt-principles-plugin");
   const superpowersSkillsRoot = app.isPackaged
     ? join(process.resourcesPath, "superpowers-skills")
     : join(app.getAppPath(), "packages", "superpowers-skills");
+  const globalAgentPromptRoot = app.isPackaged
+    ? join(process.resourcesPath, "global-agent-prompt")
+    : join(app.getAppPath(), "config", "global-agent-prompt");
   const bundledRoutingSuiteRoot = app.isPackaged
     ? join(process.resourcesPath, "routing-suite")
     : join(app.getAppPath(), "build", "routing-suite");
+  const runtimeBinRoot = join(app.getPath("userData"), "runtime-bin");
   const { dshHome, legacyHome } = resolveHarnessDataPaths(
     app.getPath("userData"),
   );
@@ -420,10 +466,11 @@ async function startHarness(): Promise<HarnessChild> {
   await ensureOfficialHarnessInstall({
     dshEntry,
     dshHome,
-    nodeExecutable: runtime.nodeExecutable,
+    nodeExecutable: systemNodeExecutable(),
     pnpmEntry: join(nodeRuntimeResourcePath(), "pnpm.mjs"),
     pnpmStoreDir: runtime.pnpmStoreDir,
-    runtimeBinRoot: join(app.getPath("userData"), "runtime-bin"),
+    runtimeBinRoot: runtimeBinRoot,
+    serverEverythingRoot: runtime.serverEverythingRoot,
     integratedPlugins: [
       {
         packageName: "deepseek-harness-desktop-plugin",
@@ -436,6 +483,30 @@ async function startHarness(): Promise<HarnessChild> {
       {
         packageName: "dsh-model2-selector",
         packageRoot: modelSelectorPluginRoot,
+      },
+      {
+        packageName: "dsh-prompt-principles",
+        packageRoot: promptPrinciplesRoot,
+      },
+      {
+        packageName: "dsh-vision-router",
+        packageRoot: runtime.dshVisionRouterRoot,
+      },
+      {
+        packageName: "dsh-better-sidebar",
+        packageRoot: runtime.dshBetterSidebarRoot,
+      },
+      {
+        packageName: "deepseek-harness-composition",
+        packageRoot: runtime.deepseekHarnessCompositionRoot,
+      },
+      {
+        packageName: "@deepseek-ai/dsh-subagent-codex",
+        packageRoot: runtime.dshSubagentCodexRoot,
+      },
+      {
+        packageName: "@deepseek-ai/dsh-subagent-claude-code",
+        packageRoot: runtime.dshSubagentClaudeCodeRoot,
       },
       {
         packageName: "@dsh-external/dsh-super-injector",
@@ -484,6 +555,27 @@ async function startHarness(): Promise<HarnessChild> {
       `Bundled Superpowers skills skipped user-owned directories: ${superpowersSkills.summary.conflicts.join(", ")}.\n`,
     );
   }
+  const globalPrompt = await installGlobalAgentPromptForStartup({
+    dshHome,
+    resourceRoot: globalAgentPromptRoot,
+  });
+  if (globalPrompt.status === "installed") {
+    process.stderr.write(
+      "Installed the bundled global AGENTS.md prompt under the official Harness home.\n",
+    );
+  } else if (globalPrompt.status === "updated") {
+    process.stderr.write(
+      "Updated the app-managed global AGENTS.md prompt to this release's bundled version.\n",
+    );
+  } else if (globalPrompt.status === "conflict") {
+    process.stderr.write(
+      'Bundled global AGENTS.md prompt skipped: a user-owned global prompt is already present. Use "Use Bundled Global Prompt…" in the app menu to switch.\n',
+    );
+  } else if (globalPrompt.status === "unavailable") {
+    process.stderr.write(
+      "Bundled global AGENTS.md prompt resource is unavailable; Harness startup will continue.\n",
+    );
+  }
   // Assemble the reviewed, immutable dsh-routing-suite snapshot bundled with
   // this app release. Startup never downloads or executes mutable code.
   const routingSuite: RoutingPresetStartupResult =
@@ -507,13 +599,27 @@ async function startHarness(): Promise<HarnessChild> {
   return startWithPortRetries(reserveLoopbackPort, async (port) => {
     harnessOrigin = `http://127.0.0.1:${port}`;
     const spec = createHarnessLaunchSpec({
-      nodeExecutable: runtime.nodeExecutable,
+      nodeExecutable: systemNodeExecutable(),
       dshEntry,
       dshHome,
       port,
     });
     const child = spawn(spec.command, spec.args, {
-      env: { ...process.env, ...spec.env },
+      // The harness may spawn bundled tooling (for example the dsh-npx
+      // launcher behind the MCP bridge) whose commands resolve through
+      // PATH. A GUI launch inherits a minimal PATH, so prepend the
+      // runtime-bin launchers and the detected system Node directory.
+      env: {
+        ...process.env,
+        ...spec.env,
+        PATH: [
+          runtimeBinRoot,
+          dirname(systemNodeExecutable()),
+          process.env.PATH,
+        ]
+          .filter((entry) => entry !== undefined && entry !== "")
+          .join(delimiter),
+      },
       shell: false,
       stdio: ["ignore", "pipe", "pipe"],
       windowsHide: true,
@@ -545,6 +651,60 @@ async function startHarness(): Promise<HarnessChild> {
   });
 }
 
+async function adoptBundledGlobalPrompt(): Promise<void> {
+  const { dshHome } = resolveHarnessDataPaths(app.getPath("userData"));
+  const resourceRoot = app.isPackaged
+    ? join(process.resourcesPath, "global-agent-prompt")
+    : join(app.getAppPath(), "config", "global-agent-prompt");
+  const confirmOptions: Electron.MessageBoxOptions = {
+    type: "question",
+    buttons: ["Back up and switch", "Cancel"],
+    defaultId: 0,
+    cancelId: 1,
+    title: "Use Bundled Global Prompt",
+    message:
+      "Replace the global AGENTS.md with the bundled Global Agent Operating Protocol?",
+    detail:
+      "The current file is backed up as AGENTS.md.backup-<timestamp> in the same directory. The new prompt takes effect from the next Harness session.",
+  };
+  const confirm =
+    mainWindow !== undefined && !mainWindow.isDestroyed()
+      ? await dialog.showMessageBox(mainWindow, confirmOptions)
+      : await dialog.showMessageBox(confirmOptions);
+  if (confirm.response !== 0) return;
+  try {
+    const result = await adoptBundledGlobalAgentPrompt({
+      dshHome,
+      resourceRoot,
+    });
+    if (result.status === "unavailable") {
+      await dialog.showMessageBox({
+        type: "warning",
+        message: "Bundled global prompt unavailable",
+        detail:
+          "The bundled AGENTS.md resource is missing from this installation.",
+      });
+      return;
+    }
+    await dialog.showMessageBox({
+      type: "info",
+      title: "Global prompt updated",
+      message: "The global AGENTS.md now uses the bundled prompt.",
+      detail:
+        result.backupPath === undefined
+          ? "No previous prompt existed, so no backup was created."
+          : `Previous prompt backed up at: ${result.backupPath}`,
+    });
+  } catch (error) {
+    const failedError =
+      error instanceof Error ? error : new Error("Unknown error");
+    dialog.showErrorBox(
+      "Global prompt switch failed",
+      failedError.message.slice(0, 2_000),
+    );
+  }
+}
+
 function buildMenu(): void {
   Menu.setApplicationMenu(
     Menu.buildFromTemplate(
@@ -561,6 +721,8 @@ function buildMenu(): void {
         restartHarness: () =>
           void controller?.restart().catch(reportRuntimeFailure),
         openLogs: () => void shell.openPath(app.getPath("logs")),
+        adoptBundledGlobalPrompt: () =>
+          void adoptBundledGlobalPrompt().catch(reportRuntimeFailure),
         quit: () => app.quit(),
         pasteFocused: () =>
           BrowserWindow.getFocusedWindow()?.webContents.paste(),
@@ -602,7 +764,58 @@ function createTray(): void {
   tray.on("click", () => mainWindow?.show());
 }
 
+// A frozen or forcefully quit window leaves its Harness child behind; several
+// stale children then write the same profile and compete for ports, which
+// makes the app appear to hang. Reap them before starting a fresh child. The
+// pattern matches only the managed harness web entry.
+function terminateStaleHarnessChildren(): void {
+  const collect = (): number[] => {
+    if (process.platform === "win32") {
+      const result = spawnSync(
+        "powershell",
+        [
+          "-NoProfile",
+          "-Command",
+          "Get-CimInstance Win32_Process | Where-Object { $_.CommandLine -match 'dsh/lib/bin\\.js web' } | ForEach-Object { $_.ProcessId }",
+        ],
+        { encoding: "utf8", windowsHide: true },
+      );
+      if (result.error !== undefined) return [];
+      return String(result.stdout ?? "")
+        .split(/\s+/u)
+        .map((value) => Number.parseInt(value, 10))
+        .filter((value) => Number.isInteger(value) && value > 0);
+    }
+    const result = spawnSync("ps", ["-axo", "pid=,command="], {
+      encoding: "utf8",
+      windowsHide: true,
+    });
+    if (result.error !== undefined) return [];
+    const pids: number[] = [];
+    for (const line of String(result.stdout ?? "").split("\n")) {
+      const match = line.match(/^\s*(\d+)\s+(.+)$/u);
+      if (match === null) continue;
+      const command = match[2];
+      if (command === undefined) continue;
+      if (!command.includes("dsh") || !command.includes("bin.js web")) {
+        continue;
+      }
+      const pid = Number.parseInt(match[1] ?? "", 10);
+      if (Number.isInteger(pid) && pid > 0) pids.push(pid);
+    }
+    return pids;
+  };
+  for (const pid of collect()) {
+    try {
+      process.kill(pid, "SIGTERM");
+    } catch {
+      // Already gone.
+    }
+  }
+}
+
 async function launch(): Promise<void> {
+  terminateStaleHarnessChildren();
   watchdogHost = new WatchdogHost({
     appPath: app.getAppPath(),
     resourcesPath: process.resourcesPath,
@@ -617,7 +830,7 @@ async function launch(): Promise<void> {
     );
   }
   createWindow();
-  await prepareManagedNodeRuntime();
+  await prepareSystemNodeRuntime();
   controller = new HarnessRuntimeController({
     origin: () => harnessOrigin,
     startHarness,
@@ -674,7 +887,8 @@ function reportRuntimeFailure(error: unknown): void {
     error instanceof Error
       ? error.message.slice(0, 2_000)
       : "Desktop host operation failed";
-  console.error(`[DeepSeek Harness Code] ${message}`);
+  const stack = error instanceof Error ? `\n${error.stack ?? ""}` : "";
+  console.error(`[DeepSeek Harness Code] ${message}${stack}`);
 }
 
 function reportLaunchFailure(error: unknown): void {
@@ -686,23 +900,31 @@ function reportLaunchFailure(error: unknown): void {
   dialog.showErrorBox("DeepSeek Harness Code could not start", message);
 }
 
-app
-  .whenReady()
-  .then(() => {
-    app.on("activate", () => {
-      if (BrowserWindow.getAllWindows().length === 0) createWindow();
-      else mainWindow?.show();
-    });
-    return launch();
-  })
-  .catch(reportLaunchFailure);
-app.on("before-quit", (event) => {
-  if (quitting) return;
-  event.preventDefault();
-  quitting = true;
-  if (healthTimer !== undefined) clearInterval(healthTimer);
-  void shutdownNormally();
-});
+if (hasSingleInstanceLock) {
+  app.on("second-instance", () => {
+    if (mainWindow === undefined) return;
+    if (mainWindow.isMinimized()) mainWindow.restore();
+    mainWindow.show();
+    mainWindow.focus();
+  });
+  app
+    .whenReady()
+    .then(() => {
+      app.on("activate", () => {
+        if (BrowserWindow.getAllWindows().length === 0) createWindow();
+        else mainWindow?.show();
+      });
+      return launch();
+    })
+    .catch(reportLaunchFailure);
+  app.on("before-quit", (event) => {
+    if (quitting) return;
+    event.preventDefault();
+    quitting = true;
+    if (healthTimer !== undefined) clearInterval(healthTimer);
+    void shutdownNormally();
+  });
+}
 
 async function shutdownNormally(): Promise<void> {
   try {

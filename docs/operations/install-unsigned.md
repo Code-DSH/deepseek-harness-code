@@ -2,6 +2,10 @@
 
 This is a community wrapper and is not an official DeepSeek release. DeepSeek Harness Code is ad-hoc signed, not Apple-notarized. Verify the DMG source and checksum before proceeding.
 
+## Prerequisite: official Node.js
+
+The app runs on the system-installed official Node.js — it no longer downloads a portable runtime. Install Node.js 22.13 or newer from [nodejs.org](https://nodejs.org/en/download) (any newer version, including 24/26, works). Common install locations are detected automatically: the nodejs.org installer, Homebrew (`/opt/homebrew/bin`, `/usr/local/bin`), nvm, Volta, fnm, mise, and copies in standard bin directories. Version-manager roots with custom locations are honored through `NVM_DIR`, `VOLTA_HOME`, and `FNM_DIR`. If no usable Node is found, the app offers a guided dialog with a download link and a retry button.
+
 The renamed Universal artifact follows `release/DeepSeek-Harness-Code-<version>-mac-universal.dmg`. Its checksum is published only after the final package verification succeeds.
 
 After copying the app to Applications, remove quarantine only from this app:
@@ -16,4 +20,4 @@ Files downloaded or transferred by another application can receive quarantine ag
 
 ## First launch
 
-On its first successful startup, the app uses the official Harness Home (`$DSH_HOME` when explicitly set, otherwise `~/.dsh`). It copy-merges supported data from the retired Electron-specific Home, installs all bundled plugins through the official CLI using the pnpm runtime inside the app, and synchronizes Superpowers 6.2.0 under `<DSH_HOME>/skills`. Existing target files, unrelated plugins, and unmarked user-owned Skills or Agent Presets are never overwritten. See the [migration runbook](./harness-home-migration.md).
+On its first successful startup, the app uses the official Harness Home (`$DSH_HOME` when explicitly set, otherwise `~/.dsh`). It copy-merges supported data from the retired Electron-specific Home, installs all bundled plugins through the official CLI using the pnpm runtime inside the app, synchronizes Superpowers 6.2.0 under `<DSH_HOME>/skills`, installs the bundled Global Agent Operating Protocol as `<DSH_HOME>/AGENTS.md` when no global prompt exists yet, and provisions the global `dsh` command through the official `npm install -g` flow using the app's pinned version (so `dsh` works in new terminals right away; an existing user-managed global `dsh` is never overwritten). Existing target files, unrelated plugins, unmarked user-owned Skills or Agent Presets, and a user-authored global prompt are never overwritten; the app menu's "Use Bundled Global Prompt…" switches an existing prompt to the bundled one with a timestamped backup. See the [migration runbook](./harness-home-migration.md).

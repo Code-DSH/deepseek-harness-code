@@ -106,21 +106,21 @@ Project2 测试中，该方案连续跑出 **98** 和 **99** 的成绩，进入�
 
 DeepSeek Harness Code 选择了另一条路线：
 
-| 能力         | 普通网页套壳             | DeepSeek Harness Code                                                                               |
-| ------------ | ------------------------ | --------------------------------------------------------------------------------------------------- |
-| 运行时       | 加载已有远程页面         | 内置 Chromium、官方 Harness 运行时与集成插件；首次启动自动下载固定的便携 Node.js 24                 |
-| 模型集成     | 继承网页当时提供的模型   | 一等 V4 Pro/Flash 目录与官方推理强度控制                                                            |
-| Agent 工具链 | 没有集成式工具链         | Harness 插件、Skills、工具、Goal、Plan、Workflow、提问与 Subagent                                   |
-| 进程所有权   | 页面本身就是产品         | 桌面宿主管理 Harness 启动、就绪、重启与退出                                                         |
-| 长会话健康   | 依赖用户手动刷新         | 非重叠健康探测与基于证据的恢复机制                                                                  |
-| Web 界面卡死 | 关闭或重载整个应用       | 检测无响应渲染器，在保留健康 Harness 状态的同时重建窗口                                             |
-| 服务失效     | 界面停止后用户才发现     | 连续探测失败或子进程退出后自动恢复                                                                  |
-| 桌面进程崩溃 | 没有独立恢复层           | IPC-only Watchdog、有界退避与崩溃循环保护                                                           |
-| 内存压力     | 继承网页和进程的无界行为 | 限制已知增长路径、轮转日志、回收失效进程、隔离渲染器恢复                                            |
-| 诊断         | 最多只有浏览器控制台     | 经脱敏的 Electron、Harness、Watchdog 日志，可在应用内打开                                           |
-| 桌面集成     | 只有窗口外壳             | 原生托盘/菜单、关闭策略、系统主题、快捷键与会话感知恢复                                             |
-| 安全边界     | 常见宽权限 preload       | 仅回环地址 Harness 与两组经过验证的 preload 能力                                                    |
-| 分发         | 依赖外部网站或运行环境   | 自包含应用，运行时不要求全局安装 Node：首次启动自动下载固定的便携 Node.js（自动下载或提供下载链接） |
+| 能力         | 普通网页套壳             | DeepSeek Harness Code                                                                                                              |
+| ------------ | ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------- |
+| 运行时       | 加载已有远程页面         | 内置 Chromium、官方 Harness 运行时与集成插件；运行于系统官方 Node.js（自动探测）                                                   |
+| 模型集成     | 继承网页当时提供的模型   | 一等 V4 Pro/Flash 目录与官方推理强度控制                                                                                           |
+| Agent 工具链 | 没有集成式工具链         | Harness 插件、Skills、工具、Goal、Plan、Workflow、提问与 Subagent                                                                  |
+| 进程所有权   | 页面本身就是产品         | 桌面宿主管理 Harness 启动、就绪、重启与退出                                                                                        |
+| 长会话健康   | 依赖用户手动刷新         | 非重叠健康探测与基于证据的恢复机制                                                                                                 |
+| Web 界面卡死 | 关闭或重载整个应用       | 检测无响应渲染器，在保留健康 Harness 状态的同时重建窗口                                                                            |
+| 服务失效     | 界面停止后用户才发现     | 连续探测失败或子进程退出后自动恢复                                                                                                 |
+| 桌面进程崩溃 | 没有独立恢复层           | IPC-only Watchdog、有界退避与崩溃循环保护                                                                                          |
+| 内存压力     | 继承网页和进程的无界行为 | 限制已知增长路径、轮转日志、回收失效进程、隔离渲染器恢复                                                                           |
+| 诊断         | 最多只有浏览器控制台     | 经脱敏的 Electron、Harness、Watchdog 日志，可在应用内打开                                                                          |
+| 桌面集成     | 只有窗口外壳             | 原生托盘/菜单、关闭策略、系统主题、快捷键与会话感知恢复                                                                            |
+| 安全边界     | 常见宽权限 preload       | 仅回环地址 Harness 与两组经过验证的 preload 能力                                                                                   |
+| 分发         | 依赖外部网站或运行环境   | 自包含应用，运行于系统官方 Node.js：自动探测常见安装位置（nodejs.org 安装器、Homebrew、nvm、Volta、fnm、mise、nvm-windows、Scoop） |
 
 我们尊重轻量套壳的价值：它们解决的是“像应用一样打开这个网页”。DeepSeek Harness Code 解决的是另一个问题：**把 Harness 作为一个有韧性的桌面编码系统来运行。**
 
@@ -152,7 +152,7 @@ DeepSeek Harness Code 使用明确的生命周期控制覆盖这些已知失效�
 
 ## 现代化桌面体验
 
-- **自包含宿主、小体积安装包**——Chromium、Harness、插件和 Watchdog 放在应用包内。为减小安装包体积，Node.js 不再随包携带：首次启动会下载 SHA-256 固定的便携 Node.js 24（自动下载或提供浏览器下载链接），并把固定的 Harness 依赖安装到应用自有用户数据目录。
+- **自包含宿主、系统 Node.js**——Chromium、Harness、插件和 Watchdog 放在应用包内。应用直接使用系统安装的官方 Node.js（22.13 及以上，无上限），首次启动把固定的 Harness 依赖安装到应用自有用户数据目录；自动探测常见安装位置，包括 GUI 启动时 PATH 不含 Node 的场景。
 - **官方 Harness 体验**——会话、Profile、Provider、工作区行为与提问流程继续使用官方 Harness 模型。
 - **集成设置**——运行状态、重启、日志、关闭行为和实验模式使用官方 Harness UI 原语集成到“通用”设置。
 - **原生生命周期**——通过常驻托盘/菜单打开应用、重启 Harness、打开日志或退出；可选择关闭到托盘或直接退出。
@@ -160,6 +160,8 @@ DeepSeek Harness Code 使用明确的生命周期控制覆盖这些已知失效�
 - **平滑导航**——可用时采用 View Transitions，否则使用低开销 CSS 回退完成路由提交转场。
 - **工作区韧性**——已验证 Standard 工作区切换和官方会话恢复。
 - **内置 Skills 基础**——启动时将 Superpowers 6.2.0 安装到官方 `<DSH_HOME>/skills` 根目录；同名用户自建 Skill 目录绝不会被覆盖。
+- **内置全局 Agent 提示词**——随包携带经过评审的《全局 Agent 运行协议》并安装为 `<DSH_HOME>/AGENTS.md`：用户没有全局提示词时自动安装；仅在副本仍由应用管理且未被修改时随版本更新；绝不覆盖用户自有的提示词。菜单中的「Use Bundled Global Prompt…」可将现有提示词一键切换为内置版（自动生成带时间戳的备份）。
+- **全局 `dsh` 命令**——首次启动即通过官方 `npm install -g` 流程安装本应用固定版本的 `@deepseek-ai/dsh`，此后在任何新终端里都能直接使用 `dsh`，与官方 CLI 安装体验完全一致。用户自有的全局 `dsh` 绝不会被覆盖；供给失败不阻塞启动，仅提示一行手动安装命令。
 - **本地化 Agent Preset**——`anchored-standard`、`router-standard`、`router-spec` 均提供简短的中英双语名称与描述，且不改变 Preset ID 或路由行为。
 - **安全的实验集成**——Anchored Standard 是独立的官方格式 Bundle；在固定的 Harness rc.6 API 上会安全回退到 Standard。
 
@@ -172,6 +174,8 @@ DeepSeek Harness Code 使用明确的生命周期控制覆盖这些已知失效�
 | V4 模型        | 官方 V4 Pro/Flash 目录与 `off` / `high` / `max` 推理控制                           |
 | 一体化能力栈   | Skills、工具、Goal、Plan、Workflow、Todo、Jobs、提问、审批与 Subagent              |
 | 内置 Skills    | Superpowers 6.2.0 合集安装进官方 Harness Home，不覆盖用户 Skills                   |
+| 全局提示词     | 内置 `AGENTS.md` 运行协议：所有权安全安装 + 带备份的菜单一键切换                   |
+| 全局 CLI       | 首次启动经官方 `npm install -g` 流程安装固定版本的 `dsh` 命令                      |
 | Agent Preset   | Standard 保持默认；可选 `anchored-standard` 与受管 `router-standard`/`router-spec` |
 | 恢复           | 健康探测、进程重启、渲染器替换、端口重试、会话恢复                                 |
 | Watchdog       | 独立 IPC 进程、有界重启策略、持久化崩溃循环标记                                    |
@@ -186,7 +190,7 @@ DeepSeek Harness Code 内置社区 [dsh-routing-suite](https://github.com/yjh051
 
 - **离线快照** —— 安装包内置套件三个组件的固定版本快照（@dsh-external/dsh-super-injector Bundle 层、@dsh-external/dsh-mode-boost 宿主增强、router-standard 与 router-spec 智能体预设），存放在应用资源目录中。
 - **固定基线** —— 内置快照记录 injector `0.3.3`、mode-boost `0.1.0`、路由预设 `0.2.0`（commit `eff787e95132d6c7104214542104a84d656b497e`），SHA-256 摘要保存在 `build/routing-suite/versions.json`。
-- **官方安装** —— 启动时桌面宿主使用应用内置 pnpm 运行公开的 `dsh plugin --profile web add` 流程，安装桌面 Bundle、`dsh-ui-motion`、`dsh-model2-selector`、Super Injector、Mode Boost 与 `dsh-find-plugin`。Profile 清单、依赖位置、Bundle 列表和补丁加载均由 Harness 管理；桌面宿主只在该 CLI 之外管理路由预设与 Skills。
+- **官方安装** —— 启动时桌面宿主使用应用内置 pnpm 运行公开的 `dsh plugin --profile web add` 流程，安装桌面 Bundle、`dsh-ui-motion`、`dsh-model2-selector`、`dsh-prompt-principles`（分层提示词原则注入，含插件区专属设置页）、`dsh-vision-router`、`dsh-better-sidebar`、应用组合 Bundle（MCP 桥接 everything 测试服务与 Context7 文档，以及官方 Codex / Claude Code subagent 提供方——经插件自带 bundle patch 下发，绝不触碰用户的 profile 补丁层）、Super Injector、Mode Boost 与 `dsh-find-plugin`。Profile 清单、依赖位置、Bundle 列表和补丁加载均由 Harness 管理；桌面宿主只在该 CLI 之外管理路由预设与 Skills。调和若因派生 `node_modules` 损坏（如自引用符号链接）失败，会自动清除该派生产物并整体重试一次。
 - **审核后更新** —— 路由组件只随经过审核的新 App 版本更新。构建在解压前校验每个固定归档的精确 SHA-256；安装后的 App 不会在后台下载或执行可变的路由代码。
 - **容错** —— 任何装配失败都不影响 Standard Harness 启动，并只报告有限诊断；用户自建的同名预设不会被覆盖。
 
@@ -234,7 +238,7 @@ xattr -dr com.apple.quarantine "/Applications/DeepSeek Harness Code.app"
 
 ### 环境要求
 
-- Node.js 24
+- Node.js 22.13 及以上（构建工具链与应用运行时要求）
 - pnpm 11.19.0（通过下方固定命令调用）
 - 目标操作系统对应的原生打包工具
 

@@ -61,7 +61,7 @@ The app bundles and installs these packages using the same official mechanism as
 - `@dsh-external/dsh-mode-boost`
 - `dsh-find-plugin`
 
-The generated `pnpm`/`pnpm.cmd` launcher points to the pnpm runtime inside the application and is prepended to the child command's private `PATH`. It does not change the user's shell or require a system Node/pnpm installation. The plugin patches retain bare package names.
+The generated `pnpm`/`pnpm.cmd` launcher points to the pnpm runtime inside the application and is prepended to the child command's private `PATH` together with the detected system Node's bin directory. It does not change the user's shell or require a system pnpm installation (a system official Node.js >=22.13 is required and auto-detected). The plugin patches retain bare package names.
 
 ## Conflict Diagnosis
 

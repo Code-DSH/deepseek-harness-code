@@ -1,0 +1,21 @@
+{
+  "name": "deepseek-harness-composition",
+  "version": "1.0.0",
+  "private": true,
+  "description": "App-managed official composition layer: MCP client bridges (everything test server, Context7 docs) and the official Codex / Claude Code subagent providers, delivered through the plugin's own bundle patch so the user's profile patch layer stays untouched",
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  },
+  "files": [
+    "package.json",
+    "cordis.patch.yml",
+    "README.md"
+  ],
+  "dependencies": {
+    "@deepseek-ai/dsh-mcp-client": "0.1.0-rc.6",
+    "@deepseek-ai/dsh-subagent-codex": "0.1.0-rc.6",
+    "@deepseek-ai/dsh-subagent-claude-code": "0.1.0-rc.6"
+  }
+}

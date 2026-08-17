@@ -20,6 +20,7 @@ describe("desktop application menu", () => {
         publishStatus: vi.fn(),
         restartHarness: vi.fn(),
         openLogs: vi.fn(),
+        adoptBundledGlobalPrompt: vi.fn(),
         quit: vi.fn(),
         pasteFocused: vi.fn(),
       });
@@ -44,6 +45,7 @@ describe("desktop application menu", () => {
       publishStatus: vi.fn(),
       restartHarness: vi.fn(),
       openLogs: vi.fn(),
+      adoptBundledGlobalPrompt: vi.fn(),
       quit: vi.fn(),
       pasteFocused,
     });
@@ -57,12 +59,38 @@ describe("desktop application menu", () => {
     expect(pasteFocused).toHaveBeenCalledOnce();
   });
 
+  it("offers the bundled global prompt switch in the app menu", () => {
+    const adoptBundledGlobalPrompt = vi.fn();
+    const template = createApplicationMenuTemplate("darwin", {
+      open: vi.fn(),
+      publishStatus: vi.fn(),
+      restartHarness: vi.fn(),
+      openLogs: vi.fn(),
+      adoptBundledGlobalPrompt,
+      quit: vi.fn(),
+      pasteFocused: vi.fn(),
+    });
+    const appMenu = template.find(
+      (item) => item.label === "DeepSeek Harness Code",
+    );
+    if (!Array.isArray(appMenu?.submenu))
+      throw new Error("App menu is missing");
+    const promptItem = appMenu.submenu.find(
+      (item) => item.label === "Use Bundled Global Prompt…",
+    );
+
+    expect(promptItem).toBeDefined();
+    promptItem?.click?.({} as never, {} as never, {} as never);
+    expect(adoptBundledGlobalPrompt).toHaveBeenCalledOnce();
+  });
+
   it("keeps standard window commands so the desktop menu bar is not empty", () => {
     const template = createApplicationMenuTemplate("darwin", {
       open: vi.fn(),
       publishStatus: vi.fn(),
       restartHarness: vi.fn(),
       openLogs: vi.fn(),
+      adoptBundledGlobalPrompt: vi.fn(),
       quit: vi.fn(),
       pasteFocused: vi.fn(),
     });

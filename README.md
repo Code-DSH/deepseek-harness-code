@@ -113,21 +113,21 @@ Many desktop clients stop after loading a remote Web page in Electron or WebView
 
 DeepSeek Harness Code takes a different approach:
 
-| Capability          | Basic Web wrapper                        | DeepSeek Harness Code                                                                                                                                                       |
-| ------------------- | ---------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Runtime             | Loads an existing remote page            | Bundles Chromium, the official Harness runtime, and integrated plugins; downloads a pinned portable Node.js 24 on first launch                                              |
-| Model integration   | Inherits whatever the page exposes       | First-class V4 Pro/Flash catalog and official reasoning-effort controls                                                                                                     |
-| Agent toolkit       | No integrated toolchain                  | Harness plugins, Skills, tools, goals, plans, workflows, questions, and subagents                                                                                           |
-| Process ownership   | The page is the product                  | The desktop host owns Harness startup, readiness, restart, and shutdown                                                                                                     |
-| Long-session health | Depends on a manual refresh              | Non-overlapping health probes and evidence-based recovery                                                                                                                   |
-| Web UI freeze       | Close or reload the whole app            | Detects an unresponsive renderer and can replace the window while keeping healthy Harness state alive                                                                       |
-| Service failure     | User notices after the UI stops          | Restarts after defined consecutive probe failures or child exit                                                                                                             |
-| Desktop crash       | No independent recovery layer            | IPC-only Watchdog with bounded backoff and crash-loop protection                                                                                                            |
-| Memory pressure     | Inherits unbounded page/process behavior | Bounds known growth paths, rotates logs, retires failed processes, and isolates renderer recovery                                                                           |
-| Diagnostics         | Browser console, if available            | Redacted Electron, Harness, and Watchdog logs with in-app access                                                                                                            |
-| Desktop integration | Window chrome                            | Native tray/menu actions, close policy, system theme, shortcuts, and session-aware recovery                                                                                 |
-| Security boundary   | Often exposes broad preload access       | Loopback-only Harness and two validated preload capability groups                                                                                                           |
-| Distribution        | Requires an external site or runtime     | Self-contained application packaging with no global Node requirement: a pinned portable Node.js is downloaded on first launch (automatic or via the provided download link) |
+| Capability          | Basic Web wrapper                        | DeepSeek Harness Code                                                                                                                                                                                          |
+| ------------------- | ---------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Runtime             | Loads an existing remote page            | Bundles Chromium, the official Harness runtime, and integrated plugins; runs on the system-installed official Node.js (auto-detected)                                                                          |
+| Model integration   | Inherits whatever the page exposes       | First-class V4 Pro/Flash catalog and official reasoning-effort controls                                                                                                                                        |
+| Agent toolkit       | No integrated toolchain                  | Harness plugins, Skills, tools, goals, plans, workflows, questions, and subagents                                                                                                                              |
+| Process ownership   | The page is the product                  | The desktop host owns Harness startup, readiness, restart, and shutdown                                                                                                                                        |
+| Long-session health | Depends on a manual refresh              | Non-overlapping health probes and evidence-based recovery                                                                                                                                                      |
+| Web UI freeze       | Close or reload the whole app            | Detects an unresponsive renderer and can replace the window while keeping healthy Harness state alive                                                                                                          |
+| Service failure     | User notices after the UI stops          | Restarts after defined consecutive probe failures or child exit                                                                                                                                                |
+| Desktop crash       | No independent recovery layer            | IPC-only Watchdog with bounded backoff and crash-loop protection                                                                                                                                               |
+| Memory pressure     | Inherits unbounded page/process behavior | Bounds known growth paths, rotates logs, retires failed processes, and isolates renderer recovery                                                                                                              |
+| Diagnostics         | Browser console, if available            | Redacted Electron, Harness, and Watchdog logs with in-app access                                                                                                                                               |
+| Desktop integration | Window chrome                            | Native tray/menu actions, close policy, system theme, shortcuts, and session-aware recovery                                                                                                                    |
+| Security boundary   | Often exposes broad preload access       | Loopback-only Harness and two validated preload capability groups                                                                                                                                              |
+| Distribution        | Requires an external site or runtime     | Self-contained application packaging that runs on the system official Node.js: common install locations (nodejs.org installer, Homebrew, nvm, Volta, fnm, mise, nvm-windows, Scoop) are detected automatically |
 
 We respect the usefulness of lightweight wrappers. They solve “open this website like an app.” DeepSeek Harness Code solves a different problem: **operate Harness as a resilient desktop coding system.**
 
@@ -159,7 +159,7 @@ These are implemented controls, not a synthetic “X% less memory” claim. A re
 
 ## Modern desktop experience
 
-- **Self-contained host, small installer** — Chromium, Harness, plugins, and Watchdog ship inside the application bundle. To keep the installer small, Node.js is not bundled: the first launch downloads a SHA-256-pinned portable Node.js 24 (automatic download or a browser link) and installs the pinned Harness packages into app-owned user data.
+- **Self-contained host, system Node.js** — Chromium, Harness, plugins, and Watchdog ship inside the application bundle. The app runs on the system-installed official Node.js (22.13 or newer, no upper bound) and installs the pinned Harness packages into app-owned user data on first launch. Common install locations are detected automatically, including GUI launches whose PATH excludes them.
 - **Official Harness surface** — sessions, profiles, providers, workspace behavior, and question flows remain on the official Harness model.
 - **Integrated settings** — runtime status, restart, logs, close behavior, and experimental mode controls live in General settings using official Harness UI primitives.
 - **Native lifecycle** — open, restart Harness, open logs, and quit from a persistent tray/menu; choose close-to-tray or direct quit.
@@ -167,6 +167,8 @@ These are implemented controls, not a synthetic “X% less memory” claim. A re
 - **Smooth navigation** — route-commit transitions use View Transitions when available and a low-cost CSS fallback otherwise.
 - **Workspace resilience** — validated Standard workspace switching and official session restoration.
 - **Bundled Skills foundation** — Superpowers 6.2.0 is installed into the official `<DSH_HOME>/skills` root on startup; user-authored skill directories with the same name are never overwritten.
+- **Bundled global agent prompt** — a reviewed Global Agent Operating Protocol ships as `<DSH_HOME>/AGENTS.md`: installed automatically when the user has no global prompt, updated only while the copy remains app-managed and unmodified, and never overwriting a user-authored prompt. The app menu's "Use Bundled Global Prompt…" switches an existing prompt over with a timestamped backup.
+- **Global `dsh` command** — the first launch installs the app's pinned `@deepseek-ai/dsh` through the official `npm install -g` flow, so `dsh` works in every new terminal exactly like an official CLI installation. An existing user-managed global `dsh` is never overwritten; failures never block startup and surface a one-line manual command.
 - **Localized Agent Presets** — `anchored-standard`, `router-standard`, and `router-spec` ship short bilingual Chinese/English names and descriptions without changing their preset IDs or routing behavior.
 - **Safe experimental integration** — Anchored Standard is a separate official-format bundle and fails closed to Standard on the pinned Harness rc.6 API.
 
@@ -179,6 +181,8 @@ These are implemented controls, not a synthetic “X% less memory” claim. A re
 | V4 models        | Official V4 Pro/Flash catalog and `off` / `high` / `max` reasoning controls                           |
 | Integrated stack | Skills, tools, Goal, Plan, Workflow, Todo, Jobs, questions, approvals, and subagents                  |
 | Bundled Skills   | Superpowers 6.2.0 collection installed into the official Harness Home without overwriting user skills |
+| Global prompt    | Bundled `AGENTS.md` operating protocol with ownership-safe install and a backup-safe menu switch      |
+| Global CLI       | Pinned `dsh` installed through the official `npm install -g` flow on first launch                     |
 | Agent Presets    | Standard remains default; optional `anchored-standard` plus managed `router-standard`/`router-spec`   |
 | Recovery         | Health probes, process restart, renderer replacement, port retry, session restoration                 |
 | Watchdog         | Independent IPC process, bounded restart policy, persistent crash-loop marker                         |
@@ -193,7 +197,7 @@ DeepSeek Harness Code bundles the community [dsh-routing-suite](https://github.c
 
 - **Offline snapshot** - the installer ships a pinned snapshot of the suite's three components (the @dsh-external/dsh-super-injector bundle layer, the @dsh-external/dsh-mode-boost host-plane boost, and the router-standard + router-spec agent presets) inside the app resources.
 - **Pinned baseline** - the bundled snapshot records injector `0.3.3`, mode-boost `0.1.0`, router preset `0.2.0` at commit `eff787e95132d6c7104214542104a84d656b497e`, with SHA-256 digests in `build/routing-suite/versions.json`.
-- **Official installation** - on startup the desktop host runs the public `dsh plugin --profile web add` flow with the downloaded portable Node.js and its bundled pnpm runtime for the desktop bundle, `dsh-ui-motion`, `dsh-model2-selector`, Super Injector, Mode Boost, and `dsh-find-plugin`. Harness owns the profile manifest, dependency location, bundle list, and patch loading; the desktop host only manages router presets and Skills outside that CLI.
+- **Official installation** - on startup the desktop host runs the public `dsh plugin --profile web add` flow with the detected system Node.js and its bundled pnpm runtime for the desktop bundle, `dsh-ui-motion`, `dsh-model2-selector`, `dsh-prompt-principles` (layered prompt-principles injection with a Plugins-section settings page), `dsh-vision-router`, `dsh-better-sidebar`, the app composition bundle (MCP bridges to the everything test server and Context7 docs, plus the official Codex and Claude Code subagent providers — delivered through the plugin's own bundle patch, never touching the user's profile patch layer), Super Injector, Mode Boost, and `dsh-find-plugin`. Harness owns the profile manifest, dependency location, bundle list, and patch loading; the desktop host only manages router presets and Skills outside that CLI. A corrupted profile `node_modules` (for example a self-referential symlink) is detected and rebuilt once before failing.
 - **Reviewed updates** - routing components update only with a new reviewed app release. The build verifies the exact SHA-256 of every pinned archive before extraction; the installed app never downloads or executes mutable routing code in the background.
 - **Ownership-safe** - existing unrelated plugins remain in the official profile, user-owned presets are never overwritten, and the retired app-specific Home remains intact after copy-only migration.
 
@@ -241,7 +245,7 @@ Do not disable Gatekeeper globally. Read the [complete unsigned installation gui
 
 ### Requirements
 
-- Node.js 24
+- Node.js 22.13 or newer (build toolchain and app runtime requirement)
 - pnpm 11.19.0 (invoked through the pinned command below)
 - Platform-native packaging tools for the target operating system
 

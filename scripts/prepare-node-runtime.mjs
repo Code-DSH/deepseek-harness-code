@@ -1,4 +1,4 @@
-import { copyFile, cp, mkdir, readFile } from "node:fs/promises";
+import { chmod, copyFile, cp, mkdir, readFile } from "node:fs/promises";
 import { createRequire } from "node:module";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -51,11 +51,21 @@ await copyFile(
 await cp(join(sourceRoot, "patches"), join(targetRoot, "patches"), {
   recursive: true,
 });
+// The vendored plugin tarballs referenced by the manifest through file:
+// specifiers must sit next to it for a reproducible offline install.
+await cp(join(sourceRoot, "vendor"), join(targetRoot, "vendor"), {
+  recursive: true,
+});
 // The standalone pnpm launcher is not a single file: its install pipeline
 // spawns worker threads (worker.js) and needs node-gyp-bin, templates, and
 // vendor assets from the same directory. Copy the whole dist tree so the
 // portable runtime installs packages exactly like the development tree.
 await cp(pnpmStandaloneRoot, targetRoot, { recursive: true });
+// fs.cp does not preserve the executable bit on script shims; native-module
+// fallback builds execute node-gyp directly, so restore the mode explicitly.
+await chmod(join(targetRoot, "node-gyp-bin", "node-gyp"), 0o755).catch(
+  () => undefined,
+);
 
 process.stdout.write(
   `${JSON.stringify({

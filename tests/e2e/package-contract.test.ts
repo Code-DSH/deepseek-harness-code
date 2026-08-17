@@ -126,11 +126,13 @@ describe("DeepSeek Harness Code distribution contract", () => {
       "dist/desktop",
       "dist/watchdog",
       "packages/desktop-plugin",
-      "THIRD_PARTY_NOTICES.md",
+      "THIRD-PARTY-NOTICES.md",
       "packages/anchored-standard-plugin",
       "apps/desktop/src/startup.html",
       "build/THIRD-PARTY-NOTICES.md",
       "build/node-runtime",
+      "config/global-agent-prompt",
+      "packages/prompt-principles-plugin",
     ]) {
       expect(config).toContain(resource);
     }
@@ -151,6 +153,16 @@ describe("DeepSeek Harness Code distribution contract", () => {
     expect(verifyScript).toContain("node-runtime/package.json");
     expect(verifyScript).toContain("node-runtime/pnpm-lock.yaml");
     expect(verifyScript).toContain("node-runtime/pnpm.mjs");
+    expect(verifyScript).toContain("global-agent-prompt/AGENTS.md");
+    expect(verifyScript).toContain(
+      "node-runtime/vendor/dsh-vision-router-1.4.4.tgz",
+    );
+    expect(verifyScript).toContain(
+      "node-runtime/vendor/dsh-better-sidebar-0.12.3.tgz",
+    );
+    expect(verifyScript).toContain(
+      "node-runtime/vendor/deepseek-harness-composition-1.0.0.tgz",
+    );
     expect(verifyScript).toContain(
       "packaged application still contains node_modules",
     );

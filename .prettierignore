@@ -4,7 +4,9 @@
 dist
 node_modules
 release
+packages/better-sidebar/**
 packages/desktop-plugin/client.js
+packages/better-sidebar/lib/**
 packages/desktop-plugin/index.d.ts
 packages/desktop-plugin/index.js
 packages/dsh-ui-motion/**
@@ -21,3 +23,6 @@ packages/anchored-standard-plugin/zero-anchored-standard/**
 packages/anchored-standard-plugin/README.md
 packages/anchored-standard-plugin/README.zh-CN.md
 pnpm-lock.yaml
+packages/prompt-principles-plugin/client.js
+packages/prompt-principles-plugin/index.d.ts
+packages/prompt-principles-plugin/index.js

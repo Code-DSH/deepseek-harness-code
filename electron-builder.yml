@@ -12,9 +12,9 @@ files:
   - dist/desktop/**/*
   - apps/desktop/src/startup.html
   - package.json
-  # The packaged app carries no node_modules. The first launch offers to
-  # download the portable Node.js runtime and installs the pinned Harness
-  # packages into the user-data directory.
+  # The packaged app carries no node_modules. The first launch runs on the
+  # auto-detected system official Node.js (>=22.13) and installs the pinned
+  # Harness packages into the user-data directory.
   - "!node_modules/**/*"
   - "!**/node_modules/**/*"
 extraResources:
@@ -51,6 +51,14 @@ extraResources:
       - index.js
       - lib/**/*
       - cordis.patch.yml
+  - from: packages/prompt-principles-plugin
+    to: prompt-principles-plugin
+    filter:
+      - package.json
+      - index.js
+      - index.d.ts
+      - client.js
+      - cordis.patch.yml
   - from: packages/anchored-standard-plugin
     to: anchored-standard-plugin
     filter:
@@ -68,6 +76,10 @@ extraResources:
       - LICENSE
       - UPSTREAM.json
       - skills/**/*
+  - from: config/global-agent-prompt
+    to: global-agent-prompt
+    filter:
+      - AGENTS.md
   - from: build/routing-suite
     to: routing-suite
     filter:

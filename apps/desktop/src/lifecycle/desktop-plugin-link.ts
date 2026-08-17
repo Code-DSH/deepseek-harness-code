@@ -14,7 +14,7 @@ import {
 import { createReadStream } from "node:fs";
 import { createHash, randomUUID } from "node:crypto";
 import { spawnSync } from "node:child_process";
-import { delimiter, dirname, join, resolve } from "node:path";
+import { basename, delimiter, dirname, join, resolve } from "node:path";
 
 const ANCHORED_PRESET_ID = "anchored-standard";
 const SUPERPOWERS_PACKAGE_NAME = "superpowers";
@@ -60,6 +60,7 @@ export type OfficialHarnessInstallInput = {
   pnpmEntry: string;
   pnpmStoreDir: string;
   runtimeBinRoot: string;
+  serverEverythingRoot?: string;
   integratedPlugins: readonly IntegratedHarnessPlugin[];
   legacyPluginSpecs?: readonly LegacyPluginSpec[];
   env?: Record<string, string | undefined>;
@@ -98,13 +99,84 @@ const WINDOWS_PNPM_LAUNCHER = `@echo off\r
 "%DHC_NODE_EXECUTABLE%" "%DHC_PNPM_ENTRY%" --store-dir "%DHC_PNPM_STORE_DIR%" %*\r
 `;
 
-async function writePnpmLaunchers(runtimeBinRoot: string): Promise<void> {
+// The bundled MCP bridge spawns `dsh-npx` through the official SDK's
+// shell-less stdio transport. The launchers below forward to the detected
+// system Node's own npx (npx.cmd on Windows), with absolute paths baked in
+// at startup so the harness child never depends on environment variables.
+function npxLauncherShims(nodeExecutable: string): {
+  posix: string;
+  windows: string;
+} {
+  const nodeDir = dirname(nodeExecutable);
+  const posixNpx = join(nodeDir, "npx");
+  const windowsNpx = join(nodeDir, "npx.cmd");
+  return {
+    posix: `#!/bin/sh
+exec "${posixNpx}" "$@"
+`,
+    windows: `@echo off\r
+"${windowsNpx}" %*\r
+`,
+  };
+}
+
+// The bundled everything MCP server ships inside the pinned runtime package
+// set, so the launcher below starts it straight from the store without any
+// registry resolution or download at startup time.
+function everythingLauncherShims(
+  nodeExecutable: string,
+  serverEntry: string,
+): { posix: string; windows: string } {
+  return {
+    posix: `#!/bin/sh
+exec "${nodeExecutable}" "${serverEntry}" "$@"
+`,
+    windows: `@echo off\r
+"${nodeExecutable}" "${serverEntry}" %*\r
+`,
+  };
+}
+
+async function writePnpmLaunchers(
+  runtimeBinRoot: string,
+  nodeExecutable: string,
+  serverEverythingRoot?: string,
+): Promise<void> {
   await mkdir(runtimeBinRoot, { recursive: true, mode: 0o700 });
   const posixPath = join(runtimeBinRoot, "pnpm");
   const windowsPath = join(runtimeBinRoot, "pnpm.cmd");
   await writeFile(posixPath, POSIX_PNPM_LAUNCHER, { mode: 0o700 });
   await chmod(posixPath, 0o700);
   await writeFile(windowsPath, WINDOWS_PNPM_LAUNCHER, { mode: 0o600 });
+  const npxShims = npxLauncherShims(nodeExecutable);
+  const posixNpxPath = join(runtimeBinRoot, "dsh-npx");
+  const windowsNpxPath = join(runtimeBinRoot, "dsh-npx.cmd");
+  await writeFile(posixNpxPath, npxShims.posix, { mode: 0o700 });
+  await chmod(posixNpxPath, 0o700);
+  await writeFile(windowsNpxPath, npxShims.windows, { mode: 0o600 });
+  if (serverEverythingRoot !== undefined) {
+    const serverEntry = join(
+      await realpath(serverEverythingRoot),
+      "dist",
+      "index.js",
+    );
+    const everythingShims = everythingLauncherShims(
+      nodeExecutable,
+      serverEntry,
+    );
+    const posixEverythingPath = join(runtimeBinRoot, "dsh-mcp-everything");
+    const windowsEverythingPath = join(
+      runtimeBinRoot,
+      "dsh-mcp-everything.cmd",
+    );
+    await writeFile(posixEverythingPath, everythingShims.posix, {
+      mode: 0o700,
+    });
+    await chmod(posixEverythingPath, 0o700);
+    await writeFile(windowsEverythingPath, everythingShims.windows, {
+      mode: 0o600,
+    });
+  }
 }
 
 function defaultOfficialCommandRunner(
@@ -119,6 +191,55 @@ function defaultOfficialCommandRunner(
     stderr: result.stderr,
     ...(result.error === undefined ? {} : { error: result.error }),
   };
+}
+
+// A dsh profile directory may have been linked against a foreign pnpm store
+// (for example by running dsh from a terminal with a user-level pnpm). pnpm
+// refuses to mix stores (ERR_PNPM_UNEXPECTED_STORE), so drop the derived
+// node_modules tree and let the official install relink it against the
+// managed store. node_modules is package-manager output only; settings,
+// sessions, and presets live elsewhere in the dsh home.
+async function reconcileForeignPnpmStore(input: {
+  profileRoot: string;
+  expectedStoreDir: string;
+}): Promise<void> {
+  const modulesYamlPath = join(
+    input.profileRoot,
+    "node_modules",
+    ".modules.yaml",
+  );
+  let content: string;
+  try {
+    content = await readFile(modulesYamlPath, "utf8");
+  } catch {
+    return;
+  }
+  // pnpm writes this manifest as JSON (layoutVersion 5) or legacy YAML.
+  let storeDir: string | undefined;
+  if (content.trimStart().startsWith("{")) {
+    try {
+      const parsed = JSON.parse(content) as { storeDir?: unknown };
+      if (typeof parsed.storeDir === "string") storeDir = parsed.storeDir;
+    } catch {
+      return;
+    }
+  } else {
+    storeDir = content.match(/^storeDir:\s*(\S+)\s*$/m)?.[1];
+  }
+  if (storeDir === undefined) return;
+  // pnpm appends a version directory (for example `/v11`) to the configured
+  // store root; strip it on both sides so a healthy install is left alone.
+  // The version leaf is matched by name (basename) so the check works with
+  // both forward and backslash paths on Windows.
+  const normalize = (value: string): string => {
+    const resolved = resolve(value);
+    return /^v\d+$/u.test(basename(resolved)) ? dirname(resolved) : resolved;
+  };
+  if (normalize(storeDir) === normalize(input.expectedStoreDir)) return;
+  await rm(join(input.profileRoot, "node_modules"), {
+    recursive: true,
+    force: true,
+  });
 }
 
 /** Install integrated packages through the public dsh plugin command. */
@@ -162,7 +283,16 @@ export async function ensureOfficialHarnessInstall(
     })),
   ];
 
-  await writePnpmLaunchers(input.runtimeBinRoot);
+  await writePnpmLaunchers(
+    input.runtimeBinRoot,
+    input.nodeExecutable,
+    input.serverEverythingRoot,
+  );
+  const profileRoot = join(input.dshHome, "profiles", "web");
+  await reconcileForeignPnpmStore({
+    profileRoot,
+    expectedStoreDir: input.pnpmStoreDir,
+  });
   const inheritedEnv = input.env ?? process.env;
   const existingPath = inheritedEnv.PATH;
   const env: Record<string, string | undefined> = {
@@ -171,36 +301,56 @@ export async function ensureOfficialHarnessInstall(
     DHC_NODE_EXECUTABLE: input.nodeExecutable,
     DHC_PNPM_ENTRY: input.pnpmEntry,
     DHC_PNPM_STORE_DIR: input.pnpmStoreDir,
-    PATH:
-      existingPath === undefined || existingPath === ""
-        ? input.runtimeBinRoot
-        : `${input.runtimeBinRoot}${delimiter}${existingPath}`,
+    // The pnpm launchers resolve Node through DHC_NODE_EXECUTABLE, but the
+    // plugin installs they run may execute native-module postinstall scripts
+    // that invoke `node` by name, and a GUI launch inherits a minimal PATH.
+    PATH: [input.runtimeBinRoot, dirname(input.nodeExecutable), existingPath]
+      .filter((entry) => entry !== undefined && entry !== "")
+      .join(delimiter),
   };
   const runCommand = input.runCommand ?? defaultOfficialCommandRunner;
-  for (const request of installRequests) {
-    const result = runCommand(
-      input.nodeExecutable,
-      [
-        input.dshEntry,
-        "plugin",
-        "--profile",
-        "web",
-        "add",
-        request.installSpec,
-      ],
-      {
-        encoding: "utf8",
-        env,
-        shell: false,
-        windowsHide: true,
-      },
-    );
-    if (result.error !== undefined || result.status !== 0) {
-      const exit = result.status === null ? "spawn" : String(result.status);
-      throw new Error(
-        `official plugin installation failed for ${request.packageName} (exit ${exit})`,
+  const installAll = async (): Promise<void> => {
+    for (const request of installRequests) {
+      const result = runCommand(
+        input.nodeExecutable,
+        [
+          input.dshEntry,
+          "plugin",
+          "--profile",
+          "web",
+          "add",
+          request.installSpec,
+        ],
+        {
+          encoding: "utf8",
+          env,
+          shell: false,
+          windowsHide: true,
+        },
       );
+      if (result.error !== undefined || result.status !== 0) {
+        const exit = result.status === null ? "spawn" : String(result.status);
+        const diagnostic =
+          result.error?.message ?? String(result.stderr ?? "").slice(0, 2_000);
+        throw new Error(
+          `official plugin installation failed for ${request.packageName} (exit ${exit}): ${diagnostic}`,
+        );
+      }
     }
+  };
+  try {
+    await installAll();
+  } catch (error) {
+    // A corrupted derived node_modules — for example a self-referential
+    // symlink left by an interrupted concurrent pnpm install — fails every
+    // pnpm invocation with ELOOP. node_modules is package-manager output
+    // only, so rebuild it once and retry the whole official reconciliation.
+    await rm(join(profileRoot, "node_modules"), {
+      recursive: true,
+      force: true,
+    }).catch(() => undefined);
+    await installAll();
+    void error;
   }
   return {
     status: "installed",

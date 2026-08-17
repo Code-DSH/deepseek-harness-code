@@ -8,7 +8,7 @@ import {
   writeFile,
 } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { delimiter, join, resolve } from "node:path";
+import { delimiter, dirname, join, resolve } from "node:path";
 
 import { describe, expect, it, vi } from "vitest";
 
@@ -41,6 +41,153 @@ async function createPlugin(
 }
 
 describe("official Harness plugin installation", () => {
+  it("removes a profile node_modules linked against a foreign pnpm store", async () => {
+    const root = await mkdtemp(join(tmpdir(), "dsh-plugin-store-"));
+    const dshHome = join(root, "home");
+    const runtimeBinRoot = join(root, "app-data", "runtime-bin");
+    const desktopPlugin = await createPlugin(
+      root,
+      "desktop-plugin",
+      "deepseek-harness-desktop-plugin",
+    );
+    const foreignModules = join(dshHome, "profiles", "web", "node_modules");
+    await mkdir(foreignModules, { recursive: true });
+    await writeFile(
+      join(foreignModules, ".modules.yaml"),
+      `${JSON.stringify({
+        layoutVersion: 5,
+        storeDir: join(root, "user-global-pnpm-store", "v11"),
+      })}\n`,
+    );
+    const runCommand = vi.fn<OfficialCommandRunner>(() => ({
+      status: 0,
+      stdout: "",
+      stderr: "",
+    }));
+
+    const result = await ensureOfficialHarnessInstall({
+      dshEntry: "/packages/node_modules/@deepseek-ai/dsh/lib/bin.js",
+      dshHome,
+      nodeExecutable: "/usr/bin/node",
+      pnpmEntry: "/resources/node-runtime/pnpm.mjs",
+      pnpmStoreDir: "/app-data/node-runtime/pnpm-store",
+      runtimeBinRoot,
+      integratedPlugins: [
+        {
+          packageName: "deepseek-harness-desktop-plugin",
+          packageRoot: desktopPlugin,
+        },
+      ],
+      legacyPluginSpecs: [],
+      runCommand,
+    });
+
+    expect(result).toEqual({
+      status: "installed",
+      packages: ["deepseek-harness-desktop-plugin"],
+    });
+    await expect(stat(foreignModules)).rejects.toThrow();
+  });
+
+  it("keeps a profile node_modules linked against the managed store", async () => {
+    const root = await mkdtemp(join(tmpdir(), "dsh-plugin-keep-"));
+    const dshHome = join(root, "home");
+    const runtimeBinRoot = join(root, "app-data", "runtime-bin");
+    const desktopPlugin = await createPlugin(
+      root,
+      "desktop-plugin",
+      "deepseek-harness-desktop-plugin",
+    );
+    const managedModules = join(dshHome, "profiles", "web", "node_modules");
+    await mkdir(managedModules, { recursive: true });
+    await writeFile(
+      join(managedModules, ".modules.yaml"),
+      `${JSON.stringify({
+        layoutVersion: 5,
+        storeDir: "/app-data/node-runtime/pnpm-store/v11",
+      })}\n`,
+    );
+    const runCommand = vi.fn<OfficialCommandRunner>(() => ({
+      status: 0,
+      stdout: "",
+      stderr: "",
+    }));
+
+    await ensureOfficialHarnessInstall({
+      dshEntry: "/packages/node_modules/@deepseek-ai/dsh/lib/bin.js",
+      dshHome,
+      nodeExecutable: "/usr/bin/node",
+      pnpmEntry: "/resources/node-runtime/pnpm.mjs",
+      pnpmStoreDir: "/app-data/node-runtime/pnpm-store",
+      runtimeBinRoot,
+      integratedPlugins: [
+        {
+          packageName: "deepseek-harness-desktop-plugin",
+          packageRoot: desktopPlugin,
+        },
+      ],
+      legacyPluginSpecs: [],
+      runCommand,
+    });
+
+    await expect(stat(managedModules)).resolves.not.toThrow();
+  });
+
+  it("rebuilds a corrupted profile node_modules once and retries the official install", async () => {
+    const root = await mkdtemp(join(tmpdir(), "dsh-plugin-eloop-"));
+    const dshHome = join(root, "home");
+    const runtimeBinRoot = join(root, "app-data", "runtime-bin");
+    const desktopPlugin = await createPlugin(
+      root,
+      "desktop-plugin",
+      "deepseek-harness-desktop-plugin",
+    );
+    const profileModules = join(dshHome, "profiles", "web", "node_modules");
+    await mkdir(profileModules, { recursive: true });
+    await writeFile(
+      join(profileModules, ".modules.yaml"),
+      `${JSON.stringify({
+        layoutVersion: 5,
+        storeDir: "/app-data/node-runtime/pnpm-store/v11",
+      })}\n`,
+    );
+    let calls = 0;
+    const runCommand = vi.fn<OfficialCommandRunner>(() => {
+      calls += 1;
+      return calls === 1
+        ? {
+            status: 194,
+            stdout: "",
+            stderr: "ELOOP: too many symbolic links encountered",
+          }
+        : { status: 0, stdout: "", stderr: "" };
+    });
+
+    const result = await ensureOfficialHarnessInstall({
+      dshEntry: "/packages/node_modules/@deepseek-ai/dsh/lib/bin.js",
+      dshHome,
+      nodeExecutable: "/usr/bin/node",
+      pnpmEntry: "/resources/node-runtime/pnpm.mjs",
+      pnpmStoreDir: "/app-data/node-runtime/pnpm-store",
+      runtimeBinRoot,
+      integratedPlugins: [
+        {
+          packageName: "deepseek-harness-desktop-plugin",
+          packageRoot: desktopPlugin,
+        },
+      ],
+      legacyPluginSpecs: [],
+      runCommand,
+    });
+
+    expect(result).toEqual({
+      status: "installed",
+      packages: ["deepseek-harness-desktop-plugin"],
+    });
+    expect(runCommand).toHaveBeenCalledTimes(2);
+    await expect(stat(profileModules)).rejects.toThrow();
+  });
+
   it("invokes the public dsh plugin command with the managed pnpm launcher on PATH", async () => {
     const root = await mkdtemp(join(tmpdir(), "dsh-plugin-official-"));
     const dshHome = join(root, "home");
@@ -65,7 +212,7 @@ describe("official Harness plugin installation", () => {
       dshEntry:
         "/user-data/node-runtime/packages/node_modules/@deepseek-ai/dsh/lib/bin.js",
       dshHome,
-      nodeExecutable: "/user-data/node-runtime/node-v24.18.0/bin/node",
+      nodeExecutable: "/usr/bin/node",
       pnpmEntry: "/resources/node-runtime/pnpm.mjs",
       pnpmStoreDir: "/user-data/node-runtime/pnpm-store",
       runtimeBinRoot,
@@ -107,7 +254,7 @@ describe("official Harness plugin installation", () => {
       "legacy-user-plugin@1.2.3",
     ]);
     expect(runCommand.mock.calls[1]?.slice(0, 2)).toEqual([
-      "/user-data/node-runtime/node-v24.18.0/bin/node",
+      "/usr/bin/node",
       [
         "/user-data/node-runtime/packages/node_modules/@deepseek-ai/dsh/lib/bin.js",
         "plugin",
@@ -122,7 +269,7 @@ describe("official Harness plugin installation", () => {
       shell: false,
       env: {
         DSH_HOME: dshHome,
-        DHC_NODE_EXECUTABLE: "/user-data/node-runtime/node-v24.18.0/bin/node",
+        DHC_NODE_EXECUTABLE: "/usr/bin/node",
         DHC_PNPM_ENTRY: "/resources/node-runtime/pnpm.mjs",
         DHC_PNPM_STORE_DIR: "/user-data/node-runtime/pnpm-store",
       },
@@ -134,6 +281,15 @@ describe("official Harness plugin installation", () => {
     expect(await readFile(join(runtimeBinRoot, "pnpm.cmd"), "utf8")).toContain(
       '"%DHC_NODE_EXECUTABLE%" "%DHC_PNPM_ENTRY%" --store-dir "%DHC_PNPM_STORE_DIR%" %*',
     );
+    // The shim embeds the Node directory through the host's path module, so
+    // the expected launcher text uses the platform's separators.
+    const nodeBinDir = dirname("/usr/bin/node");
+    expect(await readFile(join(runtimeBinRoot, "dsh-npx"), "utf8")).toContain(
+      `exec "${join(nodeBinDir, "npx")}" "$@"`,
+    );
+    expect(
+      await readFile(join(runtimeBinRoot, "dsh-npx.cmd"), "utf8"),
+    ).toContain(`"${join(nodeBinDir, "npx.cmd")}" %*`);
   });
 
   it("fails without running a mismatched or failed package", async () => {
