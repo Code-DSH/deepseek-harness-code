@@ -4,6 +4,10 @@
   "private": true,
   "description": "Community DeepSeek Harness coding desktop with integrated plugins",
   "license": "MIT",
+  "author": {
+    "name": "DeepSeek Harness Code Contributors",
+    "email": "maintainers@deepseek-harness.code"
+  },
   "packageManager": "pnpm@11.19.0",
   "main": "dist/desktop/main.js",
   "scripts": {
