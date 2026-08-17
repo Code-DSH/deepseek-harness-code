@@ -132,6 +132,7 @@ nsis:
   artifactName: DeepSeek-Harness-Code-${version}-windows-${arch}-setup.${ext}
 linux:
   category: Development
+  maintainer: DeepSeek Harness Code Contributors <maintainers@deepseek-harness.code>
   icon: build/deepseek-harness-code.png
   target:
     - target: AppImage

@@ -227,9 +227,9 @@ The experimental Anchored Standard setting does not intercept private model traf
 | -------- | ---------------------------------- | ------------------------------------------------------------------------------------- |
 | macOS    | macOS 12+, Intel and Apple Silicon | Universal application and unsigned/ad-hoc-signed DMG verified; shipped in 0.1.0-BETA1 |
 | Windows  | Windows 10+, x64 and arm64         | Native NSIS installers built on Windows runners; shipped in 0.1.0-BETA1               |
-| Linux    | x64 and arm64                      | AppImage/deb packaging definition ready; native builds follow in a later release      |
+| Linux    | x64 and arm64                      | AppImage/deb builds pass on Linux runners; included in upcoming releases              |
 
-Cross-platform definitions are checked into the repository, and an artifact is only considered released after it has been built and verified on its native runner. The first public preview release is **DeepSeek Harness Code (DHSC) 0.1.0-BETA1** — a preview covering macOS and Windows, with Linux builds to follow.
+Cross-platform definitions are checked into the repository, and an artifact is only considered released after it has been built and verified on its native runner. The first public preview release is **DeepSeek Harness Code (DHSC) 0.1.0-BETA1** — it covered macOS and Windows; Linux cloud CI is now green for upcoming releases.
 
 ## Install on macOS
 
@@ -269,6 +269,8 @@ npm exec --yes --package=pnpm@11.19.0 -- pnpm dist:mac
 npm exec --yes --package=pnpm@11.19.0 -- pnpm dist:win
 npm exec --yes --package=pnpm@11.19.0 -- pnpm dist:linux
 ```
+
+> Release packages are built automatically by GitHub Actions whenever a `v*` tag is pushed. The local `dist:*` commands are for local verification only and do not publish artifacts.
 
 ## Verify
 

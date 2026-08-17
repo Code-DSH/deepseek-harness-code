@@ -220,9 +220,9 @@ Electron 主进程负责窗口、本地 Harness 子进程、就绪检查和窄�
 | ------- | --------------------------------- | ------------------------------------------------------------------ |
 | macOS   | macOS 12+，Intel 与 Apple Silicon | Universal 应用与未签名/ad-hoc 签名 DMG 已验证，随 0.1.0-BETA1 发布 |
 | Windows | Windows 10+，x64 与 arm64         | 原生 NSIS 安装包在 Windows Runner 构建，随 0.1.0-BETA1 发布        |
-| Linux   | x64 与 arm64                      | AppImage/deb 打包配置已就绪，原生构建在后续版本推出                |
+| Linux   | x64 与 arm64                      | AppImage/deb 已在 Linux Runner 构建通过，将在后续版本随包发布      |
 
-跨平台配置已经进入仓库，只有经过对应原生 Runner 构建与验证的产物才会被视为正式发行。首个公开预览版为 **DeepSeek Harness Code（DHSC）0.1.0-BETA1**——预览版覆盖 macOS 与 Windows，Linux 构建稍后推出。
+跨平台配置已经进入仓库，只有经过对应原生 Runner 构建与验证的产物才会被视为正式发行。首个公开预览版为 **DeepSeek Harness Code（DHSC）0.1.0-BETA1**——该版本覆盖 macOS 与 Windows；Linux 云端 CI 现已通过，可在后续版本提供 Linux 安装包。
 
 ## 在 macOS 上安装
 
@@ -262,6 +262,8 @@ npm exec --yes --package=pnpm@11.19.0 -- pnpm dist:mac
 npm exec --yes --package=pnpm@11.19.0 -- pnpm dist:win
 npm exec --yes --package=pnpm@11.19.0 -- pnpm dist:linux
 ```
+
+> 发布安装包由 GitHub Actions 在推送 `v*` 标签时自动在云端构建。本地的 `dist:*` 命令仅用于本地验证，不会发布产物。
 
 ## 验证
 

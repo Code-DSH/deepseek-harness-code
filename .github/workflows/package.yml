@@ -18,19 +18,19 @@ jobs:
         include:
           - label: windows-x64
             os: windows-2025
-            command: pnpm exec electron-builder --win nsis --x64
+            command: pnpm exec electron-builder --win nsis --x64 --publish never
           - label: windows-arm64
             os: windows-2025
-            command: pnpm exec electron-builder --win nsis --arm64
+            command: pnpm exec electron-builder --win nsis --arm64 --publish never
           - label: macos-universal
             os: macos-latest
-            command: pnpm exec electron-builder --mac dmg --universal
+            command: pnpm exec electron-builder --mac dmg --universal --publish never
           - label: linux-x64
             os: ubuntu-latest
-            command: pnpm exec electron-builder --linux AppImage deb --x64
+            command: pnpm exec electron-builder --linux AppImage deb --x64 --publish never
           - label: linux-arm64
             os: ubuntu-latest
-            command: pnpm exec electron-builder --linux AppImage deb --arm64
+            command: pnpm exec electron-builder --linux AppImage deb --arm64 --publish never
     runs-on: ${{ matrix.os }}
     timeout-minutes: 60
     steps:
