@@ -50,7 +50,12 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.label }}
-          path: release/**
+          path: |
+            release/*.dmg
+            release/*.exe
+            release/*.blockmap
+            release/*.AppImage
+            release/*.deb
           if-no-files-found: error
 
   release:
