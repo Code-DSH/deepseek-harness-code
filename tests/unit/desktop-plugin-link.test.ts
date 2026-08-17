@@ -8,7 +8,7 @@ import {
   writeFile,
 } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { delimiter, join, resolve } from "node:path";
+import { delimiter, dirname, join, resolve } from "node:path";
 
 import { describe, expect, it, vi } from "vitest";
 
@@ -281,12 +281,15 @@ describe("official Harness plugin installation", () => {
     expect(await readFile(join(runtimeBinRoot, "pnpm.cmd"), "utf8")).toContain(
       '"%DHC_NODE_EXECUTABLE%" "%DHC_PNPM_ENTRY%" --store-dir "%DHC_PNPM_STORE_DIR%" %*',
     );
+    // The shim embeds the Node directory through the host's path module, so
+    // the expected launcher text uses the platform's separators.
+    const nodeBinDir = dirname("/usr/bin/node");
     expect(await readFile(join(runtimeBinRoot, "dsh-npx"), "utf8")).toContain(
-      'exec "/usr/bin/npx" "$@"',
+      `exec "${join(nodeBinDir, "npx")}" "$@"`,
     );
     expect(
       await readFile(join(runtimeBinRoot, "dsh-npx.cmd"), "utf8"),
-    ).toContain('"/usr/bin/npx.cmd" %*');
+    ).toContain(`"${join(nodeBinDir, "npx.cmd")}" %*`);
   });
 
   it("fails without running a mismatched or failed package", async () => {

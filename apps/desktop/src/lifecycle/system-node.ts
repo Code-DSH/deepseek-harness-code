@@ -296,7 +296,10 @@ function validateCandidate(
     return undefined;
   }
   const version = deriveNodeVersion(executable, deps.realpath);
-  if (version !== null && compareNodeVersions(version, MINIMUM_NODE_VERSION) < 0) {
+  if (
+    version !== null &&
+    compareNodeVersions(version, MINIMUM_NODE_VERSION) < 0
+  ) {
     deps.log(
       `Skipping Node.js candidate ${executable}: version ${version} is older than ${MINIMUM_NODE_VERSION}.`,
     );

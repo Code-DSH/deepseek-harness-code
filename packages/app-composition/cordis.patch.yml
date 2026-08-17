@@ -11,7 +11,7 @@
     # and Node directories on the harness PATH so stdio spawn resolves it
     # on macOS and Windows alike.
     - id: mcp-everything
-      name: '@deepseek-ai/dsh-mcp-client'
+      name: "@deepseek-ai/dsh-mcp-client"
       config:
         serverName: everything
         transport: stdio
@@ -21,7 +21,7 @@
     # npx server's backend api.context7.com may be blocked on some networks,
     # while mcp.context7.com stays reachable.
     - id: mcp-context7
-      name: '@deepseek-ai/dsh-mcp-client'
+      name: "@deepseek-ai/dsh-mcp-client"
       config:
         serverName: context7
         transport: streamable-http
@@ -31,11 +31,11 @@
     # so they are supplied explicitly; local ~/.codex/auth.json provides
     # authentication.
     - id: subagent-codex
-      name: '@deepseek-ai/dsh-subagent-codex'
+      name: "@deepseek-ai/dsh-subagent-codex"
       config:
         env:
           PATH: /opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin
     # Official Claude Code subagent provider (one-shot, Agent SDK).
     # Requires the native `claude` executable on PATH to actually run.
     - id: subagent-claude-code
-      name: '@deepseek-ai/dsh-subagent-claude-code'
+      name: "@deepseek-ai/dsh-subagent-claude-code"

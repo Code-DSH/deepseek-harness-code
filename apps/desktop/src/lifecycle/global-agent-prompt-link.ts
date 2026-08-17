@@ -1,6 +1,13 @@
 import { createHash } from "node:crypto";
 import { createReadStream } from "node:fs";
-import { access, copyFile, mkdir, readFile, rename, writeFile } from "node:fs/promises";
+import {
+  access,
+  copyFile,
+  mkdir,
+  readFile,
+  rename,
+  writeFile,
+} from "node:fs/promises";
 import { join } from "node:path";
 
 const MANAGED_MARKER = ".agents-md.managed.json";
@@ -121,9 +128,7 @@ export async function installGlobalAgentPromptForStartup(input: {
     });
     return { status: "installed" };
   }
-  const marker = await readManagedMarker(
-    join(input.dshHome, MANAGED_MARKER),
-  );
+  const marker = await readManagedMarker(join(input.dshHome, MANAGED_MARKER));
   if (marker === undefined) {
     return { status: "conflict" };
   }
@@ -162,10 +167,7 @@ export async function adoptBundledGlobalAgentPrompt(input: {
   let backupPath: string | undefined;
   if (await pathExists(targetPath)) {
     const stamp = timestampSlug(input.now?.() ?? new Date());
-    const pendingBackup = join(
-      input.dshHome,
-      `${TARGET_FILE}.backup-${stamp}`,
-    );
+    const pendingBackup = join(input.dshHome, `${TARGET_FILE}.backup-${stamp}`);
     await rename(targetPath, pendingBackup);
     backupPath = pendingBackup;
   }

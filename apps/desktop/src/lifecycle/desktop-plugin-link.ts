@@ -14,7 +14,7 @@ import {
 import { createReadStream } from "node:fs";
 import { createHash, randomUUID } from "node:crypto";
 import { spawnSync } from "node:child_process";
-import { delimiter, dirname, join, resolve } from "node:path";
+import { basename, delimiter, dirname, join, resolve } from "node:path";
 
 const ANCHORED_PRESET_ID = "anchored-standard";
 const SUPERPOWERS_PACKAGE_NAME = "superpowers";
@@ -165,7 +165,10 @@ async function writePnpmLaunchers(
       serverEntry,
     );
     const posixEverythingPath = join(runtimeBinRoot, "dsh-mcp-everything");
-    const windowsEverythingPath = join(runtimeBinRoot, "dsh-mcp-everything.cmd");
+    const windowsEverythingPath = join(
+      runtimeBinRoot,
+      "dsh-mcp-everything.cmd",
+    );
     await writeFile(posixEverythingPath, everythingShims.posix, {
       mode: 0o700,
     });
@@ -226,8 +229,12 @@ async function reconcileForeignPnpmStore(input: {
   if (storeDir === undefined) return;
   // pnpm appends a version directory (for example `/v11`) to the configured
   // store root; strip it on both sides so a healthy install is left alone.
-  const normalize = (value: string): string =>
-    resolve(value).replace(/\/v\d+$/u, "");
+  // The version leaf is matched by name (basename) so the check works with
+  // both forward and backslash paths on Windows.
+  const normalize = (value: string): string => {
+    const resolved = resolve(value);
+    return /^v\d+$/u.test(basename(resolved)) ? dirname(resolved) : resolved;
+  };
   if (normalize(storeDir) === normalize(input.expectedStoreDir)) return;
   await rm(join(input.profileRoot, "node_modules"), {
     recursive: true,
@@ -297,11 +304,7 @@ export async function ensureOfficialHarnessInstall(
     // The pnpm launchers resolve Node through DHC_NODE_EXECUTABLE, but the
     // plugin installs they run may execute native-module postinstall scripts
     // that invoke `node` by name, and a GUI launch inherits a minimal PATH.
-    PATH: [
-      input.runtimeBinRoot,
-      dirname(input.nodeExecutable),
-      existingPath,
-    ]
+    PATH: [input.runtimeBinRoot, dirname(input.nodeExecutable), existingPath]
       .filter((entry) => entry !== undefined && entry !== "")
       .join(delimiter),
   };

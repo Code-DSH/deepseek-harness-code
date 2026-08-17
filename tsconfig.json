@@ -17,8 +17,5 @@
     "tests/**/*.ts",
     "vitest.config.ts"
   ],
-  "exclude": [
-    "packages/superpowers-skills/**",
-    "packages/better-sidebar/**"
-  ]
+  "exclude": ["packages/superpowers-skills/**", "packages/better-sidebar/**"]
 }

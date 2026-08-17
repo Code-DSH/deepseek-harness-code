@@ -26,9 +26,7 @@ async function createResource(root: string): Promise<string> {
 
 function lsResult(version?: string) {
   const dependencies =
-    version === undefined
-      ? {}
-      : { "@deepseek-ai/dsh": { version } };
+    version === undefined ? {} : { "@deepseek-ai/dsh": { version } };
   return {
     status: 0,
     stdout: `${JSON.stringify({ dependencies })}\n`,
@@ -73,9 +71,7 @@ describe("global dsh CLI provisioning", () => {
   it("does nothing when the pinned version is already global", async () => {
     const root = await mkdtemp(join(tmpdir(), "dhc-cli-present-"));
     const resource = await createResource(root);
-    const runNpm = vi
-      .fn<NpmRunner>()
-      .mockReturnValue(lsResult("0.1.0-rc.6"));
+    const runNpm = vi.fn<NpmRunner>().mockReturnValue(lsResult("0.1.0-rc.6"));
 
     const result = await ensureGlobalDshCli({
       nodeExecutable: "/usr/bin/node",
@@ -123,7 +119,9 @@ describe("global dsh CLI provisioning", () => {
     });
 
     expect(result.status).toBe("failed");
-    expect(result.message).toContain("npm install -g @deepseek-ai/dsh@0.1.0-rc.6");
+    expect(result.message).toContain(
+      "npm install -g @deepseek-ai/dsh@0.1.0-rc.6",
+    );
   });
 
   it("reports a failed install without throwing", async () => {

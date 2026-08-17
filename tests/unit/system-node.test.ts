@@ -34,7 +34,9 @@ const DARWIN_HOME = "/Users/test";
 
 describe("system Node.js detection", () => {
   it("compares dotted versions numerically", () => {
-    expect(compareNodeVersions("22.12.0", MINIMUM_NODE_VERSION)).toBeLessThan(0);
+    expect(compareNodeVersions("22.12.0", MINIMUM_NODE_VERSION)).toBeLessThan(
+      0,
+    );
     expect(compareNodeVersions("22.13.0", MINIMUM_NODE_VERSION)).toBe(0);
     expect(compareNodeVersions("26.7.0", "24.18.0")).toBeGreaterThan(0);
     expect(compareNodeVersions("v24.1.0", "24.1.5")).toBeLessThan(0);
@@ -88,10 +90,7 @@ describe("system Node.js detection", () => {
   it("skips below-floor candidates and keeps searching", () => {
     const oldBrewNode = "/opt/homebrew/bin/node";
     const fake: FakeFilesystem = {
-      files: new Set([
-        oldBrewNode,
-        posix.join("/usr", "local", "bin", "node"),
-      ]),
+      files: new Set([oldBrewNode, posix.join("/usr", "local", "bin", "node")]),
       dirs: {},
       symlinks: {
         [oldBrewNode]: "/opt/homebrew/Cellar/node/20.1.0/bin/node",

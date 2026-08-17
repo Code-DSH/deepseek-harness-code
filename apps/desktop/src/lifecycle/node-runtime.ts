@@ -31,7 +31,9 @@ export interface NodeRuntimePaths {
   markerPath: string;
 }
 
-export function resolveNodeRuntimePaths(userDataPath: string): NodeRuntimePaths {
+export function resolveNodeRuntimePaths(
+  userDataPath: string,
+): NodeRuntimePaths {
   const rootDir = join(userDataPath, "node-runtime");
   return {
     rootDir,

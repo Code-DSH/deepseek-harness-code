@@ -113,9 +113,7 @@ function parseInstalledVersion(lsJson: string): string | undefined {
     };
     const entry = parsed.dependencies?.[DSH_PACKAGE];
     const version = entry?.version;
-    return typeof version === "string" && version !== ""
-      ? version
-      : undefined;
+    return typeof version === "string" && version !== "" ? version : undefined;
   } catch {
     return undefined;
   }
@@ -134,13 +132,7 @@ export async function ensureGlobalDshCli(
   const pinnedVersion = await readPinnedDshVersion(input.runtimeResourcePath);
   const runNpm = input.runNpm ?? createDefaultNpmRunner(input.nodeExecutable);
 
-  const listing = runNpm([
-    "ls",
-    "-g",
-    DSH_PACKAGE,
-    "--depth=0",
-    "--json",
-  ]);
+  const listing = runNpm(["ls", "-g", DSH_PACKAGE, "--depth=0", "--json"]);
   if (listing.error !== undefined) {
     return {
       status: "failed",
@@ -171,5 +163,9 @@ export async function ensureGlobalDshCli(
       message: `Global dsh install failed: ${diagnostic}. Run "npm install -g ${DSH_PACKAGE}@${pinnedVersion}" manually.`,
     };
   }
-  return { status: "installed", pinnedVersion, installedVersion: pinnedVersion };
+  return {
+    status: "installed",
+    pinnedVersion,
+    installedVersion: pinnedVersion,
+  };
 }

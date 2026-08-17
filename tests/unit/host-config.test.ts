@@ -41,8 +41,7 @@ describe("Electron host configuration", () => {
   it("launches the official dsh web entry through the system Node runtime on loopback", () => {
     expect(
       createHarnessLaunchSpec({
-        nodeExecutable:
-          "/opt/homebrew/bin/node",
+        nodeExecutable: "/opt/homebrew/bin/node",
         dshEntry:
           "/Users/test/Library/Application Support/deepseek-harness-desktop/node-runtime/packages/node_modules/@deepseek-ai/dsh/lib/bin.js",
         dshHome:
@@ -50,8 +49,7 @@ describe("Electron host configuration", () => {
         port: 41234,
       }),
     ).toEqual({
-      command:
-        "/opt/homebrew/bin/node",
+      command: "/opt/homebrew/bin/node",
       args: [
         "--expose-internals",
         "/Users/test/Library/Application Support/deepseek-harness-desktop/node-runtime/packages/node_modules/@deepseek-ai/dsh/lib/bin.js",

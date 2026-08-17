@@ -241,7 +241,10 @@ describe("pinned runtime packages driven by the system Node", () => {
     const legacyDir = join(paths.rootDir, "node-v24.18.0-darwin-x64", "bin");
     await mkdir(legacyDir, { recursive: true });
     await writeFile(join(legacyDir, "node"), "legacy\n");
-    const legacyArchive = join(paths.rootDir, "node-v24.18.0-darwin-x64.tar.gz");
+    const legacyArchive = join(
+      paths.rootDir,
+      "node-v24.18.0-darwin-x64.tar.gz",
+    );
     await writeFile(legacyArchive, "archive\n");
     const install = vi.fn(async () => {
       await createInstalledPackages(paths);

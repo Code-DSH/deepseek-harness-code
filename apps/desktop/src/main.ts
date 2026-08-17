@@ -336,9 +336,7 @@ async function showNodeRequiredDialog(
     mainWindow === undefined || mainWindow.isDestroyed()
       ? await dialog.showMessageBox(options)
       : await dialog.showMessageBox(mainWindow, options);
-  return (
-    (["retry", "open-page", "quit"] as const)[result.response] ?? "quit"
-  );
+  return (["retry", "open-page", "quit"] as const)[result.response] ?? "quit";
 }
 
 async function prepareSystemNodeRuntime(): Promise<void> {
@@ -381,17 +379,18 @@ async function prepareSystemNodeRuntime(): Promise<void> {
       const globalCli = await ensureGlobalDshCli({
         nodeExecutable: node.executable,
         runtimeResourcePath,
-      }).catch(
-        (error: unknown): { status: "failed"; message?: string } => ({
-          status: "failed",
-          message: error instanceof Error ? error.message : String(error),
-        }),
-      );
+      }).catch((error: unknown): { status: "failed"; message?: string } => ({
+        status: "failed",
+        message: error instanceof Error ? error.message : String(error),
+      }));
       if (globalCli.status === "installed") {
         process.stderr.write(
           `Installed the official dsh@${globalCli.pinnedVersion} command globally; it is available in new terminal sessions.\n`,
         );
-      } else if (globalCli.status !== "present" && globalCli.message !== undefined) {
+      } else if (
+        globalCli.status !== "present" &&
+        globalCli.message !== undefined
+      ) {
         process.stderr.write(`Global dsh CLI: ${globalCli.message}\n`);
       }
       return;
@@ -570,7 +569,7 @@ async function startHarness(): Promise<HarnessChild> {
     );
   } else if (globalPrompt.status === "conflict") {
     process.stderr.write(
-      "Bundled global AGENTS.md prompt skipped: a user-owned global prompt is already present. Use \"Use Bundled Global Prompt…\" in the app menu to switch.\n",
+      'Bundled global AGENTS.md prompt skipped: a user-owned global prompt is already present. Use "Use Bundled Global Prompt…" in the app menu to switch.\n',
     );
   } else if (globalPrompt.status === "unavailable") {
     process.stderr.write(
@@ -613,7 +612,11 @@ async function startHarness(): Promise<HarnessChild> {
       env: {
         ...process.env,
         ...spec.env,
-        PATH: [runtimeBinRoot, dirname(systemNodeExecutable()), process.env.PATH]
+        PATH: [
+          runtimeBinRoot,
+          dirname(systemNodeExecutable()),
+          process.env.PATH,
+        ]
           .filter((entry) => entry !== undefined && entry !== "")
           .join(delimiter),
       },

@@ -73,7 +73,8 @@ describe("desktop application menu", () => {
     const appMenu = template.find(
       (item) => item.label === "DeepSeek Harness Code",
     );
-    if (!Array.isArray(appMenu?.submenu)) throw new Error("App menu is missing");
+    if (!Array.isArray(appMenu?.submenu))
+      throw new Error("App menu is missing");
     const promptItem = appMenu.submenu.find(
       (item) => item.label === "Use Bundled Global Prompt…",
     );

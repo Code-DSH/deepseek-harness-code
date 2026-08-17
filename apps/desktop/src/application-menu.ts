@@ -66,7 +66,10 @@ export function createApplicationMenuTemplate(
         { label: "Status", click: actions.publishStatus },
         { label: "Restart Harness", click: actions.restartHarness },
         { label: "Open Logs", click: actions.openLogs },
-        { label: "Use Bundled Global Prompt…", click: actions.adoptBundledGlobalPrompt },
+        {
+          label: "Use Bundled Global Prompt…",
+          click: actions.adoptBundledGlobalPrompt,
+        },
         { type: "separator" },
         { label: "Quit", click: actions.quit },
       ],

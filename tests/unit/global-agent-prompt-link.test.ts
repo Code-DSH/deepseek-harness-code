@@ -9,10 +9,7 @@ import {
   installGlobalAgentPromptForStartup,
 } from "../../apps/desktop/src/lifecycle/global-agent-prompt-link.js";
 
-async function createResource(
-  root: string,
-  content: string,
-): Promise<string> {
+async function createResource(root: string, content: string): Promise<string> {
   const resource = join(root, "resource");
   await mkdir(resource, { recursive: true });
   await writeFile(join(resource, "AGENTS.md"), content);
@@ -34,9 +31,9 @@ describe("bundled global AGENTS.md installation", () => {
     });
 
     expect(result).toEqual({ status: "installed" });
-    await expect(
-      readFile(join(dshHome, "AGENTS.md"), "utf8"),
-    ).resolves.toBe(PROMPT_V1);
+    await expect(readFile(join(dshHome, "AGENTS.md"), "utf8")).resolves.toBe(
+      PROMPT_V1,
+    );
     const marker = JSON.parse(
       await readFile(join(dshHome, ".agents-md.managed.json"), "utf8"),
     ) as { owner: string; schemaVersion: number };
@@ -50,7 +47,10 @@ describe("bundled global AGENTS.md installation", () => {
     const root = await mkdtemp(join(tmpdir(), "dhc-agents-current-"));
     const resource = await createResource(root, PROMPT_V1);
     const dshHome = join(root, "home");
-    await installGlobalAgentPromptForStartup({ dshHome, resourceRoot: resource });
+    await installGlobalAgentPromptForStartup({
+      dshHome,
+      resourceRoot: resource,
+    });
 
     const result = await installGlobalAgentPromptForStartup({
       dshHome,
@@ -64,7 +64,10 @@ describe("bundled global AGENTS.md installation", () => {
     const root = await mkdtemp(join(tmpdir(), "dhc-agents-update-"));
     const resource = await createResource(root, PROMPT_V1);
     const dshHome = join(root, "home");
-    await installGlobalAgentPromptForStartup({ dshHome, resourceRoot: resource });
+    await installGlobalAgentPromptForStartup({
+      dshHome,
+      resourceRoot: resource,
+    });
     await writeFile(join(resource, "AGENTS.md"), PROMPT_V2);
 
     const result = await installGlobalAgentPromptForStartup({
@@ -73,9 +76,9 @@ describe("bundled global AGENTS.md installation", () => {
     });
 
     expect(result).toEqual({ status: "updated" });
-    await expect(
-      readFile(join(dshHome, "AGENTS.md"), "utf8"),
-    ).resolves.toBe(PROMPT_V2);
+    await expect(readFile(join(dshHome, "AGENTS.md"), "utf8")).resolves.toBe(
+      PROMPT_V2,
+    );
   });
 
   it("never touches a user-authored or user-edited file", async () => {
@@ -89,9 +92,9 @@ describe("bundled global AGENTS.md installation", () => {
     await expect(
       installGlobalAgentPromptForStartup({ dshHome, resourceRoot: resource }),
     ).resolves.toEqual({ status: "conflict" });
-    await expect(
-      readFile(join(dshHome, "AGENTS.md"), "utf8"),
-    ).resolves.toBe("user prompt\n");
+    await expect(readFile(join(dshHome, "AGENTS.md"), "utf8")).resolves.toBe(
+      "user prompt\n",
+    );
 
     // App-managed copy that the user later edited.
     const editedHome = join(root, "home2");
@@ -106,9 +109,9 @@ describe("bundled global AGENTS.md installation", () => {
         resourceRoot: resource,
       }),
     ).resolves.toEqual({ status: "conflict" });
-    await expect(
-      readFile(join(editedHome, "AGENTS.md"), "utf8"),
-    ).resolves.toBe("edited by user\n");
+    await expect(readFile(join(editedHome, "AGENTS.md"), "utf8")).resolves.toBe(
+      "edited by user\n",
+    );
   });
 
   it("reports unavailable when the bundle is missing", async () => {
@@ -139,9 +142,9 @@ describe("bundled global AGENTS.md installation", () => {
       status: "adopted",
       backupPath: join(dshHome, "AGENTS.md.backup-20260817T050405Z"),
     });
-    await expect(
-      readFile(join(dshHome, "AGENTS.md"), "utf8"),
-    ).resolves.toBe(PROMPT_V2);
+    await expect(readFile(join(dshHome, "AGENTS.md"), "utf8")).resolves.toBe(
+      PROMPT_V2,
+    );
     await expect(
       readFile(join(dshHome, "AGENTS.md.backup-20260817T050405Z"), "utf8"),
     ).resolves.toBe("user prompt\n");
@@ -162,8 +165,8 @@ describe("bundled global AGENTS.md installation", () => {
     });
 
     expect(result).toEqual({ status: "adopted", backupPath: undefined });
-    await expect(
-      readFile(join(dshHome, "AGENTS.md"), "utf8"),
-    ).resolves.toBe(PROMPT_V1);
+    await expect(readFile(join(dshHome, "AGENTS.md"), "utf8")).resolves.toBe(
+      PROMPT_V1,
+    );
   });
 });
