@@ -1,0 +1,41 @@
+# deepseek-harness-composition bundle layer: the app-managed composition
+# entries, applied through the official plugin patch path at `dsh plugin add`
+# time. The user's own profile patch layer is never read or modified here.
+- insert:
+    # Official DSH MCP client bridge, connected to the official everything
+    # test server for link validation. `dsh-mcp-everything` is the
+    # app-provided launcher shim (runtime-bin/dsh-mcp-everything,
+    # dsh-mcp-everything.cmd) that starts the pinned local copy of the
+    # server from the runtime package store — no registry resolution or
+    # download happens at startup. The desktop host puts the runtime-bin
+    # and Node directories on the harness PATH so stdio spawn resolves it
+    # on macOS and Windows alike.
+    - id: mcp-everything
+      name: '@deepseek-ai/dsh-mcp-client'
+      config:
+        serverName: everything
+        transport: stdio
+        command: dsh-mcp-everything
+    # Context7 MCP: up-to-date library/framework docs via resolve-library-id
+    # and query-docs. Uses the hosted streamable-http endpoint: the local
+    # npx server's backend api.context7.com may be blocked on some networks,
+    # while mcp.context7.com stays reachable.
+    - id: mcp-context7
+      name: '@deepseek-ai/dsh-mcp-client'
+      config:
+        serverName: context7
+        transport: streamable-http
+        url: https://mcp.context7.com/mcp
+    # Official Codex subagent provider (one-shot, app-server protocol).
+    # Needs `codex` on PATH: host PATH lacks the user's install locations,
+    # so they are supplied explicitly; local ~/.codex/auth.json provides
+    # authentication.
+    - id: subagent-codex
+      name: '@deepseek-ai/dsh-subagent-codex'
+      config:
+        env:
+          PATH: /opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin
+    # Official Claude Code subagent provider (one-shot, Agent SDK).
+    # Requires the native `claude` executable on PATH to actually run.
+    - id: subagent-claude-code
+      name: '@deepseek-ai/dsh-subagent-claude-code'

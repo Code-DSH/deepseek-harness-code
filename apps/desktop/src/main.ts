@@ -1,6 +1,6 @@
-import { spawn, type ChildProcess } from "node:child_process";
+import { spawn, spawnSync, type ChildProcess } from "node:child_process";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
-import { dirname, join } from "node:path";
+import { delimiter, dirname, join } from "node:path";
 import { pathToFileURL } from "node:url";
 
 import {
@@ -45,6 +45,11 @@ import {
   ensureRuntimePackages,
   type NodeRuntimePaths,
 } from "./lifecycle/node-runtime.js";
+import {
+  adoptBundledGlobalAgentPrompt,
+  installGlobalAgentPromptForStartup,
+} from "./lifecycle/global-agent-prompt-link.js";
+import { ensureGlobalDshCli } from "./lifecycle/global-cli-link.js";
 import {
   MINIMUM_NODE_VERSION,
   NODE_DOWNLOAD_PAGE_URL,
@@ -96,6 +101,14 @@ app.setPath(
   "userData",
   join(app.getPath("appData"), "deepseek-harness-desktop"),
 );
+
+// One window per user data directory. Without the lock, every relaunch while
+// a stale instance is stuck would spawn another Harness child against the
+// same profile, and the pile-up makes the app appear to hang.
+const hasSingleInstanceLock = app.requestSingleInstanceLock();
+if (!hasSingleInstanceLock) {
+  app.quit();
+}
 
 function settingsPath(): string {
   return join(app.getPath("userData"), "desktop-settings.json");
@@ -364,6 +377,23 @@ async function prepareSystemNodeRuntime(): Promise<void> {
           `Installed pinned Harness packages under ${userDataPath}/node-runtime.\n`,
         );
       }
+      // Best-effort official CLI availability: never block startup on it.
+      const globalCli = await ensureGlobalDshCli({
+        nodeExecutable: node.executable,
+        runtimeResourcePath,
+      }).catch(
+        (error: unknown): { status: "failed"; message?: string } => ({
+          status: "failed",
+          message: error instanceof Error ? error.message : String(error),
+        }),
+      );
+      if (globalCli.status === "installed") {
+        process.stderr.write(
+          `Installed the official dsh@${globalCli.pinnedVersion} command globally; it is available in new terminal sessions.\n`,
+        );
+      } else if (globalCli.status !== "present" && globalCli.message !== undefined) {
+        process.stderr.write(`Global dsh CLI: ${globalCli.message}\n`);
+      }
       return;
     } catch (error) {
       const failedError =
@@ -407,12 +437,19 @@ async function startHarness(): Promise<HarnessChild> {
   const modelSelectorPluginRoot = app.isPackaged
     ? join(process.resourcesPath, "dsh-model-two-level-selector")
     : join(app.getAppPath(), "packages", "dsh-model-two-level-selector");
+  const promptPrinciplesRoot = app.isPackaged
+    ? join(process.resourcesPath, "prompt-principles-plugin")
+    : join(app.getAppPath(), "packages", "prompt-principles-plugin");
   const superpowersSkillsRoot = app.isPackaged
     ? join(process.resourcesPath, "superpowers-skills")
     : join(app.getAppPath(), "packages", "superpowers-skills");
+  const globalAgentPromptRoot = app.isPackaged
+    ? join(process.resourcesPath, "global-agent-prompt")
+    : join(app.getAppPath(), "config", "global-agent-prompt");
   const bundledRoutingSuiteRoot = app.isPackaged
     ? join(process.resourcesPath, "routing-suite")
     : join(app.getAppPath(), "build", "routing-suite");
+  const runtimeBinRoot = join(app.getPath("userData"), "runtime-bin");
   const { dshHome, legacyHome } = resolveHarnessDataPaths(
     app.getPath("userData"),
   );
@@ -433,7 +470,8 @@ async function startHarness(): Promise<HarnessChild> {
     nodeExecutable: systemNodeExecutable(),
     pnpmEntry: join(nodeRuntimeResourcePath(), "pnpm.mjs"),
     pnpmStoreDir: runtime.pnpmStoreDir,
-    runtimeBinRoot: join(app.getPath("userData"), "runtime-bin"),
+    runtimeBinRoot: runtimeBinRoot,
+    serverEverythingRoot: runtime.serverEverythingRoot,
     integratedPlugins: [
       {
         packageName: "deepseek-harness-desktop-plugin",
@@ -446,6 +484,30 @@ async function startHarness(): Promise<HarnessChild> {
       {
         packageName: "dsh-model2-selector",
         packageRoot: modelSelectorPluginRoot,
+      },
+      {
+        packageName: "dsh-prompt-principles",
+        packageRoot: promptPrinciplesRoot,
+      },
+      {
+        packageName: "dsh-vision-router",
+        packageRoot: runtime.dshVisionRouterRoot,
+      },
+      {
+        packageName: "dsh-better-sidebar",
+        packageRoot: runtime.dshBetterSidebarRoot,
+      },
+      {
+        packageName: "deepseek-harness-composition",
+        packageRoot: runtime.deepseekHarnessCompositionRoot,
+      },
+      {
+        packageName: "@deepseek-ai/dsh-subagent-codex",
+        packageRoot: runtime.dshSubagentCodexRoot,
+      },
+      {
+        packageName: "@deepseek-ai/dsh-subagent-claude-code",
+        packageRoot: runtime.dshSubagentClaudeCodeRoot,
       },
       {
         packageName: "@dsh-external/dsh-super-injector",
@@ -494,6 +556,27 @@ async function startHarness(): Promise<HarnessChild> {
       `Bundled Superpowers skills skipped user-owned directories: ${superpowersSkills.summary.conflicts.join(", ")}.\n`,
     );
   }
+  const globalPrompt = await installGlobalAgentPromptForStartup({
+    dshHome,
+    resourceRoot: globalAgentPromptRoot,
+  });
+  if (globalPrompt.status === "installed") {
+    process.stderr.write(
+      "Installed the bundled global AGENTS.md prompt under the official Harness home.\n",
+    );
+  } else if (globalPrompt.status === "updated") {
+    process.stderr.write(
+      "Updated the app-managed global AGENTS.md prompt to this release's bundled version.\n",
+    );
+  } else if (globalPrompt.status === "conflict") {
+    process.stderr.write(
+      "Bundled global AGENTS.md prompt skipped: a user-owned global prompt is already present. Use \"Use Bundled Global Prompt…\" in the app menu to switch.\n",
+    );
+  } else if (globalPrompt.status === "unavailable") {
+    process.stderr.write(
+      "Bundled global AGENTS.md prompt resource is unavailable; Harness startup will continue.\n",
+    );
+  }
   // Assemble the reviewed, immutable dsh-routing-suite snapshot bundled with
   // this app release. Startup never downloads or executes mutable code.
   const routingSuite: RoutingPresetStartupResult =
@@ -523,7 +606,17 @@ async function startHarness(): Promise<HarnessChild> {
       port,
     });
     const child = spawn(spec.command, spec.args, {
-      env: { ...process.env, ...spec.env },
+      // The harness may spawn bundled tooling (for example the dsh-npx
+      // launcher behind the MCP bridge) whose commands resolve through
+      // PATH. A GUI launch inherits a minimal PATH, so prepend the
+      // runtime-bin launchers and the detected system Node directory.
+      env: {
+        ...process.env,
+        ...spec.env,
+        PATH: [runtimeBinRoot, dirname(systemNodeExecutable()), process.env.PATH]
+          .filter((entry) => entry !== undefined && entry !== "")
+          .join(delimiter),
+      },
       shell: false,
       stdio: ["ignore", "pipe", "pipe"],
       windowsHide: true,
@@ -555,6 +648,60 @@ async function startHarness(): Promise<HarnessChild> {
   });
 }
 
+async function adoptBundledGlobalPrompt(): Promise<void> {
+  const { dshHome } = resolveHarnessDataPaths(app.getPath("userData"));
+  const resourceRoot = app.isPackaged
+    ? join(process.resourcesPath, "global-agent-prompt")
+    : join(app.getAppPath(), "config", "global-agent-prompt");
+  const confirmOptions: Electron.MessageBoxOptions = {
+    type: "question",
+    buttons: ["Back up and switch", "Cancel"],
+    defaultId: 0,
+    cancelId: 1,
+    title: "Use Bundled Global Prompt",
+    message:
+      "Replace the global AGENTS.md with the bundled Global Agent Operating Protocol?",
+    detail:
+      "The current file is backed up as AGENTS.md.backup-<timestamp> in the same directory. The new prompt takes effect from the next Harness session.",
+  };
+  const confirm =
+    mainWindow !== undefined && !mainWindow.isDestroyed()
+      ? await dialog.showMessageBox(mainWindow, confirmOptions)
+      : await dialog.showMessageBox(confirmOptions);
+  if (confirm.response !== 0) return;
+  try {
+    const result = await adoptBundledGlobalAgentPrompt({
+      dshHome,
+      resourceRoot,
+    });
+    if (result.status === "unavailable") {
+      await dialog.showMessageBox({
+        type: "warning",
+        message: "Bundled global prompt unavailable",
+        detail:
+          "The bundled AGENTS.md resource is missing from this installation.",
+      });
+      return;
+    }
+    await dialog.showMessageBox({
+      type: "info",
+      title: "Global prompt updated",
+      message: "The global AGENTS.md now uses the bundled prompt.",
+      detail:
+        result.backupPath === undefined
+          ? "No previous prompt existed, so no backup was created."
+          : `Previous prompt backed up at: ${result.backupPath}`,
+    });
+  } catch (error) {
+    const failedError =
+      error instanceof Error ? error : new Error("Unknown error");
+    dialog.showErrorBox(
+      "Global prompt switch failed",
+      failedError.message.slice(0, 2_000),
+    );
+  }
+}
+
 function buildMenu(): void {
   Menu.setApplicationMenu(
     Menu.buildFromTemplate(
@@ -571,6 +718,8 @@ function buildMenu(): void {
         restartHarness: () =>
           void controller?.restart().catch(reportRuntimeFailure),
         openLogs: () => void shell.openPath(app.getPath("logs")),
+        adoptBundledGlobalPrompt: () =>
+          void adoptBundledGlobalPrompt().catch(reportRuntimeFailure),
         quit: () => app.quit(),
         pasteFocused: () =>
           BrowserWindow.getFocusedWindow()?.webContents.paste(),
@@ -612,7 +761,58 @@ function createTray(): void {
   tray.on("click", () => mainWindow?.show());
 }
 
+// A frozen or forcefully quit window leaves its Harness child behind; several
+// stale children then write the same profile and compete for ports, which
+// makes the app appear to hang. Reap them before starting a fresh child. The
+// pattern matches only the managed harness web entry.
+function terminateStaleHarnessChildren(): void {
+  const collect = (): number[] => {
+    if (process.platform === "win32") {
+      const result = spawnSync(
+        "powershell",
+        [
+          "-NoProfile",
+          "-Command",
+          "Get-CimInstance Win32_Process | Where-Object { $_.CommandLine -match 'dsh/lib/bin\\.js web' } | ForEach-Object { $_.ProcessId }",
+        ],
+        { encoding: "utf8", windowsHide: true },
+      );
+      if (result.error !== undefined) return [];
+      return String(result.stdout ?? "")
+        .split(/\s+/u)
+        .map((value) => Number.parseInt(value, 10))
+        .filter((value) => Number.isInteger(value) && value > 0);
+    }
+    const result = spawnSync("ps", ["-axo", "pid=,command="], {
+      encoding: "utf8",
+      windowsHide: true,
+    });
+    if (result.error !== undefined) return [];
+    const pids: number[] = [];
+    for (const line of String(result.stdout ?? "").split("\n")) {
+      const match = line.match(/^\s*(\d+)\s+(.+)$/u);
+      if (match === null) continue;
+      const command = match[2];
+      if (command === undefined) continue;
+      if (!command.includes("dsh") || !command.includes("bin.js web")) {
+        continue;
+      }
+      const pid = Number.parseInt(match[1] ?? "", 10);
+      if (Number.isInteger(pid) && pid > 0) pids.push(pid);
+    }
+    return pids;
+  };
+  for (const pid of collect()) {
+    try {
+      process.kill(pid, "SIGTERM");
+    } catch {
+      // Already gone.
+    }
+  }
+}
+
 async function launch(): Promise<void> {
+  terminateStaleHarnessChildren();
   watchdogHost = new WatchdogHost({
     appPath: app.getAppPath(),
     resourcesPath: process.resourcesPath,
@@ -697,23 +897,31 @@ function reportLaunchFailure(error: unknown): void {
   dialog.showErrorBox("DeepSeek Harness Code could not start", message);
 }
 
-app
-  .whenReady()
-  .then(() => {
-    app.on("activate", () => {
-      if (BrowserWindow.getAllWindows().length === 0) createWindow();
-      else mainWindow?.show();
-    });
-    return launch();
-  })
-  .catch(reportLaunchFailure);
-app.on("before-quit", (event) => {
-  if (quitting) return;
-  event.preventDefault();
-  quitting = true;
-  if (healthTimer !== undefined) clearInterval(healthTimer);
-  void shutdownNormally();
-});
+if (hasSingleInstanceLock) {
+  app.on("second-instance", () => {
+    if (mainWindow === undefined) return;
+    if (mainWindow.isMinimized()) mainWindow.restore();
+    mainWindow.show();
+    mainWindow.focus();
+  });
+  app
+    .whenReady()
+    .then(() => {
+      app.on("activate", () => {
+        if (BrowserWindow.getAllWindows().length === 0) createWindow();
+        else mainWindow?.show();
+      });
+      return launch();
+    })
+    .catch(reportLaunchFailure);
+  app.on("before-quit", (event) => {
+    if (quitting) return;
+    event.preventDefault();
+    quitting = true;
+    if (healthTimer !== undefined) clearInterval(healthTimer);
+    void shutdownNormally();
+  });
+}
 
 async function shutdownNormally(): Promise<void> {
   try {

@@ -160,6 +160,8 @@ DeepSeek Harness Code 使用明确的生命周期控制覆盖这些已知失效�
 - **平滑导航**——可用时采用 View Transitions，否则使用低开销 CSS 回退完成路由提交转场。
 - **工作区韧性**——已验证 Standard 工作区切换和官方会话恢复。
 - **内置 Skills 基础**——启动时将 Superpowers 6.2.0 安装到官方 `<DSH_HOME>/skills` 根目录；同名用户自建 Skill 目录绝不会被覆盖。
+- **内置全局 Agent 提示词**——随包携带经过评审的《全局 Agent 运行协议》并安装为 `<DSH_HOME>/AGENTS.md`：用户没有全局提示词时自动安装；仅在副本仍由应用管理且未被修改时随版本更新；绝不覆盖用户自有的提示词。菜单中的「Use Bundled Global Prompt…」可将现有提示词一键切换为内置版（自动生成带时间戳的备份）。
+- **全局 `dsh` 命令**——首次启动即通过官方 `npm install -g` 流程安装本应用固定版本的 `@deepseek-ai/dsh`，此后在任何新终端里都能直接使用 `dsh`，与官方 CLI 安装体验完全一致。用户自有的全局 `dsh` 绝不会被覆盖；供给失败不阻塞启动，仅提示一行手动安装命令。
 - **本地化 Agent Preset**——`anchored-standard`、`router-standard`、`router-spec` 均提供简短的中英双语名称与描述，且不改变 Preset ID 或路由行为。
 - **安全的实验集成**——Anchored Standard 是独立的官方格式 Bundle；在固定的 Harness rc.6 API 上会安全回退到 Standard。
 
@@ -172,6 +174,8 @@ DeepSeek Harness Code 使用明确的生命周期控制覆盖这些已知失效�
 | V4 模型        | 官方 V4 Pro/Flash 目录与 `off` / `high` / `max` 推理控制                           |
 | 一体化能力栈   | Skills、工具、Goal、Plan、Workflow、Todo、Jobs、提问、审批与 Subagent              |
 | 内置 Skills    | Superpowers 6.2.0 合集安装进官方 Harness Home，不覆盖用户 Skills                   |
+| 全局提示词     | 内置 `AGENTS.md` 运行协议：所有权安全安装 + 带备份的菜单一键切换                   |
+| 全局 CLI      | 首次启动经官方 `npm install -g` 流程安装固定版本的 `dsh` 命令                       |
 | Agent Preset   | Standard 保持默认；可选 `anchored-standard` 与受管 `router-standard`/`router-spec` |
 | 恢复           | 健康探测、进程重启、渲染器替换、端口重试、会话恢复                                 |
 | Watchdog       | 独立 IPC 进程、有界重启策略、持久化崩溃循环标记                                    |
@@ -186,7 +190,7 @@ DeepSeek Harness Code 内置社区 [dsh-routing-suite](https://github.com/yjh051
 
 - **离线快照** —— 安装包内置套件三个组件的固定版本快照（@dsh-external/dsh-super-injector Bundle 层、@dsh-external/dsh-mode-boost 宿主增强、router-standard 与 router-spec 智能体预设），存放在应用资源目录中。
 - **固定基线** —— 内置快照记录 injector `0.3.3`、mode-boost `0.1.0`、路由预设 `0.2.0`（commit `eff787e95132d6c7104214542104a84d656b497e`），SHA-256 摘要保存在 `build/routing-suite/versions.json`。
-- **官方安装** —— 启动时桌面宿主使用应用内置 pnpm 运行公开的 `dsh plugin --profile web add` 流程，安装桌面 Bundle、`dsh-ui-motion`、`dsh-model2-selector`、Super Injector、Mode Boost 与 `dsh-find-plugin`。Profile 清单、依赖位置、Bundle 列表和补丁加载均由 Harness 管理；桌面宿主只在该 CLI 之外管理路由预设与 Skills。
+- **官方安装** —— 启动时桌面宿主使用应用内置 pnpm 运行公开的 `dsh plugin --profile web add` 流程，安装桌面 Bundle、`dsh-ui-motion`、`dsh-model2-selector`、`dsh-prompt-principles`（分层提示词原则注入，含插件区专属设置页）、`dsh-vision-router`、`dsh-better-sidebar`、应用组合 Bundle（MCP 桥接 everything 测试服务与 Context7 文档，以及官方 Codex / Claude Code subagent 提供方——经插件自带 bundle patch 下发，绝不触碰用户的 profile 补丁层）、Super Injector、Mode Boost 与 `dsh-find-plugin`。Profile 清单、依赖位置、Bundle 列表和补丁加载均由 Harness 管理；桌面宿主只在该 CLI 之外管理路由预设与 Skills。调和若因派生 `node_modules` 损坏（如自引用符号链接）失败，会自动清除该派生产物并整体重试一次。
 - **审核后更新** —— 路由组件只随经过审核的新 App 版本更新。构建在解压前校验每个固定归档的精确 SHA-256；安装后的 App 不会在后台下载或执行可变的路由代码。
 - **容错** —— 任何装配失败都不影响 Standard Harness 启动，并只报告有限诊断；用户自建的同名预设不会被覆盖。
 

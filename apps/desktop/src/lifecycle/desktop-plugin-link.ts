@@ -60,6 +60,7 @@ export type OfficialHarnessInstallInput = {
   pnpmEntry: string;
   pnpmStoreDir: string;
   runtimeBinRoot: string;
+  serverEverythingRoot?: string;
   integratedPlugins: readonly IntegratedHarnessPlugin[];
   legacyPluginSpecs?: readonly LegacyPluginSpec[];
   env?: Record<string, string | undefined>;
@@ -98,13 +99,81 @@ const WINDOWS_PNPM_LAUNCHER = `@echo off\r
 "%DHC_NODE_EXECUTABLE%" "%DHC_PNPM_ENTRY%" --store-dir "%DHC_PNPM_STORE_DIR%" %*\r
 `;
 
-async function writePnpmLaunchers(runtimeBinRoot: string): Promise<void> {
+// The bundled MCP bridge spawns `dsh-npx` through the official SDK's
+// shell-less stdio transport. The launchers below forward to the detected
+// system Node's own npx (npx.cmd on Windows), with absolute paths baked in
+// at startup so the harness child never depends on environment variables.
+function npxLauncherShims(nodeExecutable: string): {
+  posix: string;
+  windows: string;
+} {
+  const nodeDir = dirname(nodeExecutable);
+  const posixNpx = join(nodeDir, "npx");
+  const windowsNpx = join(nodeDir, "npx.cmd");
+  return {
+    posix: `#!/bin/sh
+exec "${posixNpx}" "$@"
+`,
+    windows: `@echo off\r
+"${windowsNpx}" %*\r
+`,
+  };
+}
+
+// The bundled everything MCP server ships inside the pinned runtime package
+// set, so the launcher below starts it straight from the store without any
+// registry resolution or download at startup time.
+function everythingLauncherShims(
+  nodeExecutable: string,
+  serverEntry: string,
+): { posix: string; windows: string } {
+  return {
+    posix: `#!/bin/sh
+exec "${nodeExecutable}" "${serverEntry}" "$@"
+`,
+    windows: `@echo off\r
+"${nodeExecutable}" "${serverEntry}" %*\r
+`,
+  };
+}
+
+async function writePnpmLaunchers(
+  runtimeBinRoot: string,
+  nodeExecutable: string,
+  serverEverythingRoot?: string,
+): Promise<void> {
   await mkdir(runtimeBinRoot, { recursive: true, mode: 0o700 });
   const posixPath = join(runtimeBinRoot, "pnpm");
   const windowsPath = join(runtimeBinRoot, "pnpm.cmd");
   await writeFile(posixPath, POSIX_PNPM_LAUNCHER, { mode: 0o700 });
   await chmod(posixPath, 0o700);
   await writeFile(windowsPath, WINDOWS_PNPM_LAUNCHER, { mode: 0o600 });
+  const npxShims = npxLauncherShims(nodeExecutable);
+  const posixNpxPath = join(runtimeBinRoot, "dsh-npx");
+  const windowsNpxPath = join(runtimeBinRoot, "dsh-npx.cmd");
+  await writeFile(posixNpxPath, npxShims.posix, { mode: 0o700 });
+  await chmod(posixNpxPath, 0o700);
+  await writeFile(windowsNpxPath, npxShims.windows, { mode: 0o600 });
+  if (serverEverythingRoot !== undefined) {
+    const serverEntry = join(
+      await realpath(serverEverythingRoot),
+      "dist",
+      "index.js",
+    );
+    const everythingShims = everythingLauncherShims(
+      nodeExecutable,
+      serverEntry,
+    );
+    const posixEverythingPath = join(runtimeBinRoot, "dsh-mcp-everything");
+    const windowsEverythingPath = join(runtimeBinRoot, "dsh-mcp-everything.cmd");
+    await writeFile(posixEverythingPath, everythingShims.posix, {
+      mode: 0o700,
+    });
+    await chmod(posixEverythingPath, 0o700);
+    await writeFile(windowsEverythingPath, everythingShims.windows, {
+      mode: 0o600,
+    });
+  }
 }
 
 function defaultOfficialCommandRunner(
@@ -207,9 +276,14 @@ export async function ensureOfficialHarnessInstall(
     })),
   ];
 
-  await writePnpmLaunchers(input.runtimeBinRoot);
+  await writePnpmLaunchers(
+    input.runtimeBinRoot,
+    input.nodeExecutable,
+    input.serverEverythingRoot,
+  );
+  const profileRoot = join(input.dshHome, "profiles", "web");
   await reconcileForeignPnpmStore({
-    profileRoot: join(input.dshHome, "profiles", "web"),
+    profileRoot,
     expectedStoreDir: input.pnpmStoreDir,
   });
   const inheritedEnv = input.env ?? process.env;
@@ -232,32 +306,48 @@ export async function ensureOfficialHarnessInstall(
       .join(delimiter),
   };
   const runCommand = input.runCommand ?? defaultOfficialCommandRunner;
-  for (const request of installRequests) {
-    const result = runCommand(
-      input.nodeExecutable,
-      [
-        input.dshEntry,
-        "plugin",
-        "--profile",
-        "web",
-        "add",
-        request.installSpec,
-      ],
-      {
-        encoding: "utf8",
-        env,
-        shell: false,
-        windowsHide: true,
-      },
-    );
-    if (result.error !== undefined || result.status !== 0) {
-      const exit = result.status === null ? "spawn" : String(result.status);
-      const diagnostic =
-        result.error?.message ?? String(result.stderr ?? "").slice(0, 2_000);
-      throw new Error(
-        `official plugin installation failed for ${request.packageName} (exit ${exit}): ${diagnostic}`,
+  const installAll = async (): Promise<void> => {
+    for (const request of installRequests) {
+      const result = runCommand(
+        input.nodeExecutable,
+        [
+          input.dshEntry,
+          "plugin",
+          "--profile",
+          "web",
+          "add",
+          request.installSpec,
+        ],
+        {
+          encoding: "utf8",
+          env,
+          shell: false,
+          windowsHide: true,
+        },
       );
+      if (result.error !== undefined || result.status !== 0) {
+        const exit = result.status === null ? "spawn" : String(result.status);
+        const diagnostic =
+          result.error?.message ?? String(result.stderr ?? "").slice(0, 2_000);
+        throw new Error(
+          `official plugin installation failed for ${request.packageName} (exit ${exit}): ${diagnostic}`,
+        );
+      }
     }
+  };
+  try {
+    await installAll();
+  } catch (error) {
+    // A corrupted derived node_modules — for example a self-referential
+    // symlink left by an interrupted concurrent pnpm install — fails every
+    // pnpm invocation with ELOOP. node_modules is package-manager output
+    // only, so rebuild it once and retry the whole official reconciliation.
+    await rm(join(profileRoot, "node_modules"), {
+      recursive: true,
+      force: true,
+    }).catch(() => undefined);
+    await installAll();
+    void error;
   }
   return {
     status: "installed",

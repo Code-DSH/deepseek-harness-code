@@ -5,6 +5,7 @@ export interface ApplicationMenuActions {
   publishStatus(): void;
   restartHarness(): void;
   openLogs(): void;
+  adoptBundledGlobalPrompt(): void;
   quit(): void;
   pasteFocused(): void;
 }
@@ -65,6 +66,7 @@ export function createApplicationMenuTemplate(
         { label: "Status", click: actions.publishStatus },
         { label: "Restart Harness", click: actions.restartHarness },
         { label: "Open Logs", click: actions.openLogs },
+        { label: "Use Bundled Global Prompt…", click: actions.adoptBundledGlobalPrompt },
         { type: "separator" },
         { label: "Quit", click: actions.quit },
       ],

@@ -1,0 +1,8 @@
+# dsh-prompt-principles bundle layer: one loader row so the web profile
+# activates the plugin globally (host plane). The assembly hook itself
+# skips Minimal-shaped and un-promoted sessions, so the injection only
+# reaches Standard-like modes by behavior, not by composition scoping.
+- insert:
+    - id: dsh-prompt-principles
+      name: "dsh-prompt-principles"
+      config: {}

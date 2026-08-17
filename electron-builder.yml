@@ -51,6 +51,14 @@ extraResources:
       - index.js
       - lib/**/*
       - cordis.patch.yml
+  - from: packages/prompt-principles-plugin
+    to: prompt-principles-plugin
+    filter:
+      - package.json
+      - index.js
+      - index.d.ts
+      - client.js
+      - cordis.patch.yml
   - from: packages/anchored-standard-plugin
     to: anchored-standard-plugin
     filter:
@@ -68,6 +76,10 @@ extraResources:
       - LICENSE
       - UPSTREAM.json
       - skills/**/*
+  - from: config/global-agent-prompt
+    to: global-agent-prompt
+    filter:
+      - AGENTS.md
   - from: build/routing-suite
     to: routing-suite
     filter:

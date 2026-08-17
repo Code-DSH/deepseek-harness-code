@@ -17,7 +17,7 @@
 
 - Goal: ship DeepSeek Harness Code with a cross-platform Electron shell, official-format integrated plugins, an immutable DSH Routing Suite, an optional progressive Anchored Standard Agent Preset, native Harness conversation rendering, and an independent watchdog.
 - Current phase: release `0.3.3` packages the complete six-plugin Web set plus managed Skills/presets; the verified Universal DMG is available locally and PR #3 is open.
-- Primary constraints: macOS Universal local release plus native Windows/Linux CI, runs on the system-installed official Node.js (>=22.13, auto-detected across common install locations on macOS, Windows, and Linux), loopback-only Harness, unsigned macOS distribution with ad-hoc signing.
+- Primary constraints: macOS Universal local release plus native Windows/Linux CI, runs on the system-installed official Node.js (>=22.13, auto-detected across common install locations on macOS, Windows, and Linux), provisions the global `dsh` command through the official npm install -g flow on first launch, loopback-only Harness, unsigned macOS distribution with ad-hoc signing.
 - Active branch/worktree: `release/0.3.3-integrated-plugins` in `.worktrees/release-routing-suite`; the earlier plugin snapshot remains at `archive/desktop-plugin-before-app-merge-20260816`.
 - Build/test entry: `pnpm test`; release entry: `pnpm dist:mac` then `pnpm verify:mac release/DeepSeek-Harness-Code-0.3.3-mac-universal.dmg --universal`.
 - Current critical risk: the local macOS artifact is ad-hoc signed and not notarized; plugin snapshots update only with reviewed app releases, while user data and unrelated plugins remain outside the application and are never cleared by reinstall.

@@ -20,7 +20,13 @@ export interface NodeRuntimePaths {
   rootDir: string;
   packagesDir: string;
   dshEntry: string;
+  dshBetterSidebarRoot: string;
   dshFindPluginRoot: string;
+  dshVisionRouterRoot: string;
+  deepseekHarnessCompositionRoot: string;
+  dshSubagentCodexRoot: string;
+  dshSubagentClaudeCodeRoot: string;
+  serverEverythingRoot: string;
   pnpmStoreDir: string;
   markerPath: string;
 }
@@ -39,11 +45,50 @@ export function resolveNodeRuntimePaths(userDataPath: string): NodeRuntimePaths 
       "lib",
       "bin.js",
     ),
+    dshBetterSidebarRoot: join(
+      rootDir,
+      "packages",
+      "node_modules",
+      "dsh-better-sidebar",
+    ),
     dshFindPluginRoot: join(
       rootDir,
       "packages",
       "node_modules",
       "dsh-find-plugin",
+    ),
+    dshVisionRouterRoot: join(
+      rootDir,
+      "packages",
+      "node_modules",
+      "dsh-vision-router",
+    ),
+    deepseekHarnessCompositionRoot: join(
+      rootDir,
+      "packages",
+      "node_modules",
+      "deepseek-harness-composition",
+    ),
+    dshSubagentCodexRoot: join(
+      rootDir,
+      "packages",
+      "node_modules",
+      "@deepseek-ai",
+      "dsh-subagent-codex",
+    ),
+    dshSubagentClaudeCodeRoot: join(
+      rootDir,
+      "packages",
+      "node_modules",
+      "@deepseek-ai",
+      "dsh-subagent-claude-code",
+    ),
+    serverEverythingRoot: join(
+      rootDir,
+      "packages",
+      "node_modules",
+      "@modelcontextprotocol",
+      "server-everything",
     ),
     pnpmStoreDir: join(rootDir, "pnpm-store"),
     markerPath: join(rootDir, "runtime.json"),
@@ -155,7 +200,9 @@ export async function inspectNodeRuntime(
 // Native-module postinstall scripts (koffi, node-pty) invoke `node` by name.
 // A GUI launch inherits a minimal PATH without the system Node, so expose the
 // resolved Node's directory to install children explicitly.
-function childEnvWithNodeOnPath(nodeExecutable: string): NodeJS.ProcessEnv {
+export function childEnvWithNodeOnPath(
+  nodeExecutable: string,
+): NodeJS.ProcessEnv {
   const nodeBinDir = dirname(nodeExecutable);
   const existingPath = process.env.PATH ?? process.env.Path ?? "";
   return {
@@ -200,6 +247,13 @@ export const installRuntimePackages: InstallRuntimePackages = async ({
       recursive: true,
     },
   );
+  // The vendored plugin tarballs behind file: specifiers in the manifest must
+  // sit next to the copied manifest for a reproducible frozen install.
+  await cp(
+    join(runtimeResourceDir, "vendor"),
+    join(paths.packagesDir, "vendor"),
+    { recursive: true },
+  ).catch(() => undefined);
   const result = spawnSync(
     nodeExecutable,
     [

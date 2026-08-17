@@ -11,6 +11,7 @@ vi.mock("electron", () => {
     ),
     isPackaged: false,
     quit: vi.fn(),
+    requestSingleInstanceLock: vi.fn(() => true),
     setPath: vi.fn(),
     whenReady: vi.fn(() => new Promise<void>(() => undefined)),
   });
