@@ -33,7 +33,7 @@
 - `scripts/fetch-routing-suite.mjs` — English-only fallback metadata in generated routing snapshots.
 - `tests/unit/anchored-standard-preset.test.ts` and `tests/unit/routing-suite.test.ts` — managed metadata regression coverage.
 - `tests/unit/package-runtime-closure.test.ts` and `scripts/check-runtime-closure.mjs` — packaged patch closure assertions.
-- `docs/knowledge/anchored-standard.md`, `docs/engineering/testing.md`, and the current localization plan/status docs — implementation-backed documentation updates.
+- `docs/knowledge/anchored-standard.md`, `docs/engineering/testing.md`, and this active design/plan pair — implementation-backed documentation updates; the completed 2026-08-16 localization plan remains historical and read-only.
 
 ---
 
@@ -449,8 +449,8 @@ git commit -m "test: enforce preset locale patch closure"
 **Files:**
 - Modify: `docs/knowledge/anchored-standard.md`
 - Modify: `docs/engineering/testing.md`
-- Modify: `docs/superpowers/plans/2026-08-16-localize-agent-presets.md`
 - Modify: `docs/superpowers/specs/2026-08-17-agent-preset-locale-copy-design.md` only if implementation differs from the approved design
+- Preserve unchanged: `docs/superpowers/plans/2026-08-16-localize-agent-presets.md` (completed historical record)
 - Local verification only: `${DSH_HOME}/.agent-presets/cordis-with-products/preset.yml`
 
 **Interfaces:**
@@ -534,7 +534,6 @@ Invoke `requesting-code-review` and provide the approved design, implementation 
 ```bash
 git add docs/knowledge/anchored-standard.md \
   docs/engineering/testing.md \
-  docs/superpowers/plans/2026-08-16-localize-agent-presets.md \
   docs/superpowers/specs/2026-08-17-agent-preset-locale-copy-design.md
 git commit -m "docs: record locale-aware preset presentation"
 ```
