@@ -20,9 +20,13 @@ export interface WatchdogLauncherOptions {
 }
 
 export interface WatchdogHandshake {
-  shutdown(timeoutMs?: number): Promise<void>;
+  shutdown(timeoutMs?: number): Promise<WatchdogShutdownResult>;
   disconnect(): void;
 }
+
+export type WatchdogShutdownResult =
+  | { readonly status: "acknowledged" }
+  | { readonly status: "timed-out" };
 
 export function launchWatchdog(
   options: WatchdogLauncherOptions,
@@ -77,31 +81,36 @@ export function launchWatchdog(
     },
   );
   child.on("error", () => undefined);
-  let pendingShutdown: Promise<void> | undefined;
+  let pendingShutdown: Promise<WatchdogShutdownResult> | undefined;
   return {
-    shutdown(timeoutMs = 1_000): Promise<void> {
+    shutdown(timeoutMs = 1_000): Promise<WatchdogShutdownResult> {
       if (pendingShutdown) return pendingShutdown;
-      if (!child.connected) return Promise.resolve();
-      pendingShutdown = new Promise((resolve) => {
+      if (!child.connected) return Promise.resolve({ status: "timed-out" });
+      pendingShutdown = new Promise<WatchdogShutdownResult>((resolve) => {
         let completed = false;
-        const complete = () => {
+        const complete = (
+          status: WatchdogShutdownResult["status"] = "acknowledged",
+        ) => {
           if (completed) return;
           completed = true;
           clearTimeout(timeout);
           child.off("message", onMessage);
           if (child.connected) child.disconnect();
-          resolve();
+          resolve({ status });
         };
         const onMessage = (message: unknown) => {
           if (message === "shutdown-ack") complete();
         };
-        const timeout = setTimeout(complete, Math.max(0, timeoutMs));
-        child.once("error", complete);
+        const timeout = setTimeout(
+          () => complete("timed-out"),
+          Math.max(0, timeoutMs),
+        );
+        child.once("error", () => complete("timed-out"));
         child.on("message", onMessage);
         try {
           child.send("shutdown");
         } catch {
-          complete();
+          complete("timed-out");
         }
       });
       return pendingShutdown;

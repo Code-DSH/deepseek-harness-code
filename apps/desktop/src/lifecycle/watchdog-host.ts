@@ -4,6 +4,7 @@ import {
   launchWatchdog,
   type WatchdogHandshake,
   type WatchdogLauncherOptions,
+  type WatchdogShutdownResult,
 } from "../../../../packages/watchdog/src/launcher.js";
 
 export interface WatchdogLaunchContext {
@@ -45,7 +46,7 @@ export function createWatchdogLaunchOptions(
 
 export class WatchdogHost {
   private handshake: WatchdogHandshake | undefined;
-  private shutdownInFlight: Promise<void> | undefined;
+  private shutdownInFlight: Promise<WatchdogShutdownResult> | undefined;
 
   constructor(
     private readonly context: WatchdogLaunchContext,
@@ -68,13 +69,13 @@ export class WatchdogHost {
     }
   }
 
-  async shutdown(): Promise<void> {
+  async shutdown(): Promise<WatchdogShutdownResult> {
     if (this.shutdownInFlight !== undefined) return this.shutdownInFlight;
     const handshake = this.handshake;
-    if (handshake === undefined) return;
+    if (handshake === undefined) return { status: "timed-out" };
     this.shutdownInFlight = (async () => {
       try {
-        await handshake.shutdown();
+        return await handshake.shutdown();
       } finally {
         handshake.disconnect();
       }

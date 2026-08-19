@@ -45,7 +45,7 @@ describe("desktop watchdog host adapter", () => {
 
   it("launches at most one watchdog and reports a synchronous launch failure", () => {
     const handshake = {
-      shutdown: vi.fn(async () => undefined),
+      shutdown: vi.fn(async () => ({ status: "acknowledged" as const })),
       disconnect: vi.fn(),
     };
     const launcher = vi.fn(() => handshake);
@@ -69,6 +69,7 @@ describe("desktop watchdog host adapter", () => {
     const handshake = {
       shutdown: vi.fn(async () => {
         events.push("ack");
+        return { status: "acknowledged" as const };
       }),
       disconnect: vi.fn(() => {
         events.push("disconnect");
@@ -81,6 +82,18 @@ describe("desktop watchdog host adapter", () => {
 
     expect(events).toEqual(["ack", "disconnect"]);
     expect(handshake.shutdown).toHaveBeenCalledOnce();
+    expect(handshake.disconnect).toHaveBeenCalledOnce();
+  });
+
+  it("propagates an unacknowledged watchdog shutdown", async () => {
+    const handshake = {
+      shutdown: vi.fn(async () => ({ status: "timed-out" as const })),
+      disconnect: vi.fn(),
+    };
+    const host = new WatchdogHost(baseContext, () => handshake);
+    host.start();
+
+    await expect(host.shutdown()).resolves.toEqual({ status: "timed-out" });
     expect(handshake.disconnect).toHaveBeenCalledOnce();
   });
 });

@@ -1,50 +1,76 @@
-import { EventEmitter } from "node:events";
-
 import { describe, expect, it, vi } from "vitest";
 
-vi.mock("electron", () => {
-  const app = Object.assign(new EventEmitter(), {
-    dock: { show: vi.fn() },
-    getAppPath: vi.fn(() => process.cwd()),
-    getPath: vi.fn((name: string) =>
-      name === "appData" ? "/tmp/deepseek-app-data" : "/tmp/deepseek-user-data",
-    ),
-    isPackaged: false,
-    quit: vi.fn(),
-    requestSingleInstanceLock: vi.fn(() => true),
-    setPath: vi.fn(),
-    whenReady: vi.fn(() => new Promise<void>(() => undefined)),
-  });
-  const BrowserWindow = Object.assign(
-    vi.fn(() => {
-      throw new Error("Cannot create BrowserWindow before app is ready");
-    }),
-    {
-      getAllWindows: vi.fn(() => []),
-      getFocusedWindow: vi.fn(() => undefined),
-    },
-  );
-  return {
-    app,
-    BrowserWindow,
-    dialog: { showErrorBox: vi.fn(), showMessageBox: vi.fn() },
-    ipcMain: {},
-    Menu: { buildFromTemplate: vi.fn(), setApplicationMenu: vi.fn() },
-    nativeImage: { createFromPath: vi.fn() },
-    shell: {
-      openExternal: vi.fn(),
-      openPath: vi.fn(),
-    },
-    Tray: vi.fn(),
-  };
-});
+import {
+  registerDesktopLifecycle,
+  type BeforeQuitEvent,
+} from "../../apps/desktop/src/lifecycle/app-lifecycle.js";
 
 describe("Electron readiness boundary", () => {
-  it("cannot create a BrowserWindow when macOS activates before app readiness", async () => {
-    const { app, BrowserWindow } = await import("electron");
-    await import("../../apps/desktop/src/main.js");
+  it("registers activation only after Electron readiness resolves", async () => {
+    let resolveReady: (() => void) | undefined;
+    const ready = new Promise<void>((resolve) => {
+      resolveReady = resolve;
+    });
+    let activate: (() => void) | undefined;
+    const launch = vi.fn();
 
-    expect(() => app.emit("activate")).not.toThrow();
-    expect(BrowserWindow).not.toHaveBeenCalled();
+    registerDesktopLifecycle(
+      {
+        whenReady: () => ready,
+        onActivate: (listener) => {
+          activate = listener;
+        },
+        onBeforeQuit: vi.fn(),
+      },
+      {
+        activate: vi.fn(),
+        launch,
+        shutdown: vi.fn(),
+        clearHealthTimer: vi.fn(),
+        reportLaunchFailure: vi.fn(),
+      },
+    );
+
+    expect(activate).toBeUndefined();
+    expect(launch).not.toHaveBeenCalled();
+
+    resolveReady?.();
+    await Promise.resolve();
+
+    expect(activate).toBeTypeOf("function");
+    expect(launch).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not start shutdown recursively when terminal quit re-enters before-quit", async () => {
+    let beforeQuit: ((event: BeforeQuitEvent) => void) | undefined;
+    const initialEvent = { preventDefault: vi.fn() };
+    const terminalEvent = { preventDefault: vi.fn() };
+    const shutdown = vi.fn(() => {
+      beforeQuit?.(terminalEvent);
+      return Promise.resolve();
+    });
+
+    registerDesktopLifecycle(
+      {
+        whenReady: () => Promise.resolve(),
+        onActivate: vi.fn(),
+        onBeforeQuit: (listener) => {
+          beforeQuit = listener;
+        },
+      },
+      {
+        activate: vi.fn(),
+        launch: vi.fn(),
+        shutdown,
+        clearHealthTimer: vi.fn(),
+        reportLaunchFailure: vi.fn(),
+      },
+    );
+
+    beforeQuit?.(initialEvent);
+
+    expect(shutdown).toHaveBeenCalledTimes(1);
+    expect(initialEvent.preventDefault).toHaveBeenCalledTimes(1);
+    expect(terminalEvent.preventDefault).not.toHaveBeenCalled();
   });
 });
