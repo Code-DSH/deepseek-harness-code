@@ -1,12 +1,12 @@
-import { execFile } from "node:child_process";
-import { readFile } from "node:fs/promises";
-import { promisify } from "node:util";
+import { execFileSync } from "node:child_process";
+import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 
+import { format } from "prettier";
 import { describe, expect, test } from "vitest";
 
 const projectRoot = process.cwd();
-const execFileAsync = promisify(execFile);
 
 // Windows CI cold-starts sharp's native rasterizer; the 5 s vitest default
 // is too tight for the icon regeneration step.
@@ -72,33 +72,45 @@ describe("DeepSeek Harness Code distribution contract", () => {
   test(
     "generates a self-contained SVG, ICNS, ICO, and PNG product icon",
     async () => {
-      await execFileAsync(process.execPath, ["scripts/build-icon.mjs"], {
-        cwd: projectRoot,
-      });
+      const outputRoot = await mkdtemp(
+        join(tmpdir(), "deepseek-harness-test-icon-"),
+      );
+      try {
+        execFileSync(process.execPath, ["scripts/build-icon.mjs"], {
+          cwd: projectRoot,
+          env: { ...process.env, DSH_ICON_OUTPUT_DIR: outputRoot },
+          stdio: "pipe",
+        });
 
-      const svg = await readProjectFile("build/deepseek-harness-code.svg");
-      const icoHeader = await readFile(
-        join(projectRoot, "build/deepseek-harness-code.ico"),
-      );
-      const pngHeader = await readFile(
-        join(projectRoot, "build/deepseek-harness-code.png"),
-      );
-      const icnsHeader = await readFile(
-        join(projectRoot, "build/deepseek-harness-code.icns"),
-      );
-      const trayHeader = await readFile(
-        join(projectRoot, "build/deepseek-harness-code-tray.png"),
-      );
+        const svg = await readFile(
+          join(outputRoot, "deepseek-harness-code.svg"),
+          "utf8",
+        );
+        const icoHeader = await readFile(
+          join(outputRoot, "deepseek-harness-code.ico"),
+        );
+        const pngHeader = await readFile(
+          join(outputRoot, "deepseek-harness-code.png"),
+        );
+        const icnsHeader = await readFile(
+          join(outputRoot, "deepseek-harness-code.icns"),
+        );
+        const trayHeader = await readFile(
+          join(outputRoot, "deepseek-harness-code-tray.png"),
+        );
 
-      expect(svg).toContain("Official DeepSeek Harness black graphic");
-      expect(svg).toContain('fill="#F4F6FA"');
-      expect(svg).toContain('transform="translate(58 42) scale(2.8)"');
-      expect(svg).toContain('<text x="128" y="218"');
-      expect(svg).toContain(">Code<");
-      expect(icnsHeader.subarray(0, 4).toString("ascii")).toBe("icns");
-      expect(icoHeader.subarray(0, 4).toString("hex")).toBe("00000100");
-      expect(pngHeader.subarray(1, 4).toString("hex")).toBe("504e47");
-      expect(trayHeader.subarray(1, 4).toString("hex")).toBe("504e47");
+        expect(svg).toContain("Official DeepSeek Harness black graphic");
+        expect(svg).toContain('fill="#F4F6FA"');
+        expect(svg).toContain('transform="translate(58 42) scale(2.8)"');
+        expect(svg).toContain('<text x="128" y="218"');
+        expect(svg).toContain(">Code<");
+        expect(icnsHeader.subarray(0, 4).toString("ascii")).toBe("icns");
+        expect(icoHeader.subarray(0, 4).toString("hex")).toBe("00000100");
+        expect(pngHeader.subarray(1, 4).toString("hex")).toBe("504e47");
+        expect(trayHeader.subarray(1, 4).toString("hex")).toBe("504e47");
+      } finally {
+        await rm(outputRoot, { recursive: true, force: true });
+      }
     },
     ICON_BUILD_TIMEOUT_MS,
   );
@@ -210,5 +222,195 @@ describe("DeepSeek Harness Code distribution contract", () => {
     expect(preflightScript).toContain("name: '@dsh-external/dsh-mode-boost'");
     expect(verifyScript).toContain("node-runtime/package.json");
     expect(verifyScript).toContain("node-runtime/pnpm.mjs");
+  });
+
+  test("declares native packaging and durable sanitized smoke evidence", async () => {
+    const manifest = JSON.parse(await readProjectFile("package.json")) as {
+      scripts: Record<string, string>;
+    };
+    const workflow = await readProjectFile(".github/workflows/package.yml");
+    const smokeScript = await readProjectFile(
+      "scripts/smoke-packaged-runtime.mjs",
+    );
+
+    expect(manifest.scripts["smoke:package"]).toContain(
+      "smoke-packaged-runtime.mjs",
+    );
+    expect(workflow).toContain("windows-x64");
+    expect(workflow).toContain("windows-arm64");
+    expect(workflow).toContain("macos-universal");
+    expect(workflow).toContain("linux-x64");
+    expect(workflow).toContain("linux-arm64");
+    expect(workflow).toContain("package-kind: nsis");
+    expect(workflow).toContain("expected-architecture: x64");
+    expect(workflow).toContain("windows-${EXPECTED_ARCHITECTURE}-setup.exe");
+    expect(workflow).toContain("mac-universal.dmg");
+    expect(workflow).toContain("linux-${EXPECTED_ARCHITECTURE}.AppImage");
+    expect(workflow).toContain("linux-${EXPECTED_ARCHITECTURE}.deb");
+    expect(workflow).toContain("artifact-sha256");
+    expect(workflow).not.toContain(".omo");
+    expect(workflow).toContain("release/evidence/${{ matrix.label }}");
+    expect(workflow).toContain("${{ matrix.package-kind }}");
+    expect(workflow).toContain("${{ matrix.expected-architecture }}");
+    expect(workflow).toContain("--artifact-filename");
+    expect(workflow).toContain("--evidence-root");
+    expect(workflow).toContain("--evidence");
+    expect(workflow).toContain("pnpm smoke:package");
+    expect(workflow).toContain("smoke-evidence");
+    expect(workflow).toContain("if: always()");
+    expect(workflow).toContain("Start-Process -PassThru");
+    expect(workflow).toContain("installer.ExitCode -eq 0");
+    expect(workflow).toContain("uninstaller.ExitCode -eq 0");
+    expect(workflow).toContain("finally");
+    expect(workflow).toContain("set -euo pipefail");
+    expect(workflow).toContain("dpkg-deb -f");
+    expect(workflow).toContain("dpkg-query");
+    expect(workflow).toContain("trap cleanup EXIT");
+    expect(workflow).toContain("find release -maxdepth 1 -type f");
+    expect(workflow).toContain("wc -l");
+    expect(workflow).toContain(
+      'printf \'ARTIFACT=%s\\n\' "${matches[0]}" >> "$GITHUB_ENV"',
+    );
+    expect(workflow).toContain(
+      'printf \'ARTIFACT_FILENAME=%s\\n\' "$(basename "${matches[0]}")" >> "$GITHUB_ENV"',
+    );
+    expect(workflow).not.toContain('if [[ "$pattern" == *.AppImage ]]');
+    expect(workflow).toContain("Get-Item $env:ARTIFACT");
+    expect(workflow).toContain("--artifact-filename $env:ARTIFACT_FILENAME");
+    expect(workflow).toContain(
+      "release/evidence/${{ matrix.label }}/**/*.json",
+    );
+    expect(smokeScript).toContain("127.0.0.1");
+    expect(smokeScript).toContain("desktop-plugin");
+    expect(smokeScript).toContain("anchored-standard-plugin");
+    expect(smokeScript).toContain("architecture");
+    expect(smokeScript).toContain("verifySmokeEvidence");
+    expect(smokeScript).toContain("SMOKE_EVIDENCE_PATH");
+    expect(smokeScript).toContain("SMOKE_RUN_ID");
+    expect(smokeScript).toContain("randomUUID");
+  });
+
+  test("parses the package workflow as YAML", async () => {
+    const workflow = await readProjectFile(".github/workflows/package.yml");
+
+    const formatted = await format(workflow, { parser: "yaml" });
+
+    expect(formatted).toContain("name: Package DeepSeek Harness Code");
+    expect(formatted).toContain("jobs:");
+  });
+
+  test("publishes only installable packages to GitHub releases", async () => {
+    // Given
+    const workflow = await readProjectFile(".github/workflows/package.yml");
+    const releaseJob = workflow.slice(workflow.indexOf("  release:"));
+
+    // When
+    const publishedExtensions = [
+      ...releaseJob.matchAll(/-name '\*\.([^']+)'/g),
+    ].map((match) => match[1]);
+
+    // Then
+    expect(new Set(publishedExtensions)).toEqual(
+      new Set(["dmg", "exe", "AppImage", "deb"]),
+    );
+    expect(releaseJob).not.toContain("artifacts/*");
+    expect(releaseJob).not.toContain("*.blockmap");
+    expect(workflow.slice(0, workflow.indexOf("  release:"))).toContain(
+      "setup.exe.blockmap",
+    );
+  });
+
+  test("preserves native smoke failures while enforcing installer cleanup", async () => {
+    // Given
+    const workflow = await readProjectFile(".github/workflows/package.yml");
+    const windowsStep = workflow.slice(
+      workflow.indexOf("      - name: Smoke test Windows package"),
+      workflow.indexOf("      - name: Extract and smoke test Linux package"),
+    );
+    const linuxStep = workflow.slice(
+      workflow.indexOf(
+        "      - name: Extract and smoke test Linux AppImage package",
+      ),
+      workflow.indexOf("      - name: Upload installer artifacts"),
+    );
+
+    // When
+    const windowsFinally = windowsStep.slice(windowsStep.indexOf("finally {"));
+    const uninstallAttempt = windowsFinally.indexOf(
+      'Start-Process -PassThru -Wait -FilePath $uninstallers[0].FullName -ArgumentList "/S"',
+    );
+    const forcedRemoval = windowsFinally.indexOf(
+      "Remove-Item -Recurse -Force $install",
+    );
+
+    // Then
+    expect(windowsStep).toContain("$primaryFailure = $null");
+    expect(windowsStep).toContain(
+      'if ($LASTEXITCODE -ne 0) { throw "package smoke failed with exit code $LASTEXITCODE" }',
+    );
+    expect(windowsFinally).toContain(
+      "if (Test-Path $install -PathType Container)",
+    );
+    expect(windowsFinally).not.toContain("if ($installSucceeded)");
+    expect(uninstallAttempt).toBeGreaterThan(-1);
+    expect(windowsFinally).toContain("uninstaller.ExitCode -eq 0");
+    expect(forcedRemoval).toBeGreaterThan(uninstallAttempt);
+    expect(windowsStep).toContain("throw $primaryFailure");
+    expect(windowsStep.indexOf("throw $primaryFailure")).toBeLessThan(
+      windowsStep.indexOf("throw $cleanupFailures[0]"),
+    );
+    expect(windowsStep).toContain('Write-Host "::error::Cleanup failed:');
+    expect(linuxStep).toContain("original_exit=$?");
+    expect(linuxStep).toContain('package_installed="false"');
+    expect(linuxStep).toContain('package_installed="true"');
+    expect(linuxStep).toContain("sudo dpkg --purge deepseek-harness-code");
+    expect(linuxStep).not.toContain("apt-get remove");
+    expect(linuxStep).toContain(
+      "dpkg-query -W -f='${Status}\\n' deepseek-harness-code 2>/dev/null | grep -q .",
+    );
+    expect(linuxStep).toContain('rm -rf "$squashfs_root" "$temp_root"');
+    expect(linuxStep).toContain('exit "$original_exit"');
+  });
+
+  test("scopes Linux smoke package metadata to each package step", async () => {
+    const workflow = await readProjectFile(".github/workflows/package.yml");
+    const appImageStep = workflow.slice(
+      workflow.indexOf(
+        "      - name: Extract and smoke test Linux AppImage package",
+      ),
+      workflow.indexOf(
+        "      - name: Install and smoke test Linux deb package",
+      ),
+    );
+    const debStep = workflow.slice(
+      workflow.indexOf(
+        "      - name: Install and smoke test Linux deb package",
+      ),
+      workflow.indexOf("      - name: Upload installer artifacts"),
+    );
+
+    expect(appImageStep).toContain("PACKAGE_KIND: appimage");
+    expect(debStep).toContain("PACKAGE_KIND: deb");
+  });
+
+  test("keeps agent worktree metadata out of tracked package inputs", async () => {
+    const stdout = execFileSync("git", ["ls-files", ".omo/**"], {
+      cwd: projectRoot,
+      encoding: "utf8",
+    });
+
+    execFileSync("git", ["check-ignore", "-q", ".omo/probe"], {
+      cwd: projectRoot,
+      stdio: "ignore",
+    });
+    expect(stdout.trim()).toBe("");
+  });
+
+  test("contains no product workflow or package reference to agent evidence paths", async () => {
+    const workflow = await readProjectFile(".github/workflows/package.yml");
+    const manifest = await readProjectFile("package.json");
+
+    expect(workflow).not.toMatch(/\.omo/);
+    expect(manifest).not.toMatch(/\.omo/);
   });
 });

@@ -24,12 +24,13 @@ const source = webAppRequire.resolve(
   "@deepseek-ai/dsh-web-frontend/dist/favicon.svg",
 );
 const buildRoot = join(root, "build");
-const svgOutput = join(buildRoot, "deepseek-harness-code.svg");
-const markOutput = join(buildRoot, "deepseek-harness-code-official-mark.svg");
-const icnsOutput = join(buildRoot, "deepseek-harness-code.icns");
-const icoOutput = join(buildRoot, "deepseek-harness-code.ico");
-const pngOutput = join(buildRoot, "deepseek-harness-code.png");
-const trayPngOutput = join(buildRoot, "deepseek-harness-code-tray.png");
+const outputRoot = process.env.DSH_ICON_OUTPUT_DIR ?? buildRoot;
+const svgOutput = join(outputRoot, "deepseek-harness-code.svg");
+const markOutput = join(outputRoot, "deepseek-harness-code-official-mark.svg");
+const icnsOutput = join(outputRoot, "deepseek-harness-code.icns");
+const icoOutput = join(outputRoot, "deepseek-harness-code.ico");
+const pngOutput = join(outputRoot, "deepseek-harness-code.png");
+const trayPngOutput = join(outputRoot, "deepseek-harness-code-tray.png");
 const work = await mkdtemp(join(tmpdir(), "deepseek-harness-icon-"));
 const iconset = join(work, "DeepSeekHarness.iconset");
 
@@ -91,7 +92,7 @@ function isMac() {
 
 try {
   await mkdir(iconset, { recursive: true });
-  await mkdir(buildRoot, { recursive: true });
+  await mkdir(outputRoot, { recursive: true });
   const officialIcon = await readFile(source, "utf8");
   const mark = officialIcon.match(/<path id="path"[^>]*\/>/u)?.[0];
   if (mark === undefined)
@@ -130,6 +131,8 @@ try {
     process.stderr.write(
       "iconutil unavailable on this platform; keeping the committed .icns file\n",
     );
+    if (outputRoot !== buildRoot)
+      await copyFile(join(buildRoot, "deepseek-harness-code.icns"), icnsOutput);
   }
   await copyFile(join(iconset, "icon_512x512@2x.png"), pngOutput);
   await rasterize(traySvg, trayPngOutput, 64);
