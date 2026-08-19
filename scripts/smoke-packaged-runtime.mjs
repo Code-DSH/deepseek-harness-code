@@ -1,0 +1,836 @@
+import { createHash, randomUUID } from "node:crypto";
+import { execFile, spawn } from "node:child_process";
+import { constants as fsConstants } from "node:fs";
+import {
+  access,
+  lstat,
+  mkdir,
+  open,
+  readFile,
+  readdir,
+  realpath,
+  rename,
+  rm,
+  stat,
+  unlink,
+  writeFile,
+} from "node:fs/promises";
+import { tmpdir } from "node:os";
+import {
+  basename,
+  dirname,
+  isAbsolute,
+  join,
+  relative,
+  resolve,
+} from "node:path";
+import { fileURLToPath } from "node:url";
+import { promisify } from "node:util";
+
+const execFileAsync = promisify(execFile);
+const root = process.cwd();
+const evidencePath =
+  process.env.SMOKE_EVIDENCE ??
+  argument("--evidence") ??
+  join(tmpdir(), `dsh-smoke-${process.pid}.json`);
+const evidenceRoot = resolve(
+  argument("--evidence-root") ??
+    process.env.SMOKE_EVIDENCE_ROOT ??
+    resolve(evidencePath, ".."),
+);
+const metadataRoot =
+  argument("--metadata-root") ?? process.env.SMOKE_METADATA_ROOT;
+const appEvidencePath = `${evidencePath}.app.json`;
+const timeoutMs = Number(process.env.SMOKE_TIMEOUT_MS ?? 45_000);
+const startedAt = new Date().toISOString();
+
+function argument(name) {
+  const index = process.argv.indexOf(name);
+  return index < 0 ? undefined : process.argv[index + 1];
+}
+
+function requiredArgument(name) {
+  const value = argument(name);
+  if (value === undefined || value === "")
+    throw new Error(`${name} is required`);
+  return value;
+}
+
+function findExecutable() {
+  const configured = argument("--executable") ?? process.env.SMOKE_EXECUTABLE;
+  if (configured) return resolve(configured);
+  throw new Error("SMOKE_EXECUTABLE or --executable is required");
+}
+
+async function checksum(path) {
+  const info = await stat(path);
+  if (!info.isFile()) {
+    const entries = await inventory(path);
+    return createHash("sha256").update(JSON.stringify(entries)).digest("hex");
+  }
+  const hash = createHash("sha256");
+  const { createReadStream } = await import("node:fs");
+  return new Promise((resolveHash, reject) => {
+    const stream = createReadStream(path);
+    stream.on("data", (chunk) => hash.update(chunk));
+    stream.on("error", reject);
+    stream.on("end", () => resolveHash(hash.digest("hex")));
+  });
+}
+
+async function inventory(path) {
+  const entries = [];
+  async function visit(current) {
+    const info = await stat(current);
+    if (info.isFile()) {
+      entries.push({ path: relative(path, current), bytes: info.size });
+      return;
+    }
+    for (const entry of await readdir(current))
+      await visit(join(current, entry));
+  }
+  await visit(path);
+  return entries.sort((left, right) => left.path.localeCompare(right.path));
+}
+
+async function assertPathWithinRoot(path, rootPath) {
+  const [resolvedPath, resolvedRoot] = await Promise.all([
+    realpath(dirname(path)).then((parent) =>
+      join(parent, path.split(pathSeparator()).at(-1)),
+    ),
+    realpath(rootPath),
+  ]);
+  const suffix = relative(resolvedRoot, resolvedPath);
+  if (
+    suffix === ".." ||
+    suffix.startsWith(`..${pathSeparator()}`) ||
+    resolve(suffix) === ".."
+  )
+    throw new Error(`path escapes smoke evidence root: ${path}`);
+}
+
+async function assertPathNotSymlink(path) {
+  try {
+    if ((await lstat(path)).isSymbolicLink())
+      throw new Error(`refusing symbolic link evidence path: ${path}`);
+  } catch (error) {
+    if (!(error instanceof Error) || error.code !== "ENOENT") throw error;
+  }
+}
+
+async function assertEvidenceRootAllowed(rootPath, metadataRootPath) {
+  if (metadataRootPath === undefined) return;
+  const resolvedRoot = await realpath(rootPath);
+  const forbiddenRoot = await realpath(metadataRootPath);
+  if (
+    resolvedRoot === forbiddenRoot ||
+    resolvedRoot.startsWith(`${forbiddenRoot}${pathSeparator()}`)
+  )
+    throw new Error(
+      "smoke evidence root must be outside configured metadata root",
+    );
+}
+
+function pathSeparator() {
+  return process.platform === "win32" ? "\\" : "/";
+}
+
+async function writeEvidenceAtomically({
+  evidencePath: finalPath,
+  evidenceRoot: rootPath,
+  content,
+  preserveExisting = false,
+  tempPath = join(
+    dirname(finalPath),
+    `.${finalPath.split(pathSeparator()).at(-1)}.${process.pid}.${randomUUID()}.tmp`,
+  ),
+}) {
+  const resolvedFinalPath = resolve(finalPath);
+  const resolvedTempPath = resolve(tempPath);
+  await assertPathWithinRoot(resolvedFinalPath, rootPath);
+  await assertPathWithinRoot(resolvedTempPath, rootPath);
+  await assertPathNotSymlink(resolvedFinalPath);
+  if (preserveExisting) {
+    try {
+      await access(resolvedFinalPath);
+      return;
+    } catch (error) {
+      if (!(error instanceof Error) || error.code !== "ENOENT") throw error;
+    }
+  }
+  await assertPathNotSymlink(resolvedTempPath);
+  let handle;
+  try {
+    handle = await open(
+      resolvedTempPath,
+      fsConstants.O_WRONLY |
+        fsConstants.O_CREAT |
+        fsConstants.O_EXCL |
+        fsConstants.O_NOFOLLOW,
+      0o600,
+    );
+    await handle.writeFile(content, "utf8");
+    await handle.sync();
+    await handle.close();
+    handle = undefined;
+    await assertPathNotSymlink(resolvedTempPath);
+    await assertPathNotSymlink(resolvedFinalPath);
+    await rename(resolvedTempPath, resolvedFinalPath);
+  } catch (error) {
+    await handle?.close().catch(() => undefined);
+    await unlink(resolvedTempPath).catch((unlinkError) => {
+      if (!(unlinkError instanceof Error) || unlinkError.code !== "ENOENT")
+        throw unlinkError;
+    });
+    throw error;
+  }
+}
+
+function createInterruptHandler(cleanup, exit) {
+  let interruption;
+  return () => {
+    interruption ??= cleanup().finally(() => exit(130));
+    return interruption;
+  };
+}
+
+function parseLoopbackListeners(output, platform = process.platform) {
+  const listeners = [];
+  for (const line of output.split("\n")) {
+    if (!line.includes("127.0.0.1") || !/LISTEN/i.test(line)) continue;
+    const portMatch = line.match(/127\.0\.0\.1:(\d+)/);
+    if (!portMatch) continue;
+    const pidMatch =
+      platform === "win32"
+        ? line.match(/LISTENING\s+(\d+)\s*$/i)
+        : line.match(/pid=(\d+)/);
+    listeners.push({
+      port: Number(portMatch[1]),
+      pid: pidMatch ? Number(pidMatch[1]) : undefined,
+    });
+  }
+  return listeners;
+}
+
+async function listLoopbackListeners() {
+  const command = process.platform === "win32" ? "netstat" : "ss";
+  const args = process.platform === "win32" ? ["-ano", "-p", "tcp"] : ["-ltnp"];
+  const output = await execFileAsync(command, args, {
+    windowsHide: true,
+  }).then(
+    ({ stdout }) => stdout,
+    () => "",
+  );
+  return parseLoopbackListeners(output);
+}
+
+function assertEvidenceMetadata(value, expected) {
+  for (const key of [
+    "runId",
+    "matrixLabel",
+    "packageKind",
+    "expectedArchitecture",
+    "artifactFilename",
+    "artifactSha256",
+    "startedAt",
+  ]) {
+    if (value?.[key] !== expected[key])
+      throw new Error(`smoke evidence metadata does not match ${key}`);
+  }
+}
+
+function verifySmokeEvidence(evidence, expected) {
+  const ready = evidence?.ready;
+  const final = evidence?.final;
+  if (
+    evidence?.runId !== expected.runId ||
+    ready?.runId !== expected.runId ||
+    final?.runId !== expected.runId
+  )
+    throw new Error("smoke evidence run nonce does not match current run");
+  if (
+    evidence?.schema !== 2 ||
+    evidence?.runId !== expected.runId ||
+    ready?.phase !== "ready" ||
+    final?.phase !== "final"
+  )
+    throw new Error("smoke evidence does not contain ready and final phases");
+  assertEvidenceMetadata(ready, expected);
+  assertEvidenceMetadata(final, expected);
+  if (evidence.startedAt !== expected.startedAt)
+    throw new Error("smoke evidence metadata does not match startedAt");
+  if (!/^http:\/\/127\.0\.0\.1:\d+$/.test(ready.harnessOrigin))
+    throw new Error("smoke evidence origin is not exact loopback HTTP");
+  if (ready.harnessOrigin !== final.harnessOrigin)
+    throw new Error("smoke evidence origin changed during shutdown");
+  if (ready.readinessProbePassed !== true || ready.packaged !== true)
+    throw new Error("smoke evidence readiness contract failed");
+  if (final.watchdogAcked !== true || final.harnessRetired !== true)
+    throw new Error("smoke evidence shutdown contract failed");
+  if (!Number.isInteger(ready.appPid) || ready.appPid <= 0)
+    throw new Error("smoke evidence app PID is invalid");
+  if (!Number.isInteger(ready.harnessPid) || ready.harnessPid <= 0)
+    throw new Error("smoke evidence Harness PID is invalid");
+  if (final.appPid !== ready.appPid || final.harnessPid !== ready.harnessPid)
+    throw new Error("smoke evidence PIDs changed during shutdown");
+  if (ready.harnessPid !== ready.listenerPid)
+    throw new Error("smoke listener owner does not match reported Harness PID");
+  if (
+    !ready.harnessHome ||
+    !ready.resourceRoot ||
+    !ready.systemNode?.executable
+  )
+    throw new Error("smoke evidence runtime provenance is incomplete");
+  const startedAt = Date.parse(evidence.startedAt ?? "");
+  const readyAt = Date.parse(ready.timestamps?.readyAt ?? "");
+  const finalAt = Date.parse(final.timestamps?.finalAt ?? "");
+  if (
+    !Number.isFinite(startedAt) ||
+    !Number.isFinite(readyAt) ||
+    !Number.isFinite(finalAt) ||
+    readyAt < startedAt ||
+    finalAt < readyAt
+  )
+    throw new Error("smoke evidence timestamps are not ordered");
+  if (finalAt - startedAt > 5 * 60_000)
+    throw new Error("smoke evidence exceeds the freshness window");
+  return {
+    origin: ready.harnessOrigin,
+    appPid: ready.appPid,
+    harnessPid: ready.harnessPid,
+    port: Number(new URL(ready.harnessOrigin).port),
+  };
+}
+
+function validateArtifactContract({
+  matrixLabel,
+  packageKind,
+  expectedArchitecture,
+  artifactFilename,
+  artifactPath,
+}) {
+  const matrix = {
+    "windows-x64": ["nsis", "x64"],
+    "windows-arm64": ["nsis", "arm64"],
+    "macos-universal": ["dmg", "universal"],
+    "linux-x64": [["appimage", "deb"], "x64"],
+    "linux-arm64": [["appimage", "deb"], "arm64"],
+  }[matrixLabel];
+  const packageKinds = Array.isArray(matrix?.[0]) ? matrix[0] : [matrix?.[0]];
+  if (
+    !matrix ||
+    !packageKinds.includes(packageKind) ||
+    matrix[1] !== expectedArchitecture
+  )
+    throw new Error("package matrix metadata is not allowlisted");
+  const escapedArchitecture = expectedArchitecture.replace(
+    /[.*+?^${}()|[\]\\]/gu,
+    "\\$&",
+  );
+  const artifactVersion = String.raw`\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?`;
+  const packagePattern = {
+    nsis: new RegExp(
+      `^DeepSeek-Harness-Code-${artifactVersion}-windows-${escapedArchitecture}-setup\\.exe$`,
+      "u",
+    ),
+    dmg: new RegExp(
+      `^DeepSeek-Harness-Code-${artifactVersion}-mac-universal\\.dmg$`,
+      "u",
+    ),
+    appimage: new RegExp(
+      `^DeepSeek-Harness-Code-${artifactVersion}-linux-${escapedArchitecture}\\.AppImage$`,
+      "u",
+    ),
+    deb: new RegExp(
+      `^DeepSeek-Harness-Code-${artifactVersion}-linux-${escapedArchitecture}\\.deb$`,
+      "u",
+    ),
+  }[packageKind];
+  if (
+    packagePattern === undefined ||
+    !packagePattern.test(artifactFilename) ||
+    basename(artifactPath) !== artifactFilename
+  )
+    throw new Error(
+      "artifact filename or extension does not match package metadata",
+    );
+}
+
+function matrixLabelFor(packageKind, expectedArchitecture) {
+  const match = Object.entries({
+    "windows-x64": ["nsis", "x64"],
+    "windows-arm64": ["nsis", "arm64"],
+    "macos-universal": ["dmg", "universal"],
+    "linux-x64": [["appimage", "deb"], "x64"],
+    "linux-arm64": [["appimage", "deb"], "arm64"],
+  }).find(([, values]) => {
+    const packageKinds = Array.isArray(values[0]) ? values[0] : [values[0]];
+    return (
+      packageKinds.includes(packageKind) && values[1] === expectedArchitecture
+    );
+  });
+  if (!match) throw new Error("package matrix metadata is not allowlisted");
+  return match[0];
+}
+
+async function assertResources(executable) {
+  const resources = resolve(
+    argument("--resources") ?? join(executable, "..", "resources"),
+  );
+  const required = [
+    join(resources, "desktop-plugin", "package.json"),
+    join(resources, "desktop-plugin", "client.js"),
+    join(resources, "anchored-standard-plugin", "package.json"),
+    join(resources, "anchored-standard-plugin", "UPSTREAM.json"),
+    join(resources, "anchored-standard-plugin", "UPSTREAM-SHA256SUMS"),
+    join(resources, "anchored-standard-plugin", "preset", "agent.cordis.yml"),
+    join(resources, "node-runtime", "package.json"),
+    join(resources, "node-runtime", "pnpm.mjs"),
+    join(resources, "routing-suite", "versions.json"),
+    join(resources, "superpowers-skills", "UPSTREAM.json"),
+    join(resources, "global-agent-prompt", "AGENTS.md"),
+  ];
+  for (const path of required) {
+    await assertPathWithinRoot(path, resources);
+    await access(path);
+  }
+  return required.map((path) => relative(root, path));
+}
+
+async function assertRuntimeProvenance(smokeEvidence, userData, resourcesRoot) {
+  const ready = smokeEvidence.ready;
+  for (const path of [
+    ready.harnessHome,
+    ready.resourceRoot,
+    ready.systemNode.executable,
+  ]) {
+    if (typeof path !== "string" || !isAbsolute(path))
+      throw new Error("runtime provenance paths must be absolute");
+    await access(path);
+  }
+  await assertPathWithinRoot(ready.harnessHome, userData);
+  const actualResourceRoot = await realpath(ready.resourceRoot);
+  const expectedResourceRoot = await realpath(resourcesRoot);
+  if (actualResourceRoot !== expectedResourceRoot)
+    throw new Error("runtime resource root does not match packaged resources");
+  const { stdout } = await execFileAsync(
+    ready.systemNode.executable,
+    ["--version"],
+    {
+      windowsHide: true,
+    },
+  );
+  const match = stdout.trim().match(/^v(\d+)\.(\d+)\.(\d+)$/u);
+  if (
+    !match ||
+    Number(match[1]) < 22 ||
+    (Number(match[1]) === 22 && Number(match[2]) < 13)
+  )
+    throw new Error("system Node must be semantic version 22.13.0 or newer");
+  if (ready.systemNode.version !== stdout.trim().slice(1))
+    throw new Error("system Node version provenance does not match executable");
+}
+
+async function stopProcess(child, force = false) {
+  if (child.exitCode !== null) return true;
+  if (force && process.platform === "win32") {
+    await execFileAsync("taskkill", ["/PID", String(child.pid), "/T", "/F"], {
+      windowsHide: true,
+    }).catch(() => undefined);
+  } else if (force && child.pid !== undefined) {
+    try {
+      process.kill(-child.pid, "SIGKILL");
+    } catch (error) {
+      if (!(error instanceof Error) || !("code" in error)) throw error;
+    }
+  } else child.kill("SIGTERM");
+  return new Promise((resolveExit) => {
+    const timer = setTimeout(() => resolveExit(false), 10_000);
+    child.once("exit", () => {
+      clearTimeout(timer);
+      resolveExit(true);
+    });
+  });
+}
+
+async function cleanupProcess(child) {
+  if (child === undefined || child.exitCode !== null) return;
+  await stopProcess(child, true);
+}
+
+function assertKnownRunnerArchitecture(
+  platform = process.platform,
+  arch = process.arch,
+) {
+  if (platform === "darwin") {
+    if (!["x64", "arm64"].includes(arch))
+      throw new Error(`unsupported macOS runner architecture ${arch}`);
+    return;
+  }
+  if ((platform === "linux" || platform === "win32") && arch !== "x64")
+    throw new Error(`unsupported ${platform} runner architecture ${arch}`);
+  if (!["darwin", "linux", "win32"].includes(platform))
+    throw new Error(`unsupported smoke platform ${platform}`);
+}
+
+async function inspectArchitecture(executable) {
+  assertKnownRunnerArchitecture();
+  if (process.platform === "win32") {
+    const script =
+      "$bytes=[IO.File]::ReadAllBytes($args[0]); $offset=[BitConverter]::ToInt32($bytes,60); [BitConverter]::ToUInt16($bytes,$offset+4)";
+    const { stdout } = await execFileAsync("powershell", [
+      "-NoProfile",
+      "-Command",
+      script,
+      executable,
+    ]);
+    const machine = stdout.trim();
+    if (machine !== "34404")
+      throw new Error(`unsupported Windows PE machine ${machine}`);
+    return { runner: process.arch, platform: process.platform, machine };
+  }
+  const file = await execFileAsync("file", [executable]).then(
+    ({ stdout }) => stdout.trim(),
+    () => undefined,
+  );
+  if (file === undefined)
+    throw new Error("native architecture inspection failed");
+  if (!/x86-64|x86_64|amd64/i.test(file))
+    throw new Error(`unsupported Linux architecture: ${file}`);
+  return { runner: process.arch, platform: process.platform, file };
+}
+
+async function waitForEvidence(path, deadline, runId, phase) {
+  while (Date.now() < deadline) {
+    try {
+      const evidence = JSON.parse(await readFile(path, "utf8"));
+      if (
+        evidence?.schema === 2 &&
+        evidence?.runId === runId &&
+        evidence?.[phase]?.phase === phase
+      )
+        return evidence;
+    } catch (error) {
+      if (
+        !(error instanceof Error) ||
+        !["ENOENT", "EACCES", undefined].includes(error.code)
+      )
+        throw error;
+    }
+    await new Promise((resolveDelay) => setTimeout(resolveDelay, 250));
+  }
+  throw new Error(
+    `packaged application did not publish ${phase} smoke evidence`,
+  );
+}
+
+async function waitForSmokeAcknowledgement(path, deadline, runId, appPid) {
+  while (Date.now() < deadline) {
+    try {
+      const acknowledgement = JSON.parse(await readFile(path, "utf8"));
+      if (
+        acknowledgement?.runId === runId &&
+        acknowledgement?.appPid === appPid
+      )
+        return acknowledgement;
+    } catch (error) {
+      if (error instanceof Error && !["ENOENT", "EACCES"].includes(error.code))
+        throw error;
+    }
+    await new Promise((resolveDelay) => setTimeout(resolveDelay, 25));
+  }
+  throw new Error("smoke ready acknowledgement timed out");
+}
+
+function verifySmokeReadyEvidence(evidence, expected) {
+  const ready = evidence?.ready;
+  if (
+    evidence?.schema !== 2 ||
+    evidence?.runId !== expected.runId ||
+    ready?.runId !== expected.runId
+  )
+    throw new Error("smoke evidence run nonce does not match current run");
+  if (ready?.phase !== "ready")
+    throw new Error("smoke ready evidence is missing");
+  assertEvidenceMetadata(ready, expected);
+  if (evidence.startedAt !== expected.startedAt)
+    throw new Error("smoke evidence metadata does not match startedAt");
+  if (!/^http:\/\/127\.0\.0\.1:\d+$/.test(ready.harnessOrigin))
+    throw new Error("smoke evidence origin is not exact loopback HTTP");
+  if (ready.readinessProbePassed !== true || ready.packaged !== true)
+    throw new Error("smoke evidence readiness contract failed");
+  if (
+    !Number.isInteger(ready.appPid) ||
+    ready.appPid <= 0 ||
+    !Number.isInteger(ready.harnessPid) ||
+    ready.harnessPid <= 0
+  )
+    throw new Error("smoke evidence PID is invalid");
+  if (ready.harnessPid !== ready.listenerPid)
+    throw new Error("smoke listener owner does not match reported Harness PID");
+  return {
+    origin: ready.harnessOrigin,
+    appPid: ready.appPid,
+    harnessPid: ready.harnessPid,
+    port: Number(new URL(ready.harnessOrigin).port),
+  };
+}
+
+function assertPidDead(pid) {
+  try {
+    process.kill(pid, 0);
+    throw new Error(`process ${pid} is still alive`);
+  } catch (error) {
+    if (error instanceof Error && "code" in error && error.code === "ESRCH")
+      return;
+    throw error;
+  }
+}
+
+async function assertPortClosed(port) {
+  const listeners = await listLoopbackListeners();
+  if (listeners.some((listener) => listener.port === port))
+    throw new Error(`Harness loopback port ${port} is still listening`);
+}
+
+async function assertPortOwned(port, pid) {
+  const listeners = await listLoopbackListeners();
+  const listener = listeners.find((candidate) => candidate.port === port);
+  if (listener?.pid !== pid)
+    throw new Error(`Harness listener ${port} is not owned by PID ${pid}`);
+}
+
+async function main() {
+  const runId = randomUUID();
+  const executable = findExecutable();
+  const packageKind = requiredArgument("--package-kind");
+  const expectedArchitecture = requiredArgument("--expected-architecture");
+  const artifactFilename = requiredArgument("--artifact-filename");
+  const matrixLabel =
+    argument("--matrix-label") ??
+    matrixLabelFor(packageKind, expectedArchitecture);
+  const artifactPath = argument("--artifact") ?? executable;
+  const expectedArtifactHash =
+    requiredArgument("--artifact-sha256").toLowerCase();
+  const inventoryPath = argument("--inventory") ?? executable;
+  validateArtifactContract({
+    matrixLabel,
+    packageKind,
+    expectedArchitecture,
+    artifactFilename,
+    artifactPath,
+  });
+  const artifactSha256 = await checksum(artifactPath);
+  const evidence = {
+    schema: 2,
+    runId,
+    platform: process.platform,
+    runnerArchitecture: process.arch,
+    startedAt,
+    artifact: {
+      packageKind,
+      expectedArchitecture,
+      filename: artifactFilename,
+      path: resolve(artifactPath),
+      sha256: artifactSha256,
+      inventory: await inventory(inventoryPath),
+      architecture: await inspectArchitecture(executable),
+    },
+    runtime: { executable: resolve(executable), resources: [] },
+  };
+  if (artifactSha256 !== expectedArtifactHash)
+    throw new Error("packaged artifact SHA-256 does not match expected hash");
+  const userData = await import("node:fs/promises").then(({ mkdtemp }) =>
+    mkdtemp(join(tmpdir(), "dsh-packaged-smoke-")),
+  );
+  await mkdir(evidenceRoot, { recursive: true });
+  await assertEvidenceRootAllowed(evidenceRoot, metadataRoot);
+  await assertPathWithinRoot(resolve(evidencePath), evidenceRoot);
+  await assertPathWithinRoot(resolve(appEvidencePath), evidenceRoot);
+  await assertPathNotSymlink(resolve(evidencePath));
+  await assertPathNotSymlink(resolve(appEvidencePath));
+  await assertPathNotSymlink(resolve(`${appEvidencePath}.ack`));
+  await unlink(resolve(evidencePath)).catch((error) => {
+    if (!(error instanceof Error) || error.code !== "ENOENT") throw error;
+  });
+  await unlink(resolve(appEvidencePath)).catch((error) => {
+    if (!(error instanceof Error) || error.code !== "ENOENT") throw error;
+  });
+  await unlink(resolve(`${appEvidencePath}.ack`)).catch((error) => {
+    if (!(error instanceof Error) || error.code !== "ENOENT") throw error;
+  });
+  let child;
+  let exitedCleanly = false;
+  let finalization;
+  const finalize = () => {
+    finalization ??= (async () => {
+      await cleanupProcess(child);
+      evidence.finishedAt = new Date().toISOString();
+      evidence.runtime.exitedCleanly = exitedCleanly;
+      try {
+        await writeEvidenceAtomically({
+          evidencePath,
+          evidenceRoot,
+          content: `${JSON.stringify(evidence, null, 2)}\n`,
+        });
+      } finally {
+        await rm(userData, { recursive: true, force: true });
+      }
+    })();
+    return finalization;
+  };
+  const onInterrupt = createInterruptHandler(async () => {
+    evidence.failure ??= "packaged smoke interrupted";
+    await finalize();
+  }, process.exit.bind(process));
+  process.on("SIGINT", onInterrupt);
+  process.on("SIGTERM", onInterrupt);
+  child = spawn(executable, [], {
+    cwd: root,
+    env: {
+      ...process.env,
+      APPDATA: join(userData, "appdata"),
+      XDG_CONFIG_HOME: join(userData, "config"),
+      XDG_DATA_HOME: join(userData, "data"),
+      XDG_STATE_HOME: join(userData, "state"),
+      XDG_CACHE_HOME: join(userData, "cache"),
+      SMOKE_MODE: "ci",
+      SMOKE_EVIDENCE_PATH: resolve(appEvidencePath),
+      SMOKE_ACK_PATH: resolve(`${appEvidencePath}.ack`),
+      SMOKE_EVIDENCE_ROOT: evidenceRoot,
+      SMOKE_RUN_ID: runId,
+      MATRIX_LABEL: matrixLabel,
+      PACKAGE_KIND: packageKind,
+      EXPECTED_ARCHITECTURE: expectedArchitecture,
+      ARTIFACT_FILENAME: artifactFilename,
+      ARTIFACT_SHA256: artifactSha256,
+      SMOKE_STARTED_AT: startedAt,
+    },
+    stdio: ["ignore", "pipe", "pipe"],
+    detached: process.platform !== "win32",
+    windowsHide: true,
+  });
+  const deadline = Date.now() + timeoutMs;
+  try {
+    child.once("exit", (code, signal) => {
+      if (code !== null || signal !== null)
+        process.stderr.write(
+          `packaged application exited before evidence (code=${code ?? "null"}, signal=${signal ?? "null"})\n`,
+        );
+    });
+    evidence.runtime.resources = await assertResources(executable);
+    const readyEvidence = await Promise.race([
+      waitForEvidence(resolve(appEvidencePath), deadline, runId, "ready"),
+      new Promise((_, reject) => {
+        child.once("exit", (code, signal) =>
+          reject(
+            new Error(
+              `packaged application exited before evidence (code=${code ?? "null"}, signal=${signal ?? "null"})`,
+            ),
+          ),
+        );
+      }),
+    ]);
+    const expectedMetadata = {
+      runId,
+      matrixLabel,
+      packageKind,
+      expectedArchitecture,
+      artifactFilename,
+      artifactSha256,
+      startedAt,
+    };
+    const identity = verifySmokeReadyEvidence(readyEvidence, expectedMetadata);
+    await assertRuntimeProvenance(
+      readyEvidence,
+      userData,
+      resolve(argument("--resources") ?? join(executable, "..", "resources")),
+    );
+    evidence.runtime.loopback = {
+      host: "127.0.0.1",
+      port: identity.port,
+      status: 200,
+    };
+    await assertPortOwned(identity.port, identity.harnessPid);
+    await writeFile(
+      resolve(`${appEvidencePath}.ack`),
+      `${JSON.stringify({ runId, appPid: identity.appPid })}\n`,
+      { encoding: "utf8", mode: 0o600 },
+    );
+    const smokeEvidence = await Promise.race([
+      waitForEvidence(resolve(appEvidencePath), deadline, runId, "final"),
+      new Promise((_, reject) => {
+        child.once("exit", (code, signal) =>
+          reject(
+            new Error(
+              `packaged application exited before final evidence (code=${code ?? "null"}, signal=${signal ?? "null"})`,
+            ),
+          ),
+        );
+      }),
+    ]);
+    verifySmokeEvidence(smokeEvidence, expectedMetadata);
+    exitedCleanly = child.exitCode !== null ? true : await stopProcess(child);
+    evidence.runtime.exitCode = child.exitCode;
+    evidence.runtime.exitedCleanly = exitedCleanly;
+    if (!exitedCleanly || child.exitCode !== 0)
+      throw new Error(`packaged application exited with ${child.exitCode}`);
+    assertPidDead(identity.harnessPid);
+    assertPidDead(identity.appPid);
+    await assertPortClosed(identity.port);
+    await new Promise((resolveDelay) => setTimeout(resolveDelay, 2_500));
+    await assertPortClosed(identity.port);
+  } catch (error) {
+    evidence.failure ??=
+      error instanceof Error ? error.message : "packaged smoke failed";
+    throw error;
+  } finally {
+    await finalize();
+    process.removeListener("SIGINT", onInterrupt);
+    process.removeListener("SIGTERM", onInterrupt);
+  }
+  process.stdout.write(`${JSON.stringify(evidence)}\n`);
+}
+
+export {
+  assertKnownRunnerArchitecture,
+  parseLoopbackListeners,
+  assertPathWithinRoot,
+  assertPathNotSymlink,
+  assertEvidenceRootAllowed,
+  assertPortOwned,
+  createInterruptHandler,
+  writeEvidenceAtomically,
+  verifySmokeEvidence,
+  verifySmokeReadyEvidence,
+  waitForEvidence,
+  waitForSmokeAcknowledgement,
+  validateArtifactContract,
+};
+
+if (
+  process.argv[1] &&
+  resolve(process.argv[1]) === fileURLToPath(import.meta.url)
+) {
+  main().catch((error) => {
+    const message =
+      error instanceof Error ? error.message : "packaged smoke failed";
+    void (async () => {
+      try {
+        await mkdir(evidenceRoot, { recursive: true });
+        await assertEvidenceRootAllowed(evidenceRoot, metadataRoot);
+        await assertPathWithinRoot(resolve(evidencePath), evidenceRoot);
+        await writeEvidenceAtomically({
+          evidencePath,
+          evidenceRoot,
+          content: `${JSON.stringify({ schema: 2, startedAt, finishedAt: new Date().toISOString(), failure: message }, null, 2)}\n`,
+          preserveExisting: true,
+        });
+      } catch (evidenceError) {
+        if (!(evidenceError instanceof Error)) throw evidenceError;
+      }
+      process.stderr.write(`${message}\n`);
+      process.exitCode = 1;
+    })();
+  });
+}
