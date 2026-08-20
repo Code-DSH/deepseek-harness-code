@@ -9,6 +9,7 @@
 const ALLOWED_HOSTS = new Set<string>([
   "github.com",
   "objects.githubusercontent.com",
+  "release-assets.githubusercontent.com",
   "raw.githubusercontent.com",
   "codeload.github.com",
 ]);

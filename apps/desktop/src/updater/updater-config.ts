@@ -3,8 +3,8 @@
  *
  * The manifest URL points at a GitHub release asset by default
  * (https://github.com/Code-DSH/deepseek-harness-code/releases/latest/download/update-manifest.json),
- * which the host policy allows (github.com redirects to
- * objects.githubusercontent.com, both in the allow-list).
+ * which the host policy allows (GitHub redirects release downloads through
+ * release-assets.githubusercontent.com, which is also in the allow-list).
  *
  * A dev/test escape hatch (`DSC_UPDATER_ALLOW_LOOPBACK=1`) relaxes the URL
  * policy AND injects a file-backed fetch so a local manifest + installer can

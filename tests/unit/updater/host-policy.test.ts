@@ -31,6 +31,7 @@ describe("updater/host-policy classifyHost", () => {
   it("allows github hosts", () => {
     expect(classifyHost("github.com").ok).toBe(true);
     expect(classifyHost("objects.githubusercontent.com").ok).toBe(true);
+    expect(classifyHost("release-assets.githubusercontent.com").ok).toBe(true);
   });
 
   it("rejects non-allow-listed public hosts", () => {
@@ -49,6 +50,13 @@ describe("updater/host-policy validateUpdateUrl", () => {
       "https://github.com/Code-DSH/deepseek-harness-code",
     );
     expect(v.host).toBe("github.com");
+  });
+
+  it("accepts the GitHub release asset redirect host", () => {
+    const v = validateUpdateUrl(
+      "https://release-assets.githubusercontent.com/github-production-release-asset/example",
+    );
+    expect(v.host).toBe("release-assets.githubusercontent.com");
   });
 
   it("rejects http", () => {
