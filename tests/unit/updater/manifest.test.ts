@@ -36,7 +36,7 @@ describe("updater/manifest parseUpdateManifest", () => {
   it("parses a valid manifest", () => {
     const m = parseUpdateManifest(validManifest);
     expect(m.latestVersion).toBe("0.1.0-BETA2");
-    expect(m.assets.darwin.format).toBe("zip");
+    expect(platformAsset(m, "darwin").format).toBe("zip");
   });
 
   it("defaults notes to empty string when omitted", () => {
@@ -89,5 +89,23 @@ describe("updater/manifest platformAsset", () => {
     const m = parseUpdateManifest(validManifest);
     expect(platformAsset(m, "darwin").format).toBe("zip");
     expect(platformAsset(m, "linux").format).toBe("appimage");
+  });
+
+  it("selects the requested architecture from a variant platform asset", () => {
+    const m = parseUpdateManifest({
+      ...validManifest,
+      assets: {
+        ...validManifest.assets,
+        win32: {
+          x64: validManifest.assets.win32,
+          arm64: {
+            ...validManifest.assets.win32,
+            url: "https://github.com/a/b-arm64.exe",
+          },
+        },
+      },
+    });
+    expect(platformAsset(m, "win32", "x64").url).toContain("b.exe");
+    expect(platformAsset(m, "win32", "arm64").url).toContain("b-arm64.exe");
   });
 });

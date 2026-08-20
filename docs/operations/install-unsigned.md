@@ -1,6 +1,6 @@
 # Installing the Unsigned macOS Build
 
-This is a community wrapper and is not an official DeepSeek release. DeepSeek Harness Code `0.1.0-BETA2` (and prior `0.1.0-BETA1`) is ad-hoc signed, not Apple-notarized. Verify the DMG source and checksum before proceeding.
+This is a community wrapper and is not an official DeepSeek release. DeepSeek Harness Code `0.1.0-BETA2-1` (and prior `0.1.0-BETA2` / `0.1.0-BETA1`) is ad-hoc signed, not Apple-notarized. Verify the DMG source and checksum before proceeding.
 
 ## Prerequisite: official Node.js
 
@@ -8,7 +8,7 @@ The app runs on the system-installed official Node.js — it no longer downloads
 
 The app's private `PATH` prepends the detected Node's bin directory and the bundled pnpm runtime, so native-module postinstall scripts find `node` even when the GUI launch PATH is minimal.
 
-The Universal artifact follows `release/DeepSeek-Harness-Code-<version>-mac-universal.dmg` (e.g., `0.1.0-BETA2`). Its checksum is published only after the final package verification succeeds.
+The Universal artifact follows `release/DeepSeek-Harness-Code-<version>-mac-universal.dmg` (e.g., `0.1.0-BETA2-1`). Its checksum is published only after the final package verification succeeds. The same release also publishes a Universal `.zip` consumed by the user-confirmed updater.
 
 After copying the app to Applications, remove quarantine only from this app:
 
@@ -19,6 +19,10 @@ xattr -dr com.apple.quarantine "/Applications/DeepSeek Harness Code.app"
 Do not disable Gatekeeper globally and do not use `spctl --master-disable`.
 
 Files downloaded or transferred by another application can receive quarantine again, which is why the targeted command remains part of the installation instructions.
+
+## User-confirmed updates
+
+From an installed app in `/Applications`, use 设置 → 通用 → 检查更新. The app fetches the GitHub `update-manifest.json`, verifies the selected platform artifact's SHA-256, then asks before downloading and replacing the app. It refuses DMG-mounted or Gatekeeper-translocated paths. Updates are never silently forced in the background.
 
 ## First launch
 

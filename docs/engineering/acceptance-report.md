@@ -1,7 +1,7 @@
 ---
 id: engineering.acceptance-report
 title: DeepSeek Harness Code Acceptance Report
-summary: Current 0.1.0-BETA2 (rc.8 + 8 plugins) evidence plus archived BETA1/0.3.x startup recovery, Routing Suite, stream projection, and Universal release evidence.
+summary: Current 0.1.0-BETA2-1 (rc.8 + 8 plugins + persistent Bash patch) evidence plus archived BETA2/BETA1/0.3.x startup recovery, Routing Suite, stream projection, and Universal release evidence.
 kind: engineering
 status: canonical
 content_stage: implementation-backed
@@ -23,6 +23,14 @@ tags: [acceptance, release, evidence]
 
 # DeepSeek Harness Code Acceptance Report
 
+## 0.1.0-BETA2-1 implementation evidence
+
+- The pinned `@deepseek-ai/dsh-terminal-bash@0.1.0-rc.8` patch changes `CONTROLLED_PROMPT` to `__DSH_PERSISTENT_BASH_PROMPT__` and replaces the hard-coded prompt bound with `CONTROLLED_PROMPT.length + 1`. The patch is registered in both root and packaged runtime lockfiles with hash `ab9c3393...`.
+- A real local installed Harness run after runtime reconciliation executed `cd "/Users/trip/TRUE 开发/openless" && pwd && echo BASH_PATCH_OK` in `0.3s` and returned `BASH_PATCH_OK`; the previous same-shape call had timed out at 300s.
+- Local `pnpm test` passes 312 unit tests (3 intentionally skipped), 108 Anchored tests, 24 plugin/real-Harness tests, 39 package-contract tests, and 2 Playwright E2E tests. `pnpm check`, runtime closure, Universal DMG verification, and the Universal ZIP resource inspection also pass locally.
+- The updater now remains user-confirmed: it selects the x64/arm64 or macOS universal asset, verifies SHA-256, invokes the platform replacement helper, and restarts only after the user chooses “Update and restart”. CI generates `update-manifest.json` from the release assets.
+- Cross-platform Windows/Linux artifact production and remote Release/manifest evidence remain external CI gates until the tagged workflow completes.
+
 ## 0.1.0-BETA2 integration evidence (current)
 
 - BETA2 is released only from the synchronized `main` commit accepted by the release PR; tag `v0.1.0-BETA2` identifies the immutable source used by tag CI.
@@ -31,7 +39,7 @@ tags: [acceptance, release, evidence]
 - The host installs **8+ integrated plugins** only through `dsh plugin --profile web add` using the bundled pnpm runtime: `deepseek-harness-desktop-plugin`, `dsh-ui-motion@1.1.0`, `dsh-model2-selector@1.1.0`, `dsh-ui-polish`, `dsh-updater-check@1.0.0`, `dsh-prompt-principles`, `dsh-vision-router@1.7.1`, `dsh-better-sidebar@0.12.3`, `dsh-superpowers`, `@dsh-external/dsh-super-injector@0.3.3`, `@dsh-external/dsh-mode-boost@0.1.0`, `dsh-find-plugin`, and `deepseek-harness-composition` (MCP bridges + subagent providers). The Harness child receives `--expose-internals`; all bare-name patches are retained. A corrupted profile `node_modules` triggers a one-time rebuild before failing.
 - Packaged extra resources include `routing-suite/` (SHA-256 pinned), `superpowers-skills/`, `global-agent-prompt/`, and the 8 plugin trees; `asar: false` preserves the full `window.__DSH_BOOT__` boot graph (39+ entries).
 - Current gates (BETA2 pipeline): `pnpm build` → `pnpm check:memory` → `pnpm preflight:runtime` (51 runtime artifacts + 35 production dependencies + 8 critical versions + 10 bundled plugin packages + SHA-256 digests + bare-name patches + orphan import rejection) → `pnpm check` (typecheck + lint + format:check + verify:docs + verify:security) → tag CI packaging. The macOS tag job runs `verify-macos-artifact.mjs --universal` before upload; Windows NSIS and Linux AppImage/deb build on native runners.
-- BETA2 accepts only an official system Node.js installation and never downloads or adds a private Node to PATH. Its updater host is informational only: no background schedule, installer download, application replacement, or automatic restart is reachable from the packaged main process. Startup no longer scans or terminates unrelated system Harness processes.
+- BETA2 accepted only an official system Node.js installation and never downloaded or added a private Node to PATH. Its updater host was informational only; BETA2-1 supersedes that boundary with user-confirmed replacement while retaining no background schedule or silent update. Startup no longer scans or terminates unrelated system Harness processes.
 
 ## 0.1.0-BETA1 historical artifact
 

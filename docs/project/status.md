@@ -1,7 +1,7 @@
 # Project Status
 
-- Phase: `main` is the sole integration branch. BETA2 is accepted through a CI-gated release PR, then tagged `v0.1.0-BETA2` only from a local `main` synchronized exactly with `origin/main`.
-- Current milestone: **DeepSeek Harness Code (DHSC) 0.1.0-BETA2** — integration build advancing from BETA1; Universal macOS DMG + Windows NSIS verified via `pnpm dist:mac --universal` / `pnpm dist:win`; Linux AppImage/deb CI-green on native runners.
+- Phase: `main` is the sole integration branch. BETA2-1 is the next CI-gated release from a local `main` synchronized exactly with `origin/main`.
+- Current milestone: **DeepSeek Harness Code (DHSC) 0.1.0-BETA2-1** — persistent Bash readiness patch plus user-confirmed update channel; Universal macOS DMG/ZIP + Windows NSIS + Linux AppImage/deb are built by native CI.
 - Previous milestone: **0.1.0-BETA1** released on GitHub as `v0.1.0-BETA1` (see `docs/releases/0.1.0-BETA1.md`) — 221 MB Universal DMG + Windows x64/arm64 NSIS.
 - Repository: `https://github.com/Code-DSH/deepseek-harness-code` (public)
 - Integrated surface (BETA2): official Harness Home resolution (`@deepseek-ai/dsh-home-paths@0.1.0-rc.8`), copy-only legacy migration, application-bundled pnpm launcher, **8 integrated plugins** (`desktop-plugin`, `dsh-ui-motion@1.1.0`, `dsh-model2-selector@1.1.0`, `dsh-ui-polish`, `dsh-updater-check@1.0.0`, `dsh-prompt-principles`, `dsh-vision-router@1.7.1`, `dsh-better-sidebar@0.12.3` + `dsh-superpowers` + `anchored-standard` preset + `app-composition` MCP/subagent bridges) reconciled via public `dsh plugin --profile web add`, checksum-pinned Routing Suite (`injector 0.3.3` `355238fa...`, `mode-boost 0.1.0` `72836d64...`, `router-preset 0.2.0 eff787e` `a8f3616f...`), Superpowers Skills 6.2.0, Global Agent Prompt, sandboxed desktop host, independent Watchdog, system Node auto-detection (>=22.13)

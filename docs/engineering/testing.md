@@ -28,7 +28,7 @@ The desktop bundle leaves streamed prose, Think disclosures, native status copy,
 - The desktop plugin has no fixed conversation overlay, CSS Highlight, glyph copy, particle, or status replacement to retain. Its inline Orb host exists only while the authoritative native running row exists.
 - Fault injection recovered a killed Harness in nine seconds. Killing the renderer rebuilt the window while preserving the Electron main and Harness PIDs.
 - The 0.1.0-BETA1 Universal package was mounted and signature-checked; both managed preset resource sets were present and 49 Mach-O files passed Universal/architecture-qualified inspection. The Routing Suite manifest and all expected executable/preset entry points were also checked in the packaged resources.
-- The packaged 0.1.0-BETA2 build reuses the same pipeline; `verify:mac --universal` and Windows NSIS installers are the current verification gates.
+- The packaged 0.1.0-BETA2-1 build reuses the same pipeline, carries the terminal-bash patch hash, emits a macOS Universal ZIP for updates, and verifies the architecture-aware update manifest alongside the DMG, Windows NSIS, and Linux AppImage/deb artifacts.
 
 Detailed evidence and unexecuted external checks are in the [acceptance report](./acceptance-report.md).
 

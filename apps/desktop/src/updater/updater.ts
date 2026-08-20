@@ -4,6 +4,7 @@ import { downloadInstaller, fetchManifest, type FetchDeps } from "./fetch.js";
 import {
   platformAsset,
   type UpdateAsset,
+  type UpdateArchitecture,
   type UpdateManifest,
   type UpdatePlatform,
 } from "./manifest.js";
@@ -26,6 +27,7 @@ export interface UpdaterCheckDeps {
   manifestUrl: string;
   currentVersion: string;
   platform: UpdatePlatform;
+  architecture?: UpdateArchitecture;
   fetchDeps?: FetchDeps;
 }
 
@@ -60,7 +62,7 @@ export async function checkForUpdate(
   if (!isNewerVersion(manifest.latestVersion, deps.currentVersion)) {
     return { available: false };
   }
-  const asset = platformAsset(manifest, deps.platform);
+  const asset = platformAsset(manifest, deps.platform, deps.architecture);
   return { available: true, manifest, asset };
 }
 

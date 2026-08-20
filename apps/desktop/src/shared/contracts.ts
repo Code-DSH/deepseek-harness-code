@@ -71,6 +71,7 @@ export type RuntimeState = z.infer<typeof runtimeStateSchema>;
 export interface UpdaterCheckOutcome {
   available: boolean;
   version?: string;
+  applied?: boolean;
 }
 
 export interface BundledPluginEntry {

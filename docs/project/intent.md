@@ -33,7 +33,7 @@ Deliver an all-in-one, modernized DeepSeek Harness Code desktop distribution tha
 
 ## Required Deliverables
 
-- `DeepSeek Harness Code.app` and DMG for x64 and arm64 as one verified Universal artifact (`deepseek-harness-code@0.1.0-BETA2`).
+- `DeepSeek Harness Code.app` and DMG for x64 and arm64 as one verified Universal artifact (`deepseek-harness-code@0.1.0-BETA2-1`), plus architecture-specific Windows/Linux installers and a verified update manifest.
 - Native Windows NSIS and Linux AppImage/deb build definitions with platform-native CI production.
 - Chromium UI, Harness (`@deepseek-ai/dsh@0.1.0-rc.8`), 8 integrated plugins, and watchdog inside the app bundle, running on the system-installed official Node.js.
 - Safe close behavior, menu recovery, health checks, crash recovery, log rotation, and official session restoration.
@@ -50,7 +50,7 @@ Deliver an all-in-one, modernized DeepSeek Harness Code desktop distribution tha
 ## Non-goals
 
 - Apple notarization or claims of an official DeepSeek release.
-- Automatic updates in the first community release (updater-check is present as a settings entry, not an auto-installer).
+- Silent or background-forced application replacement; updates must remain user-confirmed after manifest and checksum verification.
 - Replaying, logging, or matching hidden reasoning text such as `we need`.
 - One-time or cross-device model warm state, private-wire request mutation, and immediate full-catalog reinjection.
 - Guarantees about benchmark scores or hidden chain-of-thought wording.
@@ -59,7 +59,7 @@ Deliver an all-in-one, modernized DeepSeek Harness Code desktop distribution tha
 
 ## Constraints
 
-- App and product display name `DeepSeek Harness Code`; package name `deepseek-harness-code`; integration release `0.1.0-BETA2` (successor to `0.1.0-BETA1` and `0.3.3` integrated-plugin snapshot) with the checksum-pinned Routing Suite retained.
+- App and product display name `DeepSeek Harness Code`; package name `deepseek-harness-code`; integration release `0.1.0-BETA2-1` (successor to `0.1.0-BETA2`, `0.1.0-BETA1`, and the `0.3.3` integrated-plugin snapshot) with the checksum-pinned Routing Suite retained.
 - Baseline versions: `@deepseek-ai/dsh@0.1.0-rc.8`, Electron `43.4.0`, electron-builder `26.15.3`, Node runtime requirement `>=22.13` (system official Node.js, auto-detected; no portable download), pnpm `11.19.0`, `dsh-find-plugin@0.3.6`.
 - macOS 12-27 x64/arm64, Windows and Linux x64 native CI; fail closed rather than mislabel an architecture.
 - Harness binds only to `127.0.0.1`; user data remains outside `.app`.
@@ -84,6 +84,8 @@ On 2026-08-17 the user redirected the Node.js strategy: the app must use the sys
 The same day, the user confirmed that every plugin currently installed in the local Harness Web profile must ship in the integrated installer. The release freezes only public plugin code and package metadata; credentials, sessions, settings, logs, prompts, and private profile state remain outside the application.
 
 On 2026-08-20 the project advances to `0.1.0-BETA2` / `rc.8`: 8 integrated plugins (including vision-router, ui-polish, updater-check, better-sidebar service, prompt-principles, code-brand), immutable routing snapshot, and system-Node auto-detection are now baseline. Prior `0.3.x` versioning is archived.
+
+On 2026-08-20 the project advances to `0.1.0-BETA2-1`: the persistent Bash PTY prompt patch is carried through the packaged runtime, and the existing updater gains user-confirmed download, SHA-256 verification, platform replacement, and restart with architecture-aware release assets.
 
 ## Related Documents
 

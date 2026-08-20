@@ -18,6 +18,26 @@ const updateAssetSchema = z
   })
   .strict();
 
+const updateAssetVariantsSchema = z
+  .object({
+    x64: updateAssetSchema.optional(),
+    arm64: updateAssetSchema.optional(),
+    universal: updateAssetSchema.optional(),
+  })
+  .strict()
+  .refine(
+    (value) =>
+      value.x64 !== undefined ||
+      value.arm64 !== undefined ||
+      value.universal !== undefined,
+    "at least one architecture asset is required",
+  );
+
+const platformAssetsSchema = z.union([
+  updateAssetSchema,
+  updateAssetVariantsSchema,
+]);
+
 export const updateManifestSchema = z
   .object({
     latestVersion: z.string().min(1),
@@ -25,9 +45,9 @@ export const updateManifestSchema = z
     notes: z.string().default(""),
     assets: z
       .object({
-        darwin: updateAssetSchema,
-        win32: updateAssetSchema,
-        linux: updateAssetSchema,
+        darwin: platformAssetsSchema,
+        win32: platformAssetsSchema,
+        linux: platformAssetsSchema,
       })
       .strict(),
   })
@@ -35,7 +55,10 @@ export const updateManifestSchema = z
 
 export type UpdateManifest = z.infer<typeof updateManifestSchema>;
 export type UpdateAsset = z.infer<typeof updateAssetSchema>;
+export type UpdateAssetVariants = z.infer<typeof updateAssetVariantsSchema>;
+export type PlatformAssets = z.infer<typeof platformAssetsSchema>;
 export type UpdatePlatform = "darwin" | "win32" | "linux";
+export type UpdateArchitecture = "x64" | "arm64" | "universal";
 
 export class ManifestParseError extends Error {
   constructor(
@@ -61,13 +84,16 @@ export function parseUpdateManifest(input: unknown): UpdateManifest {
 export function platformAsset(
   manifest: UpdateManifest,
   platform: UpdatePlatform,
+  architecture: UpdateArchitecture = process.arch === "arm64" ? "arm64" : "x64",
 ): UpdateAsset {
-  switch (platform) {
-    case "darwin":
-      return manifest.assets.darwin;
-    case "win32":
-      return manifest.assets.win32;
-    case "linux":
-      return manifest.assets.linux;
+  const assets = manifest.assets[platform];
+  if ("url" in assets) return assets;
+  const selected =
+    assets[architecture] ?? assets.universal ?? assets.x64 ?? assets.arm64;
+  if (selected === undefined) {
+    throw new Error(
+      `updater: no ${platform}/${architecture} update asset is available`,
+    );
   }
+  return selected;
 }

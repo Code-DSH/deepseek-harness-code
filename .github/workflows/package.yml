@@ -27,10 +27,10 @@ jobs:
             os: windows-2025
             command: pnpm exec electron-builder --win nsis --arm64 --publish never
           - label: macos-universal
-            package-kind: dmg
+            package-kind: dmg-zip
             expected-architecture: universal
             os: macos-latest
-            command: pnpm exec electron-builder --mac dmg --universal --publish never
+            command: pnpm exec electron-builder --mac dmg zip --universal --publish never
           - label: linux-x64
             package-kind: appimage-deb
             expected-architecture: x64
@@ -75,7 +75,7 @@ jobs:
           set -euo pipefail
           case "$MATRIX_LABEL" in
             windows-*) patterns=("release/DeepSeek-Harness-Code-*-windows-${EXPECTED_ARCHITECTURE}-setup.exe");;
-            macos-*) patterns=("release/DeepSeek-Harness-Code-*-mac-universal.dmg");;
+            macos-*) patterns=("release/DeepSeek-Harness-Code-*-mac-universal.dmg" "release/DeepSeek-Harness-Code-*-mac-universal.zip");;
             linux-x64) patterns=("release/DeepSeek-Harness-Code-*-linux-x86_64.AppImage" "release/DeepSeek-Harness-Code-*-linux-amd64.deb");;
             linux-arm64) patterns=("release/DeepSeek-Harness-Code-*-linux-arm64.AppImage" "release/DeepSeek-Harness-Code-*-linux-arm64.deb");;
             *) printf 'unknown matrix label: %s\n' "$MATRIX_LABEL" >&2; exit 1;;
@@ -247,7 +247,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.label }}
-          path: release/DeepSeek-Harness-Code-*-mac-universal.dmg
+          path: |
+            release/DeepSeek-Harness-Code-*-mac-universal.dmg
+            release/DeepSeek-Harness-Code-*-mac-universal.zip
           if-no-files-found: error
       - name: Upload Linux installer artifacts
         if: always() && (matrix.label == 'linux-x64' || matrix.label == 'linux-arm64')
@@ -290,16 +292,24 @@ jobs:
           VERSION="${GITHUB_REF_NAME#v}"
           NOTES="docs/releases/${VERSION}.md"
           test -f "$NOTES" || NOTES=""
-          args=(--prerelease --title "DeepSeek Harness Code (DHSC) ${VERSION} (Preview)")
+          manifest_args=(
+            --version "$VERSION"
+            --tag "$GITHUB_REF_NAME"
+            --artifacts-dir artifacts
+            --output artifacts/update-manifest.json
+          )
+          if [ -n "$NOTES" ]; then manifest_args+=(--notes-file "$NOTES"); fi
+          node scripts/generate-update-manifest.mjs "${manifest_args[@]}"
+          args=(--latest --title "DeepSeek Harness Code (DHSC) ${VERSION}")
           if [ -n "$NOTES" ]; then
             args+=(--notes-file "$NOTES")
           fi
           if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
-            mapfile -t release_files < <(find artifacts -type f \( -name '*.dmg' -o -name '*.exe' -o -name '*.AppImage' -o -name '*.deb' \) -print)
+            mapfile -t release_files < <(find artifacts -type f \( -name '*.dmg' -o -name '*.zip' -o -name '*.exe' -o -name '*.AppImage' -o -name '*.deb' -o -name 'update-manifest.json' \) -print)
             ((${#release_files[@]} > 0))
             gh release upload "$GITHUB_REF_NAME" "${release_files[@]}" --clobber
           else
-            mapfile -t release_files < <(find artifacts -type f \( -name '*.dmg' -o -name '*.exe' -o -name '*.AppImage' -o -name '*.deb' \) -print)
+            mapfile -t release_files < <(find artifacts -type f \( -name '*.dmg' -o -name '*.zip' -o -name '*.exe' -o -name '*.AppImage' -o -name '*.deb' -o -name 'update-manifest.json' \) -print)
             ((${#release_files[@]} > 0))
             gh release create "$GITHUB_REF_NAME" "${release_files[@]}" "${args[@]}"
           fi

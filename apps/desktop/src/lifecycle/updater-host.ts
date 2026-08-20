@@ -1,25 +1,37 @@
 import { app, dialog, type BrowserWindow } from "electron";
+import { join } from "node:path";
 
 import { getUpdaterConfig } from "../updater/updater-config.js";
-import { checkForUpdate, type UpdaterCheckDeps } from "../updater/updater.js";
+import { createPlatformReplace } from "../updater/replace/index.js";
+import {
+  applyUpdate,
+  checkForUpdate,
+  type ReplaceFn,
+  type UpdaterDeps,
+} from "../updater/updater.js";
 
 export interface UpdaterHostOptions {
   /** Window to parent update dialogs to (undefined = app-modal). */
   parentWindow?: () => BrowserWindow | undefined;
+  /** Test seam; production uses the platform-specific replacement helper. */
+  replace?: ReplaceFn;
+  /** Test seam; production stores downloads under Electron's temp directory. */
+  tempDir?: string;
 }
 
 export interface UpdaterCheckOutcome {
   available: boolean;
   version?: string;
+  applied?: boolean;
 }
 
 /**
- * Host glue for the informational update check. BETA2 deliberately does not
- * schedule background checks, download installers, replace the application,
- * or restart it. Installation remains an explicit user action from Releases.
+ * Host glue for a user-confirmed update check. There is no background timer or
+ * silent replacement: the user explicitly chooses “Update and restart” after
+ * the manifest has been fetched and the platform asset has been selected.
  */
 export class UpdaterHost {
-  private readonly deps: UpdaterCheckDeps;
+  private readonly deps: UpdaterDeps;
   private checking = false;
 
   constructor(private readonly options: UpdaterHostOptions = {}) {
@@ -28,6 +40,15 @@ export class UpdaterHost {
       manifestUrl: config.manifestUrl,
       currentVersion: app.getVersion(),
       platform: process.platform as "darwin" | "win32" | "linux",
+      architecture: process.arch === "arm64" ? "arm64" : "x64",
+      tempDir:
+        options.tempDir ??
+        join(app.getPath("temp"), "deepseek-harness-code-updates"),
+      replace:
+        options.replace ??
+        createPlatformReplace({
+          exit: () => app.quit(),
+        }),
       ...(config.fetchDeps !== undefined
         ? { fetchDeps: config.fetchDeps }
         : {}),
@@ -52,13 +73,25 @@ export class UpdaterHost {
       }
       const version = result.manifest?.latestVersion ?? "";
       const notes = result.manifest?.notes ?? "";
-      await this.showMessageBox(
+      if (opts.silent) return { available: true, version };
+      const choice = await this.showMessageBox(
         "Update available",
-        `A new version ${version} is available. Download it from GitHub Releases to install it.`,
-        ["OK"],
+        `A new version ${version} is available. Download, verify, and restart now?`,
+        ["Update and restart", "Later"],
         notes,
       );
-      return { available: true, version };
+      if (choice !== 0) return { available: true, version };
+      try {
+        await applyUpdate(this.deps, result.asset);
+        return { available: true, version, applied: true };
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        process.stderr.write(`updater: apply failed: ${message}\n`);
+        await this.showMessageBox("Update failed", message.slice(0, 1_000), [
+          "OK",
+        ]);
+        return { available: true, version };
+      }
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       // A 404 on the manifest means no update manifest is published yet

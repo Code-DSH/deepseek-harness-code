@@ -330,10 +330,11 @@ describe("DeepSeek Harness Code distribution contract", () => {
 
     // Then
     expect(new Set(publishedExtensions)).toEqual(
-      new Set(["dmg", "exe", "AppImage", "deb"]),
+      new Set(["dmg", "zip", "exe", "AppImage", "deb"]),
     );
     expect(releaseJob).not.toContain("artifacts/*");
     expect(releaseJob).not.toContain("*.blockmap");
+    expect(releaseJob).toContain("update-manifest.json");
     expect(workflow.slice(0, workflow.indexOf("  release:"))).toContain(
       "setup.exe.blockmap",
     );

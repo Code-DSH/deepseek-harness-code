@@ -1,0 +1,22 @@
+diff --git a/lib/index.js b/lib/index.js
+index e51b73cb720d1b449207f317a5ec3671db2450bd..e19f5f359e09ebb3fab8624e5d25014e0d6c15b4 100644
+--- a/lib/index.js
++++ b/lib/index.js
+@@ -65,7 +65,7 @@ function validateConfig(config) {
+ 	if (resolved.handoffGraceMs < resolved.pollIntervalMs) throw new Error("terminal-bash: handoffGraceMs must be at least pollIntervalMs so one readiness poll runs inside the grace window");
+ }
+ /** Exact printable prompt emitted after the private marker. */
+-const CONTROLLED_PROMPT = "dsh> ";
++const CONTROLLED_PROMPT = "__DSH_PERSISTENT_BASH_PROMPT__";
+ /**
+ * Remove CSI/OSC/short escape sequences while preserving split-sequence carry.
+ * Full terminal emulation is deliberately deferred; ordinary line output and
+@@ -554,7 +554,7 @@ var LocalPtySession = class {
+ 			this.lastOutputAt = Date.now();
+ 		}
+ 		if (this.promptSeen && sanitized.promptTail !== void 0) {
+-			const remaining = Math.max(0, 6 - this.promptTail.length);
++			const remaining = Math.max(0, CONTROLLED_PROMPT.length + 1 - this.promptTail.length);
+ 			this.promptTail += sanitized.promptTail.slice(0, remaining);
+ 			if (sanitized.promptTail.length > remaining) this.promptTail = `${CONTROLLED_PROMPT}\0`;
+ 			this.promptTextSeen = this.promptTail === CONTROLLED_PROMPT;

@@ -128,6 +128,8 @@ const presetLocalePatch =
   "@deepseek-ai__dsh-client-ui-agent-preset@0.1.0-rc.8.patch";
 const sidebarSafeAreaPatch =
   "@deepseek-ai__dsh-client-ui-sidebar@0.1.0-rc.8.patch";
+const terminalBashPromptPatch =
+  "@deepseek-ai__dsh-terminal-bash@0.1.0-rc.8.patch";
 for (const relativePath of [
   "package.json",
   "pnpm-lock.yaml",
@@ -136,7 +138,11 @@ for (const relativePath of [
 ]) {
   await access(join(nodeRuntimeResourceRoot, relativePath));
 }
-for (const runtimePatch of [presetLocalePatch, sidebarSafeAreaPatch]) {
+for (const runtimePatch of [
+  presetLocalePatch,
+  sidebarSafeAreaPatch,
+  terminalBashPromptPatch,
+]) {
   const sourcePatch = await readFile(
     join(projectRoot, "config", "node-runtime", "patches", runtimePatch),
   );
@@ -175,7 +181,8 @@ if (
   !packagedPnpmLock.includes("@deepseek-ai/dsh-client-ui-sidebar@0.1.0-rc.8") ||
   !packagedPnpmLock.includes("patch_hash=") ||
   !packagedPnpmWorkspace.includes(presetLocalePatch) ||
-  !packagedPnpmWorkspace.includes(sidebarSafeAreaPatch)
+  !packagedPnpmWorkspace.includes(sidebarSafeAreaPatch) ||
+  !packagedPnpmWorkspace.includes(terminalBashPromptPatch)
 ) {
   throw new Error(
     "build/node-runtime is missing pinned Harness packages or required client patches",

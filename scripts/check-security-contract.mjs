@@ -70,8 +70,8 @@ const forbidden = [
   ],
   [
     "apps/desktop/src/lifecycle/updater-host.ts",
-    /createPlatformReplace|applyUpdate|DSC_UPDATER_AUTO_APPLY|\bschedule\(/,
-    "automatic update replacement path",
+    /DSC_UPDATER_AUTO_APPLY|\bschedule\(|setInterval\([^)]*update/i,
+    "silent or scheduled update replacement path",
   ],
 ];
 for (const [relativePath, pattern, description] of forbidden) {
