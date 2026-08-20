@@ -256,6 +256,7 @@ describe("DeepSeek Harness Code distribution contract", () => {
     );
     expect(artifactValidationStep).not.toContain("mapfile -t");
     expect(workflow).toContain("Validate tag version");
+    expect(workflow).toContain('if [[ "$GITHUB_REF" == refs/tags/* ]]');
     expect(workflow).toContain("SMOKE_TIMEOUT_MS: 600000");
     expect(workflow).toContain(
       'executable="$squashfs_root/deepseek-harness-code"',
@@ -305,6 +306,7 @@ describe("DeepSeek Harness Code distribution contract", () => {
     expect(smokeScript).toContain("parseWindowsPeMachine");
     expect(smokeScript).toContain('child.stdout?.on("data"');
     expect(smokeScript).toContain('child.stderr?.on("data"');
+    expect(smokeScript).toContain("redactPackagedDiagnostic");
   });
 
   test("parses the package workflow as YAML", async () => {
@@ -380,6 +382,12 @@ describe("DeepSeek Harness Code distribution contract", () => {
     expect(linuxStep).toContain("original_exit=$?");
     expect(linuxStep).toContain('package_installed="false"');
     expect(linuxStep).toContain('package_installed="true"');
+    expect(linuxStep).toContain('sudo apt-get install -y "$deb"');
+    expect(linuxStep).not.toContain('sudo dpkg -i "$deb"');
+    expect(linuxStep).toContain(
+      "executable=$(command -v deepseek-harness-code)",
+    );
+    expect(linuxStep).not.toContain('awk -F= \'$1 == "Exec"');
     expect(linuxStep).toContain("sudo dpkg --purge deepseek-harness-code");
     expect(linuxStep).not.toContain("apt-get remove");
     expect(linuxStep).toContain(

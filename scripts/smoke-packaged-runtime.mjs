@@ -4,6 +4,7 @@ import { constants as fsConstants } from "node:fs";
 import {
   access,
   lstat,
+  mkdtemp,
   mkdir,
   open,
   readFile,
@@ -21,8 +22,10 @@ import {
   dirname,
   isAbsolute,
   join,
+  posix,
   relative,
   resolve,
+  win32,
 } from "node:path";
 import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
@@ -60,6 +63,16 @@ function findExecutable() {
   const configured = argument("--executable") ?? process.env.SMOKE_EXECUTABLE;
   if (configured) return resolve(configured);
   throw new Error("SMOKE_EXECUTABLE or --executable is required");
+}
+
+function buildPackagedSmokeLaunch(platform, userDataPath) {
+  const args = [`--user-data-dir=${userDataPath}`];
+  if (platform === "linux") args.push("--no-sandbox");
+  const pathApi = platform === "win32" ? win32 : posix;
+  return {
+    args,
+    env: { DSH_HOME: pathApi.join(userDataPath, "dsh-home") },
+  };
 }
 
 async function checksum(path) {
@@ -133,6 +146,17 @@ async function assertEvidenceRootAllowed(rootPath, metadataRootPath) {
 
 function pathSeparator() {
   return process.platform === "win32" ? "\\" : "/";
+}
+
+function redactPackagedDiagnostic(value) {
+  return value
+    .replace(
+      /\b(authorization|api[-_ ]?key|token|password|secret)\b\s*[:=]\s*[^\s]+/giu,
+      "$1=[redacted]",
+    )
+    .replace(/https:\/\/[^/@\s:]+:[^@\s]+@/giu, "https://[redacted]@")
+    .replace(/\bsk-[A-Za-z0-9_-]{8,}\b/gu, "[redacted-key]")
+    .slice(-8_000);
 }
 
 async function writeEvidenceAtomically({
@@ -292,7 +316,12 @@ function verifySmokeEvidence(evidence, expected) {
     finalAt < readyAt
   )
     throw new Error("smoke evidence timestamps are not ordered");
-  if (finalAt - startedAt > 5 * 60_000)
+  const requestedWindow = expected.maxDurationMs;
+  const freshnessWindow =
+    Number.isFinite(requestedWindow) && requestedWindow > 0
+      ? Math.min(requestedWindow, 15 * 60_000)
+      : 5 * 60_000;
+  if (finalAt - startedAt > freshnessWindow)
     throw new Error("smoke evidence exceeds the freshness window");
   return {
     origin: ready.harnessOrigin,
@@ -437,8 +466,23 @@ async function assertRuntimeProvenance(smokeEvidence, userData, resourcesRoot) {
     throw new Error("system Node version provenance does not match executable");
 }
 
+async function waitForPackagedExit(child, timeoutMs = 10_000) {
+  if (child.exitCode !== null || child.signalCode !== null) return true;
+  return new Promise((resolveExit) => {
+    const onExit = () => {
+      clearTimeout(timer);
+      resolveExit(true);
+    };
+    const timer = setTimeout(() => {
+      child.removeListener("exit", onExit);
+      resolveExit(false);
+    }, timeoutMs);
+    child.once("exit", onExit);
+  });
+}
+
 async function stopProcess(child, force = false) {
-  if (child.exitCode !== null) return true;
+  if (child.exitCode !== null || child.signalCode !== null) return true;
   if (force && process.platform === "win32") {
     await execFileAsync("taskkill", ["/PID", String(child.pid), "/T", "/F"], {
       windowsHide: true,
@@ -460,8 +504,22 @@ async function stopProcess(child, force = false) {
 }
 
 async function cleanupProcess(child) {
-  if (child === undefined || child.exitCode !== null) return;
+  if (
+    child === undefined ||
+    child.exitCode !== null ||
+    child.signalCode !== null
+  )
+    return;
   await stopProcess(child, true);
+}
+
+async function removeSmokeUserData(path, remove = rm) {
+  await remove(path, {
+    recursive: true,
+    force: true,
+    maxRetries: 5,
+    retryDelay: 200,
+  });
 }
 
 function assertKnownRunnerArchitecture(
@@ -528,6 +586,47 @@ async function waitForEvidence(path, deadline, runId, phase) {
   throw new Error(
     `packaged application did not publish ${phase} smoke evidence`,
   );
+}
+
+async function waitForEvidenceWithExitGrace({
+  path,
+  deadline,
+  runId,
+  phase,
+  child,
+  exitGraceMs = 2_000,
+}) {
+  let exitTimer;
+  let onExit;
+  const exitFailure = new Promise((_, reject) => {
+    const scheduleFailure = (code, signal) => {
+      const remaining = Math.max(0, deadline - Date.now());
+      exitTimer = setTimeout(
+        () =>
+          reject(
+            new Error(
+              `packaged application exited before ${phase} evidence (code=${code ?? "null"}, signal=${signal ?? "null"})`,
+            ),
+          ),
+        Math.min(exitGraceMs, remaining),
+      );
+    };
+    onExit = scheduleFailure;
+    if (child.exitCode !== null || child.signalCode !== null) {
+      scheduleFailure(child.exitCode, child.signalCode);
+    } else {
+      child.once("exit", onExit);
+    }
+  });
+  try {
+    return await Promise.race([
+      waitForEvidence(path, deadline, runId, phase),
+      exitFailure,
+    ]);
+  } finally {
+    if (onExit !== undefined) child.removeListener("exit", onExit);
+    if (exitTimer !== undefined) clearTimeout(exitTimer);
+  }
 }
 
 async function waitForSmokeAcknowledgement(path, deadline, runId, appPid) {
@@ -646,9 +745,6 @@ async function main() {
   };
   if (artifactSha256 !== expectedArtifactHash)
     throw new Error("packaged artifact SHA-256 does not match expected hash");
-  const userData = await import("node:fs/promises").then(({ mkdtemp }) =>
-    mkdtemp(join(tmpdir(), "dsh-packaged-smoke-")),
-  );
   await mkdir(evidenceRoot, { recursive: true });
   await assertEvidenceRootAllowed(evidenceRoot, metadataRoot);
   await assertPathWithinRoot(resolve(evidencePath), evidenceRoot);
@@ -665,7 +761,9 @@ async function main() {
   await unlink(resolve(`${appEvidencePath}.ack`)).catch((error) => {
     if (!(error instanceof Error) || error.code !== "ENOENT") throw error;
   });
+  const userData = await mkdtemp(join(evidenceRoot, ".user-data-"));
   let child;
+  let childDiagnostics = "";
   let exitedCleanly = false;
   let finalization;
   const finalize = () => {
@@ -680,7 +778,7 @@ async function main() {
           content: `${JSON.stringify(evidence, null, 2)}\n`,
         });
       } finally {
-        await rm(userData, { recursive: true, force: true });
+        await removeSmokeUserData(userData);
       }
     })();
     return finalization;
@@ -691,7 +789,8 @@ async function main() {
   }, process.exit.bind(process));
   process.on("SIGINT", onInterrupt);
   process.on("SIGTERM", onInterrupt);
-  child = spawn(executable, [], {
+  const packagedLaunch = buildPackagedSmokeLaunch(process.platform, userData);
+  child = spawn(executable, packagedLaunch.args, {
     cwd: root,
     env: {
       ...process.env,
@@ -700,10 +799,12 @@ async function main() {
       XDG_DATA_HOME: join(userData, "data"),
       XDG_STATE_HOME: join(userData, "state"),
       XDG_CACHE_HOME: join(userData, "cache"),
+      ...packagedLaunch.env,
       SMOKE_MODE: "ci",
       SMOKE_EVIDENCE_PATH: resolve(appEvidencePath),
       SMOKE_ACK_PATH: resolve(`${appEvidencePath}.ack`),
       SMOKE_EVIDENCE_ROOT: evidenceRoot,
+      SMOKE_USER_DATA_PATH: userData,
       SMOKE_RUN_ID: runId,
       MATRIX_LABEL: matrixLabel,
       PACKAGE_KIND: packageKind,
@@ -719,11 +820,21 @@ async function main() {
   // Always consume both pipes. First-launch package installation and Harness
   // diagnostics can exceed an OS pipe buffer; leaving them unread can block
   // the packaged process before it publishes ready evidence.
-  child.stdout?.on("data", () => undefined);
-  child.stderr?.on("data", () => undefined);
+  const captureDiagnostic = (source, chunk) => {
+    childDiagnostics = redactPackagedDiagnostic(
+      `${childDiagnostics}\n[${source}] ${String(chunk)}`,
+    );
+  };
+  child.stdout?.on("data", (chunk) => captureDiagnostic("stdout", chunk));
+  child.stderr?.on("data", (chunk) => captureDiagnostic("stderr", chunk));
   const deadline = Date.now() + timeoutMs;
   try {
     child.once("exit", (code, signal) => {
+      if (childDiagnostics.trim() !== "") {
+        process.stderr.write(
+          `packaged application diagnostics:${childDiagnostics}\n`,
+        );
+      }
       if (code !== null || signal !== null)
         process.stderr.write(
           `packaged application exited before evidence (code=${code ?? "null"}, signal=${signal ?? "null"})\n`,
@@ -750,6 +861,7 @@ async function main() {
       artifactFilename,
       artifactSha256,
       startedAt,
+      maxDurationMs: timeoutMs,
     };
     const identity = verifySmokeReadyEvidence(readyEvidence, expectedMetadata);
     await assertRuntimeProvenance(
@@ -768,20 +880,17 @@ async function main() {
       `${JSON.stringify({ runId, appPid: identity.appPid })}\n`,
       { encoding: "utf8", mode: 0o600 },
     );
-    const smokeEvidence = await Promise.race([
-      waitForEvidence(resolve(appEvidencePath), deadline, runId, "final"),
-      new Promise((_, reject) => {
-        child.once("exit", (code, signal) =>
-          reject(
-            new Error(
-              `packaged application exited before final evidence (code=${code ?? "null"}, signal=${signal ?? "null"})`,
-            ),
-          ),
-        );
-      }),
-    ]);
+    const smokeEvidence = await waitForEvidenceWithExitGrace({
+      path: resolve(appEvidencePath),
+      deadline,
+      runId,
+      phase: "final",
+      child,
+    });
     verifySmokeEvidence(smokeEvidence, expectedMetadata);
-    exitedCleanly = child.exitCode !== null ? true : await stopProcess(child);
+    const exitedNaturally = await waitForPackagedExit(child);
+    if (!exitedNaturally) await stopProcess(child);
+    exitedCleanly = child.exitCode === 0;
     evidence.runtime.exitCode = child.exitCode;
     evidence.runtime.exitedCleanly = exitedCleanly;
     if (!exitedCleanly || child.exitCode !== 0)
@@ -792,6 +901,9 @@ async function main() {
     await new Promise((resolveDelay) => setTimeout(resolveDelay, 2_500));
     await assertPortClosed(identity.port);
   } catch (error) {
+    if (childDiagnostics.trim() !== "") {
+      evidence.runtime.diagnostics = childDiagnostics;
+    }
     evidence.failure ??=
       error instanceof Error ? error.message : "packaged smoke failed";
     throw error;
@@ -818,6 +930,11 @@ export {
   waitForSmokeAcknowledgement,
   validateArtifactContract,
   parseWindowsPeMachine,
+  buildPackagedSmokeLaunch,
+  waitForPackagedExit,
+  waitForEvidenceWithExitGrace,
+  removeSmokeUserData,
+  redactPackagedDiagnostic,
 };
 
 if (

@@ -20,6 +20,7 @@ import {
   completeSmokeShutdown,
   isEvidencePathWithinRoot,
   parseSmokeConfig,
+  resolveApplicationUserDataPath,
   validateSmokeRuntimeProvenance,
 } from "../../apps/desktop/src/lifecycle/smoke-contract.js";
 
@@ -35,11 +36,13 @@ const smokeMetadata = {
 const smokeConfig = {
   path: "/tmp/smoke.json",
   root: "/tmp",
+  userDataPath: "/tmp/smoke-user-data",
   runId: "run-1234",
   ...smokeMetadata,
 };
 
 const smokeEnv = {
+  SMOKE_USER_DATA_PATH: "/tmp/smoke-user-data",
   MATRIX_LABEL: smokeMetadata.matrixLabel,
   PACKAGE_KIND: smokeMetadata.packageKind,
   EXPECTED_ARCHITECTURE: smokeMetadata.expectedArchitecture,
@@ -82,10 +85,35 @@ describe("application-owned smoke contract", () => {
     expect(config).toEqual({
       path: "/tmp/smoke.json",
       root: "/tmp",
+      userDataPath: "/tmp/smoke-user-data",
       acknowledgementPath: "/tmp/smoke.json.ack",
       runId: "run-1234",
       ...smokeMetadata,
     });
+  });
+
+  it("uses only a validated smoke user-data root", () => {
+    expect(
+      resolveApplicationUserDataPath("/normal/user-data", {
+        userDataPath: "/tmp/smoke-user-data",
+      }),
+    ).toBe("/tmp/smoke-user-data");
+    expect(resolveApplicationUserDataPath("/normal/user-data")).toBe(
+      "/normal/user-data",
+    );
+    expect(
+      parseSmokeConfig(
+        {
+          SMOKE_MODE: "ci",
+          SMOKE_EVIDENCE_ROOT: "/tmp/evidence",
+          SMOKE_EVIDENCE_PATH: "/tmp/evidence/run.json",
+          SMOKE_RUN_ID: "run-1234",
+          ...smokeEnv,
+          SMOKE_USER_DATA_PATH: "/tmp/outside",
+        },
+        { isPackaged: true },
+      ),
+    ).toBeUndefined();
   });
 
   it("builds ready evidence from the exact loopback origin and process IDs", () => {
@@ -169,12 +197,14 @@ describe("application-owned smoke contract", () => {
           SMOKE_EVIDENCE_PATH: "/tmp/evidence/run.json",
           SMOKE_RUN_ID: "run-1234",
           ...smokeEnv,
+          SMOKE_USER_DATA_PATH: "/tmp/evidence/user-data",
         },
         { isPackaged: true },
       ),
     ).toEqual({
       path: "/tmp/evidence/run.json",
       root: "/tmp/evidence",
+      userDataPath: "/tmp/evidence/user-data",
       acknowledgementPath: "/tmp/evidence/run.json.ack",
       runId: "run-1234",
       ...smokeMetadata,
@@ -187,6 +217,7 @@ describe("application-owned smoke contract", () => {
           SMOKE_EVIDENCE_PATH: "/tmp/other/run.json",
           SMOKE_RUN_ID: "run-1234",
           ...smokeEnv,
+          SMOKE_USER_DATA_PATH: "/tmp/evidence/user-data",
         },
         { isPackaged: true },
       ),
@@ -225,6 +256,7 @@ describe("application-owned smoke contract", () => {
         SMOKE_ALLOW_UNPACKAGED: "1",
         SMOKE_EVIDENCE_ROOT: "/tmp/evidence",
         SMOKE_EVIDENCE_PATH: "/tmp/evidence/run.json",
+        SMOKE_USER_DATA_PATH: "/tmp/evidence/user-data",
         SMOKE_RUN_ID: "run-1234",
         MATRIX_LABEL: "windows-x64",
         PACKAGE_KIND: "nsis",
@@ -249,6 +281,7 @@ describe("application-owned smoke contract", () => {
         SMOKE_ALLOW_UNPACKAGED: "1",
         SMOKE_EVIDENCE_ROOT: "/tmp/evidence",
         SMOKE_EVIDENCE_PATH: "/tmp/evidence/run.json",
+        SMOKE_USER_DATA_PATH: "/tmp/evidence/user-data",
         SMOKE_RUN_ID: "run-1234",
         MATRIX_LABEL: "unknown",
         PACKAGE_KIND: "nsis",
@@ -353,6 +386,7 @@ describe("application-owned smoke contract", () => {
       {
         path: join(root, "ready.json"),
         root,
+        userDataPath: join(root, "user-data"),
         acknowledgementPath,
         runId: "run-1234",
         ...smokeMetadata,

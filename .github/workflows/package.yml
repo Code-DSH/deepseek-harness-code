@@ -61,7 +61,10 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - name: Validate tag version
         shell: bash
-        run: test "$GITHUB_REF_NAME" = "v$(node -p 'require("./package.json").version')"
+        run: |
+          if [[ "$GITHUB_REF" == refs/tags/* ]]; then
+            test "$GITHUB_REF_NAME" = "v$(node -p 'require("./package.json").version')"
+          fi
       - run: pnpm build
       - run: pnpm build:icon
       - run: pnpm preflight:runtime
@@ -210,18 +213,21 @@ jobs:
           [[ "$deb_filename_arch" == x64 ]] && deb_filename_arch=amd64
           deb=$(find release -maxdepth 1 -type f -name "DeepSeek-Harness-Code-*-linux-${deb_filename_arch}.deb" -print)
           [[ "$(wc -l <<< "$deb")" -eq 1 ]]
+          deb=$(realpath "$deb")
           expected_deb_arch=amd64
           [[ "$EXPECTED_ARCHITECTURE" == arm64 ]] && expected_deb_arch=arm64
           [[ "$(dpkg-deb -f "$deb" Package)" == deepseek-harness-code ]]
           [[ -n "$(dpkg-deb -f "$deb" Version)" ]]
           [[ "$(dpkg-deb -f "$deb" Architecture)" == "$expected_deb_arch" ]]
-          sudo dpkg -i "$deb"
+          sudo apt-get update
+          sudo apt-get install -y "$deb"
           package_installed="true"
           [[ "$(dpkg-query -W -f='${Status}' deepseek-harness-code)" == "install ok installed" ]]
           desktop=$(dpkg-query -L deepseek-harness-code | awk '/\/usr\/share\/applications\/.*\.desktop$/ { print; exit }')
           [[ -n "$desktop" && -f "$desktop" ]]
-          executable=$(awk -F= '$1 == "Exec" { print $2; exit }' "$desktop" | awk '{print $1}')
+          executable=$(command -v deepseek-harness-code)
           [[ -n "$executable" && -x "$executable" ]]
+          executable=$(realpath "$executable")
           install_dir=$(dirname "$executable")
           resources="$install_dir/resources"
           [[ -d "$resources" ]]

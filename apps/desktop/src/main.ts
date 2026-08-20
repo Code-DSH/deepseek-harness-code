@@ -52,6 +52,7 @@ import {
   awaitSmokeAcknowledgement,
   completeSmokeShutdown,
   parseSmokeConfig,
+  resolveApplicationUserDataPath,
   validateSmokeRuntimeProvenance,
   type SmokeReadyEvidence,
 } from "./lifecycle/smoke-contract.js";
@@ -140,7 +141,10 @@ async function writeSmokeFailure(error: unknown): Promise<void> {
 // intentional compatibility path; no user data is copied into the app bundle.
 app.setPath(
   "userData",
-  join(app.getPath("appData"), "deepseek-harness-desktop"),
+  resolveApplicationUserDataPath(
+    join(app.getPath("appData"), "deepseek-harness-desktop"),
+    smokeConfig,
+  ),
 );
 
 // One window per user data directory. Without the lock, every relaunch while

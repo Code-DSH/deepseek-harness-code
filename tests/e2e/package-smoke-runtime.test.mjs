@@ -8,6 +8,7 @@ import {
 } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { EventEmitter } from "node:events";
 
 import { describe, expect, test } from "vitest";
 
@@ -19,6 +20,11 @@ import {
   assertKnownRunnerArchitecture,
   validateArtifactContract,
   parseWindowsPeMachine,
+  buildPackagedSmokeLaunch,
+  waitForPackagedExit,
+  waitForEvidenceWithExitGrace,
+  removeSmokeUserData,
+  redactPackagedDiagnostic,
   waitForSmokeAcknowledgement,
 } from "../../scripts/smoke-packaged-runtime.mjs";
 
@@ -39,6 +45,75 @@ const expectedMetadata = {
 };
 
 describe("packaged runtime listener selection", () => {
+  test("waits for the packaged app to exit naturally after final evidence", async () => {
+    const child = new EventEmitter();
+    child.exitCode = null;
+    child.signalCode = null;
+    const waiting = waitForPackagedExit(child, 100);
+    child.exitCode = 0;
+    child.emit("exit", 0, null);
+
+    await expect(waiting).resolves.toBe(true);
+  });
+
+  test("accepts final evidence written just after a clean process exit", async () => {
+    const root = await mkdtemp(join(tmpdir(), "dsh-final-evidence-"));
+    const path = join(root, "final.json");
+    const child = new EventEmitter();
+    child.exitCode = null;
+    child.signalCode = null;
+    const waiting = waitForEvidenceWithExitGrace({
+      path,
+      deadline: Date.now() + 1_000,
+      runId: "run-final",
+      phase: "final",
+      child,
+      exitGraceMs: 500,
+    });
+    child.exitCode = 0;
+    child.emit("exit", 0, null);
+    await writeFile(
+      path,
+      JSON.stringify({
+        schema: 2,
+        runId: "run-final",
+        final: { phase: "final" },
+      }),
+    );
+
+    await expect(waiting).resolves.toMatchObject({
+      final: { phase: "final" },
+    });
+  });
+
+  test("retries removal of the isolated smoke user-data directory", async () => {
+    let received;
+    await removeSmokeUserData("/tmp/isolated-smoke", async (...args) => {
+      received = args;
+    });
+
+    expect(received).toEqual([
+      "/tmp/isolated-smoke",
+      {
+        recursive: true,
+        force: true,
+        maxRetries: 5,
+        retryDelay: 200,
+      },
+    ]);
+  });
+
+  test("isolates Harness Home and disables only the Linux CI sandbox", () => {
+    expect(buildPackagedSmokeLaunch("linux", "/tmp/smoke-user-data")).toEqual({
+      args: ["--user-data-dir=/tmp/smoke-user-data", "--no-sandbox"],
+      env: { DSH_HOME: "/tmp/smoke-user-data/dsh-home" },
+    });
+    expect(buildPackagedSmokeLaunch("win32", "C:\\smoke-user-data")).toEqual({
+      args: ["--user-data-dir=C:\\smoke-user-data"],
+      env: { DSH_HOME: "C:\\smoke-user-data\\dsh-home" },
+    });
+  });
+
   test("keeps product smoke runner free of agent metadata paths", async () => {
     const source = await readFile(
       new URL("../../scripts/smoke-packaged-runtime.mjs", import.meta.url),
@@ -101,12 +176,17 @@ describe("packaged runtime listener selection", () => {
         systemNode: { executable: "/usr/bin/node", version: "24.1.0" },
         timestamps: {
           readyAt: "2026-08-19T00:00:01.000Z",
-          finalAt: "2026-08-19T00:00:02.000Z",
+          finalAt: "2026-08-19T00:07:00.000Z",
         },
       },
     };
 
-    expect(verifySmokeEvidence(evidence, expectedMetadata)).toEqual({
+    expect(
+      verifySmokeEvidence(evidence, {
+        ...expectedMetadata,
+        maxDurationMs: 10 * 60_000,
+      }),
+    ).toEqual({
       origin: "http://127.0.0.1:41002",
       appPid: 7000,
       harnessPid: 7002,
@@ -227,6 +307,17 @@ describe("packaged runtime listener selection", () => {
     pe.writeUInt32LE(64, 60);
     pe.writeUInt16LE(34404, 68);
     expect(parseWindowsPeMachine(pe)).toBe(34404);
+  });
+
+  test("bounds and redacts packaged process diagnostics", () => {
+    const diagnostic = redactPackagedDiagnostic(
+      `${"x".repeat(10_000)} authorization=Bearer-secret token=abc123 password=hunter2 sk-abcdefghijk`,
+    );
+    expect(diagnostic.length).toBeLessThanOrEqual(8_000);
+    expect(diagnostic).not.toContain("Bearer-secret");
+    expect(diagnostic).not.toContain("abc123");
+    expect(diagnostic).not.toContain("hunter2");
+    expect(diagnostic).not.toContain("sk-abcdefghijk");
   });
 
   test("rejects a misleading architecture substring without the exact package filename", () => {
