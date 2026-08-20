@@ -61,7 +61,10 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - name: Validate tag version
         shell: bash
-        run: test "$GITHUB_REF_NAME" = "v$(node -p 'require("./package.json").version')"
+        run: |
+          if [[ "$GITHUB_REF" == refs/tags/* ]]; then
+            test "$GITHUB_REF_NAME" = "v$(node -p 'require("./package.json").version')"
+          fi
       - run: pnpm build
       - run: pnpm build:icon
       - run: pnpm preflight:runtime

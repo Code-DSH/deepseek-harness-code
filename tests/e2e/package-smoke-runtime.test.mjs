@@ -19,6 +19,7 @@ import {
   assertKnownRunnerArchitecture,
   validateArtifactContract,
   parseWindowsPeMachine,
+  redactPackagedDiagnostic,
   waitForSmokeAcknowledgement,
 } from "../../scripts/smoke-packaged-runtime.mjs";
 
@@ -227,6 +228,17 @@ describe("packaged runtime listener selection", () => {
     pe.writeUInt32LE(64, 60);
     pe.writeUInt16LE(34404, 68);
     expect(parseWindowsPeMachine(pe)).toBe(34404);
+  });
+
+  test("bounds and redacts packaged process diagnostics", () => {
+    const diagnostic = redactPackagedDiagnostic(
+      `${"x".repeat(10_000)} authorization=Bearer-secret token=abc123 password=hunter2 sk-abcdefghijk`,
+    );
+    expect(diagnostic.length).toBeLessThanOrEqual(8_000);
+    expect(diagnostic).not.toContain("Bearer-secret");
+    expect(diagnostic).not.toContain("abc123");
+    expect(diagnostic).not.toContain("hunter2");
+    expect(diagnostic).not.toContain("sk-abcdefghijk");
   });
 
   test("rejects a misleading architecture substring without the exact package filename", () => {

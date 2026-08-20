@@ -135,6 +135,17 @@ function pathSeparator() {
   return process.platform === "win32" ? "\\" : "/";
 }
 
+function redactPackagedDiagnostic(value) {
+  return value
+    .replace(
+      /\b(authorization|api[-_ ]?key|token|password|secret)\b\s*[:=]\s*[^\s]+/giu,
+      "$1=[redacted]",
+    )
+    .replace(/https:\/\/[^/@\s:]+:[^@\s]+@/giu, "https://[redacted]@")
+    .replace(/\bsk-[A-Za-z0-9_-]{8,}\b/gu, "[redacted-key]")
+    .slice(-8_000);
+}
+
 async function writeEvidenceAtomically({
   evidencePath: finalPath,
   evidenceRoot: rootPath,
@@ -666,6 +677,7 @@ async function main() {
     if (!(error instanceof Error) || error.code !== "ENOENT") throw error;
   });
   let child;
+  let childDiagnostics = "";
   let exitedCleanly = false;
   let finalization;
   const finalize = () => {
@@ -719,11 +731,21 @@ async function main() {
   // Always consume both pipes. First-launch package installation and Harness
   // diagnostics can exceed an OS pipe buffer; leaving them unread can block
   // the packaged process before it publishes ready evidence.
-  child.stdout?.on("data", () => undefined);
-  child.stderr?.on("data", () => undefined);
+  const captureDiagnostic = (source, chunk) => {
+    childDiagnostics = redactPackagedDiagnostic(
+      `${childDiagnostics}\n[${source}] ${String(chunk)}`,
+    );
+  };
+  child.stdout?.on("data", (chunk) => captureDiagnostic("stdout", chunk));
+  child.stderr?.on("data", (chunk) => captureDiagnostic("stderr", chunk));
   const deadline = Date.now() + timeoutMs;
   try {
     child.once("exit", (code, signal) => {
+      if (childDiagnostics.trim() !== "") {
+        process.stderr.write(
+          `packaged application diagnostics:${childDiagnostics}\n`,
+        );
+      }
       if (code !== null || signal !== null)
         process.stderr.write(
           `packaged application exited before evidence (code=${code ?? "null"}, signal=${signal ?? "null"})\n`,
@@ -792,6 +814,9 @@ async function main() {
     await new Promise((resolveDelay) => setTimeout(resolveDelay, 2_500));
     await assertPortClosed(identity.port);
   } catch (error) {
+    if (childDiagnostics.trim() !== "") {
+      evidence.runtime.diagnostics = childDiagnostics;
+    }
     evidence.failure ??=
       error instanceof Error ? error.message : "packaged smoke failed";
     throw error;
@@ -818,6 +843,7 @@ export {
   waitForSmokeAcknowledgement,
   validateArtifactContract,
   parseWindowsPeMachine,
+  redactPackagedDiagnostic,
 };
 
 if (
