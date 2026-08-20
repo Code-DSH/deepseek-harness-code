@@ -110,7 +110,7 @@ describe("packaged runtime listener selection", () => {
     });
     expect(buildPackagedSmokeLaunch("win32", "C:\\smoke-user-data")).toEqual({
       args: ["--user-data-dir=C:\\smoke-user-data"],
-      env: { DSH_HOME: join("C:\\smoke-user-data", "dsh-home") },
+      env: { DSH_HOME: "C:\\smoke-user-data\\dsh-home" },
     });
   });
 

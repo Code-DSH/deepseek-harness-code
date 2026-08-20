@@ -22,8 +22,10 @@ import {
   dirname,
   isAbsolute,
   join,
+  posix,
   relative,
   resolve,
+  win32,
 } from "node:path";
 import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
@@ -66,9 +68,10 @@ function findExecutable() {
 function buildPackagedSmokeLaunch(platform, userDataPath) {
   const args = [`--user-data-dir=${userDataPath}`];
   if (platform === "linux") args.push("--no-sandbox");
+  const pathApi = platform === "win32" ? win32 : posix;
   return {
     args,
-    env: { DSH_HOME: join(userDataPath, "dsh-home") },
+    env: { DSH_HOME: pathApi.join(userDataPath, "dsh-home") },
   };
 }
 
