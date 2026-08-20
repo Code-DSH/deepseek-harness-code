@@ -382,6 +382,8 @@ describe("DeepSeek Harness Code distribution contract", () => {
     expect(linuxStep).toContain("original_exit=$?");
     expect(linuxStep).toContain('package_installed="false"');
     expect(linuxStep).toContain('package_installed="true"');
+    expect(linuxStep).toContain('sudo apt-get install -y "$deb"');
+    expect(linuxStep).not.toContain('sudo dpkg -i "$deb"');
     expect(linuxStep).toContain("sudo dpkg --purge deepseek-harness-code");
     expect(linuxStep).not.toContain("apt-get remove");
     expect(linuxStep).toContain(
