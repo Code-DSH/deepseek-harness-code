@@ -31,6 +31,7 @@ import {
   reserveLoopbackPort,
   startWithPortRetries,
 } from "./lifecycle/port-retry.js";
+import { registerDesktopLifecycle } from "./lifecycle/app-lifecycle.js";
 import {
   HarnessRuntimeController,
   type HarnessChild,
@@ -41,6 +42,16 @@ import {
   startupFailureFromDiagnostics,
 } from "./lifecycle/startup-diagnostics.js";
 import { WatchdogHost } from "./lifecycle/watchdog-host.js";
+import { writeEvidenceAtomically } from "./lifecycle/atomic-evidence.js";
+import {
+  buildSmokeFinalEvidence,
+  buildSmokeReadyEvidence,
+  awaitSmokeAcknowledgement,
+  completeSmokeShutdown,
+  parseSmokeConfig,
+  validateSmokeRuntimeProvenance,
+  type SmokeReadyEvidence,
+} from "./lifecycle/smoke-contract.js";
 import {
   ensureRuntimePackages,
   type NodeRuntimePaths,
@@ -88,12 +99,36 @@ let harnessOrigin = "";
 let healthTimer: ReturnType<typeof setInterval> | undefined;
 let watchdogHost: WatchdogHost | undefined;
 let tray: Tray | undefined;
-let quitting = false;
 let preferences: DesktopPreferencesState = { ...DEFAULT_DESKTOP_PREFERENCES };
 let anchoredPresetNotice: RuntimeNotice | undefined;
 let routingSuiteNotice: RuntimeNotice | undefined;
 let nodeRuntimePaths: NodeRuntimePaths | undefined;
 let systemNodeRuntime: ResolvedSystemNode | undefined;
+const smokeConfig = parseSmokeConfig(process.env, {
+  isPackaged: app.isPackaged,
+});
+const smokeStartedAt = smokeConfig?.startedAt ?? new Date().toISOString();
+let smokeReadyEvidence: SmokeReadyEvidence | undefined;
+let smokeFailureWritten = false;
+
+async function writeSmokeEvidence(value: unknown): Promise<void> {
+  if (smokeConfig === undefined) return;
+  await writeEvidenceAtomically(smokeConfig.path, value);
+}
+
+async function writeSmokeFailure(error: unknown): Promise<void> {
+  if (smokeConfig === undefined || smokeFailureWritten) return;
+  smokeFailureWritten = true;
+  await writeSmokeEvidence({
+    schema: 2,
+    runId: smokeConfig.runId,
+    startedAt: smokeStartedAt,
+    failure:
+      error instanceof Error
+        ? error.message.slice(0, 2_000)
+        : "smoke startup failed",
+  });
+}
 
 // Preserve sessions and credentials across the product rename. This is an
 // intentional compatibility path; no user data is copied into the app bundle.
@@ -211,7 +246,7 @@ function createWindow(showStartupPage = true): BrowserWindow {
     window.webContents.paste();
   });
   window.on("close", (event) => {
-    if (quitting) return;
+    if (lifecycle.isQuitting()) return;
     event.preventDefault();
     void handleWindowClose(window).catch(reportRuntimeFailure);
   });
@@ -839,8 +874,69 @@ async function launch(): Promise<void> {
       isHarnessChildAlive(child) && httpOk(origin),
     isChildAlive: isHarnessChildAlive,
     runtimeNotice: () => routingSuiteNotice ?? anchoredPresetNotice,
-    onReady: async (origin) => {
+    onReady: async (origin, child) => {
       await mainWindow?.loadURL(origin);
+      if (smokeConfig === undefined || child.pid === undefined) return;
+      const provenance = {
+        harnessHome: resolveHarnessDataPaths(app.getPath("userData")).dshHome,
+        resourceRoot: process.resourcesPath,
+        systemNode: {
+          executable: systemNodeRuntime?.executable ?? "",
+          version:
+            spawnSync(systemNodeRuntime?.executable ?? "", ["--version"], {
+              encoding: "utf8",
+              windowsHide: true,
+            })
+              .stdout?.trim()
+              .match(/^v(\d+\.\d+\.\d+)$/u)?.[1] ?? null,
+        },
+      };
+      validateSmokeRuntimeProvenance(provenance, [
+        app.getPath("userData"),
+        process.resourcesPath,
+      ]);
+      smokeReadyEvidence = buildSmokeReadyEvidence(smokeConfig, {
+        harnessOrigin: origin,
+        appPid: process.pid,
+        harnessPid: child.pid,
+        listenerPid: child.pid,
+        readinessProbePassed: true,
+        packaged: app.isPackaged,
+        resources: [
+          join(process.resourcesPath, "desktop-plugin", "package.json"),
+          join(
+            process.resourcesPath,
+            "anchored-standard-plugin",
+            "package.json",
+          ),
+          join(process.resourcesPath, "node-runtime", "package.json"),
+          join(process.resourcesPath, "routing-suite", "versions.json"),
+        ],
+        harnessHome: provenance.harnessHome,
+        resourceRoot: provenance.resourceRoot,
+        systemNode: provenance.systemNode,
+      });
+      await writeSmokeEvidence({
+        schema: 2,
+        runId: smokeConfig.runId,
+        ready: smokeReadyEvidence,
+        startedAt: smokeStartedAt,
+      });
+      await awaitSmokeAcknowledgement(
+        {
+          acknowledgementPath: smokeConfig.acknowledgementPath ?? "",
+          runId: smokeConfig.runId,
+          appPid: process.pid,
+          timeoutMs: 30_000,
+          pollIntervalMs: 100,
+        },
+        {
+          now: performance.now.bind(performance),
+          delay: (milliseconds) =>
+            new Promise<void>((resolve) => setTimeout(resolve, milliseconds)),
+          requestQuit: () => queueMicrotask(() => app.quit()),
+        },
+      );
     },
     onState: (state) => {
       if (mainWindow === undefined || mainWindow.isDestroyed()) return;
@@ -893,6 +989,7 @@ function reportRuntimeFailure(error: unknown): void {
 
 function reportLaunchFailure(error: unknown): void {
   reportRuntimeFailure(error);
+  void writeSmokeFailure(error).catch(reportRuntimeFailure);
   const message =
     error instanceof Error
       ? error.message.slice(0, 2_000)
@@ -907,35 +1004,61 @@ if (hasSingleInstanceLock) {
     mainWindow.show();
     mainWindow.focus();
   });
-  app
-    .whenReady()
-    .then(() => {
-      app.on("activate", () => {
-        if (BrowserWindow.getAllWindows().length === 0) createWindow();
-        else mainWindow?.show();
-      });
-      return launch();
-    })
-    .catch(reportLaunchFailure);
-  app.on("before-quit", (event) => {
-    if (quitting) return;
-    event.preventDefault();
-    quitting = true;
-    if (healthTimer !== undefined) clearInterval(healthTimer);
-    void shutdownNormally();
-  });
 }
 
+const lifecycle = hasSingleInstanceLock
+  ? registerDesktopLifecycle(
+      {
+        whenReady: () => app.whenReady(),
+        onActivate: (listener) => app.on("activate", listener),
+        onBeforeQuit: (listener) => app.on("before-quit", listener),
+      },
+      {
+        activate: () => {
+          if (BrowserWindow.getAllWindows().length === 0) createWindow();
+          else mainWindow?.show();
+        },
+        launch,
+        shutdown: shutdownNormally,
+        clearHealthTimer: () => {
+          if (healthTimer !== undefined) clearInterval(healthTimer);
+        },
+        reportLaunchFailure,
+      },
+    )
+  : { isQuitting: () => false };
+
 async function shutdownNormally(): Promise<void> {
+  let watchdogAcked = false;
+  let harnessRetired = false;
   try {
-    await watchdogHost?.shutdown();
+    watchdogAcked = (await watchdogHost?.shutdown())?.status === "acknowledged";
   } catch (error) {
     reportRuntimeFailure(error);
   }
   try {
-    await controller?.stop();
+    harnessRetired = (await controller?.stop())?.retired ?? true;
   } catch (error) {
     reportRuntimeFailure(error);
   }
-  app.quit();
+  await completeSmokeShutdown({
+    writeFinalEvidence: async () => {
+      if (smokeConfig === undefined || smokeReadyEvidence === undefined) return;
+      const finalEvidence = buildSmokeFinalEvidence(smokeConfig, {
+        ready: smokeReadyEvidence,
+        watchdogAcked,
+        harnessRetired,
+      });
+      await writeSmokeEvidence({
+        schema: 2,
+        runId: smokeConfig.runId,
+        ready: smokeReadyEvidence,
+        final: finalEvidence,
+        startedAt: smokeStartedAt,
+      });
+    },
+    quit: () => app.quit(),
+    reportFailure: (message) =>
+      console.error(`[DeepSeek Harness Code] ${message}`),
+  });
 }

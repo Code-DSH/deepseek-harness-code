@@ -17,22 +17,37 @@ jobs:
       matrix:
         include:
           - label: windows-x64
+            package-kind: nsis
+            expected-architecture: x64
             os: windows-2025
             command: pnpm exec electron-builder --win nsis --x64 --publish never
           - label: windows-arm64
+            package-kind: nsis
+            expected-architecture: arm64
             os: windows-2025
             command: pnpm exec electron-builder --win nsis --arm64 --publish never
           - label: macos-universal
+            package-kind: dmg
+            expected-architecture: universal
             os: macos-latest
             command: pnpm exec electron-builder --mac dmg --universal --publish never
           - label: linux-x64
+            package-kind: appimage-deb
+            expected-architecture: x64
             os: ubuntu-latest
             command: pnpm exec electron-builder --linux AppImage deb --x64 --publish never
           - label: linux-arm64
+            package-kind: appimage-deb
+            expected-architecture: arm64
             os: ubuntu-latest
             command: pnpm exec electron-builder --linux AppImage deb --arm64 --publish never
     runs-on: ${{ matrix.os }}
     timeout-minutes: 60
+    env:
+      MATRIX_LABEL: ${{ matrix.label }}
+      PACKAGE_KIND: ${{ matrix.package-kind }}
+      EXPECTED_ARCHITECTURE: ${{ matrix.expected-architecture }}
+      EVIDENCE_ROOT: ${{ github.workspace }}/release/evidence/${{ matrix.label }}
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -47,16 +62,188 @@ jobs:
       - run: pnpm build:icon
       - run: pnpm preflight:runtime
       - run: ${{ matrix.command }}
-      - uses: actions/upload-artifact@v4
+      - name: Validate exact package artifacts
+        shell: bash
+        run: |
+          set -euo pipefail
+          case "$MATRIX_LABEL" in
+            windows-*) patterns=("release/DeepSeek-Harness-Code-*-windows-${EXPECTED_ARCHITECTURE}-setup.exe");;
+            macos-*) patterns=("release/DeepSeek-Harness-Code-*-mac-universal.dmg");;
+            linux-*) patterns=("release/DeepSeek-Harness-Code-*-linux-${EXPECTED_ARCHITECTURE}.AppImage" "release/DeepSeek-Harness-Code-*-linux-${EXPECTED_ARCHITECTURE}.deb");;
+            *) printf 'unknown matrix label: %s\n' "$MATRIX_LABEL" >&2; exit 1;;
+          esac
+          for pattern in "${patterns[@]}"; do
+            mapfile -t matches < <(compgen -G "$pattern" || true)
+            if [[ "${#matches[@]}" -ne 1 ]]; then
+              printf 'expected exactly one artifact for %s, found %s\n' "$pattern" "${#matches[@]}" >&2
+              printf '%s\n' "${matches[@]}" >&2
+              exit 1
+            fi
+            printf 'ARTIFACT=%s\n' "${matches[0]}" >> "$GITHUB_ENV"
+            printf 'ARTIFACT_FILENAME=%s\n' "$(basename "${matches[0]}")" >> "$GITHUB_ENV"
+          done
+      - name: Smoke test Windows package
+        if: matrix.label == 'windows-x64'
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $artifact = Get-Item $env:ARTIFACT
+          $install = Join-Path $env:RUNNER_TEMP "deepseek-harness-install"
+          $primaryFailure = $null
+          $cleanupFailures = @()
+          New-Item -ItemType Directory -Force $install, $env:EVIDENCE_ROOT | Out-Null
+          try {
+            $installer = Start-Process -PassThru -Wait -FilePath $artifact.FullName -ArgumentList "/S", "/D=$install"
+            if ($installer.ExitCode -ne 0) { throw "installer.ExitCode -eq 0 required, got $($installer.ExitCode)" }
+            $executables = @(Get-ChildItem -Path $install -Filter "DeepSeek Harness Code.exe" -File -Recurse)
+            if ($executables.Count -ne 1) { throw "expected exactly one installed executable, found $($executables.Count)" }
+            $executable = $executables[0]
+            $resources = Join-Path $executable.DirectoryName "resources"
+            if (-not (Test-Path $resources -PathType Container)) { throw "installed application resources were not found" }
+            $hash = (Get-FileHash $artifact.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
+            pnpm smoke:package -- --matrix-label $env:MATRIX_LABEL --package-kind $env:PACKAGE_KIND --expected-architecture $env:EXPECTED_ARCHITECTURE --artifact-filename $env:ARTIFACT_FILENAME --executable $executable.FullName --resources $resources --inventory $executable.DirectoryName --artifact $artifact.FullName --artifact-sha256 $hash --evidence-root $env:EVIDENCE_ROOT --evidence (Join-Path $env:EVIDENCE_ROOT "smoke-evidence-windows.json")
+            if ($LASTEXITCODE -ne 0) { throw "package smoke failed with exit code $LASTEXITCODE" }
+          } catch {
+            $primaryFailure = $_
+          } finally {
+            if (Test-Path $install -PathType Container) {
+              try {
+                $uninstallers = @(Get-ChildItem -Path $install -Filter "Uninstall DeepSeek Harness Code.exe" -File -Recurse)
+                if ($uninstallers.Count -ne 1) { throw "expected exactly one uninstaller, found $($uninstallers.Count)" }
+                $uninstaller = Start-Process -PassThru -Wait -FilePath $uninstallers[0].FullName -ArgumentList "/S"
+                if ($uninstaller.ExitCode -ne 0) { throw "uninstaller.ExitCode -eq 0 required, got $($uninstaller.ExitCode)" }
+              } catch {
+                $cleanupFailures += $_
+              }
+            }
+            try {
+              if (Test-Path $install) { Remove-Item -Recurse -Force $install }
+            } catch {
+              $cleanupFailures += $_
+            }
+          }
+          foreach ($cleanupFailure in $cleanupFailures) {
+            Write-Host "::error::Cleanup failed: $($cleanupFailure.Exception.Message)"
+          }
+          if ($null -ne $primaryFailure) { throw $primaryFailure }
+          if ($cleanupFailures.Count -gt 0) { throw $cleanupFailures[0] }
+          if (Test-Path $install) {
+            throw "installation directory remained after uninstall and forced cleanup"
+          }
+      - name: Extract and smoke test Linux AppImage package
+        if: matrix.label == 'linux-x64'
+        shell: bash
+        env:
+          PACKAGE_KIND: appimage
+        run: |
+          set -euo pipefail
+          temp_root=$(mktemp -d "$RUNNER_TEMP/deepseek-harness-package.XXXXXX")
+          squashfs_root="$temp_root/squashfs-root"
+          cleanup() {
+            original_exit=$?
+            cleanup_exit=0
+            set +e
+            rm -rf "$squashfs_root" "$temp_root" || cleanup_exit=$?
+            if (( cleanup_exit != 0 )); then
+              printf 'cleanup failed with exit code %s\n' "$cleanup_exit" >&2
+            fi
+            if (( original_exit != 0 )); then
+              exit "$original_exit"
+            fi
+            exit "$cleanup_exit"
+          }
+          trap cleanup EXIT
+          mkdir -p "$EVIDENCE_ROOT"
+          appimage=$(find release -maxdepth 1 -type f -name "DeepSeek-Harness-Code-*-linux-${EXPECTED_ARCHITECTURE}.AppImage" -print)
+          [[ "$(wc -l <<< "$appimage")" -eq 1 ]]
+          appimage=$(realpath "$appimage")
+          chmod +x "$appimage"
+          (cd "$temp_root" && "$appimage" --appimage-extract >/dev/null)
+          export APPIMAGE_EXTRACT_AND_RUN=1
+          hash=$(sha256sum "$appimage" | cut -d' ' -f1)
+          pnpm smoke:package -- --matrix-label "$MATRIX_LABEL" --package-kind "$PACKAGE_KIND" --expected-architecture "$EXPECTED_ARCHITECTURE" --artifact-filename "$(basename "$appimage")" --executable "$appimage" --resources "$squashfs_root/resources" --inventory "$squashfs_root" --artifact "$appimage" --artifact-sha256 "$hash" --evidence-root "$EVIDENCE_ROOT" --evidence "$EVIDENCE_ROOT/smoke-evidence-linux-appimage.json"
+      - name: Install and smoke test Linux deb package
+        if: matrix.label == 'linux-x64'
+        shell: bash
+        env:
+          PACKAGE_KIND: deb
+        run: |
+          set -euo pipefail
+          package_installed="false"
+          temp_root=$(mktemp -d "$RUNNER_TEMP/deepseek-harness-deb.XXXXXX")
+          cleanup() {
+            original_exit=$?
+            cleanup_exit=0
+            set +e
+            if [[ "$package_installed" == "true" ]] || dpkg-query -W deepseek-harness-code >/dev/null 2>&1; then
+              sudo dpkg --purge deepseek-harness-code || cleanup_exit=$?
+            fi
+            if dpkg-query -W -f='${Status}\n' deepseek-harness-code 2>/dev/null | grep -q .; then
+              printf 'cleanup failed: deepseek-harness-code remains installed\n' >&2
+              cleanup_exit=1
+            fi
+            rm -rf "$temp_root" || cleanup_exit=$?
+            if (( cleanup_exit != 0 )); then
+              printf 'cleanup failed with exit code %s\n' "$cleanup_exit" >&2
+            fi
+            if (( original_exit != 0 )); then
+              exit "$original_exit"
+            fi
+            exit "$cleanup_exit"
+          }
+          trap cleanup EXIT
+          mkdir -p "$EVIDENCE_ROOT"
+          deb=$(find release -maxdepth 1 -type f -name "DeepSeek-Harness-Code-*-linux-${EXPECTED_ARCHITECTURE}.deb" -print)
+          [[ "$(wc -l <<< "$deb")" -eq 1 ]]
+          expected_deb_arch=amd64
+          [[ "$EXPECTED_ARCHITECTURE" == arm64 ]] && expected_deb_arch=arm64
+          [[ "$(dpkg-deb -f "$deb" Package)" == deepseek-harness-code ]]
+          [[ -n "$(dpkg-deb -f "$deb" Version)" ]]
+          [[ "$(dpkg-deb -f "$deb" Architecture)" == "$expected_deb_arch" ]]
+          sudo dpkg -i "$deb"
+          package_installed="true"
+          [[ "$(dpkg-query -W -f='${Status}' deepseek-harness-code)" == "install ok installed" ]]
+          desktop=$(dpkg-query -L deepseek-harness-code | awk '/\/usr\/share\/applications\/.*\.desktop$/ { print; exit }')
+          [[ -n "$desktop" && -f "$desktop" ]]
+          executable=$(awk -F= '$1 == "Exec" { print $2; exit }' "$desktop" | awk '{print $1}')
+          [[ -n "$executable" && -x "$executable" ]]
+          install_dir=$(dirname "$executable")
+          resources="$install_dir/resources"
+          [[ -d "$resources" ]]
+          hash=$(sha256sum "$deb" | cut -d' ' -f1)
+          pnpm smoke:package -- --matrix-label "$MATRIX_LABEL" --package-kind "$PACKAGE_KIND" --expected-architecture "$EXPECTED_ARCHITECTURE" --artifact-filename "$(basename "$deb")" --executable "$executable" --resources "$resources" --inventory "$install_dir" --artifact "$deb" --artifact-sha256 "$hash" --evidence-root "$EVIDENCE_ROOT" --evidence "$EVIDENCE_ROOT/smoke-evidence-linux-deb.json"
+      - name: Upload installer artifacts
+        if: always() && (matrix.label == 'windows-x64' || matrix.label == 'windows-arm64')
+        uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.label }}
           path: |
-            release/*.dmg
-            release/*.exe
-            release/*.blockmap
-            release/*.AppImage
-            release/*.deb
+            release/DeepSeek-Harness-Code-*-windows-${{ matrix.expected-architecture }}-setup.exe
+            release/DeepSeek-Harness-Code-*-windows-${{ matrix.expected-architecture }}-setup.exe.blockmap
           if-no-files-found: error
+      - name: Upload macOS installer artifact
+        if: always() && matrix.label == 'macos-universal'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.label }}
+          path: release/DeepSeek-Harness-Code-*-mac-universal.dmg
+          if-no-files-found: error
+      - name: Upload Linux installer artifacts
+        if: always() && (matrix.label == 'linux-x64' || matrix.label == 'linux-arm64')
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.label }}
+          path: |
+            release/DeepSeek-Harness-Code-*-linux-${{ matrix.expected-architecture }}.AppImage
+            release/DeepSeek-Harness-Code-*-linux-${{ matrix.expected-architecture }}.deb
+          if-no-files-found: error
+      - name: Upload sanitized smoke evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.label }}-evidence
+          path: release/evidence/${{ matrix.label }}/**/*.json
+          if-no-files-found: warn
 
   release:
     name: Publish GitHub pre-release
@@ -85,7 +272,11 @@ jobs:
             args+=(--notes-file "$NOTES")
           fi
           if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
-            gh release upload "$GITHUB_REF_NAME" artifacts/* --clobber
+            mapfile -t release_files < <(find artifacts -type f \( -name '*.dmg' -o -name '*.exe' -o -name '*.AppImage' -o -name '*.deb' \) -print)
+            ((${#release_files[@]} > 0))
+            gh release upload "$GITHUB_REF_NAME" "${release_files[@]}" --clobber
           else
-            gh release create "$GITHUB_REF_NAME" artifacts/* "${args[@]}"
+            mapfile -t release_files < <(find artifacts -type f \( -name '*.dmg' -o -name '*.exe' -o -name '*.AppImage' -o -name '*.deb' \) -print)
+            ((${#release_files[@]} > 0))
+            gh release create "$GITHUB_REF_NAME" "${release_files[@]}" "${args[@]}"
           fi

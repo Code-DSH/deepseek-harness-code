@@ -151,9 +151,18 @@ describe("HarnessRuntimeController", () => {
     await controller.checkHealth();
     await controller.checkHealth();
 
-    expect(onReady).toHaveBeenNthCalledWith(1, "http://127.0.0.1:41001");
-    expect(onReady).toHaveBeenNthCalledWith(2, "http://127.0.0.1:41002");
-    expect(onReady).toHaveBeenNthCalledWith(3, "http://127.0.0.1:41003");
+    expect(onReady).toHaveBeenNthCalledWith(1, "http://127.0.0.1:41001", {
+      pid: 1,
+      kill: expect.any(Function),
+    });
+    expect(onReady).toHaveBeenNthCalledWith(2, "http://127.0.0.1:41002", {
+      pid: 2,
+      kill: expect.any(Function),
+    });
+    expect(onReady).toHaveBeenNthCalledWith(3, "http://127.0.0.1:41003", {
+      pid: 3,
+      kill: expect.any(Function),
+    });
   });
 
   it("converges to failed and retires the child when loading the ready origin fails", async () => {
@@ -232,6 +241,54 @@ describe("HarnessRuntimeController", () => {
     await Promise.all([first, second]);
   });
 
+  it("retires a child acquired after stop begins while startup readiness is blocked", async () => {
+    let releaseReady: (() => void) | undefined;
+    const child = { pid: 99, kill: vi.fn() };
+    const waitForExit = vi.fn(async () => true);
+    const controller = new HarnessRuntimeController({
+      origin: "http://127.0.0.1:41001",
+      startHarness: vi.fn(async () => child),
+      waitForReady: vi.fn(
+        () =>
+          new Promise<boolean>((resolve) => {
+            releaseReady = () => resolve(true);
+          }),
+      ),
+      probeHealth: vi.fn(async () => true),
+      onState: vi.fn(),
+      waitForExit,
+    });
+
+    const start = controller.start();
+    await Promise.resolve();
+    const stop = controller.stop();
+    releaseReady?.();
+
+    await expect(start).resolves.toBeUndefined();
+    await expect(stop).resolves.toMatchObject({ retired: true });
+    expect(child.kill).toHaveBeenCalledWith("SIGTERM");
+    expect(waitForExit).toHaveBeenCalledWith(child, 8_000);
+  });
+
+  it("reports retirement only after SIGKILL exit confirmation", async () => {
+    const child = { pid: 100, kill: vi.fn() };
+    const waitForExit = vi
+      .fn()
+      .mockResolvedValueOnce(false)
+      .mockResolvedValueOnce(true);
+    const controller = new HarnessRuntimeController({
+      origin: "http://127.0.0.1:41001",
+      startHarness: vi.fn(async () => child),
+      probeHealth: vi.fn(async () => true),
+      onState: vi.fn(),
+      waitForExit,
+    });
+
+    await controller.start();
+    await expect(controller.stop()).resolves.toMatchObject({ retired: true });
+    expect(waitForExit).toHaveBeenNthCalledWith(2, child, 8_000);
+  });
+
   it("reloads an unresponsive renderer only after 30 seconds without a responsive event", async () => {
     vi.useFakeTimers();
     const startHarness = vi.fn(async () => ({ pid: 42, kill: vi.fn() }));
@@ -308,7 +365,7 @@ describe("HarnessRuntimeController", () => {
     });
 
     await controller.start();
-    await expect(controller.stop()).resolves.toBeUndefined();
+    await expect(controller.stop()).resolves.toEqual({ retired: true });
     expect(kill).toHaveBeenCalledWith("SIGTERM");
   });
 });

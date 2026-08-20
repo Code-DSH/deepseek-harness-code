@@ -12,7 +12,7 @@ export interface HarnessRuntimeOptions {
   waitForReady?: (child: HarnessChild, origin: string) => Promise<boolean>;
   isChildAlive?: (child: HarnessChild) => boolean;
   runtimeNotice?: () => RuntimeNotice | undefined;
-  onReady?: (origin: string) => Promise<void> | void;
+  onReady?: (origin: string, child: HarnessChild) => Promise<void> | void;
   onState: (state: RuntimeState) => void;
   reloadRenderer?: () => void;
   rebuildWindow?: () => void;
@@ -23,6 +23,8 @@ export class HarnessRuntimeController {
   private child: HarnessChild | undefined;
   private failures = 0;
   private restartInFlight: Promise<void> | undefined;
+  private startInFlight: Promise<void> | undefined;
+  private stopInFlight: Promise<HarnessRetirementResult> | undefined;
   private healthCheckInFlight: Promise<void> | undefined;
   private stopRequested = false;
   private unresponsiveTimer: ReturnType<typeof setTimeout> | undefined;
@@ -35,6 +37,17 @@ export class HarnessRuntimeController {
   }
 
   async start(): Promise<void> {
+    if (this.startInFlight !== undefined) return this.startInFlight;
+    const start = this.startNow();
+    this.startInFlight = start;
+    try {
+      await start;
+    } finally {
+      this.startInFlight = undefined;
+    }
+  }
+
+  private async startNow(): Promise<void> {
     this.publish({ phase: "starting", restartCount: this.state.restartCount });
     let child: HarnessChild | undefined;
     try {
@@ -49,7 +62,7 @@ export class HarnessRuntimeController {
       if (!ready || !this.isCurrentChild(child) || !this.isChildAlive(child)) {
         throw new Error("Harness not ready");
       }
-      await this.options.onReady?.(this.currentOrigin());
+      await this.options.onReady?.(this.currentOrigin(), child);
       if (this.stopRequested) return;
     } catch (error) {
       if (child !== undefined && this.isCurrentChild(child))
@@ -66,7 +79,11 @@ export class HarnessRuntimeController {
         });
       throw error;
     }
-    if (child === undefined || this.stopRequested) return;
+    if (child === undefined) return;
+    if (this.stopRequested) {
+      await this.retireCurrentChild();
+      return;
+    }
     this.failures = 0;
     const notice = this.options.runtimeNotice?.();
     this.publish({
@@ -155,12 +172,24 @@ export class HarnessRuntimeController {
     this.unresponsiveTimer = undefined;
   }
 
-  async stop(): Promise<void> {
+  async stop(): Promise<HarnessRetirementResult> {
+    if (this.stopInFlight !== undefined) return this.stopInFlight;
+    const stop = this.stopNow();
+    this.stopInFlight = stop;
+    try {
+      return await stop;
+    } finally {
+      this.stopInFlight = undefined;
+    }
+  }
+
+  private async stopNow(): Promise<HarnessRetirementResult> {
     this.stopRequested = true;
     this.publish({ phase: "stopping", restartCount: this.state.restartCount });
     this.handleRendererResponsive();
+    await this.startInFlight;
     if (this.restartInFlight !== undefined) await this.restartInFlight;
-    await this.retireCurrentChild();
+    return this.retireCurrentChild();
   }
 
   private publish(state: RuntimeState): void {
@@ -187,17 +216,27 @@ export class HarnessRuntimeController {
     return this.child === child;
   }
 
-  private async retireCurrentChild(): Promise<void> {
+  private async retireCurrentChild(): Promise<HarnessRetirementResult> {
     const child = this.child;
     this.child = undefined;
-    if (child === undefined) return;
-    await this.retireChild(child);
+    if (child === undefined) return { retired: true };
+    return this.retireChild(child);
   }
 
-  private async retireChild(child: HarnessChild): Promise<void> {
+  private async retireChild(
+    child: HarnessChild,
+  ): Promise<HarnessRetirementResult> {
     child.kill("SIGTERM");
-    const exited = await (this.options.waitForExit?.(child, 8_000) ??
-      Promise.resolve(true));
-    if (!exited) child.kill("SIGKILL");
+    const waitForExit = this.options.waitForExit;
+    if (waitForExit === undefined) return { retired: false };
+    const exited = await waitForExit(child, 8_000);
+    if (exited) return { retired: true };
+    child.kill("SIGKILL");
+    const confirmed = await waitForExit(child, 8_000);
+    return { retired: confirmed };
   }
 }
+
+export type HarnessRetirementResult = {
+  readonly retired: boolean;
+};

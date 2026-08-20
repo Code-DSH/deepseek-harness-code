@@ -32,6 +32,7 @@
     "check": "pnpm typecheck && pnpm lint && pnpm format:check && node scripts/check-doc-links.mjs && node scripts/check-security-contract.mjs",
     "check:memory": "node scripts/check-memory-bounds.mjs",
     "preflight:runtime": "node scripts/check-runtime-closure.mjs",
+    "smoke:package": "node scripts/smoke-packaged-runtime.mjs",
     "start": "pnpm build && electron .",
     "pack:dir": "pnpm build && pnpm build:icon && pnpm preflight:runtime && electron-builder --mac --dir --universal",
     "dist:mac": "pnpm build && pnpm build:icon && pnpm preflight:runtime && electron-builder --mac --universal",

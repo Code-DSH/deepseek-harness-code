@@ -123,6 +123,32 @@ describe("host watchdog launcher contract", () => {
     ).toThrow(/inside the app-owned root/i);
   });
 
+  it("reports a timeout when the watchdog never acknowledges shutdown", async () => {
+    const child = Object.assign(new EventEmitter(), {
+      connected: true,
+      disconnect: () => {
+        child.connected = false;
+      },
+      send: () => undefined,
+    });
+    const handshake = launchWatchdog(
+      {
+        electronExecutable: "/app/electron",
+        watchdogEntry: "/app/watchdog.js",
+        target: { executable: "/app/electron", args: [] },
+        statePath: "/app/state.json",
+        markerPath: "/app/marker.json",
+        logPath: "/app/watchdog.log",
+        rootPath: "/app",
+      },
+      (() => child) as never,
+    );
+
+    await expect(handshake.shutdown(1)).resolves.toEqual({
+      status: "timed-out",
+    });
+  });
+
   it("does not leak inherited Electron Node mode or original arguments during relaunch", async () => {
     const oldNodeMode = process.env.ELECTRON_RUN_AS_NODE;
     process.env.ELECTRON_RUN_AS_NODE = "1";
