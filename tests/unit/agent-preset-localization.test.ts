@@ -56,9 +56,14 @@ describe("custom Agent preset locale patch", () => {
   });
 
   it("applies the locale patch without removing the user metadata fallback", async () => {
-    const require = createRequire(join(projectRoot, "package.json"));
+    const rootRequire = createRequire(join(projectRoot, "package.json"));
+    const dshRequire = createRequire(
+      rootRequire.resolve("@deepseek-ai/dsh/package.json"),
+    );
     const packageRoot = dirname(
-      require.resolve("@deepseek-ai/dsh-client-ui-agent-preset/package.json"),
+      dshRequire.resolve(
+        "@deepseek-ai/dsh-client-ui-agent-preset/package.json",
+      ),
     );
     const client = await readFile(
       join(packageRoot, "lib", "client.js"),
