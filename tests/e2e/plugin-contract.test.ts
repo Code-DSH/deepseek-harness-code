@@ -222,14 +222,14 @@ describe("desktop plugin package contract", () => {
       "@deepseek-ai/dsh-client-locale",
     );
     expect(manifest.peerDependencies?.["@deepseek-ai/dsh-client-locale"]).toBe(
-      "^0.1.0-rc.7",
+      "^0.1.0-rc.8",
     );
     expect(
       manifest.peerDependencies?.["@deepseek-ai/dsh-client-ui-primitives"],
-    ).toBe("^0.1.0-rc.7");
+    ).toBe("^0.1.0-rc.8");
     expect(
       manifest.peerDependencies?.["@deepseek-ai/dsh-client-ui-layout"],
-    ).toBe("^0.1.0-rc.7");
+    ).toBe("^0.1.0-rc.8");
   });
 
   it("does not replace the official question protocol packages", () => {

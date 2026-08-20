@@ -67,7 +67,7 @@ class FakeRegistry {
 }
 
 /** A minimal ToolRunContext for one calling session (only the slices the tools touch). */
-function exec(sessionId: string): ToolRunContext {
+function makeToolCtx(sessionId: string): ToolRunContext {
   return {
     signal: { throwIfAborted: () => {}, aborted: false },
     agent: { session: { id: sessionId } },
@@ -119,7 +119,7 @@ describe('agent terminal tools', () => {
   it('terminal_create returns the uuid and echoed title (schema-valid)', async () => {
     const { captured, registry } = mount()
     const tool = toolOf(captured, 'terminal_create')
-    const value = await tool.execute({ title: 'dev server', command: 'npm run dev' }, exec('s1'))
+    const value = await tool.execute({ title: 'dev server', command: 'npm run dev' }, makeToolCtx('s1'))
     expect(value).toMatchObject({ title: 'dev server' })
     expect(typeof (value as { uuid: unknown }).uuid).toBe('string')
     expect(registry.terminals.size).toBe(1)
@@ -131,7 +131,7 @@ describe('agent terminal tools', () => {
     const tool = toolOf(captured, 'terminal_list')
     const uuid = registry.create('s1', 'dev server', 'npm run dev')
     registry.create('s2', 'other session', 'top secret')
-    const value = await tool.execute({}, exec('s1'))
+    const value = await tool.execute({}, makeToolCtx('s1'))
     const list = value as Array<Record<string, unknown>>
     expect(list).toHaveLength(1)
     expect(list[0]!.uuid).toBe(uuid)
@@ -155,20 +155,20 @@ describe('agent terminal tools', () => {
               : name === 'terminal_close' ? { uuid: foreign }
                 : { uuid: foreign, needle: 'x', timeout_ms: 100 }
       // A foreign uuid is indistinguishable from an unknown one.
-      await expect(tool.execute(args, exec('s1'))).rejects.toThrow(/not found/)
+      await expect(tool.execute(args, makeToolCtx('s1'))).rejects.toThrow(/not found/)
     }
     // Own-session uuids still work.
     const sendTool = toolOf(captured, 'terminal_send')
-    await expect(sendTool.execute({ uuid: mine, text: 'ls' }, exec('s1'))).resolves.toBeDefined()
+    await expect(sendTool.execute({ uuid: mine, text: 'ls' }, makeToolCtx('s1'))).resolves.toBeDefined()
     const closeTool = toolOf(captured, 'terminal_close')
-    await expect(closeTool.execute({ uuid: mine }, exec('s1'))).resolves.toMatchObject({ closed: true })
+    await expect(closeTool.execute({ uuid: mine }, makeToolCtx('s1'))).resolves.toMatchObject({ closed: true })
   })
 
   it('terminal_read truncates at the byte cap and reports it (schema-valid)', async () => {
     const { captured, registry } = mount()
     const tool = toolOf(captured, 'terminal_read')
     const uuid = registry.create('s1', 'reader', '')
-    const value = await tool.execute({ uuid }, exec('s1'))
+    const value = await tool.execute({ uuid }, makeToolCtx('s1'))
     const result = value as { text: string; truncated: boolean }
     expect(result.truncated).toBe(true)
     expect(Buffer.byteLength(result.text, 'utf8')).toBeLessThanOrEqual(256 * 1024)
@@ -179,7 +179,7 @@ describe('agent terminal tools', () => {
     const { captured, registry } = mount()
     const tool = toolOf(captured, 'terminal_resize')
     const uuid = registry.create('s1', 'resizer', '')
-    const value = await tool.execute({ uuid, cols: 120, rows: 40 }, exec('s1'))
+    const value = await tool.execute({ uuid, cols: 120, rows: 40 }, makeToolCtx('s1'))
     expect(value).toEqual({ uuid, cols: 120, rows: 40 })
     expect(validateJsonSchemaValue(tool.output.schema, value, 'value')).toEqual([])
   })
@@ -188,7 +188,7 @@ describe('agent terminal tools', () => {
     const { captured, registry } = mount()
     const tool = toolOf(captured, 'terminal_wait_for')
     const uuid = registry.create('s1', 'waiter', '')
-    const value = await tool.execute({ uuid, needle: 'done' }, exec('s1'))
+    const value = await tool.execute({ uuid, needle: 'done' }, makeToolCtx('s1'))
     expect(value).toEqual({ kind: 'found', needle: 'done', line: 0, column: 0, elapsedMs: 1 })
     expect(validateJsonSchemaValue(tool.output.schema, value, 'value')).toEqual([])
   })
@@ -197,7 +197,7 @@ describe('agent terminal tools', () => {
     const { captured, registry } = mount()
     const tool = toolOf(captured, 'terminal_wait_for')
     const uuid = registry.create('s1', 'waiter', '')
-    await expect(tool.execute({ uuid, needle: '' }, exec('s1'))).rejects.toThrow(/non-empty/)
+    await expect(tool.execute({ uuid, needle: '' }, makeToolCtx('s1'))).rejects.toThrow(/non-empty/)
   })
 })
 

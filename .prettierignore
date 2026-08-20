@@ -1,9 +1,11 @@
 .cache
 .mimosa
 .worktrees
+build
 dist
 node_modules
 release
+vendor
 packages/better-sidebar/**
 packages/desktop-plugin/client.js
 packages/better-sidebar/lib/**

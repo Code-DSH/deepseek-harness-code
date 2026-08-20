@@ -16,13 +16,6 @@ supportedArchitectures:
 
 patchedDependencies:
   "@deepseek-ai/dsh": patches/@deepseek-ai__dsh.patch
-  # rc.7 re-baselining deferred (see root pnpm-workspace.yaml); the
-  # mcp-client non-stall patch context survives rc.7 but re-validate its
-  # single hunk against rc.7's apply() before re-enabling.
-  # "@deepseek-ai/dsh-client-ui-agent-preset@0.1.0-rc.7": patches/@deepseek-ai__dsh-client-ui-agent-preset@0.1.0-rc.7.patch
-  # "@deepseek-ai/dsh-client-ui-conversation@0.1.0-rc.7": patches/@deepseek-ai__dsh-client-ui-conversation@0.1.0-rc.7.patch
-  # "@deepseek-ai/dsh-client-ui-sidebar@0.1.0-rc.7": patches/@deepseek-ai__dsh-client-ui-sidebar@0.1.0-rc.7.patch
-  # "@deepseek-ai/dsh-mcp-client@0.1.0-rc.7": patches/@deepseek-ai__dsh-mcp-client@0.1.0-rc.7.patch
 
 minimumReleaseAgeExclude:
   - "@deepseek-ai/dsh-agent-default-model@0.1.0-rc.8"

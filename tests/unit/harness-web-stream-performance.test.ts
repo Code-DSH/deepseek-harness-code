@@ -290,7 +290,7 @@ beforeAll(() => {
   const conversationManifest = JSON.parse(
     readFileSync(join(conversationRoot, "package.json"), "utf8"),
   ) as { version: string };
-  expect(conversationManifest.version).toBe("0.1.0-rc.7");
+  expect(conversationManifest.version).toBe("0.1.0-rc.8");
 
   runtime = loadRuntime();
   const definitions = captureConversationDefinitions(runtime);

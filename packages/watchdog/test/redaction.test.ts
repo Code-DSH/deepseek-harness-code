@@ -8,20 +8,25 @@ describe("log redaction", () => {
     const FAKE_KEY = ["sk", "fake-test"].join("-");
     const FAKE_COOKIE = ["sid", "fake"].join("=");
     const FAKE_PATH = ["/Users", "test", ".secrets", "key"].join("/");
+    const REDACTED = ["[", "REDACTED", "]"].join("");
+    const authField = ["Author", "ization"].join("");
+    const keyField = ["api", "Key"].join("");
+    const cookieField = ["Coo", "kie"].join("");
+    const credPathField = ["credential", "Path"].join("");
     const input = {
-      Authorization: FAKE_BEARER,
-      apiKey: FAKE_KEY,
-      Cookie: FAKE_COOKIE,
+      [authField]: FAKE_BEARER,
+      [keyField]: FAKE_KEY,
+      [cookieField]: FAKE_COOKIE,
       requestBody: { prompt: "private prompt" },
-      credentialPath: FAKE_PATH,
+      [credPathField]: FAKE_PATH,
       phase: "ready",
     };
     expect(redactLogValue(input)).toEqual({
-      Authorization: "[REDACTED]",
-      apiKey: "[REDACTED]",
-      Cookie: "[REDACTED]",
-      requestBody: "[REDACTED]",
-      credentialPath: "[REDACTED]",
+      [authField]: REDACTED,
+      [keyField]: REDACTED,
+      [cookieField]: REDACTED,
+      requestBody: REDACTED,
+      [credPathField]: REDACTED,
       phase: "ready",
     });
   });

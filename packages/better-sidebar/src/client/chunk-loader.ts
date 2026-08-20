@@ -98,9 +98,13 @@ function chunkRegistry(): ChunkRegistry {
 export type ChunkScriptLoader = (src: string) => Promise<void>
 
 const defaultScriptLoader: ChunkScriptLoader = (src) => new Promise((resolve, reject) => {
+  if (!/^\/sidebar\/bundle\/[a-z]+\.js$/u.test(src)) {
+    reject(new Error(`[dsh-better-sidebar] chunk URL must be a relative bundle path`))
+    return
+  }
   const el = document.createElement('script')
   el.async = true
-  el.src = src
+  el.setAttribute('src', src)
   el.addEventListener('load', () => {
     el.remove()
     resolve()

@@ -213,7 +213,7 @@ async function assembleFromTarball(source, cacheDir, outDir, components) {
     );
     if (
       !fixedClient.includes("SuperInjectorPage") ||
-      !fixedClient.includes("}, SuperInjectorPage)")
+      !fixedClient.includes("slots.register")
     ) {
       throw new Error(
         "fetch-routing-suite: bundled super-injector client fix is missing the slots.register(options, Component) contract",

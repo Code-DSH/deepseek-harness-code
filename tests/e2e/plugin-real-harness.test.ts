@@ -497,9 +497,11 @@ describe("desktop plugin with the real pinned Harness", () => {
     const origin = `http://127.0.0.1:${port}`;
     if (
       typeof bootElectronExecutable !== "string" ||
-      !bootElectronExecutable.startsWith("/")
+      !bootElectronExecutable.startsWith("/") ||
+      typeof bootDshEntry !== "string" ||
+      !bootDshEntry.startsWith("/")
     ) {
-      throw new Error("bootElectronExecutable must be an absolute path");
+      throw new Error("boot paths must be absolute");
     }
     const child = spawn(
       bootElectronExecutable,
