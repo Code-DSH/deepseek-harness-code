@@ -8,6 +8,7 @@ import {
 } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { EventEmitter } from "node:events";
 
 import { describe, expect, test } from "vitest";
 
@@ -20,6 +21,8 @@ import {
   validateArtifactContract,
   parseWindowsPeMachine,
   buildPackagedSmokeLaunch,
+  waitForPackagedExit,
+  waitForEvidenceWithExitGrace,
   redactPackagedDiagnostic,
   waitForSmokeAcknowledgement,
 } from "../../scripts/smoke-packaged-runtime.mjs";
@@ -41,6 +44,47 @@ const expectedMetadata = {
 };
 
 describe("packaged runtime listener selection", () => {
+  test("waits for the packaged app to exit naturally after final evidence", async () => {
+    const child = new EventEmitter();
+    child.exitCode = null;
+    child.signalCode = null;
+    const waiting = waitForPackagedExit(child, 100);
+    child.exitCode = 0;
+    child.emit("exit", 0, null);
+
+    await expect(waiting).resolves.toBe(true);
+  });
+
+  test("accepts final evidence written just after a clean process exit", async () => {
+    const root = await mkdtemp(join(tmpdir(), "dsh-final-evidence-"));
+    const path = join(root, "final.json");
+    const child = new EventEmitter();
+    child.exitCode = null;
+    child.signalCode = null;
+    const waiting = waitForEvidenceWithExitGrace({
+      path,
+      deadline: Date.now() + 1_000,
+      runId: "run-final",
+      phase: "final",
+      child,
+      exitGraceMs: 500,
+    });
+    child.exitCode = 0;
+    child.emit("exit", 0, null);
+    await writeFile(
+      path,
+      JSON.stringify({
+        schema: 2,
+        runId: "run-final",
+        final: { phase: "final" },
+      }),
+    );
+
+    await expect(waiting).resolves.toMatchObject({
+      final: { phase: "final" },
+    });
+  });
+
   test("isolates Harness Home and disables only the Linux CI sandbox", () => {
     expect(buildPackagedSmokeLaunch("linux", "/tmp/smoke-user-data")).toEqual({
       args: ["--user-data-dir=/tmp/smoke-user-data", "--no-sandbox"],

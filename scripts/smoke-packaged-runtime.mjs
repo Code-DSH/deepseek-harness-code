@@ -458,8 +458,23 @@ async function assertRuntimeProvenance(smokeEvidence, userData, resourcesRoot) {
     throw new Error("system Node version provenance does not match executable");
 }
 
+async function waitForPackagedExit(child, timeoutMs = 10_000) {
+  if (child.exitCode !== null || child.signalCode !== null) return true;
+  return new Promise((resolveExit) => {
+    const onExit = () => {
+      clearTimeout(timer);
+      resolveExit(true);
+    };
+    const timer = setTimeout(() => {
+      child.removeListener("exit", onExit);
+      resolveExit(false);
+    }, timeoutMs);
+    child.once("exit", onExit);
+  });
+}
+
 async function stopProcess(child, force = false) {
-  if (child.exitCode !== null) return true;
+  if (child.exitCode !== null || child.signalCode !== null) return true;
   if (force && process.platform === "win32") {
     await execFileAsync("taskkill", ["/PID", String(child.pid), "/T", "/F"], {
       windowsHide: true,
@@ -481,7 +496,12 @@ async function stopProcess(child, force = false) {
 }
 
 async function cleanupProcess(child) {
-  if (child === undefined || child.exitCode !== null) return;
+  if (
+    child === undefined ||
+    child.exitCode !== null ||
+    child.signalCode !== null
+  )
+    return;
   await stopProcess(child, true);
 }
 
@@ -549,6 +569,47 @@ async function waitForEvidence(path, deadline, runId, phase) {
   throw new Error(
     `packaged application did not publish ${phase} smoke evidence`,
   );
+}
+
+async function waitForEvidenceWithExitGrace({
+  path,
+  deadline,
+  runId,
+  phase,
+  child,
+  exitGraceMs = 2_000,
+}) {
+  let exitTimer;
+  let onExit;
+  const exitFailure = new Promise((_, reject) => {
+    const scheduleFailure = (code, signal) => {
+      const remaining = Math.max(0, deadline - Date.now());
+      exitTimer = setTimeout(
+        () =>
+          reject(
+            new Error(
+              `packaged application exited before ${phase} evidence (code=${code ?? "null"}, signal=${signal ?? "null"})`,
+            ),
+          ),
+        Math.min(exitGraceMs, remaining),
+      );
+    };
+    onExit = scheduleFailure;
+    if (child.exitCode !== null || child.signalCode !== null) {
+      scheduleFailure(child.exitCode, child.signalCode);
+    } else {
+      child.once("exit", onExit);
+    }
+  });
+  try {
+    return await Promise.race([
+      waitForEvidence(path, deadline, runId, phase),
+      exitFailure,
+    ]);
+  } finally {
+    if (onExit !== undefined) child.removeListener("exit", onExit);
+    if (exitTimer !== undefined) clearTimeout(exitTimer);
+  }
 }
 
 async function waitForSmokeAcknowledgement(path, deadline, runId, appPid) {
@@ -801,20 +862,17 @@ async function main() {
       `${JSON.stringify({ runId, appPid: identity.appPid })}\n`,
       { encoding: "utf8", mode: 0o600 },
     );
-    const smokeEvidence = await Promise.race([
-      waitForEvidence(resolve(appEvidencePath), deadline, runId, "final"),
-      new Promise((_, reject) => {
-        child.once("exit", (code, signal) =>
-          reject(
-            new Error(
-              `packaged application exited before final evidence (code=${code ?? "null"}, signal=${signal ?? "null"})`,
-            ),
-          ),
-        );
-      }),
-    ]);
+    const smokeEvidence = await waitForEvidenceWithExitGrace({
+      path: resolve(appEvidencePath),
+      deadline,
+      runId,
+      phase: "final",
+      child,
+    });
     verifySmokeEvidence(smokeEvidence, expectedMetadata);
-    exitedCleanly = child.exitCode !== null ? true : await stopProcess(child);
+    const exitedNaturally = await waitForPackagedExit(child);
+    if (!exitedNaturally) await stopProcess(child);
+    exitedCleanly = child.exitCode === 0;
     evidence.runtime.exitCode = child.exitCode;
     evidence.runtime.exitedCleanly = exitedCleanly;
     if (!exitedCleanly || child.exitCode !== 0)
@@ -855,6 +913,8 @@ export {
   validateArtifactContract,
   parseWindowsPeMachine,
   buildPackagedSmokeLaunch,
+  waitForPackagedExit,
+  waitForEvidenceWithExitGrace,
   redactPackagedDiagnostic,
 };
 
