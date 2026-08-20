@@ -327,6 +327,12 @@ function validateArtifactContract({
     /[.*+?^${}()|[\]\\]/gu,
     "\\$&",
   );
+  const packagedArchitecture =
+    expectedArchitecture === "x64" && packageKind === "appimage"
+      ? "x86_64"
+      : expectedArchitecture === "x64" && packageKind === "deb"
+        ? "amd64"
+        : escapedArchitecture;
   const artifactVersion = String.raw`\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?`;
   const packagePattern = {
     nsis: new RegExp(
@@ -338,11 +344,11 @@ function validateArtifactContract({
       "u",
     ),
     appimage: new RegExp(
-      `^DeepSeek-Harness-Code-${artifactVersion}-linux-${escapedArchitecture}\\.AppImage$`,
+      `^DeepSeek-Harness-Code-${artifactVersion}-linux-${packagedArchitecture}\\.AppImage$`,
       "u",
     ),
     deb: new RegExp(
-      `^DeepSeek-Harness-Code-${artifactVersion}-linux-${escapedArchitecture}\\.deb$`,
+      `^DeepSeek-Harness-Code-${artifactVersion}-linux-${packagedArchitecture}\\.deb$`,
       "u",
     ),
   }[packageKind];
@@ -476,15 +482,7 @@ function assertKnownRunnerArchitecture(
 async function inspectArchitecture(executable) {
   assertKnownRunnerArchitecture();
   if (process.platform === "win32") {
-    const script =
-      "$bytes=[IO.File]::ReadAllBytes($args[0]); $offset=[BitConverter]::ToInt32($bytes,60); [BitConverter]::ToUInt16($bytes,$offset+4)";
-    const { stdout } = await execFileAsync("powershell", [
-      "-NoProfile",
-      "-Command",
-      script,
-      executable,
-    ]);
-    const machine = stdout.trim();
+    const machine = String(parseWindowsPeMachine(await readFile(executable)));
     if (machine !== "34404")
       throw new Error(`unsupported Windows PE machine ${machine}`);
     return { runner: process.arch, platform: process.platform, machine };
@@ -498,6 +496,14 @@ async function inspectArchitecture(executable) {
   if (!/x86-64|x86_64|amd64/i.test(file))
     throw new Error(`unsupported Linux architecture: ${file}`);
   return { runner: process.arch, platform: process.platform, file };
+}
+
+function parseWindowsPeMachine(bytes) {
+  if (bytes.length < 64) throw new Error("Windows PE file is too small");
+  const peOffset = bytes.readUInt32LE(60);
+  if (peOffset + 6 > bytes.length)
+    throw new Error("Windows PE header is outside the file");
+  return bytes.readUInt16LE(peOffset + 4);
 }
 
 async function waitForEvidence(path, deadline, runId, phase) {
@@ -806,6 +812,7 @@ export {
   waitForEvidence,
   waitForSmokeAcknowledgement,
   validateArtifactContract,
+  parseWindowsPeMachine,
 };
 
 if (

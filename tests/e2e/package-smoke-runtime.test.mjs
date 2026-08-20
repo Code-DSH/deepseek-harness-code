@@ -18,6 +18,7 @@ import {
   verifySmokeEvidence,
   assertKnownRunnerArchitecture,
   validateArtifactContract,
+  parseWindowsPeMachine,
   waitForSmokeAcknowledgement,
 } from "../../scripts/smoke-packaged-runtime.mjs";
 
@@ -205,6 +206,27 @@ describe("packaged runtime listener selection", () => {
         artifactPath: "/tmp/DeepSeek-Harness-Code-0.1.0-windows-x64-setup.exe",
       }),
     ).toThrow(/matrix|allowlist/i);
+  });
+
+  test("accepts native Linux x64 artifact names and parses a PE machine", () => {
+    for (const [packageKind, filename] of [
+      ["appimage", "DeepSeek-Harness-Code-0.1.0-BETA2-linux-x86_64.AppImage"],
+      ["deb", "DeepSeek-Harness-Code-0.1.0-BETA2-linux-amd64.deb"],
+    ]) {
+      expect(() =>
+        validateArtifactContract({
+          matrixLabel: "linux-x64",
+          packageKind,
+          expectedArchitecture: "x64",
+          artifactFilename: filename,
+          artifactPath: `/tmp/${filename}`,
+        }),
+      ).not.toThrow();
+    }
+    const pe = Buffer.alloc(128);
+    pe.writeUInt32LE(64, 60);
+    pe.writeUInt16LE(34404, 68);
+    expect(parseWindowsPeMachine(pe)).toBe(34404);
   });
 
   test("rejects a misleading architecture substring without the exact package filename", () => {
