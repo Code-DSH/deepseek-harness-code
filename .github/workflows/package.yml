@@ -75,7 +75,7 @@ jobs:
           set -euo pipefail
           case "$MATRIX_LABEL" in
             windows-*) patterns=("release/DeepSeek-Harness-Code-*-windows-${EXPECTED_ARCHITECTURE}-setup.exe");;
-            macos-*) patterns=("release/DeepSeek-Harness-Code-*-mac-universal.dmg" "release/DeepSeek-Harness-Code-*-mac-universal.zip");;
+            macos-*) patterns=("release/DeepSeek-Harness-Code-*-mac-universal.dmg");;
             linux-x64) patterns=("release/DeepSeek-Harness-Code-*-linux-x86_64.AppImage" "release/DeepSeek-Harness-Code-*-linux-amd64.deb");;
             linux-arm64) patterns=("release/DeepSeek-Harness-Code-*-linux-arm64.AppImage" "release/DeepSeek-Harness-Code-*-linux-arm64.deb");;
             *) printf 'unknown matrix label: %s\n' "$MATRIX_LABEL" >&2; exit 1;;
@@ -91,6 +91,16 @@ jobs:
             printf 'ARTIFACT=%s\n' "${matches[0]}" >> "$GITHUB_ENV"
             printf 'ARTIFACT_FILENAME=%s\n' "$(basename "${matches[0]}")" >> "$GITHUB_ENV"
           done
+          if [[ "$MATRIX_LABEL" == 'macos-universal' ]]; then
+            zip_matches=()
+            while IFS= read -r match; do zip_matches+=("$match"); done < <(compgen -G "release/DeepSeek-Harness-Code-*-mac-universal.zip" || true)
+            if [[ "${#zip_matches[@]}" -ne 1 ]]; then
+              printf 'expected exactly one macOS update ZIP, found %s\n' "${#zip_matches[@]}" >&2
+              printf '%s\n' "${zip_matches[@]}" >&2
+              exit 1
+            fi
+            printf 'UPDATE_ARTIFACT=%s\n' "${zip_matches[0]}" >> "$GITHUB_ENV"
+          fi
       - name: Smoke test Windows package
         if: matrix.label == 'windows-x64'
         shell: pwsh
