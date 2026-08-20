@@ -30,6 +30,7 @@ tags: [acceptance, release, evidence]
 - Local `pnpm test` passes 314 unit tests (3 intentionally skipped), 108 Anchored tests, 24 plugin/real-Harness tests, 39 package-contract tests, and 2 Playwright E2E tests. `pnpm check`, runtime closure, Universal DMG verification, and the Universal ZIP resource inspection also pass locally.
 - The updater now remains user-confirmed: it selects the x64/arm64 or macOS universal asset, verifies SHA-256, invokes the platform replacement helper, and restarts only after the user chooses “Update and restart”. CI generates `update-manifest.json` from the release assets.
 - The updater host policy now explicitly allows GitHub’s signed `release-assets.githubusercontent.com` redirect target. The regression reproduces the real release redirect and the updater host/fetch/manifest suite passes 46 tests after the fix.
+- Large installer downloads now use 32 MiB HTTPS Range chunks with per-chunk timeout, retry, and size validation, so a CDN connection ending near 100 MB cannot leave the update flow hanging or corrupt the package.
 - Tagged workflow `32380432464` completed successfully for native macOS Universal, Windows x64/arm64, Linux x64/arm64 packaging and the GitHub Release publish job. Release `v0.1.0-BETA2-1` is Latest/non-prerelease and exposes eight installers plus `update-manifest.json`; the remote manifest selects the Universal macOS ZIP and architecture-specific Windows/Linux assets with 64-character SHA-256 values.
 
 ## 0.1.0-BETA2 integration evidence (current)

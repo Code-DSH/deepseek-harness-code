@@ -64,6 +64,22 @@ function startServer(): Promise<{ server: Server; base: string }> {
     } else if (url === "/file") {
       res.writeHead(200, { "content-type": "application/octet-stream" });
       res.end(Buffer.from("data"));
+    } else if (url === "/range-file") {
+      const payload = Buffer.from("abcdefghij");
+      const range = req.headers.range?.match(/^bytes=(\d+)-(\d+)$/u);
+      if (range === undefined || range === null) {
+        res.writeHead(416);
+        res.end();
+        return;
+      }
+      const start = Number(range[1]);
+      const end = Math.min(Number(range[2]), payload.length - 1);
+      res.writeHead(206, {
+        "content-type": "application/octet-stream",
+        "content-range": `bytes ${start}-${end}/${payload.length}`,
+        "content-length": String(end - start + 1),
+      });
+      res.end(payload.subarray(start, end + 1));
     } else if (url === "/redirect-to-manifest") {
       res.writeHead(302, { location: "/manifest" });
       res.end();
@@ -144,5 +160,18 @@ describe("updater/fetch", () => {
       .update(Buffer.from("data"))
       .digest("hex");
     expect(createHash("sha256").update(buf).digest("hex")).toBe(expected);
+  });
+
+  it("downloads a GitHub-sized asset through range requests", async () => {
+    const dest = join(dir, "ranged.bin");
+    await downloadInstaller(
+      `${base}/range-file`,
+      dest,
+      {
+        validateUrl: testValidateUrl,
+      },
+      10,
+    );
+    await expect(readFile(dest, "utf8")).resolves.toBe("abcdefghij");
   });
 });

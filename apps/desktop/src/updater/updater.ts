@@ -16,6 +16,7 @@ export type DownloadFn = (
   url: string,
   dest: string,
   deps?: FetchDeps,
+  expectedSize?: number,
 ) => Promise<void>;
 export type VerifyFn = (path: string, expected: string) => Promise<boolean>;
 export type ReplaceFn = (
@@ -73,7 +74,7 @@ export async function applyUpdate(
   const download = deps.download ?? downloadInstaller;
   const verify = deps.verify ?? verifySha256;
   const dest = join(deps.tempDir, basenameFromUrl(asset.url));
-  await download(asset.url, dest, deps.fetchDeps);
+  await download(asset.url, dest, deps.fetchDeps, asset.size);
   const ok = await verify(dest, asset.sha256);
   if (!ok) {
     throw new Error(`updater: sha256 mismatch for ${asset.url}`);
