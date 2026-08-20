@@ -186,6 +186,11 @@ function versionDirProbes(
         relative: ["node.exe"],
       });
     }
+    probes.push({
+      dir: join(localAppData, "dsh-node"),
+      entryPattern: VERSION_ENTRY_WITH_V,
+      relative: ["node.exe"],
+    });
     return probes;
   }
   const nvmRoot = join(homeDir, ".nvm", "versions", "node");
@@ -254,6 +259,11 @@ function versionDirProbes(
       relative: ["installation", "bin", "node"],
     });
   }
+  probes.push({
+    dir: join(homeDir, ".local", "share", "dsh-node"),
+    entryPattern: VERSION_ENTRY_WITH_V,
+    relative: ["bin", "node"],
+  });
   return probes;
 }
 

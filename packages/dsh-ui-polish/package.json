@@ -1,0 +1,25 @@
+{
+  "name": "dsh-ui-polish",
+  "description": "DSH UI Polish 界面焕新 v1.1：设置弹窗整体重排（导航侧栏/统一栏宽/官方令牌化的卡片·输入·按钮）、全局平滑动画增强、模型二级菜单防抖飞出（自动换边+交叉淡入，零闪烁）。纯注入式改造，不修改任何官方文件。",
+  "version": "1.1.0",
+  "private": true,
+  "main": "lib/index.js",
+  "exports": {
+    ".": "./lib/index.js",
+    "./client": "./lib/client.js",
+    "./package.json": "./package.json"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "inject": [
+        "@deepseek-ai/dsh-client-runtime",
+        "@deepseek-ai/dsh-client-ui-slots"
+      ],
+      "platform": "web"
+    }
+  },
+  "license": "BSD-3-Clause"
+}

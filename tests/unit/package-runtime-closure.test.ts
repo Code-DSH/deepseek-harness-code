@@ -14,7 +14,7 @@ describe("packaged runtime dependency closure", () => {
       await readFile(join(projectRoot, "package.json"), "utf8"),
     ) as { dependencies: Record<string, string> };
     expect(manifest.dependencies["@deepseek-ai/dsh-home-paths"]).toBe(
-      "0.1.0-rc.6",
+      "0.1.0-rc.8",
     );
     expect(manifest.dependencies.pnpm).toBe("11.19.0");
 
@@ -24,7 +24,7 @@ describe("packaged runtime dependency closure", () => {
         "utf8",
       ),
     ) as { dependencies: Record<string, string> };
-    expect(runtimeManifest.dependencies["@deepseek-ai/dsh"]).toBe("0.1.0-rc.6");
+    expect(runtimeManifest.dependencies["@deepseek-ai/dsh"]).toBe("0.1.0-rc.8");
     expect(runtimeManifest.dependencies["dsh-find-plugin"]).toBe("0.3.6");
     const runtimeLock = await readFile(
       join(projectRoot, "config", "node-runtime", "pnpm-lock.yaml"),
@@ -114,7 +114,7 @@ describe("packaged runtime dependency closure", () => {
       await readFile(join(projectRoot, "package.json"), "utf8"),
     ) as { dependencies: Record<string, string> };
     expect(manifest.dependencies["@deepseek-ai/dsh-workflow"]).toBe(
-      "0.1.0-rc.6",
+      "0.1.0-rc.8",
     );
   });
 
@@ -124,13 +124,13 @@ describe("packaged runtime dependency closure", () => {
     ) as { dependencies: Record<string, string> };
 
     expect(manifest.dependencies["@deepseek-ai/dsh-compaction"]).toBe(
-      "0.1.0-rc.6",
+      "0.1.0-rc.8",
     );
     expect(manifest.dependencies["@deepseek-ai/dsh-invariants"]).toBe(
-      "0.1.0-rc.6",
+      "0.1.0-rc.8",
     );
     expect(manifest.dependencies["@deepseek-ai/dsh-client-ui-primitives"]).toBe(
-      "0.1.0-rc.6",
+      "0.1.0-rc.8",
     );
   });
 

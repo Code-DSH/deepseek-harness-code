@@ -5,13 +5,14 @@
   "type": "module",
   "description": "Pinned runtime packages installed on first launch with the detected system Node.js",
   "dependencies": {
-    "@deepseek-ai/dsh": "0.1.0-rc.6",
-    "@deepseek-ai/dsh-subagent-claude-code": "0.1.0-rc.6",
-    "@deepseek-ai/dsh-subagent-codex": "0.1.0-rc.6",
+    "@deepseek-ai/dsh": "0.1.0-rc.8",
+    "@deepseek-ai/dsh-subagent-claude-code": "0.1.0-rc.8",
+    "@deepseek-ai/dsh-subagent-codex": "0.1.0-rc.8",
     "@modelcontextprotocol/server-everything": "2026.7.4",
     "deepseek-harness-composition": "file:vendor/deepseek-harness-composition-1.0.0.tgz",
     "dsh-better-sidebar": "file:vendor/dsh-better-sidebar-0.12.3.tgz",
     "dsh-find-plugin": "0.3.6",
-    "dsh-vision-router": "file:vendor/dsh-vision-router-1.4.4.tgz"
+    "dsh-vision-router": "file:vendor/dsh-vision-router-1.7.1.tgz",
+    "dsh-superpowers": "file:vendor/dsh-superpowers-0.1.0.tgz"
   }
 }

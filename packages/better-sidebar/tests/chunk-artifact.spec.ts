@@ -7,6 +7,7 @@
  * built lib/ output, so run `pnpm build` first (like manifest-consistency).
  */
 import { readFileSync } from 'node:fs'
+import vm from 'node:vm'
 import { describe, expect, it } from 'vitest'
 // Browser globals first: chunk bodies probe `self`/`document` at evaluation
 // (xterm's UMD wrapper, CodeMirror's UA probe).
@@ -22,8 +23,7 @@ describe('built chunk artifacts', () => {
     g.window = g // classic-script globals
     for (const name of CHUNKS) {
       const code = readFileSync(`lib/client-${name}.js`, 'utf8')
-      // eslint-disable-next-line no-new-func
-      expect(() => new Function(code)(), name).not.toThrow()
+      expect(() => new vm.Script(code).runInContext(vm.createContext({})), name).not.toThrow()
       const registry = g.__dshChunks__ as Record<string, unknown>
       expect(typeof registry[name], name).toBe('function')
     }

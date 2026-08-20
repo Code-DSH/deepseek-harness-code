@@ -369,8 +369,8 @@ describe("desktop plugin with the real pinned Harness", () => {
     expect(presets).toEqual([
       expect.objectContaining({
         id: "anchored-standard",
-        name: "渐进式标准模式 / Anchored Standard (Progressive)",
-        description: expect.stringContaining("Minimal's real tool pair"),
+        name: "渐进式标准模式",
+        description: expect.stringContaining("专为 DeepSeek V4 Pro"),
       }),
     ]);
     expect(presets[0]?.broken).toBeUndefined();
@@ -385,7 +385,7 @@ describe("desktop plugin with the real pinned Harness", () => {
         env: {
           ...process.env,
           DSH_HOME: dshHome,
-          DEEPSEEK_API_KEY: "test-placeholder",
+          DEEPSEEK_API_KEY: process.env.DEEPSEEK_API_KEY ?? "0".repeat(32),
         },
         stdio: ["ignore", "pipe", "pipe"],
       },
@@ -495,6 +495,14 @@ describe("desktop plugin with the real pinned Harness", () => {
 
     const port = await reserveLoopbackPort();
     const origin = `http://127.0.0.1:${port}`;
+    if (
+      typeof bootElectronExecutable !== "string" ||
+      !bootElectronExecutable.startsWith("/") ||
+      typeof bootDshEntry !== "string" ||
+      !bootDshEntry.startsWith("/")
+    ) {
+      throw new Error("boot paths must be absolute");
+    }
     const child = spawn(
       bootElectronExecutable,
       [
@@ -549,7 +557,8 @@ describe("desktop plugin with the real pinned Harness", () => {
         },
       },
     };
-    vm.runInNewContext(source, { document, window });
+    const ctx = vm.createContext({ document, window });
+    new vm.Script(source).runInContext(ctx);
     expect(registration).toBeDefined();
     const client = registration!.factory((id) => {
       if (id === "react") {

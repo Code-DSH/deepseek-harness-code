@@ -1,0 +1,6 @@
+# dsh-superpowers bundle layer: one loader row (bare package name so the
+# client-modules registry qualifies the entry and serves lib/client.js).
+- insert:
+    - id: dsh-superpowers
+      name: 'dsh-superpowers'
+      config: {}

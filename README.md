@@ -6,7 +6,7 @@
   <p><a href="./README.md">English</a> · <a href="./README.zh-CN.md">简体中文</a></p>
   <p><a href="#the-dhc-integration-philosophy">Integration philosophy</a> · <a href="#vision">Vision</a> · <a href="#one-complete-deepseek-harness-distribution">Complete Harness</a> · <a href="#modernizing-the-beta1-experience">BETA1 improvements</a> · <a href="#beyond-a-web-wrapper">Why it is different</a> · <a href="#built-for-long-running-work">Reliability</a> · <a href="#architecture">Architecture</a> · <a href="#build-from-source">Build</a></p>
   <p>
-    <img src="https://img.shields.io/badge/version-0.1.0_BETA1-2563eb?style=flat-square" alt="Version 0.1.0-BETA1" />
+    <img src="https://img.shields.io/badge/version-0.1.0_BETA2-2563eb?style=flat-square" alt="Version 0.1.0-BETA2" />
     <img src="https://img.shields.io/badge/license-MIT-16a34a?style=flat-square" alt="MIT License" />
     <img src="https://img.shields.io/badge/macOS-12%2B-111827?style=flat-square&amp;logo=apple" alt="macOS 12+" />
     <img src="https://img.shields.io/badge/Windows-10%2B-0078D4?style=flat-square&amp;logo=windows" alt="Windows 10+" />
@@ -15,7 +15,7 @@
   <p>
     <img src="https://img.shields.io/badge/Electron-43-47848F?style=flat-square&amp;logo=electron&amp;logoColor=white" alt="Electron 43" />
     <img src="https://img.shields.io/badge/TypeScript-5.9-3178C6?style=flat-square&amp;logo=typescript&amp;logoColor=white" alt="TypeScript 5.9" />
-    <img src="https://img.shields.io/badge/DeepSeek_Harness-rc.6-4F46E5?style=flat-square" alt="DeepSeek Harness rc.6" />
+    <img src="https://img.shields.io/badge/DeepSeek_Harness-rc.8-4F46E5?style=flat-square" alt="DeepSeek Harness rc.8" />
   </p>
 </div>
 
@@ -170,14 +170,14 @@ These are implemented controls, not a synthetic “X% less memory” claim. A re
 - **Bundled global agent prompt** — a reviewed Global Agent Operating Protocol ships as `<DSH_HOME>/AGENTS.md`: installed automatically when the user has no global prompt, updated only while the copy remains app-managed and unmodified, and never overwriting a user-authored prompt. The app menu's "Use Bundled Global Prompt…" switches an existing prompt over with a timestamped backup.
 - **Global `dsh` command** — the first launch installs the app's pinned `@deepseek-ai/dsh` through the official `npm install -g` flow, so `dsh` works in every new terminal exactly like an official CLI installation. An existing user-managed global `dsh` is never overwritten; failures never block startup and surface a one-line manual command.
 - **Localized Agent Presets** — `anchored-standard`, `router-standard`, and `router-spec` ship short bilingual Chinese/English names and descriptions without changing their preset IDs or routing behavior.
-- **Safe experimental integration** — Anchored Standard is a separate official-format bundle and fails closed to Standard on the pinned Harness rc.6 API.
+- **Safe experimental integration** — Anchored Standard is a separate official-format bundle and fails closed to Standard on the pinned Harness rc.8 API.
 
 ## Feature matrix
 
 | Area             | Included                                                                                              |
 | ---------------- | ----------------------------------------------------------------------------------------------------- |
 | Desktop host     | Hardened Electron window, startup page, native menus, tray, close preferences                         |
-| Harness runtime  | Pinned `@deepseek-ai/dsh` rc.6, loopback-only Web service, official single Harness Home               |
+| Harness runtime  | Pinned `@deepseek-ai/dsh` rc.8, loopback-only Web service, official single Harness Home               |
 | V4 models        | Official V4 Pro/Flash catalog and `off` / `high` / `max` reasoning controls                           |
 | Integrated stack | Skills, tools, Goal, Plan, Workflow, Todo, Jobs, questions, approvals, and subagents                  |
 | Bundled Skills   | Superpowers 6.2.0 collection installed into the official Harness Home without overwriting user skills |

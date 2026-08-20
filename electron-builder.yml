@@ -51,6 +51,20 @@ extraResources:
       - index.js
       - lib/**/*
       - cordis.patch.yml
+  - from: packages/dsh-ui-polish
+    to: dsh-ui-polish
+    filter:
+      - package.json
+      - index.js
+      - lib/**/*
+      - cordis.patch.yml
+  - from: packages/dsh-updater-check
+    to: dsh-updater-check
+    filter:
+      - package.json
+      - index.js
+      - lib/**/*
+      - cordis.patch.yml
   - from: packages/prompt-principles-plugin
     to: prompt-principles-plugin
     filter:
@@ -103,6 +117,9 @@ mac:
     - target: dmg
       arch:
         - universal
+    - target: zip
+      arch:
+        - universal
 dmg:
   title: DeepSeek Harness Code ${version}
   sign: false
@@ -147,4 +164,7 @@ appImage:
   artifactName: DeepSeek-Harness-Code-${version}-linux-${arch}.${ext}
 deb:
   artifactName: DeepSeek-Harness-Code-${version}-linux-${arch}.${ext}
-publish: null
+publish:
+  provider: github
+  owner: Code-DSH
+  repo: deepseek-harness-code

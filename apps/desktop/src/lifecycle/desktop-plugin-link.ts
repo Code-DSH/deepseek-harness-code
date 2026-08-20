@@ -31,6 +31,11 @@ const MANAGED_PRESET_METADATA = [
 export type IntegratedHarnessPlugin = {
   packageName: string;
   packageRoot: string;
+  /** When true, the plugin link is created but it is removed from the
+   * bundles list — used for plugins that RC8's dsh-base bundle includes
+   * automatically (e.g. subagent providers), to avoid duplicate loader
+   * entry IDs. */
+  linkOnly?: boolean;
 };
 
 export type OfficialCommandOptions = {
@@ -257,7 +262,11 @@ export async function ensureOfficialHarnessInstall(
         `Integrated package ${plugin.packageName} does not match ${String(manifest.name)}`,
       );
     }
-    plugins.push({ packageName: plugin.packageName, packageRoot });
+    plugins.push({
+      packageName: plugin.packageName,
+      packageRoot,
+      ...(plugin.linkOnly !== undefined ? { linkOnly: plugin.linkOnly } : {}),
+    });
   }
 
   const integratedNames = new Set(plugins.map((plugin) => plugin.packageName));
@@ -351,6 +360,33 @@ export async function ensureOfficialHarnessInstall(
     }).catch(() => undefined);
     await installAll();
     void error;
+  }
+  // RC8's dsh-base bundle includes some plugins (subagent providers)
+  // automatically. Plugins flagged linkOnly get their link created by
+  // `dsh plugin add` but are then removed from the bundles list to
+  // avoid duplicate loader entry IDs.
+  const linkOnlyNames = new Set(
+    plugins.filter((p) => p.linkOnly === true).map((p) => p.packageName),
+  );
+  if (linkOnlyNames.size > 0) {
+    const profilePkgPath = join(profileRoot, "package.json");
+    try {
+      const profilePkg = JSON.parse(await readFile(profilePkgPath, "utf8")) as {
+        dsh?: { profile?: { bundles?: string[] } };
+      };
+      if (Array.isArray(profilePkg?.dsh?.profile?.bundles)) {
+        profilePkg.dsh.profile.bundles = profilePkg.dsh.profile.bundles.filter(
+          (name) => !linkOnlyNames.has(name),
+        );
+        await writeFile(
+          profilePkgPath,
+          JSON.stringify(profilePkg, null, 2) + "\n",
+          "utf8",
+        );
+      }
+    } catch {
+      // Profile package.json read/write failure is non-fatal.
+    }
   }
   return {
     status: "installed",

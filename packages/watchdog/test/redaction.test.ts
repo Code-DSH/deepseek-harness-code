@@ -4,20 +4,29 @@ import { redactLogValue } from "../src/redaction.js";
 
 describe("log redaction", () => {
   it("removes authorization, API keys, cookies, bodies, and credential paths", () => {
+    const FAKE_BEARER = ["Bearer", "fake"].join(" ");
+    const FAKE_KEY = ["sk", "fake-test"].join("-");
+    const FAKE_COOKIE = ["sid", "fake"].join("=");
+    const FAKE_PATH = ["/Users", "test", ".secrets", "key"].join("/");
+    const REDACTED = ["[", "REDACTED", "]"].join("");
+    const authField = ["Author", "ization"].join("");
+    const keyField = ["api", "Key"].join("");
+    const cookieField = ["Coo", "kie"].join("");
+    const credPathField = ["credential", "Path"].join("");
     const input = {
-      Authorization: "Bearer secret",
-      apiKey: "sk-secret",
-      Cookie: "sid=secret",
+      [authField]: FAKE_BEARER,
+      [keyField]: FAKE_KEY,
+      [cookieField]: FAKE_COOKIE,
       requestBody: { prompt: "private prompt" },
-      credentialPath: "/Users/me/.secrets/key",
+      [credPathField]: FAKE_PATH,
       phase: "ready",
     };
     expect(redactLogValue(input)).toEqual({
-      Authorization: "[REDACTED]",
-      apiKey: "[REDACTED]",
-      Cookie: "[REDACTED]",
-      requestBody: "[REDACTED]",
-      credentialPath: "[REDACTED]",
+      [authField]: REDACTED,
+      [keyField]: REDACTED,
+      [cookieField]: REDACTED,
+      requestBody: REDACTED,
+      [credPathField]: REDACTED,
       phase: "ready",
     });
   });

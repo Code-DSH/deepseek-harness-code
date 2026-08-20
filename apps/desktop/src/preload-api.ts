@@ -2,7 +2,9 @@ import {
   desktopPreferencesSchema,
   desktopPreferencesStateSchema,
   runtimeStateSchema,
+  type BundledPluginEntry,
   type DeepSeekDesktopBridge,
+  type UpdaterCheckOutcome,
 } from "./shared/contracts.js";
 
 export interface RendererIpc {
@@ -91,6 +93,18 @@ export function createDesktopBridge(ipc: RendererIpc): DeepSeekDesktopBridge {
           listener(runtimeStateSchema.parse(payload));
         ipc.on("runtime:changed", wrapped);
         return () => ipc.removeListener("runtime:changed", wrapped);
+      },
+    },
+    updater: {
+      async check() {
+        return (await ipc.invoke("updater:check")) as UpdaterCheckOutcome;
+      },
+    },
+    bundledPlugins: {
+      async list() {
+        return (await ipc.invoke(
+          "bundled-plugins:list",
+        )) as BundledPluginEntry[];
       },
     },
   };

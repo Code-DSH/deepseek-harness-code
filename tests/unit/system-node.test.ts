@@ -289,4 +289,98 @@ describe("system Node.js detection", () => {
     });
     expect(resolved).toBeUndefined();
   });
+
+  it("detects an app-managed Node under ~/.local/share/dsh-node on macOS", () => {
+    const dshNodeDir = posix.join(DARWIN_HOME, ".local", "share", "dsh-node");
+    const expected = posix.join(dshNodeDir, "v22.13.0", "bin", "node");
+    const fake: FakeFilesystem = {
+      files: new Set([expected]),
+      dirs: { [dshNodeDir]: ["v22.13.0"] },
+      symlinks: {},
+      logs: [],
+    };
+    const resolved = resolveSystemNode({
+      platform: "darwin",
+      env: { PATH: "" },
+      homeDir: DARWIN_HOME,
+      ...fakeDeps(fake),
+    });
+    expect(resolved).toMatchObject({
+      executable: expected,
+      version: "22.13.0",
+      major: 22,
+      source: "known-location",
+    });
+  });
+
+  it("detects an app-managed Node under %LOCALAPPDATA%\\dsh-node on Windows", () => {
+    const localAppData = "C:\\Users\\test\\AppData\\Local";
+    const dshNodeDir = win32.join(localAppData, "dsh-node");
+    const expected = win32.join(dshNodeDir, "v22.13.0", "node.exe");
+    const fake: FakeFilesystem = {
+      files: new Set([expected]),
+      dirs: { [dshNodeDir]: ["v22.13.0"] },
+      symlinks: {},
+      logs: [],
+    };
+    const resolved = resolveSystemNode({
+      platform: "win32",
+      env: { PATH: "C:\\Windows\\System32", LOCALAPPDATA: localAppData },
+      homeDir: "C:\\Users\\test",
+      ...fakeDeps(fake),
+    });
+    expect(resolved).toMatchObject({
+      executable: expected,
+      version: "22.13.0",
+      major: 22,
+      source: "known-location",
+    });
+  });
+
+  it("prefers a system Node over the app-managed Node", () => {
+    const dshNodeDir = posix.join(DARWIN_HOME, ".local", "share", "dsh-node");
+    const appManagedNode = posix.join(dshNodeDir, "v22.13.0", "bin", "node");
+    const systemNode = posix.join("/opt", "homebrew", "bin", "node");
+    const fake: FakeFilesystem = {
+      files: new Set([appManagedNode, systemNode]),
+      dirs: { [dshNodeDir]: ["v22.13.0"] },
+      symlinks: {
+        [systemNode]: "/opt/homebrew/Cellar/node/26.7.0/bin/node",
+      },
+      logs: [],
+    };
+    const resolved = resolveSystemNode({
+      platform: "darwin",
+      env: { PATH: "" },
+      homeDir: DARWIN_HOME,
+      ...fakeDeps(fake),
+    });
+    expect(resolved).toMatchObject({
+      executable: systemNode,
+      version: "26.7.0",
+    });
+  });
+
+  it("picks the newest app-managed Node version when multiple exist", () => {
+    const dshNodeDir = posix.join(DARWIN_HOME, ".local", "share", "dsh-node");
+    const fake: FakeFilesystem = {
+      files: new Set([
+        posix.join(dshNodeDir, "v22.13.0", "bin", "node"),
+        posix.join(dshNodeDir, "v24.5.0", "bin", "node"),
+      ]),
+      dirs: { [dshNodeDir]: ["v22.13.0", "v24.5.0"] },
+      symlinks: {},
+      logs: [],
+    };
+    const resolved = resolveSystemNode({
+      platform: "darwin",
+      env: { PATH: "" },
+      homeDir: DARWIN_HOME,
+      ...fakeDeps(fake),
+    });
+    expect(resolved).toMatchObject({
+      executable: posix.join(dshNodeDir, "v24.5.0", "bin", "node"),
+      version: "24.5.0",
+    });
+  });
 });

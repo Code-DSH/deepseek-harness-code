@@ -1,5 +1,6 @@
 import { spawn, spawnSync, type ChildProcess } from "node:child_process";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { homedir } from "node:os";
 import { delimiter, dirname, join } from "node:path";
 import { pathToFileURL } from "node:url";
 
@@ -52,6 +53,7 @@ import {
   validateSmokeRuntimeProvenance,
   type SmokeReadyEvidence,
 } from "./lifecycle/smoke-contract.js";
+import { UpdaterHost } from "./lifecycle/updater-host.js";
 import {
   ensureRuntimePackages,
   type NodeRuntimePaths,
@@ -67,6 +69,20 @@ import {
   resolveSystemNode,
   type ResolvedSystemNode,
 } from "./lifecycle/system-node.js";
+import {
+  BUNDLED_NODE_VERSION,
+  computeFileSha256,
+  downloadNodeArchive,
+  extractChecksumFromShasums,
+  fetchShasumsContent,
+  getNodeDownloadUrls,
+  type DownloadProgress,
+} from "./lifecycle/node-downloader.js";
+import {
+  extractNodeArchive,
+  getInstallDir,
+  updateShellPath,
+} from "./lifecycle/user-node-installer.js";
 import { replaceWindowKeepingHostAlive } from "./lifecycle/window-recovery.js";
 import {
   ensureOfficialHarnessInstall,
@@ -97,7 +113,9 @@ let mainWindow: BrowserWindow | undefined;
 let controller: HarnessRuntimeController | undefined;
 let harnessOrigin = "";
 let healthTimer: ReturnType<typeof setInterval> | undefined;
+let quitting = false;
 let watchdogHost: WatchdogHost | undefined;
+let updaterHost: UpdaterHost | undefined;
 let tray: Tray | undefined;
 let preferences: DesktopPreferencesState = { ...DEFAULT_DESKTOP_PREFERENCES };
 let anchoredPresetNotice: RuntimeNotice | undefined;
@@ -351,27 +369,222 @@ function nodeRuntimeResourcePath(): string {
 
 async function showNodeRequiredDialog(
   failedError?: Error,
-): Promise<"retry" | "open-page" | "quit"> {
+): Promise<"download" | "manual" | "retry" | "quit"> {
+  const isMissing = failedError === undefined;
+  const buttons = isMissing
+    ? [
+        "Download & Install Node",
+        "Show Installer Link",
+        "Retry detection",
+        "Quit",
+      ]
+    : ["Retry detection", "Show Installer Link", "Quit"];
   const options: Electron.MessageBoxOptions = {
-    type: failedError === undefined ? "question" : "error",
-    buttons: ["Retry detection", "Open nodejs.org download page", "Quit"],
+    type: isMissing ? "question" : "error",
+    buttons,
     defaultId: 0,
-    cancelId: 2,
+    cancelId: buttons.length - 1,
     title: "Node.js required",
-    message:
-      failedError === undefined
-        ? "DeepSeek Harness Code needs an official Node.js installation to run the local Harness."
-        : "The pinned Harness packages could not be installed.",
-    detail:
-      failedError === undefined
-        ? `No usable Node.js installation was detected. Install the official Node.js ${MINIMUM_NODE_VERSION} or newer from ${NODE_DOWNLOAD_PAGE_URL}, then choose "Retry detection". Common install locations (nodejs.org installer, Homebrew, nvm, Volta, fnm, mise, nvm-windows, Scoop) are detected automatically.`
-        : `${failedError.message.slice(0, 2_000)}\n\nOfficial Node.js download: ${NODE_DOWNLOAD_PAGE_URL}`,
+    message: isMissing
+      ? "DeepSeek Harness Code needs Node.js to run the local Harness. The app can download and install it for you automatically."
+      : "The pinned Harness packages could not be installed.",
+    detail: isMissing
+      ? `No usable Node.js installation was detected. Choose "Download & Install Node" to let the app handle it, or use "Show Installer Link" to install manually. Version ${MINIMUM_NODE_VERSION} or newer is required.`
+      : `${failedError.message.slice(0, 2_000)}\n\nOfficial Node.js download: ${NODE_DOWNLOAD_PAGE_URL}`,
   };
   const result =
     mainWindow === undefined || mainWindow.isDestroyed()
       ? await dialog.showMessageBox(options)
       : await dialog.showMessageBox(mainWindow, options);
-  return (["retry", "open-page", "quit"] as const)[result.response] ?? "quit";
+  const response = result.response;
+  if (isMissing) {
+    return (
+      (["download", "manual", "retry", "quit"] as const)[response] ?? "quit"
+    );
+  }
+  return (["retry", "manual", "quit"] as const)[response] ?? "quit";
+}
+
+function buildDownloadProgressHtml(): string {
+  return `<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="color-scheme" content="light dark" />
+<title>Downloading Node.js</title>
+<style>
+  :root { background: #fff; color: #1a1a1a; }
+  * { box-sizing: border-box; }
+  html, body {
+    width: 100%; height: 100%; margin: 0;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    font-family: -apple-system, system-ui, sans-serif;
+    gap: 16px; user-select: none; -webkit-user-select: none;
+  }
+  .title { font-size: 15px; font-weight: 600; }
+  .status { font-size: 12px; opacity: 0.6; }
+  .bar {
+    width: 280px; height: 6px; border-radius: 3px;
+    background: rgba(0,0,0,0.1); overflow: hidden;
+  }
+  .fill {
+    width: 0%; height: 100%; border-radius: 3px;
+    background: #2563eb; transition: width 200ms ease;
+  }
+  .spinner {
+    width: 24px; height: 24px;
+    border: 2px solid rgba(0,0,0,0.16);
+    border-top-color: rgba(0,0,0,0.72);
+    border-radius: 50%; animation: spin 760ms linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  @media (prefers-color-scheme: dark) {
+    :root { background: #000; color: #f5f5f5; }
+    .bar { background: rgba(255,255,255,0.15); }
+    .fill { background: #3b82f6; }
+    .spinner {
+      border-color: rgba(255,255,255,0.2);
+      border-top-color: rgba(255,255,255,0.82);
+    }
+  }
+</style>
+</head>
+<body>
+  <div class="spinner"></div>
+  <div class="title">Downloading Node.js v${BUNDLED_NODE_VERSION}</div>
+  <div class="bar"><div class="fill" id="fill"></div></div>
+  <div class="status" id="status">Starting download…</div>
+</body>
+</html>`;
+}
+
+function createDownloadProgressWindow(): BrowserWindow {
+  const win = new BrowserWindow({
+    width: 400,
+    height: 200,
+    resizable: false,
+    minimizable: false,
+    maximizable: false,
+    frame: true,
+    titleBarStyle: "hiddenInset",
+    webPreferences: {
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: true,
+    },
+  });
+  win.loadURL(
+    "data:text/html;charset=utf-8," +
+      encodeURIComponent(buildDownloadProgressHtml()),
+  );
+  win.setMenuBarVisibility(false);
+  return win;
+}
+
+function updateDownloadProgress(
+  win: BrowserWindow,
+  progress: DownloadProgress,
+): void {
+  const pct =
+    progress.total > 0
+      ? Math.min(100, Math.round((progress.received / progress.total) * 100))
+      : 0;
+  const mbReceived = (progress.received / 1_048_576).toFixed(1);
+  const mbTotal = (progress.total / 1_048_576).toFixed(1);
+  const status =
+    progress.total > 0
+      ? `${mbReceived} MB / ${mbTotal} MB (${pct}%)`
+      : `${mbReceived} MB downloaded…`;
+  win.webContents
+    .executeJavaScript(
+      `document.getElementById('fill').style.width='${pct}%';` +
+        `document.getElementById('status').textContent=${JSON.stringify(status)};`,
+    )
+    .catch(() => {
+      // Window may be closed; ignore
+    });
+}
+
+async function downloadAndInstallNode(): Promise<void> {
+  const urls = getNodeDownloadUrls(process.platform, process.arch);
+  const home = homedir();
+  // Derive the install directory entirely from homedir() — never from
+  // user-controlled env vars — so no path traversal is possible.
+  const installDir = getInstallDir(
+    process.platform,
+    home,
+    BUNDLED_NODE_VERSION,
+  );
+  const archivePath = join(
+    dirname(installDir),
+    `node-v${BUNDLED_NODE_VERSION}-archive`,
+  );
+
+  const progressWin = createDownloadProgressWindow();
+  try {
+    // 1. Download the binary archive
+    process.stderr.write(
+      `Downloading Node.js v${BUNDLED_NODE_VERSION} from ${urls.archiveUrl}.\n`,
+    );
+    await downloadNodeArchive(urls.archiveUrl, archivePath, (progress) => {
+      updateDownloadProgress(progressWin, progress);
+    });
+
+    // 2. Fetch SHASUMS256.txt and verify the checksum
+    progressWin.webContents
+      .executeJavaScript(
+        `document.getElementById('status').textContent='Verifying checksum…';`,
+      )
+      .catch(() => {});
+    const shasums = await fetchShasumsContent(urls.checksumUrl);
+    const expectedChecksum = extractChecksumFromShasums(
+      shasums,
+      urls.archiveFilename,
+    );
+    if (expectedChecksum === undefined) {
+      throw new Error(
+        `Could not find checksum for ${urls.archiveFilename} in SHASUMS256.txt`,
+      );
+    }
+    const actualChecksum = await computeFileSha256(archivePath);
+    if (actualChecksum !== expectedChecksum) {
+      throw new Error(
+        `Checksum mismatch: expected ${expectedChecksum}, got ${actualChecksum}`,
+      );
+    }
+    process.stderr.write("Node.js archive checksum verified.\n");
+
+    // 3. Extract the archive
+    progressWin.webContents
+      .executeJavaScript(
+        `document.getElementById('status').textContent='Installing Node.js…';` +
+          `document.getElementById('fill').style.width='100%';`,
+      )
+      .catch(() => {});
+    await extractNodeArchive(archivePath, installDir, process.platform);
+    process.stderr.write(`Extracted Node.js to ${installDir}.\n`);
+
+    // 4. Update the user's shell PATH
+    await updateShellPath(
+      process.platform,
+      home,
+      process.env,
+      BUNDLED_NODE_VERSION,
+      installDir,
+    );
+    process.stderr.write("Updated shell PATH for Node.js.\n");
+  } finally {
+    // Clean up the downloaded archive
+    try {
+      const { unlink } = await import("node:fs/promises");
+      await unlink(archivePath);
+    } catch {
+      // Best-effort cleanup
+    }
+    if (!progressWin.isDestroyed()) progressWin.close();
+  }
 }
 
 async function prepareSystemNodeRuntime(): Promise<void> {
@@ -381,11 +594,47 @@ async function prepareSystemNodeRuntime(): Promise<void> {
     const node = resolveSystemNode();
     if (node === undefined) {
       const choice = await showNodeRequiredDialog();
-      if (choice === "open-page") {
-        await shell.openExternal(NODE_DOWNLOAD_PAGE_URL);
-        throw new Error(
-          `No usable Node.js installation was detected. Install the official Node.js ${MINIMUM_NODE_VERSION} or newer from ${NODE_DOWNLOAD_PAGE_URL} and relaunch.`,
-        );
+      if (choice === "download") {
+        try {
+          await downloadAndInstallNode();
+          continue; // retry detection — the installed Node should now be found
+        } catch (error) {
+          const message =
+            error instanceof Error ? error.message : String(error);
+          process.stderr.write(`Node.js download/install failed: ${message}\n`);
+          const urls = getNodeDownloadUrls(process.platform, process.arch);
+          const failOpts: Electron.MessageBoxOptions = {
+            type: "warning",
+            title: "Download failed",
+            message: "Could not download Node.js automatically.",
+            detail: `${message}\n\nPlease install Node.js manually using this direct link:\n${urls.installerUrl}`,
+            buttons: ["Open installer link", "Close"],
+          };
+          if (mainWindow && !mainWindow.isDestroyed()) {
+            await dialog.showMessageBox(mainWindow, failOpts);
+          } else {
+            await dialog.showMessageBox(failOpts);
+          }
+          await shell.openExternal(urls.installerUrl);
+          continue;
+        }
+      }
+      if (choice === "manual") {
+        const urls = getNodeDownloadUrls(process.platform, process.arch);
+        const manualOpts: Electron.MessageBoxOptions = {
+          type: "info",
+          title: "Node.js installer link",
+          message: "Install Node.js manually",
+          detail: `Download and run the Node.js installer:\n${urls.installerUrl}\n\nAfter installing, click "Retry detection".`,
+          buttons: ["Open link", "Close"],
+        };
+        if (mainWindow && !mainWindow.isDestroyed()) {
+          await dialog.showMessageBox(mainWindow, manualOpts);
+        } else {
+          await dialog.showMessageBox(manualOpts);
+        }
+        await shell.openExternal(urls.installerUrl);
+        continue;
       }
       if (choice === "quit") {
         throw new Error(
@@ -433,8 +682,9 @@ async function prepareSystemNodeRuntime(): Promise<void> {
       const failedError =
         error instanceof Error ? error : new Error("Unknown runtime error");
       const choice = await showNodeRequiredDialog(failedError);
-      if (choice === "open-page") {
-        await shell.openExternal(NODE_DOWNLOAD_PAGE_URL);
+      if (choice === "manual") {
+        const urls = getNodeDownloadUrls(process.platform, process.arch);
+        await shell.openExternal(urls.installerUrl);
         throw failedError;
       }
       if (choice === "quit") throw failedError;
@@ -471,6 +721,12 @@ async function startHarness(): Promise<HarnessChild> {
   const modelSelectorPluginRoot = app.isPackaged
     ? join(process.resourcesPath, "dsh-model-two-level-selector")
     : join(app.getAppPath(), "packages", "dsh-model-two-level-selector");
+  const uiPolishPluginRoot = app.isPackaged
+    ? join(process.resourcesPath, "dsh-ui-polish")
+    : join(app.getAppPath(), "packages", "dsh-ui-polish");
+  const updaterCheckPluginRoot = app.isPackaged
+    ? join(process.resourcesPath, "dsh-updater-check")
+    : join(app.getAppPath(), "packages", "dsh-updater-check");
   const promptPrinciplesRoot = app.isPackaged
     ? join(process.resourcesPath, "prompt-principles-plugin")
     : join(app.getAppPath(), "packages", "prompt-principles-plugin");
@@ -520,12 +776,20 @@ async function startHarness(): Promise<HarnessChild> {
         packageRoot: modelSelectorPluginRoot,
       },
       {
-        packageName: "dsh-prompt-principles",
-        packageRoot: promptPrinciplesRoot,
+        packageName: "dsh-ui-polish",
+        packageRoot: uiPolishPluginRoot,
       },
       {
-        packageName: "dsh-vision-router",
-        packageRoot: runtime.dshVisionRouterRoot,
+        packageName: "dsh-updater-check",
+        packageRoot: updaterCheckPluginRoot,
+      },
+      {
+        packageName: "dsh-superpowers",
+        packageRoot: runtime.dshSuperpowersRoot,
+      },
+      {
+        packageName: "dsh-prompt-principles",
+        packageRoot: promptPrinciplesRoot,
       },
       {
         packageName: "dsh-better-sidebar",
@@ -538,10 +802,12 @@ async function startHarness(): Promise<HarnessChild> {
       {
         packageName: "@deepseek-ai/dsh-subagent-codex",
         packageRoot: runtime.dshSubagentCodexRoot,
+        linkOnly: true,
       },
       {
         packageName: "@deepseek-ai/dsh-subagent-claude-code",
         packageRoot: runtime.dshSubagentClaudeCodeRoot,
+        linkOnly: true,
       },
       {
         packageName: "@dsh-external/dsh-super-injector",
@@ -554,6 +820,10 @@ async function startHarness(): Promise<HarnessChild> {
       {
         packageName: "dsh-find-plugin",
         packageRoot: runtime.dshFindPluginRoot,
+      },
+      {
+        packageName: "dsh-vision-router",
+        packageRoot: runtime.dshVisionRouterRoot,
       },
     ],
     legacyPluginSpecs: migration.legacyPluginSpecs,
@@ -647,6 +917,14 @@ async function startHarness(): Promise<HarnessChild> {
       env: {
         ...process.env,
         ...spec.env,
+        // The runtime-bin/pnpm launcher resolves Node + pnpm + the store dir
+        // through these env vars. The first-launch install sets them, but the
+        // running Harness (and its one-click plugin updates, which re-invoke
+        // pnpm) must inherit them too, or the launcher's `exec` gets an empty
+        // Node path ("exec: : not found").
+        DHC_NODE_EXECUTABLE: systemNodeExecutable(),
+        DHC_PNPM_ENTRY: join(nodeRuntimeResourcePath(), "pnpm.mjs"),
+        DHC_PNPM_STORE_DIR: runtime.pnpmStoreDir,
         PATH: [
           runtimeBinRoot,
           dirname(systemNodeExecutable()),
@@ -966,6 +1244,10 @@ async function launch(): Promise<void> {
       preferences = value;
     },
     paste: (target) => target.paste(),
+    checkForUpdates: () =>
+      updaterHost?.check({ silent: false }) ??
+      Promise.resolve({ available: false }),
+    listBundledPlugins: () => [],
   });
   buildMenu();
   createTray();
@@ -1003,6 +1285,29 @@ if (hasSingleInstanceLock) {
     if (mainWindow.isMinimized()) mainWindow.restore();
     mainWindow.show();
     mainWindow.focus();
+  });
+  app
+    .whenReady()
+    .then(() => {
+      app.on("activate", () => {
+        if (BrowserWindow.getAllWindows().length === 0) createWindow();
+        else mainWindow?.show();
+      });
+      return launch();
+    })
+    .then(() => {
+      updaterHost = new UpdaterHost({ parentWindow: () => mainWindow });
+      updaterHost.cleanupTemp();
+      updaterHost.schedule();
+    })
+    .catch(reportLaunchFailure);
+  app.on("before-quit", (event) => {
+    if (quitting) return;
+    event.preventDefault();
+    quitting = true;
+    if (healthTimer !== undefined) clearInterval(healthTimer);
+    updaterHost?.stop();
+    void shutdownNormally();
   });
 }
 
