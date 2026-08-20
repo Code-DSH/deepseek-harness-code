@@ -34,7 +34,7 @@ export class UpdaterHost {
     };
   }
 
-  /** Manual or automatic check. `silent` skips the "no update" dialog. */
+  /** User-initiated informational check. `silent` suppresses status dialogs. */
   async check(opts: { silent?: boolean } = {}): Promise<UpdaterCheckOutcome> {
     if (this.checking) return { available: false };
     this.checking = true;
@@ -63,8 +63,8 @@ export class UpdaterHost {
       const message = error instanceof Error ? error.message : String(error);
       // A 404 on the manifest means no update manifest is published yet
       // (no release carries update-manifest.json) — treat as "no updates
-      // available" rather than a failure, so the manual 检查更新 button
-      // and the periodic silent check don't surface a scary error.
+      // available" rather than a failure, so the manual 检查更新 button does
+      // not surface a scary error before a release manifest exists.
       if (/404|not found/i.test(message)) {
         if (!opts.silent) {
           void this.showMessageBox(

@@ -125,13 +125,12 @@ The user-supplied community claim is experimental and is not a benchmark guarant
 ## Cross-platform status
 
 - macOS Universal DMG is locally built and inspected (`--universal`).
-- Windows NSIS installers are produced by native x64/x64? + arm64 jobs in `.github/workflows/package.yml` (BETA1 shipped; BETA2 re-verified).
+- Windows NSIS installers are produced by native x64 + arm64 jobs in `.github/workflows/package.yml` (BETA1 shipped; BETA2 re-verified).
 - Linux AppImage/deb are defined in `electron-builder.yml` and pass on ubuntu-latest runners in the tag-triggered packaging workflow (BETA1 definitions-ready; BETA2 CI-green).
 
 ## External limits
 
 - The equal 16-point traffic-light contract is verified in source, test, and the packaged main process. Native visual inspection on macOS 15 and macOS 26 remains an external gate; the local packaging host is macOS 27 and cannot substitute for those runs.
-- `pnpm lint` from this primary worktree currently reports generated files under the nested `.worktrees` directory. The lint scope must exclude or remove those worktree outputs before claiming a clean static-gate pass.
 - The key pasted in chat was not used, stored, printed, or forwarded. It must be revoked. A 45-minute live-provider soak is intentionally deferred until a replacement is entered by the user through official Harness settings.
 - V4 Pro/Flash selection and the official `off` / `high` / `max` reasoning controls are available in the pinned adapter. The literal `We need` automatic reasoning trigger is documented as a next requirement and is not represented as shipped until its public per-request implementation and tests exist.
 - The routing-suite immutable snapshot replaces the former mutable `dsh-router-standard/main` refresh; releases now claim a fully pinned routing supply chain verified by SHA-256 at build time.
