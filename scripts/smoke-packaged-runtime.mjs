@@ -505,6 +505,15 @@ async function cleanupProcess(child) {
   await stopProcess(child, true);
 }
 
+async function removeSmokeUserData(path, remove = rm) {
+  await remove(path, {
+    recursive: true,
+    force: true,
+    maxRetries: 5,
+    retryDelay: 200,
+  });
+}
+
 function assertKnownRunnerArchitecture(
   platform = process.platform,
   arch = process.arch,
@@ -761,7 +770,7 @@ async function main() {
           content: `${JSON.stringify(evidence, null, 2)}\n`,
         });
       } finally {
-        await rm(userData, { recursive: true, force: true });
+        await removeSmokeUserData(userData);
       }
     })();
     return finalization;
@@ -915,6 +924,7 @@ export {
   buildPackagedSmokeLaunch,
   waitForPackagedExit,
   waitForEvidenceWithExitGrace,
+  removeSmokeUserData,
   redactPackagedDiagnostic,
 };
 

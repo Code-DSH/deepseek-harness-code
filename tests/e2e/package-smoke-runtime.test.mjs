@@ -23,6 +23,7 @@ import {
   buildPackagedSmokeLaunch,
   waitForPackagedExit,
   waitForEvidenceWithExitGrace,
+  removeSmokeUserData,
   redactPackagedDiagnostic,
   waitForSmokeAcknowledgement,
 } from "../../scripts/smoke-packaged-runtime.mjs";
@@ -83,6 +84,23 @@ describe("packaged runtime listener selection", () => {
     await expect(waiting).resolves.toMatchObject({
       final: { phase: "final" },
     });
+  });
+
+  test("retries removal of the isolated smoke user-data directory", async () => {
+    let received;
+    await removeSmokeUserData("/tmp/isolated-smoke", async (...args) => {
+      received = args;
+    });
+
+    expect(received).toEqual([
+      "/tmp/isolated-smoke",
+      {
+        recursive: true,
+        force: true,
+        maxRetries: 5,
+        retryDelay: 200,
+      },
+    ]);
   });
 
   test("isolates Harness Home and disables only the Linux CI sandbox", () => {
