@@ -225,8 +225,9 @@ jobs:
           [[ "$(dpkg-query -W -f='${Status}' deepseek-harness-code)" == "install ok installed" ]]
           desktop=$(dpkg-query -L deepseek-harness-code | awk '/\/usr\/share\/applications\/.*\.desktop$/ { print; exit }')
           [[ -n "$desktop" && -f "$desktop" ]]
-          executable=$(awk -F= '$1 == "Exec" { print $2; exit }' "$desktop" | awk '{print $1}')
+          executable=$(command -v deepseek-harness-code)
           [[ -n "$executable" && -x "$executable" ]]
+          executable=$(realpath "$executable")
           install_dir=$(dirname "$executable")
           resources="$install_dir/resources"
           [[ -d "$resources" ]]
