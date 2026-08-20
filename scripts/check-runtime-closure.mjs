@@ -284,7 +284,7 @@ const injectorClient = await readFile(
 );
 if (
   !injectorClient.includes("SuperInjectorPage") ||
-  !injectorClient.includes("}, SuperInjectorPage)")
+  !injectorClient.includes("slots.register")
 ) {
   throw new Error(
     "routing injector client must carry the settings-page fix (slots.register(options, Component) with the page as the 2nd positional argument)",

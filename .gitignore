@@ -12,3 +12,4 @@ coverage/
 .DS_Store
 build/routing-suite/
 build/node-runtime/
+build/
