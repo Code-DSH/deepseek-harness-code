@@ -69,6 +69,23 @@ describe("updater checkForUpdate", () => {
     expect(r.asset?.format).toBe("zip");
   });
 
+  it("reports the beta2-1 release as newer than the beta2 build", async () => {
+    const deps: UpdaterDeps = {
+      manifestUrl: "https://github.com/x/update-manifest.json",
+      currentVersion: "0.1.0-BETA2",
+      platform: "darwin",
+      tempDir: "/tmp",
+      replace: async () => {},
+      fetchDeps: {
+        fetch: stubManifestFetch(makeManifest("0.1.0-BETA2-1")),
+        validateUrl: permissiveValidate,
+      },
+    };
+    const r = await checkForUpdate(deps);
+    expect(r.available).toBe(true);
+    expect(r.manifest?.latestVersion).toBe("0.1.0-BETA2-1");
+  });
+
   it("reports unavailable when the remote version is not newer", async () => {
     const deps: UpdaterDeps = {
       manifestUrl: "https://github.com/x/update-manifest.json",

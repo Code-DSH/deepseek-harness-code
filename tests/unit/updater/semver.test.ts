@@ -57,6 +57,11 @@ describe("updater/semver compareSemver", () => {
     expect(compareSemver("0.1.0-rc.1", "0.1.0-rc.2")).toBe(-1);
   });
 
+  it("orders a hyphenated release suffix after its base preview", () => {
+    expect(compareSemver("0.1.0-BETA2-1", "0.1.0-BETA2")).toBe(1);
+    expect(compareSemver("0.1.0-BETA2-1", "0.1.0-BETA2-2")).toBe(-1);
+  });
+
   it("ranks a numeric prerelease below an alphanumeric one", () => {
     expect(compareSemver("0.1.0-1", "0.1.0-alpha")).toBe(-1);
   });

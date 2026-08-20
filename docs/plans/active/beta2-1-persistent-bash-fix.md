@@ -61,14 +61,14 @@
 - Modify: `docs/releases/0.1.0-BETA2-1.md`.
 - Modify: updater manifest generation/release assets as required by the existing updater contract.
 
-- [ ] Bump the application version to `0.1.0-BETA2-1` without changing the pinned Harness version.
-- [ ] Run build, tests, closure, and platform artifact verification.
-- [ ] Publish the Git commit/tag and GitHub Release with installable artifacts and update manifest/assets.
+- [x] Bump the application version to `0.1.0-BETA2-1` without changing the pinned Harness version.
+- [x] Run build, tests, closure, and platform artifact verification.
+- [x] Publish the Git commit/tag and GitHub Release with installable artifacts and update manifest/assets.
 
 ### Task 4: Verify discovery and replacement
 
-- [ ] Configure the local app to check the published manifest.
-- [ ] Confirm the app reports `0.1.0-BETA2-1` as available from the old build.
+- [x] Configure the updater source to check the published manifest and verify the old `BETA2` version detects `0.1.0-BETA2-1` in the real-version regression test.
+- [ ] Confirm the desktop UI reports `0.1.0-BETA2-1` as available from the old installed build after the Mac is unlocked.
 - [ ] Download and apply the replacement package using the supported updater path.
 - [ ] Confirm the restarted app version and both terminal patch expressions after update.
 - [ ] Re-run the original Bash command and record completion evidence.

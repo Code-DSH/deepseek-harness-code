@@ -11,7 +11,7 @@ read_when: [reviewing release readiness or reproducing validation]
 skip_when: [isolated source edits before release]
 priority: must
 freshness_class: project
-last_verified: 2026-08-20T00:00:00+08:00
+last_verified: 2026-08-20T22:48:00+08:00
 owners: [primary-agent]
 source_of_truth: [../../apps, ../../packages, ../../tests, ../../release]
 related:
@@ -27,9 +27,9 @@ tags: [acceptance, release, evidence]
 
 - The pinned `@deepseek-ai/dsh-terminal-bash@0.1.0-rc.8` patch changes `CONTROLLED_PROMPT` to `__DSH_PERSISTENT_BASH_PROMPT__` and replaces the hard-coded prompt bound with `CONTROLLED_PROMPT.length + 1`. The patch is registered in both root and packaged runtime lockfiles with hash `ab9c3393...`.
 - A real local installed Harness run after runtime reconciliation executed `cd "/Users/trip/TRUE 开发/openless" && pwd && echo BASH_PATCH_OK` in `0.3s` and returned `BASH_PATCH_OK`; the previous same-shape call had timed out at 300s.
-- Local `pnpm test` passes 312 unit tests (3 intentionally skipped), 108 Anchored tests, 24 plugin/real-Harness tests, 39 package-contract tests, and 2 Playwright E2E tests. `pnpm check`, runtime closure, Universal DMG verification, and the Universal ZIP resource inspection also pass locally.
+- Local `pnpm test` passes 314 unit tests (3 intentionally skipped), 108 Anchored tests, 24 plugin/real-Harness tests, 39 package-contract tests, and 2 Playwright E2E tests. `pnpm check`, runtime closure, Universal DMG verification, and the Universal ZIP resource inspection also pass locally.
 - The updater now remains user-confirmed: it selects the x64/arm64 or macOS universal asset, verifies SHA-256, invokes the platform replacement helper, and restarts only after the user chooses “Update and restart”. CI generates `update-manifest.json` from the release assets.
-- Cross-platform Windows/Linux artifact production and remote Release/manifest evidence remain external CI gates until the tagged workflow completes.
+- Tagged workflow `32380432464` completed successfully for native macOS Universal, Windows x64/arm64, Linux x64/arm64 packaging and the GitHub Release publish job. Release `v0.1.0-BETA2-1` is Latest/non-prerelease and exposes eight installers plus `update-manifest.json`; the remote manifest selects the Universal macOS ZIP and architecture-specific Windows/Linux assets with 64-character SHA-256 values.
 
 ## 0.1.0-BETA2 integration evidence (current)
 
@@ -92,9 +92,9 @@ tags: [acceptance, release, evidence]
 
 ## Automated verification
 
-| Gate              | Result (BETA2 baseline)                                                                                                   |
+| Gate              | Result (BETA2-1)                                                                                                         |
 | ----------------- | ------------------------------------------------------------------------------------------------------------------------- |
-| Unit suite        | 50 files / 308 tests passed (3 intentionally skipped), including Routing Suite, system-node, and stream regressions       |
+| Unit suite        | 51 files / 314 tests passed (3 intentionally skipped), including Routing Suite, system-node, updater, and stream regressions |
 | Upstream preset   | 108 vendored upstream and local-patch tests passed                                                                        |
 | Official plugins  | 3 files / 24 tests passed, including pinned rc.8 roster, session creation, and boot                                       |
 | Package contract  | 2 files / 39 tests passed                                                                                                 |
@@ -103,7 +103,7 @@ tags: [acceptance, release, evidence]
 | Static gates      | ESLint, Prettier, documentation links (verified 2026-08-20), and 7-control/6-forbidden security contract passed           |
 | Dependency audit  | `pnpm audit --prod` reported no known vulnerabilities                                                                     |
 | Runtime preflight | 51 artifacts, 35 production dependencies, 8 critical packages, and 10 bundled plugin packages verified                    |
-| macOS package     | `verify:mac --universal` mounts, signature/resource closure checked, SHA-256 recorded (BETA1 archived; BETA2 re-verified) |
+| macOS package     | Local `verify:mac --universal` passed; tagged Universal macOS job passed and uploaded DMG + ZIP                            |
 
 Historical 0.3.x gate snapshots are retained above for traceability; current release gates are BETA2.
 
