@@ -23,6 +23,7 @@ export type SmokeConfig = {
   readonly path: string;
   readonly acknowledgementPath?: string;
   readonly root: string;
+  readonly userDataPath: string;
   readonly runId: string;
   readonly matrixLabel: SmokeMatrixLabel;
   readonly packageKind: string;
@@ -113,12 +114,15 @@ export function parseSmokeConfig(
     return undefined;
   const path = env.SMOKE_EVIDENCE_PATH;
   const root = env.SMOKE_EVIDENCE_ROOT;
+  const userDataPath = env.SMOKE_USER_DATA_PATH;
   const acknowledgementPath = env.SMOKE_ACK_PATH ?? `${path ?? ""}.ack`;
   if (
     path === undefined ||
     root === undefined ||
+    userDataPath === undefined ||
     !isEvidencePathWithinRoot(path, root) ||
-    !isEvidencePathWithinRoot(acknowledgementPath, root)
+    !isEvidencePathWithinRoot(acknowledgementPath, root) ||
+    !isEvidencePathWithinRoot(userDataPath, root)
   )
     return undefined;
   const runId = env.SMOKE_RUN_ID;
@@ -145,6 +149,7 @@ export function parseSmokeConfig(
   return {
     path,
     root,
+    userDataPath,
     ...(acknowledgementPath === "" ? {} : { acknowledgementPath }),
     runId,
     matrixLabel: matrixLabel as SmokeMatrixLabel,
@@ -154,6 +159,13 @@ export function parseSmokeConfig(
     artifactSha256,
     startedAt,
   };
+}
+
+export function resolveApplicationUserDataPath(
+  defaultPath: string,
+  smokeConfig?: Pick<SmokeConfig, "userDataPath">,
+): string {
+  return smokeConfig?.userDataPath ?? defaultPath;
 }
 
 export async function awaitSmokeAcknowledgement(

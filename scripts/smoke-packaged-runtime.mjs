@@ -4,6 +4,7 @@ import { constants as fsConstants } from "node:fs";
 import {
   access,
   lstat,
+  mkdtemp,
   mkdir,
   open,
   readFile,
@@ -666,9 +667,6 @@ async function main() {
   };
   if (artifactSha256 !== expectedArtifactHash)
     throw new Error("packaged artifact SHA-256 does not match expected hash");
-  const userData = await import("node:fs/promises").then(({ mkdtemp }) =>
-    mkdtemp(join(tmpdir(), "dsh-packaged-smoke-")),
-  );
   await mkdir(evidenceRoot, { recursive: true });
   await assertEvidenceRootAllowed(evidenceRoot, metadataRoot);
   await assertPathWithinRoot(resolve(evidencePath), evidenceRoot);
@@ -685,6 +683,7 @@ async function main() {
   await unlink(resolve(`${appEvidencePath}.ack`)).catch((error) => {
     if (!(error instanceof Error) || error.code !== "ENOENT") throw error;
   });
+  const userData = await mkdtemp(join(evidenceRoot, ".user-data-"));
   let child;
   let childDiagnostics = "";
   let exitedCleanly = false;
@@ -727,6 +726,7 @@ async function main() {
       SMOKE_EVIDENCE_PATH: resolve(appEvidencePath),
       SMOKE_ACK_PATH: resolve(`${appEvidencePath}.ack`),
       SMOKE_EVIDENCE_ROOT: evidenceRoot,
+      SMOKE_USER_DATA_PATH: userData,
       SMOKE_RUN_ID: runId,
       MATRIX_LABEL: matrixLabel,
       PACKAGE_KIND: packageKind,
