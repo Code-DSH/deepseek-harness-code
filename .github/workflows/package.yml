@@ -58,6 +58,9 @@ jobs:
           node-version: 24.18.0
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - name: Validate tag version
+        shell: bash
+        run: test "$GITHUB_REF_NAME" = "v$(node -p 'require("./package.json").version')"
       - run: pnpm build
       - run: pnpm build:icon
       - run: pnpm preflight:runtime
@@ -69,11 +72,13 @@ jobs:
           case "$MATRIX_LABEL" in
             windows-*) patterns=("release/DeepSeek-Harness-Code-*-windows-${EXPECTED_ARCHITECTURE}-setup.exe");;
             macos-*) patterns=("release/DeepSeek-Harness-Code-*-mac-universal.dmg");;
-            linux-*) patterns=("release/DeepSeek-Harness-Code-*-linux-${EXPECTED_ARCHITECTURE}.AppImage" "release/DeepSeek-Harness-Code-*-linux-${EXPECTED_ARCHITECTURE}.deb");;
+            linux-x64) patterns=("release/DeepSeek-Harness-Code-*-linux-x86_64.AppImage" "release/DeepSeek-Harness-Code-*-linux-amd64.deb");;
+            linux-arm64) patterns=("release/DeepSeek-Harness-Code-*-linux-arm64.AppImage" "release/DeepSeek-Harness-Code-*-linux-arm64.deb");;
             *) printf 'unknown matrix label: %s\n' "$MATRIX_LABEL" >&2; exit 1;;
           esac
           for pattern in "${patterns[@]}"; do
-            mapfile -t matches < <(compgen -G "$pattern" || true)
+            matches=()
+            while IFS= read -r match; do matches+=("$match"); done < <(compgen -G "$pattern" || true)
             if [[ "${#matches[@]}" -ne 1 ]]; then
               printf 'expected exactly one artifact for %s, found %s\n' "$pattern" "${#matches[@]}" >&2
               printf '%s\n' "${matches[@]}" >&2
@@ -158,7 +163,9 @@ jobs:
           }
           trap cleanup EXIT
           mkdir -p "$EVIDENCE_ROOT"
-          appimage=$(find release -maxdepth 1 -type f -name "DeepSeek-Harness-Code-*-linux-${EXPECTED_ARCHITECTURE}.AppImage" -print)
+          appimage_arch="$EXPECTED_ARCHITECTURE"
+          [[ "$appimage_arch" == x64 ]] && appimage_arch=x86_64
+          appimage=$(find release -maxdepth 1 -type f -name "DeepSeek-Harness-Code-*-linux-${appimage_arch}.AppImage" -print)
           [[ "$(wc -l <<< "$appimage")" -eq 1 ]]
           appimage=$(realpath "$appimage")
           chmod +x "$appimage"
@@ -197,7 +204,9 @@ jobs:
           }
           trap cleanup EXIT
           mkdir -p "$EVIDENCE_ROOT"
-          deb=$(find release -maxdepth 1 -type f -name "DeepSeek-Harness-Code-*-linux-${EXPECTED_ARCHITECTURE}.deb" -print)
+          deb_filename_arch="$EXPECTED_ARCHITECTURE"
+          [[ "$deb_filename_arch" == x64 ]] && deb_filename_arch=amd64
+          deb=$(find release -maxdepth 1 -type f -name "DeepSeek-Harness-Code-*-linux-${deb_filename_arch}.deb" -print)
           [[ "$(wc -l <<< "$deb")" -eq 1 ]]
           expected_deb_arch=amd64
           [[ "$EXPECTED_ARCHITECTURE" == arm64 ]] && expected_deb_arch=arm64
@@ -238,8 +247,10 @@ jobs:
         with:
           name: ${{ matrix.label }}
           path: |
-            release/DeepSeek-Harness-Code-*-linux-${{ matrix.expected-architecture }}.AppImage
-            release/DeepSeek-Harness-Code-*-linux-${{ matrix.expected-architecture }}.deb
+            release/DeepSeek-Harness-Code-*-linux-x86_64.AppImage
+            release/DeepSeek-Harness-Code-*-linux-amd64.deb
+            release/DeepSeek-Harness-Code-*-linux-arm64.AppImage
+            release/DeepSeek-Harness-Code-*-linux-arm64.deb
           if-no-files-found: error
       - name: Upload sanitized smoke evidence
         if: always()

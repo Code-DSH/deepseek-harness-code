@@ -248,8 +248,14 @@ describe("DeepSeek Harness Code distribution contract", () => {
     expect(workflow).toContain(
       'node scripts/verify-macos-artifact.mjs "$ARTIFACT" --universal',
     );
-    expect(workflow).toContain("linux-${EXPECTED_ARCHITECTURE}.AppImage");
-    expect(workflow).toContain("linux-${EXPECTED_ARCHITECTURE}.deb");
+    expect(workflow).toContain("linux-x86_64.AppImage");
+    expect(workflow).toContain("linux-amd64.deb");
+    const artifactValidationStep = workflow.slice(
+      workflow.indexOf("      - name: Validate exact package artifacts"),
+      workflow.indexOf("      - name: Smoke test Windows package"),
+    );
+    expect(artifactValidationStep).not.toContain("mapfile -t");
+    expect(workflow).toContain("Validate tag version");
     expect(workflow).toContain("artifact-sha256");
     expect(workflow).not.toContain(".omo");
     expect(workflow).toContain("release/evidence/${{ matrix.label }}");
@@ -291,6 +297,7 @@ describe("DeepSeek Harness Code distribution contract", () => {
     expect(smokeScript).toContain("SMOKE_EVIDENCE_PATH");
     expect(smokeScript).toContain("SMOKE_RUN_ID");
     expect(smokeScript).toContain("randomUUID");
+    expect(smokeScript).toContain("parseWindowsPeMachine");
   });
 
   test("parses the package workflow as YAML", async () => {
