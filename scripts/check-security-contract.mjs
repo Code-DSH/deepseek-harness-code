@@ -58,6 +58,21 @@ const forbidden = [
     /spctl\s+--master-disable/,
     "global Gatekeeper bypass",
   ],
+  [
+    "apps/desktop/src/main.ts",
+    /Download & Install Node|downloadAndInstallNode/,
+    "app-managed Node installer",
+  ],
+  [
+    "apps/desktop/src/main.ts",
+    /terminateStaleHarnessChildren/,
+    "global Harness process termination",
+  ],
+  [
+    "apps/desktop/src/lifecycle/updater-host.ts",
+    /createPlatformReplace|applyUpdate|DSC_UPDATER_AUTO_APPLY|\bschedule\(/,
+    "automatic update replacement path",
+  ],
 ];
 for (const [relativePath, pattern, description] of forbidden) {
   const source = readFileSync(resolve(root, relativePath), "utf8");

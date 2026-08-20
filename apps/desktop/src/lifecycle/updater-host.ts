@@ -1,15 +1,7 @@
 import { app, dialog, type BrowserWindow } from "electron";
-import { mkdirSync, rmSync } from "node:fs";
-import { join } from "node:path";
 
-import { createPlatformReplace } from "../updater/replace/index.js";
 import { getUpdaterConfig } from "../updater/updater-config.js";
-import {
-  applyUpdate,
-  checkForUpdate,
-  type UpdaterDeps,
-  type UpdateAsset,
-} from "../updater/updater.js";
+import { checkForUpdate, type UpdaterCheckDeps } from "../updater/updater.js";
 
 export interface UpdaterHostOptions {
   /** Window to parent update dialogs to (undefined = app-modal). */
@@ -22,62 +14,24 @@ export interface UpdaterCheckOutcome {
 }
 
 /**
- * Host glue for the auto-updater: builds the UpdaterDeps from app state +
- * updater-config, schedules periodic checks, surfaces an available update via
- * a dialog, and applies it on user consent. The actual bundle swap + relaunch
- * happens in the platform ReplaceFn (a detached helper on macOS).
+ * Host glue for the informational update check. BETA2 deliberately does not
+ * schedule background checks, download installers, replace the application,
+ * or restart it. Installation remains an explicit user action from Releases.
  */
 export class UpdaterHost {
-  private readonly deps: UpdaterDeps;
-  private interval: NodeJS.Timeout | undefined;
+  private readonly deps: UpdaterCheckDeps;
   private checking = false;
 
   constructor(private readonly options: UpdaterHostOptions = {}) {
     const config = getUpdaterConfig();
-    const tempDir = join(app.getPath("userData"), "updater-temp");
-    mkdirSync(tempDir, { recursive: true });
     this.deps = {
       manifestUrl: config.manifestUrl,
       currentVersion: app.getVersion(),
       platform: process.platform as "darwin" | "win32" | "linux",
-      tempDir,
-      replace: createPlatformReplace({ exit: () => app.exit(0) }),
       ...(config.fetchDeps !== undefined
         ? { fetchDeps: config.fetchDeps }
         : {}),
     };
-  }
-
-  /** Remove leftover staging/helper from a prior run. */
-  cleanupTemp(): void {
-    const tempDir = this.deps.tempDir;
-    try {
-      rmSync(join(tempDir, "dsh-update-staging"), {
-        recursive: true,
-        force: true,
-      });
-    } catch {
-      // Best effort.
-    }
-    try {
-      rmSync(join(tempDir, "dsh-update-helper.sh"), { force: true });
-    } catch {
-      // Best effort.
-    }
-  }
-
-  schedule(initialDelayMs = 10_000, intervalMs = 6 * 60 * 60_000): void {
-    setTimeout(() => {
-      void this.check({ silent: true });
-    }, initialDelayMs);
-    this.interval = setInterval(() => {
-      void this.check({ silent: true });
-    }, intervalMs);
-  }
-
-  stop(): void {
-    if (this.interval !== undefined) clearInterval(this.interval);
-    this.interval = undefined;
   }
 
   /** Manual or automatic check. `silent` skips the "no update" dialog. */
@@ -98,13 +52,12 @@ export class UpdaterHost {
       }
       const version = result.manifest?.latestVersion ?? "";
       const notes = result.manifest?.notes ?? "";
-      const apply =
-        process.env.DSC_UPDATER_AUTO_APPLY === "1"
-          ? true
-          : await this.confirmApply(version, notes);
-      if (apply) {
-        await this.apply(result.asset);
-      }
+      await this.showMessageBox(
+        "Update available",
+        `A new version ${version} is available. Download it from GitHub Releases to install it.`,
+        ["OK"],
+        notes,
+      );
       return { available: true, version };
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
@@ -134,21 +87,6 @@ export class UpdaterHost {
     } finally {
       this.checking = false;
     }
-  }
-
-  async apply(asset: UpdateAsset): Promise<void> {
-    await applyUpdate(this.deps, asset);
-  }
-
-  private async confirmApply(version: string, notes: string): Promise<boolean> {
-    const res = await this.showMessageBox(
-      "Update available",
-      `A new version ${version} is available.`,
-      ["Update now", "Later"],
-      notes ||
-        "The app will download, verify, and restart to apply the update.",
-    );
-    return res === 0;
   }
 
   private async showMessageBox(

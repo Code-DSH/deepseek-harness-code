@@ -290,7 +290,7 @@ describe("system Node.js detection", () => {
     expect(resolved).toBeUndefined();
   });
 
-  it("detects an app-managed Node under ~/.local/share/dsh-node on macOS", () => {
+  it("ignores a retired app-managed Node under ~/.local/share/dsh-node on macOS", () => {
     const dshNodeDir = posix.join(DARWIN_HOME, ".local", "share", "dsh-node");
     const expected = posix.join(dshNodeDir, "v22.13.0", "bin", "node");
     const fake: FakeFilesystem = {
@@ -305,15 +305,10 @@ describe("system Node.js detection", () => {
       homeDir: DARWIN_HOME,
       ...fakeDeps(fake),
     });
-    expect(resolved).toMatchObject({
-      executable: expected,
-      version: "22.13.0",
-      major: 22,
-      source: "known-location",
-    });
+    expect(resolved).toBeUndefined();
   });
 
-  it("detects an app-managed Node under %LOCALAPPDATA%\\dsh-node on Windows", () => {
+  it("ignores a retired app-managed Node under %LOCALAPPDATA%\\dsh-node on Windows", () => {
     const localAppData = "C:\\Users\\test\\AppData\\Local";
     const dshNodeDir = win32.join(localAppData, "dsh-node");
     const expected = win32.join(dshNodeDir, "v22.13.0", "node.exe");
@@ -329,12 +324,7 @@ describe("system Node.js detection", () => {
       homeDir: "C:\\Users\\test",
       ...fakeDeps(fake),
     });
-    expect(resolved).toMatchObject({
-      executable: expected,
-      version: "22.13.0",
-      major: 22,
-      source: "known-location",
-    });
+    expect(resolved).toBeUndefined();
   });
 
   it("prefers a system Node over the app-managed Node", () => {
@@ -361,7 +351,7 @@ describe("system Node.js detection", () => {
     });
   });
 
-  it("picks the newest app-managed Node version when multiple exist", () => {
+  it("ignores every retired app-managed Node version", () => {
     const dshNodeDir = posix.join(DARWIN_HOME, ".local", "share", "dsh-node");
     const fake: FakeFilesystem = {
       files: new Set([
@@ -378,9 +368,6 @@ describe("system Node.js detection", () => {
       homeDir: DARWIN_HOME,
       ...fakeDeps(fake),
     });
-    expect(resolved).toMatchObject({
-      executable: posix.join(dshNodeDir, "v24.5.0", "bin", "node"),
-      version: "24.5.0",
-    });
+    expect(resolved).toBeUndefined();
   });
 });

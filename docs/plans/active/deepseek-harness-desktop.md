@@ -54,9 +54,9 @@ Implement and verify the confirmed intent. Do not add auto-update installer, not
 
 1. **Bootstrap and baseline:** workspace, lockfile, official Harness launch, minimal docs, initial tests.
 2. **Desktop host:** secure window/preload, lifecycle controller, close behavior, menu, navigation policy, system Node auto-detection.
-3. **Watchdog and diagnostics:** IPC disconnect recovery, circuit breaker (1 s / 2 s, open on 3rd in 5 min), health state (5 s probe, 3 failures), rotating redacted logs (5 × 10 MB).
+3. **Watchdog and diagnostics:** IPC disconnect recovery, circuit breaker (5 s / 10 s, open on 3rd in 5 min), health state (5 s probe, 3 failures), rotating redacted logs (5 × 10 MB).
 4. **Official plugins, presets, Routing Suite, and Skills:** 8 Web bundles (desktop, ui-motion 1.1.0, model2 1.1.0, ui-polish, updater-check, prompt-principles, vision-router 1.7.1, better-sidebar 0.12.3) + composition (MCP + subagents) + superpowers (coding mode) + global prompt + managed progressive `anchored-standard` preset + auto-assembled immutable dsh-routing-suite (`injector 0.3.3` / `mode-boost 0.1.0` / `router-preset eff787e`) + bundled Superpowers skills 6.2.0.
-5. **Packaging:** icon, universal app/DMG (`asar: false`), ad-hoc signing, targeted quarantine guidance, runtime closure (35 artifacts + 8 critical versions + SHA-256 routing digests).
+5. **Packaging:** icon, universal app/DMG (`asar: false`), ad-hoc signing, targeted quarantine guidance, runtime closure (51 runtime artifacts + 35 production dependencies + 8 critical versions + 10 bundled plugin packages + SHA-256 routing digests).
 6. **Acceptance:** unit/integration/fault/security/package tests, mount verification, Computer Use, live soak if credentials exist (BETA1 shipped; BETA2 integration re-verified).
 
 ## Dependencies and Risks

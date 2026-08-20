@@ -25,13 +25,13 @@ tags: [acceptance, release, evidence]
 
 ## 0.1.0-BETA2 integration evidence (current)
 
-- All prior feature branches are consolidated into `main@dc245bc`; current HEAD is `923eed2` on `origin/main`.
+- BETA2 is released only from the synchronized `main` commit accepted by the release PR; tag `v0.1.0-BETA2` identifies the immutable source used by tag CI.
 - Runtime pinned at `@deepseek-ai/dsh@0.1.0-rc.8`, Electron 43.4.0, pnpm 11.19.0, `dsh-find-plugin@0.3.6`; system Node >=22.13 auto-detected (PATH + nodejs.org/Homebrew/nvm/Volta/fnm/mise/Scoop/nvm-windows/Chocolatey + NVM_DIR/VOLTA_HOME/FNM_DIR), portable Node download removed.
 - Harness Home resolution uses `@deepseek-ai/dsh-home-paths@0.1.0-rc.8`. Migration from `<Electron userData>/dsh-home` is copy-only, target-wins, symlink-rejecting, permission-preserving (0600/0700), idempotent, and rollback-safe.
 - The host installs **8+ integrated plugins** only through `dsh plugin --profile web add` using the bundled pnpm runtime: `deepseek-harness-desktop-plugin`, `dsh-ui-motion@1.1.0`, `dsh-model2-selector@1.1.0`, `dsh-ui-polish`, `dsh-updater-check@1.0.0`, `dsh-prompt-principles`, `dsh-vision-router@1.7.1`, `dsh-better-sidebar@0.12.3`, `dsh-superpowers`, `@dsh-external/dsh-super-injector@0.3.3`, `@dsh-external/dsh-mode-boost@0.1.0`, `dsh-find-plugin`, and `deepseek-harness-composition` (MCP bridges + subagent providers). The Harness child receives `--expose-internals`; all bare-name patches are retained. A corrupted profile `node_modules` triggers a one-time rebuild before failing.
 - Packaged extra resources include `routing-suite/` (SHA-256 pinned), `superpowers-skills/`, `global-agent-prompt/`, and the 8 plugin trees; `asar: false` preserves the full `window.__DSH_BOOT__` boot graph (39+ entries).
-- Current gates (BETA2 pipeline): `pnpm build` → `pnpm check:memory` → `pnpm preflight:runtime` (35 artifacts + 8 critical versions + 4+ plugin roots + SHA-256 digests + bare-name patches + orphan import rejection) → `pnpm check` (typecheck + lint + format:check + verify:docs + verify:security) → `pnpm dist:mac --universal` → `node scripts/verify-macos-artifact.mjs --universal` (mounted-image signature + runtime closure + preset provenance + Mach-O universal/arch checks). Windows NSIS and Linux AppImage/deb pass on native runners.
-- The lifecycle-race repair DMG is `release/DeepSeek-Harness-Code-0.1.0-BETA2-mac-universal.dmg`, 224,075,976 bytes, SHA-256 `59c48b8fcf9dd08777a4997ac3064b95ea594dda04c613b4f75eefa7c09c56f4`; `hdiutil verify` and the mounted Universal artifact verifier both exited 0.
+- Current gates (BETA2 pipeline): `pnpm build` → `pnpm check:memory` → `pnpm preflight:runtime` (51 runtime artifacts + 35 production dependencies + 8 critical versions + 10 bundled plugin packages + SHA-256 digests + bare-name patches + orphan import rejection) → `pnpm check` (typecheck + lint + format:check + verify:docs + verify:security) → tag CI packaging. The macOS tag job runs `verify-macos-artifact.mjs --universal` before upload; Windows NSIS and Linux AppImage/deb build on native runners.
+- BETA2 accepts only an official system Node.js installation and never downloads or adds a private Node to PATH. Its updater host is informational only: no background schedule, installer download, application replacement, or automatic restart is reachable from the packaged main process. Startup no longer scans or terminates unrelated system Harness processes.
 
 ## 0.1.0-BETA1 historical artifact
 
@@ -86,15 +86,15 @@ tags: [acceptance, release, evidence]
 
 | Gate              | Result (BETA2 baseline)                                                                                                   |
 | ----------------- | ------------------------------------------------------------------------------------------------------------------------- |
-| Unit suite        | ~30 files / 118+ tests passed, including 7 Routing Suite, system-node, and 4 real-bundle stream regressions               |
+| Unit suite        | 48 files / 304 tests passed (3 intentionally skipped), including Routing Suite, system-node, and stream regressions       |
 | Upstream preset   | 108 vendored upstream and local-patch tests passed                                                                        |
 | Official plugins  | 3 files / 24 tests passed, including pinned rc.8 roster, session creation, and boot                                       |
-| Package contract  | 1 file / 4 tests passed                                                                                                   |
-| Browser E2E       | Playwright chromium headless — desktop slot/transition/cleanup + real client graph                                        |
+| Package contract  | 2 files / 33 tests passed                                                                                                 |
+| Browser E2E       | 2 Playwright Chromium tests — desktop slot/transition/cleanup + real client graph                                         |
 | TypeScript        | `tsc --noEmit` passed                                                                                                     |
-| Static gates      | ESLint, Prettier, documentation links (verified 2026-08-20), and 7-control/3-forbidden security contract passed           |
+| Static gates      | ESLint, Prettier, documentation links (verified 2026-08-20), and 7-control/6-forbidden security contract passed           |
 | Dependency audit  | `pnpm audit --prod` reported no known vulnerabilities                                                                     |
-| Runtime preflight | 35 artifacts, 8 critical Harness packages, and 8+ plugin packages verified (SHA-256 routing digests)                      |
+| Runtime preflight | 51 artifacts, 35 production dependencies, 8 critical packages, and 10 bundled plugin packages verified                    |
 | macOS package     | `verify:mac --universal` mounts, signature/resource closure checked, SHA-256 recorded (BETA1 archived; BETA2 re-verified) |
 
 Historical 0.3.x gate snapshots are retained above for traceability; current release gates are BETA2.

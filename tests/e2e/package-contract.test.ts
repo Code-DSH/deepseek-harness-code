@@ -245,6 +245,9 @@ describe("DeepSeek Harness Code distribution contract", () => {
     expect(workflow).toContain("expected-architecture: x64");
     expect(workflow).toContain("windows-${EXPECTED_ARCHITECTURE}-setup.exe");
     expect(workflow).toContain("mac-universal.dmg");
+    expect(workflow).toContain(
+      'node scripts/verify-macos-artifact.mjs "$ARTIFACT" --universal',
+    );
     expect(workflow).toContain("linux-${EXPECTED_ARCHITECTURE}.AppImage");
     expect(workflow).toContain("linux-${EXPECTED_ARCHITECTURE}.deb");
     expect(workflow).toContain("artifact-sha256");

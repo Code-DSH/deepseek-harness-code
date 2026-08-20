@@ -22,14 +22,17 @@ export type ReplaceFn = (
   downloadedPath: string,
 ) => Promise<void>;
 
-export interface UpdaterDeps {
+export interface UpdaterCheckDeps {
   manifestUrl: string;
   currentVersion: string;
   platform: UpdatePlatform;
+  fetchDeps?: FetchDeps;
+}
+
+export interface UpdaterDeps extends UpdaterCheckDeps {
   tempDir: string;
   /** Platform-specific replace + relaunch; supplied by the host. */
   replace: ReplaceFn;
-  fetchDeps?: FetchDeps;
   download?: DownloadFn;
   verify?: VerifyFn;
 }
@@ -51,7 +54,7 @@ function basenameFromUrl(rawUrl: string): string {
 }
 
 export async function checkForUpdate(
-  deps: UpdaterDeps,
+  deps: UpdaterCheckDeps,
 ): Promise<UpdateCheckResult> {
   const manifest = await fetchManifest(deps.manifestUrl, deps.fetchDeps);
   if (!isNewerVersion(manifest.latestVersion, deps.currentVersion)) {

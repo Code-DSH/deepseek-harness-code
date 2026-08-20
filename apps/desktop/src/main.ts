@@ -1,6 +1,5 @@
 import { spawn, spawnSync, type ChildProcess } from "node:child_process";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
-import { homedir } from "node:os";
 import { delimiter, dirname, join } from "node:path";
 import { pathToFileURL } from "node:url";
 
@@ -72,20 +71,7 @@ import {
   resolveSystemNode,
   type ResolvedSystemNode,
 } from "./lifecycle/system-node.js";
-import {
-  BUNDLED_NODE_VERSION,
-  computeFileSha256,
-  downloadNodeArchive,
-  extractChecksumFromShasums,
-  fetchShasumsContent,
-  getNodeDownloadUrls,
-  type DownloadProgress,
-} from "./lifecycle/node-downloader.js";
-import {
-  extractNodeArchive,
-  getInstallDir,
-  updateShellPath,
-} from "./lifecycle/user-node-installer.js";
+import { getNodeDownloadUrls } from "./lifecycle/node-downloader.js";
 import { replaceWindowKeepingHostAlive } from "./lifecycle/window-recovery.js";
 import {
   ensureOfficialHarnessInstall,
@@ -375,15 +361,10 @@ function nodeRuntimeResourcePath(): string {
 
 async function showNodeRequiredDialog(
   failedError?: Error,
-): Promise<"download" | "manual" | "retry" | "quit"> {
+): Promise<"manual" | "retry" | "quit"> {
   const isMissing = failedError === undefined;
   const buttons = isMissing
-    ? [
-        "Download & Install Node",
-        "Show Installer Link",
-        "Retry detection",
-        "Quit",
-      ]
+    ? ["Show Installer Link", "Retry detection", "Quit"]
     : ["Retry detection", "Show Installer Link", "Quit"];
   const options: Electron.MessageBoxOptions = {
     type: isMissing ? "question" : "error",
@@ -392,10 +373,10 @@ async function showNodeRequiredDialog(
     cancelId: buttons.length - 1,
     title: "Node.js required",
     message: isMissing
-      ? "DeepSeek Harness Code needs Node.js to run the local Harness. The app can download and install it for you automatically."
+      ? "DeepSeek Harness Code needs an official system Node.js installation to run the local Harness."
       : "The pinned Harness packages could not be installed.",
     detail: isMissing
-      ? `No usable Node.js installation was detected. Choose "Download & Install Node" to let the app handle it, or use "Show Installer Link" to install manually. Version ${MINIMUM_NODE_VERSION} or newer is required.`
+      ? `No usable Node.js installation was detected. Install Node.js from the official installer, then retry detection. Version ${MINIMUM_NODE_VERSION} or newer is required.`
       : `${failedError.message.slice(0, 2_000)}\n\nOfficial Node.js download: ${NODE_DOWNLOAD_PAGE_URL}`,
   };
   const result =
@@ -404,193 +385,9 @@ async function showNodeRequiredDialog(
       : await dialog.showMessageBox(mainWindow, options);
   const response = result.response;
   if (isMissing) {
-    return (
-      (["download", "manual", "retry", "quit"] as const)[response] ?? "quit"
-    );
+    return (["manual", "retry", "quit"] as const)[response] ?? "quit";
   }
   return (["retry", "manual", "quit"] as const)[response] ?? "quit";
-}
-
-function buildDownloadProgressHtml(): string {
-  return `<!doctype html>
-<html lang="en">
-<head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<meta name="color-scheme" content="light dark" />
-<title>Downloading Node.js</title>
-<style>
-  :root { background: #fff; color: #1a1a1a; }
-  * { box-sizing: border-box; }
-  html, body {
-    width: 100%; height: 100%; margin: 0;
-    display: flex; flex-direction: column;
-    align-items: center; justify-content: center;
-    font-family: -apple-system, system-ui, sans-serif;
-    gap: 16px; user-select: none; -webkit-user-select: none;
-  }
-  .title { font-size: 15px; font-weight: 600; }
-  .status { font-size: 12px; opacity: 0.6; }
-  .bar {
-    width: 280px; height: 6px; border-radius: 3px;
-    background: rgba(0,0,0,0.1); overflow: hidden;
-  }
-  .fill {
-    width: 0%; height: 100%; border-radius: 3px;
-    background: #2563eb; transition: width 200ms ease;
-  }
-  .spinner {
-    width: 24px; height: 24px;
-    border: 2px solid rgba(0,0,0,0.16);
-    border-top-color: rgba(0,0,0,0.72);
-    border-radius: 50%; animation: spin 760ms linear infinite;
-  }
-  @keyframes spin { to { transform: rotate(360deg); } }
-  @media (prefers-color-scheme: dark) {
-    :root { background: #000; color: #f5f5f5; }
-    .bar { background: rgba(255,255,255,0.15); }
-    .fill { background: #3b82f6; }
-    .spinner {
-      border-color: rgba(255,255,255,0.2);
-      border-top-color: rgba(255,255,255,0.82);
-    }
-  }
-</style>
-</head>
-<body>
-  <div class="spinner"></div>
-  <div class="title">Downloading Node.js v${BUNDLED_NODE_VERSION}</div>
-  <div class="bar"><div class="fill" id="fill"></div></div>
-  <div class="status" id="status">Starting download…</div>
-</body>
-</html>`;
-}
-
-function createDownloadProgressWindow(): BrowserWindow {
-  const win = new BrowserWindow({
-    width: 400,
-    height: 200,
-    resizable: false,
-    minimizable: false,
-    maximizable: false,
-    frame: true,
-    titleBarStyle: "hiddenInset",
-    webPreferences: {
-      contextIsolation: true,
-      nodeIntegration: false,
-      sandbox: true,
-    },
-  });
-  win.loadURL(
-    "data:text/html;charset=utf-8," +
-      encodeURIComponent(buildDownloadProgressHtml()),
-  );
-  win.setMenuBarVisibility(false);
-  return win;
-}
-
-function updateDownloadProgress(
-  win: BrowserWindow,
-  progress: DownloadProgress,
-): void {
-  const pct =
-    progress.total > 0
-      ? Math.min(100, Math.round((progress.received / progress.total) * 100))
-      : 0;
-  const mbReceived = (progress.received / 1_048_576).toFixed(1);
-  const mbTotal = (progress.total / 1_048_576).toFixed(1);
-  const status =
-    progress.total > 0
-      ? `${mbReceived} MB / ${mbTotal} MB (${pct}%)`
-      : `${mbReceived} MB downloaded…`;
-  win.webContents
-    .executeJavaScript(
-      `document.getElementById('fill').style.width='${pct}%';` +
-        `document.getElementById('status').textContent=${JSON.stringify(status)};`,
-    )
-    .catch(() => {
-      // Window may be closed; ignore
-    });
-}
-
-async function downloadAndInstallNode(): Promise<void> {
-  const urls = getNodeDownloadUrls(process.platform, process.arch);
-  const home = homedir();
-  // Derive the install directory entirely from homedir() — never from
-  // user-controlled env vars — so no path traversal is possible.
-  const installDir = getInstallDir(
-    process.platform,
-    home,
-    BUNDLED_NODE_VERSION,
-  );
-  const archivePath = join(
-    dirname(installDir),
-    `node-v${BUNDLED_NODE_VERSION}-archive`,
-  );
-
-  const progressWin = createDownloadProgressWindow();
-  try {
-    // 1. Download the binary archive
-    process.stderr.write(
-      `Downloading Node.js v${BUNDLED_NODE_VERSION} from ${urls.archiveUrl}.\n`,
-    );
-    await downloadNodeArchive(urls.archiveUrl, archivePath, (progress) => {
-      updateDownloadProgress(progressWin, progress);
-    });
-
-    // 2. Fetch SHASUMS256.txt and verify the checksum
-    progressWin.webContents
-      .executeJavaScript(
-        `document.getElementById('status').textContent='Verifying checksum…';`,
-      )
-      .catch(() => {});
-    const shasums = await fetchShasumsContent(urls.checksumUrl);
-    const expectedChecksum = extractChecksumFromShasums(
-      shasums,
-      urls.archiveFilename,
-    );
-    if (expectedChecksum === undefined) {
-      throw new Error(
-        `Could not find checksum for ${urls.archiveFilename} in SHASUMS256.txt`,
-      );
-    }
-    const actualChecksum = await computeFileSha256(archivePath);
-    if (actualChecksum !== expectedChecksum) {
-      throw new Error(
-        `Checksum mismatch: expected ${expectedChecksum}, got ${actualChecksum}`,
-      );
-    }
-    process.stderr.write("Node.js archive checksum verified.\n");
-
-    // 3. Extract the archive
-    progressWin.webContents
-      .executeJavaScript(
-        `document.getElementById('status').textContent='Installing Node.js…';` +
-          `document.getElementById('fill').style.width='100%';`,
-      )
-      .catch(() => {});
-    await extractNodeArchive(archivePath, installDir, process.platform);
-    process.stderr.write(`Extracted Node.js to ${installDir}.\n`);
-
-    // 4. Update the user's shell PATH
-    await updateShellPath(
-      process.platform,
-      home,
-      process.env,
-      BUNDLED_NODE_VERSION,
-      installDir,
-    );
-    process.stderr.write("Updated shell PATH for Node.js.\n");
-  } finally {
-    // Clean up the downloaded archive
-    try {
-      const { unlink } = await import("node:fs/promises");
-      await unlink(archivePath);
-    } catch {
-      // Best-effort cleanup
-    }
-    if (!progressWin.isDestroyed()) progressWin.close();
-  }
 }
 
 async function prepareSystemNodeRuntime(): Promise<void> {
@@ -600,31 +397,6 @@ async function prepareSystemNodeRuntime(): Promise<void> {
     const node = resolveSystemNode();
     if (node === undefined) {
       const choice = await showNodeRequiredDialog();
-      if (choice === "download") {
-        try {
-          await downloadAndInstallNode();
-          continue; // retry detection — the installed Node should now be found
-        } catch (error) {
-          const message =
-            error instanceof Error ? error.message : String(error);
-          process.stderr.write(`Node.js download/install failed: ${message}\n`);
-          const urls = getNodeDownloadUrls(process.platform, process.arch);
-          const failOpts: Electron.MessageBoxOptions = {
-            type: "warning",
-            title: "Download failed",
-            message: "Could not download Node.js automatically.",
-            detail: `${message}\n\nPlease install Node.js manually using this direct link:\n${urls.installerUrl}`,
-            buttons: ["Open installer link", "Close"],
-          };
-          if (mainWindow && !mainWindow.isDestroyed()) {
-            await dialog.showMessageBox(mainWindow, failOpts);
-          } else {
-            await dialog.showMessageBox(failOpts);
-          }
-          await shell.openExternal(urls.installerUrl);
-          continue;
-        }
-      }
       if (choice === "manual") {
         const urls = getNodeDownloadUrls(process.platform, process.arch);
         const manualOpts: Electron.MessageBoxOptions = {
@@ -1083,58 +855,7 @@ function createTray(): void {
   tray.on("click", () => mainWindow?.show());
 }
 
-// A frozen or forcefully quit window leaves its Harness child behind; several
-// stale children then write the same profile and compete for ports, which
-// makes the app appear to hang. Reap them before starting a fresh child. The
-// pattern matches only the managed harness web entry.
-function terminateStaleHarnessChildren(): void {
-  const collect = (): number[] => {
-    if (process.platform === "win32") {
-      const result = spawnSync(
-        "powershell",
-        [
-          "-NoProfile",
-          "-Command",
-          "Get-CimInstance Win32_Process | Where-Object { $_.CommandLine -match 'dsh/lib/bin\\.js web' } | ForEach-Object { $_.ProcessId }",
-        ],
-        { encoding: "utf8", windowsHide: true },
-      );
-      if (result.error !== undefined) return [];
-      return String(result.stdout ?? "")
-        .split(/\s+/u)
-        .map((value) => Number.parseInt(value, 10))
-        .filter((value) => Number.isInteger(value) && value > 0);
-    }
-    const result = spawnSync("ps", ["-axo", "pid=,command="], {
-      encoding: "utf8",
-      windowsHide: true,
-    });
-    if (result.error !== undefined) return [];
-    const pids: number[] = [];
-    for (const line of String(result.stdout ?? "").split("\n")) {
-      const match = line.match(/^\s*(\d+)\s+(.+)$/u);
-      if (match === null) continue;
-      const command = match[2];
-      if (command === undefined) continue;
-      if (!command.includes("dsh") || !command.includes("bin.js web")) {
-        continue;
-      }
-      const pid = Number.parseInt(match[1] ?? "", 10);
-      if (Number.isInteger(pid) && pid > 0) pids.push(pid);
-    }
-    return pids;
-  };
-  for (const pid of collect()) {
-    try {
-      process.kill(pid, "SIGTERM");
-    } catch {
-      // Already gone.
-    }
-  }
-}
-
 async function launch(): Promise<void> {
-  terminateStaleHarnessChildren();
   watchdogHost = new WatchdogHost({
     appPath: app.getAppPath(),
     resourcesPath: process.resourcesPath,
@@ -1297,8 +1018,6 @@ if (hasSingleInstanceLock) {
 const launchOnce = createSingleFlightAction(async () => {
   await launch();
   updaterHost = new UpdaterHost({ parentWindow: () => mainWindow });
-  updaterHost.cleanupTemp();
-  updaterHost.schedule();
 });
 
 const lifecycle = hasSingleInstanceLock
@@ -1317,7 +1036,6 @@ const lifecycle = hasSingleInstanceLock
         shutdown: shutdownNormally,
         clearHealthTimer: () => {
           if (healthTimer !== undefined) clearInterval(healthTimer);
-          updaterHost?.stop();
         },
         reportLaunchFailure,
       },
