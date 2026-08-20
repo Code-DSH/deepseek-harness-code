@@ -48,6 +48,7 @@ jobs:
       PACKAGE_KIND: ${{ matrix.package-kind }}
       EXPECTED_ARCHITECTURE: ${{ matrix.expected-architecture }}
       EVIDENCE_ROOT: ${{ github.workspace }}/release/evidence/${{ matrix.label }}
+      SMOKE_TIMEOUT_MS: 180000
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -170,9 +171,10 @@ jobs:
           appimage=$(realpath "$appimage")
           chmod +x "$appimage"
           (cd "$temp_root" && "$appimage" --appimage-extract >/dev/null)
-          export APPIMAGE_EXTRACT_AND_RUN=1
           hash=$(sha256sum "$appimage" | cut -d' ' -f1)
-          pnpm smoke:package -- --matrix-label "$MATRIX_LABEL" --package-kind "$PACKAGE_KIND" --expected-architecture "$EXPECTED_ARCHITECTURE" --artifact-filename "$(basename "$appimage")" --executable "$appimage" --resources "$squashfs_root/resources" --inventory "$squashfs_root" --artifact "$appimage" --artifact-sha256 "$hash" --evidence-root "$EVIDENCE_ROOT" --evidence "$EVIDENCE_ROOT/smoke-evidence-linux-appimage.json"
+          executable="$squashfs_root/deepseek-harness-code"
+          [[ -x "$executable" ]]
+          xvfb-run -a pnpm smoke:package -- --matrix-label "$MATRIX_LABEL" --package-kind "$PACKAGE_KIND" --expected-architecture "$EXPECTED_ARCHITECTURE" --artifact-filename "$(basename "$appimage")" --executable "$executable" --resources "$squashfs_root/resources" --inventory "$squashfs_root" --artifact "$appimage" --artifact-sha256 "$hash" --evidence-root "$EVIDENCE_ROOT" --evidence "$EVIDENCE_ROOT/smoke-evidence-linux-appimage.json"
       - name: Install and smoke test Linux deb package
         if: matrix.label == 'linux-x64'
         shell: bash
@@ -224,7 +226,7 @@ jobs:
           resources="$install_dir/resources"
           [[ -d "$resources" ]]
           hash=$(sha256sum "$deb" | cut -d' ' -f1)
-          pnpm smoke:package -- --matrix-label "$MATRIX_LABEL" --package-kind "$PACKAGE_KIND" --expected-architecture "$EXPECTED_ARCHITECTURE" --artifact-filename "$(basename "$deb")" --executable "$executable" --resources "$resources" --inventory "$install_dir" --artifact "$deb" --artifact-sha256 "$hash" --evidence-root "$EVIDENCE_ROOT" --evidence "$EVIDENCE_ROOT/smoke-evidence-linux-deb.json"
+          xvfb-run -a pnpm smoke:package -- --matrix-label "$MATRIX_LABEL" --package-kind "$PACKAGE_KIND" --expected-architecture "$EXPECTED_ARCHITECTURE" --artifact-filename "$(basename "$deb")" --executable "$executable" --resources "$resources" --inventory "$install_dir" --artifact "$deb" --artifact-sha256 "$hash" --evidence-root "$EVIDENCE_ROOT" --evidence "$EVIDENCE_ROOT/smoke-evidence-linux-deb.json"
       - name: Upload installer artifacts
         if: always() && (matrix.label == 'windows-x64' || matrix.label == 'windows-arm64')
         uses: actions/upload-artifact@v4
