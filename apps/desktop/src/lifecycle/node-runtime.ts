@@ -11,7 +11,7 @@ import {
   rm,
   writeFile,
 } from "node:fs/promises";
-import { delimiter, dirname, join } from "node:path";
+import { basename, delimiter, dirname, join } from "node:path";
 import type { ResolvedSystemNode } from "./system-node.js";
 
 const MARKER_SCHEMA_VERSION = 2;
@@ -23,6 +23,7 @@ export interface NodeRuntimePaths {
   dshBetterSidebarRoot: string;
   dshFindPluginRoot: string;
   dshVisionRouterRoot: string;
+  dshSuperpowersRoot: string;
   deepseekHarnessCompositionRoot: string;
   dshSubagentCodexRoot: string;
   dshSubagentClaudeCodeRoot: string;
@@ -64,6 +65,12 @@ export function resolveNodeRuntimePaths(
       "packages",
       "node_modules",
       "dsh-vision-router",
+    ),
+    dshSuperpowersRoot: join(
+      rootDir,
+      "packages",
+      "node_modules",
+      "dsh-superpowers",
     ),
     deepseekHarnessCompositionRoot: join(
       rootDir,
@@ -221,6 +228,10 @@ export type InstallRuntimePackages = (input: {
   paths: NodeRuntimePaths;
 }) => Promise<void>;
 
+function isRuntimeResourcePath(source: string): boolean {
+  return basename(source) !== ".mimosa";
+}
+
 export const installRuntimePackages: InstallRuntimePackages = async ({
   nodeExecutable,
   pnpmEntry,
@@ -242,19 +253,28 @@ export const installRuntimePackages: InstallRuntimePackages = async ({
     join(runtimeResourceDir, "pnpm-workspace.yaml"),
     join(paths.packagesDir, "pnpm-workspace.yaml"),
   );
+  await rm(join(paths.packagesDir, "patches", ".mimosa"), {
+    recursive: true,
+    force: true,
+  });
   await cp(
     join(runtimeResourceDir, "patches"),
     join(paths.packagesDir, "patches"),
     {
       recursive: true,
+      filter: isRuntimeResourcePath,
     },
   );
   // The vendored plugin tarballs behind file: specifiers in the manifest must
   // sit next to the copied manifest for a reproducible frozen install.
+  await rm(join(paths.packagesDir, "vendor", ".mimosa"), {
+    recursive: true,
+    force: true,
+  });
   await cp(
     join(runtimeResourceDir, "vendor"),
     join(paths.packagesDir, "vendor"),
-    { recursive: true },
+    { recursive: true, filter: isRuntimeResourcePath },
   ).catch(() => undefined);
   const result = spawnSync(
     nodeExecutable,

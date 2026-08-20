@@ -130,6 +130,10 @@ jobs:
           if (Test-Path $install) {
             throw "installation directory remained after uninstall and forced cleanup"
           }
+      - name: Verify macOS Universal DMG
+        if: matrix.label == 'macos-universal'
+        shell: bash
+        run: node scripts/verify-macos-artifact.mjs "$ARTIFACT" --universal
       - name: Extract and smoke test Linux AppImage package
         if: matrix.label == 'linux-x64'
         shell: bash

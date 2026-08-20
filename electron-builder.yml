@@ -51,6 +51,20 @@ extraResources:
       - index.js
       - lib/**/*
       - cordis.patch.yml
+  - from: packages/dsh-ui-polish
+    to: dsh-ui-polish
+    filter:
+      - package.json
+      - index.js
+      - lib/**/*
+      - cordis.patch.yml
+  - from: packages/dsh-updater-check
+    to: dsh-updater-check
+    filter:
+      - package.json
+      - index.js
+      - lib/**/*
+      - cordis.patch.yml
   - from: packages/prompt-principles-plugin
     to: prompt-principles-plugin
     filter:
@@ -79,7 +93,7 @@ extraResources:
   - from: config/global-agent-prompt
     to: global-agent-prompt
     filter:
-      - AGENTS.md
+      - protocol.md
   - from: build/routing-suite
     to: routing-suite
     filter:
@@ -101,6 +115,9 @@ mac:
   mergeASARs: false
   target:
     - target: dmg
+      arch:
+        - universal
+    - target: zip
       arch:
         - universal
 dmg:
@@ -147,4 +164,7 @@ appImage:
   artifactName: DeepSeek-Harness-Code-${version}-linux-${arch}.${ext}
 deb:
   artifactName: DeepSeek-Harness-Code-${version}-linux-${arch}.${ext}
-publish: null
+publish:
+  provider: github
+  owner: Code-DSH
+  repo: deepseek-harness-code

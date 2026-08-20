@@ -40,6 +40,11 @@ window.__ModuleLoader__.load({
   position: absolute; bottom: calc(100% + 8px); right: 0; overflow: visible;
 }
 .m2-rowsCol { width: 100%; display: flex; flex-direction: column; }
+/* graceful whole-menu close: the component holds the tree mounted for ~150ms
+   under .m2-menu-closing so the menu fades instead of vanishing instantly.
+   Self-contained here (the polish plugin only refines the curve). */
+.m2-menu-closing { animation: m2-menu-out .15s var(--ds-ease-in-out) forwards; pointer-events: none; }
+@keyframes m2-menu-out { from { opacity: 1; transform: none; } to { opacity: 0; transform: translateY(4px); } }
 /* floating second-level menu: it is a SEPARATE floating window (never widens the
    first-level menu). It sits to the RIGHT of the menu with its LEFT edge flush
    against the menu's RIGHT edge, near the far right. Its BOTTOM edge is the
@@ -176,6 +181,18 @@ window.__ModuleLoader__.load({
         const [open, setOpen] = React.useState(false)
         const [active, setActive] = React.useState(null)
         const [closing, setClosing] = React.useState(null)
+        // Whole-menu graceful close: the menu fades/scales out over ~150ms
+        // (via .m2-menu-closing) before the tree unmounts, so a settled
+        // selection never flashes away. Re-opening cancels the pending unmount.
+        const [menuClosing, setMenuClosing] = React.useState(false)
+        const closeTimerRef = React.useRef(null)
+        // Per-pane open sequence + the DOM key of the node currently playing
+        // the exit animation. Re-opening a pane while its flyout is still
+        // closing bumps the sequence, so the entering flyout mounts as a NEW
+        // node while the old one keeps fading underneath — a cross-fade
+        // instead of an opacity restart on the same node (the visible 闪烁).
+        const seqRef = React.useRef({ model: 0, effort: 0 })
+        const closingKeyRef = React.useRef({ model: 'model:0', effort: 'effort:0' })
         const lastActionRef = React.useRef('load')
         const [toast, setToast] = React.useState(null)
         const toastSeq = React.useRef(0)
@@ -219,10 +236,32 @@ window.__ModuleLoader__.load({
 
         if (!available || directory === null) return null
 
-        const show = () => { setActive(null); setClosing(null); setOpen(true); reload() }
+        const cancelPendingClose = () => {
+          if (typeof closeTimerRef.current === 'function') {
+            closeTimerRef.current()
+            closeTimerRef.current = null
+          }
+        }
+        const show = () => {
+          cancelPendingClose()
+          setMenuClosing(false)
+          setActive(null)
+          setClosing(null)
+          setOpen(true)
+          reload()
+        }
         const close = (restoreFocus) => {
-          setOpen(false); setActive(null); setClosing(null)
-          if (restoreFocus) ctx.timeout(() => { if (triggerRef.current !== null) triggerRef.current.focus() }, 0)
+          if (!open || menuClosing) return
+          setMenuClosing(true)
+          cancelPendingClose()
+          closeTimerRef.current = ctx.timeout(() => {
+            closeTimerRef.current = null
+            setOpen(false)
+            setMenuClosing(false)
+            setActive(null)
+            setClosing(null)
+            if (restoreFocus) ctx.timeout(() => { if (triggerRef.current !== null) triggerRef.current.focus() }, 0)
+          }, 150)
         }
         const moveFocus = (offset) => {
           const items = itemRefs.current.filter((item) => item !== null)
@@ -235,7 +274,7 @@ window.__ModuleLoader__.load({
         const onRootKeyDown = (event) => {
           if (event.key === 'Escape' && open) {
             event.preventDefault()
-            if (active !== null) { setActive(null); setClosing(active) }
+            if (active !== null) { setActive(null); startClosing(active) }
             else close(true)
             return
           }
@@ -288,15 +327,133 @@ window.__ModuleLoader__.load({
 
         // The two second-level menus are MUTUALLY EXCLUSIVE: opening one collapses the
         // other (exit animation) while the first-level menu stays put.
+        //
+        // Force-retire safety net: if the exit animation never completes (the
+        // node was display:none, or animations were disabled before the polish
+        // sheet re-armed them), clear the closing state on a timer so a flyout
+        // can never linger as a zombie under the next one. Keyed by node
+        // generation: a timer only retires the exact closing node it was
+        // scheduled for, so rapid close→reopen→close sequences never get cut
+        // short by a stale timer.
+        const retireLater = (pane, key) => {
+          ctx.timeout(() => {
+            if (closingKeyRef.current[pane] === key) setClosing((c) => (c === pane ? null : c))
+          }, 280)
+        }
+        const startClosing = (pane) => {
+          // Capture the DOM key of the node that is about to fade out so it
+          // keeps its identity (and its mid-flight animation state).
+          const key = pane + ':' + seqRef.current[pane]
+          closingKeyRef.current = { ...closingKeyRef.current, [pane]: key }
+          setClosing(pane)
+          retireLater(pane, key)
+        }
+        const openPane = (pane) => {
+          // Fresh entrance identity: a resurrected pane mounts as a new node
+          // while its predecessor keeps fading underneath (cross-fade).
+          seqRef.current = { ...seqRef.current, [pane]: seqRef.current[pane] + 1 }
+          setActive(pane)
+        }
         const toggleRow = (pane) => {
-          if (active === pane) { setActive(null); setClosing(pane) }
-          else { setClosing(active); setActive(pane) }
+          if (active === pane) {
+            setActive(null)
+            startClosing(pane)
+          } else {
+            if (active !== null && active !== pane) startClosing(active)
+            // If the same pane is still closing, leave `closing` untouched:
+            // its node keeps fading while the new node enters on top.
+            openPane(pane)
+          }
         }
         const flyoutEnd = (pane) => (event) => {
           if (event.target === event.currentTarget && event.animationName === 'm2-flyout-out') {
             setClosing((c) => c === pane ? null : c)
           }
         }
+
+        // A pane can be mounted twice at once: the retiring node (mode
+        // 'closing', captured old key) and the freshly opened node (mode
+        // 'active', new sequence key) — this is what makes rapid re-opens a
+        // cross-fade instead of a same-node animation restart.
+        const flyoutProps = (pane, mode, label) => ({
+          key: mode === 'closing' ? closingKeyRef.current[pane] : pane + ':' + seqRef.current[pane],
+          className: 'm2-flyout' + (pane === 'effort' ? ' m2-flyout-anchorEffort' : '') + (mode === 'closing' ? ' m2-flyout-closing' : ''),
+          role: 'group',
+          'aria-label': label,
+          onAnimationEnd: flyoutEnd(pane),
+        })
+        const renderModelFlyout = (mode) => React.createElement('div', flyoutProps('model', mode, t('menu.model')),
+          // Only show the loading row when there is no cached list to display:
+          // flipping a status row in and out under a populated, bottom-anchored
+          // flyout made its top edge jump on every open (content 抖动).
+          (state.status === 'loading' && state.groups.length === 0) && React.createElement('div', { className: 'm2-status' }, t('status.loading')),
+          state.error !== null && lastActionRef.current === 'load' && React.createElement('div', { className: 'm2-error' },
+            React.createElement('span', null, t('error.action', { message: state.error })),
+            React.createElement('button', { type: 'button', className: 'm2-retry', onClick: reload }, t('retry')),
+          ),
+          state.failures.map((failure) => React.createElement('div', { className: 'm2-warning', key: failure.id },
+            React.createElement('span', null, t('warning.groupLoad', { name: failure.name, message: failure.message })),
+            React.createElement('button', { type: 'button', className: 'm2-retry', onClick: reload }, t('retry')),
+          )),
+          React.createElement('div', { className: 'm2-groups' },
+            state.groups.map((group) => {
+              const headingId = id + '-' + group.id + (mode === 'closing' ? '-ret' : '')
+              return React.createElement('section', {
+                role: 'group',
+                'aria-labelledby': headingId,
+                className: 'm2-group',
+                key: group.id,
+              },
+                React.createElement('div', { className: 'm2-groupTitle', id: headingId }, group.name),
+                group.models.map((model) => {
+                  const selected = state.current !== null && state.current.provider === group.id && state.current.model === model.id
+                  return React.createElement('button', {
+                    ref: itemRef(),
+                    type: 'button',
+                    role: 'menuitemradio',
+                    'aria-checked': selected,
+                    className: 'm2-option',
+                    title: model.name,
+                    disabled: busy || mode === 'closing',
+                    onClick: () => choose({ provider: group.id, model: model.id }),
+                    key: model.id,
+                  },
+                    React.createElement('span', { className: 'm2-optionCopy' },
+                      React.createElement('span', { className: 'm2-modelName' }, model.name),
+                      model.description !== undefined && React.createElement('span', { className: 'm2-description' }, model.description),
+                    ),
+                    React.createElement('span', { className: 'm2-check' }, selected ? React.createElement(Check16, null) : null),
+                  )
+                }),
+              )
+            }),
+          ),
+          state.status === 'ready' && choices.length === 0 && React.createElement('div', { className: 'm2-empty' }, t('empty.models')),
+        )
+        const renderEffortFlyout = (mode) => React.createElement('div', flyoutProps('effort', mode, t('menu.effort')),
+          state.error !== null && lastActionRef.current === 'load' && React.createElement('div', { className: 'm2-error' },
+            React.createElement('span', null, t('error.action', { message: state.error })),
+            React.createElement('button', { type: 'button', className: 'm2-retry', onClick: reload }, t('action.reload')),
+          ),
+          effortChoices.length === 0
+            ? React.createElement('div', { className: 'm2-empty' }, t('empty.efforts'))
+            : effortChoices.map((level) => React.createElement('button', {
+                ref: itemRef(),
+                type: 'button',
+                role: 'menuitemradio',
+                'aria-checked': effectiveEffort === level.effort,
+                className: 'm2-option',
+                disabled: busy || mode === 'closing',
+                onClick: () => chooseEffort(level.effort),
+                key: level.key,
+              },
+                React.createElement('span', { className: 'm2-optionCopy' },
+                  React.createElement('span', { className: 'm2-modelName' }, level.label),
+                  level.description !== undefined && React.createElement('span', { className: 'm2-description' }, level.description),
+                ),
+                React.createElement('span', { className: 'm2-check' }, effectiveEffort === level.effort ? React.createElement(Check16, null) : null),
+              )),
+        )
 
         return React.createElement('div', {
           ref: rootRef,
@@ -324,7 +481,7 @@ window.__ModuleLoader__.load({
           // first-level menu: the two rows are FIXED — position, layout and width never change
           open && React.createElement('div', {
             id: id + '-menu',
-            className: 'm2-menu',
+            className: 'm2-menu' + (menuClosing ? ' m2-menu-closing' : ''),
             role: 'menu',
             'aria-label': t('menu.aria'),
             'aria-busy': state.status === 'loading' || busy,
@@ -355,87 +512,15 @@ window.__ModuleLoader__.load({
                 React.createElement(ChevronRight14, { className: 'm2-cellChevron' + (active === 'effort' ? ' m2-cellChevronUp' : '') }),
               ),
             ),
-            // floating second-level menu — model list (right of the menu, anchored at the model row chevron)
-            (active === 'model' || closing === 'model') && React.createElement('div', {
-              className: 'm2-flyout' + (closing === 'model' ? ' m2-flyout-closing' : ''),
-              role: 'group',
-              'aria-label': t('menu.model'),
-              onAnimationEnd: flyoutEnd('model'),
-            },
-              state.status === 'loading' && React.createElement('div', { className: 'm2-status' }, t('status.loading')),
-              state.error !== null && lastActionRef.current === 'load' && React.createElement('div', { className: 'm2-error' },
-                React.createElement('span', null, t('error.action', { message: state.error })),
-                React.createElement('button', { type: 'button', className: 'm2-retry', onClick: reload }, t('retry')),
-              ),
-              state.failures.map((failure) => React.createElement('div', { className: 'm2-warning', key: failure.id },
-                React.createElement('span', null, t('warning.groupLoad', { name: failure.name, message: failure.message })),
-                React.createElement('button', { type: 'button', className: 'm2-retry', onClick: reload }, t('retry')),
-              )),
-              React.createElement('div', { className: 'm2-groups' },
-                state.groups.map((group) => {
-                  const headingId = id + '-' + group.id
-                  return React.createElement('section', {
-                    role: 'group',
-                    'aria-labelledby': headingId,
-                    className: 'm2-group',
-                    key: group.id,
-                  },
-                    React.createElement('div', { className: 'm2-groupTitle', id: headingId }, group.name),
-                    group.models.map((model) => {
-                      const selected = state.current !== null && state.current.provider === group.id && state.current.model === model.id
-                      return React.createElement('button', {
-                        ref: itemRef(),
-                        type: 'button',
-                        role: 'menuitemradio',
-                        'aria-checked': selected,
-                        className: 'm2-option',
-                        title: model.name,
-                        disabled: busy,
-                        onClick: () => choose({ provider: group.id, model: model.id }),
-                        key: model.id,
-                      },
-                        React.createElement('span', { className: 'm2-optionCopy' },
-                          React.createElement('span', { className: 'm2-modelName' }, model.name),
-                          model.description !== undefined && React.createElement('span', { className: 'm2-description' }, model.description),
-                        ),
-                        React.createElement('span', { className: 'm2-check' }, selected ? React.createElement(Check16, null) : null),
-                      )
-                    }),
-                  )
-                }),
-              ),
-              state.status === 'ready' && choices.length === 0 && React.createElement('div', { className: 'm2-empty' }, t('empty.models')),
-            ),
-            // floating second-level menu — reasoning effort list (anchored at the effort row chevron)
-            (active === 'effort' || closing === 'effort') && React.createElement('div', {
-              className: 'm2-flyout m2-flyout-anchorEffort' + (closing === 'effort' ? ' m2-flyout-closing' : ''),
-              role: 'group',
-              'aria-label': t('menu.effort'),
-              onAnimationEnd: flyoutEnd('effort'),
-            },
-              state.error !== null && lastActionRef.current === 'load' && React.createElement('div', { className: 'm2-error' },
-                React.createElement('span', null, t('error.action', { message: state.error })),
-                React.createElement('button', { type: 'button', className: 'm2-retry', onClick: reload }, t('action.reload')),
-              ),
-              effortChoices.length === 0
-                ? React.createElement('div', { className: 'm2-empty' }, t('empty.efforts'))
-                : effortChoices.map((level) => React.createElement('button', {
-                    ref: itemRef(),
-                    type: 'button',
-                    role: 'menuitemradio',
-                    'aria-checked': effectiveEffort === level.effort,
-                    className: 'm2-option',
-                    disabled: busy,
-                    onClick: () => chooseEffort(level.effort),
-                    key: level.key,
-                  },
-                    React.createElement('span', { className: 'm2-optionCopy' },
-                      React.createElement('span', { className: 'm2-modelName' }, level.label),
-                      level.description !== undefined && React.createElement('span', { className: 'm2-description' }, level.description),
-                    ),
-                    React.createElement('span', { className: 'm2-check' }, effectiveEffort === level.effort ? React.createElement(Check16, null) : null),
-                  )),
-            ),
+            // floating second-level menu — model list. A retiring node (old
+            // key) and the freshly opened node (new key) may coexist for the
+            // ~150ms of the exit animation: that overlap is the cross-fade.
+            closing === 'model' && renderModelFlyout('closing'),
+            active === 'model' && renderModelFlyout('active'),
+            // floating second-level menu — reasoning effort list (anchored at
+            // the effort row chevron); same cross-fade pairing as the model list
+            closing === 'effort' && renderEffortFlyout('closing'),
+            active === 'effort' && renderEffortFlyout('active'),
           ),
           // selection-failure toast
           toast !== null && React.createElement('div', { className: 'm2-toast', key: toast.seq },

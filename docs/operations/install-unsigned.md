@@ -1,12 +1,14 @@
 # Installing the Unsigned macOS Build
 
-This is a community wrapper and is not an official DeepSeek release. DeepSeek Harness Code is ad-hoc signed, not Apple-notarized. Verify the DMG source and checksum before proceeding.
+This is a community wrapper and is not an official DeepSeek release. DeepSeek Harness Code `0.1.0-BETA2` (and prior `0.1.0-BETA1`) is ad-hoc signed, not Apple-notarized. Verify the DMG source and checksum before proceeding.
 
 ## Prerequisite: official Node.js
 
 The app runs on the system-installed official Node.js — it no longer downloads a portable runtime. Install Node.js 22.13 or newer from [nodejs.org](https://nodejs.org/en/download) (any newer version, including 24/26, works). Common install locations are detected automatically: the nodejs.org installer, Homebrew (`/opt/homebrew/bin`, `/usr/local/bin`), nvm, Volta, fnm, mise, and copies in standard bin directories. Version-manager roots with custom locations are honored through `NVM_DIR`, `VOLTA_HOME`, and `FNM_DIR`. If no usable Node is found, the app offers a guided dialog with a download link and a retry button.
 
-The renamed Universal artifact follows `release/DeepSeek-Harness-Code-<version>-mac-universal.dmg`. Its checksum is published only after the final package verification succeeds.
+The app's private `PATH` prepends the detected Node's bin directory and the bundled pnpm runtime, so native-module postinstall scripts find `node` even when the GUI launch PATH is minimal.
+
+The Universal artifact follows `release/DeepSeek-Harness-Code-<version>-mac-universal.dmg` (e.g., `0.1.0-BETA2`). Its checksum is published only after the final package verification succeeds.
 
 After copying the app to Applications, remove quarantine only from this app:
 
@@ -20,4 +22,12 @@ Files downloaded or transferred by another application can receive quarantine ag
 
 ## First launch
 
-On its first successful startup, the app uses the official Harness Home (`$DSH_HOME` when explicitly set, otherwise `~/.dsh`). It copy-merges supported data from the retired Electron-specific Home, installs all bundled plugins through the official CLI using the pnpm runtime inside the app, synchronizes Superpowers 6.2.0 under `<DSH_HOME>/skills`, installs the bundled Global Agent Operating Protocol as `<DSH_HOME>/AGENTS.md` when no global prompt exists yet, and provisions the global `dsh` command through the official `npm install -g` flow using the app's pinned version (so `dsh` works in new terminals right away; an existing user-managed global `dsh` is never overwritten). Existing target files, unrelated plugins, unmarked user-owned Skills or Agent Presets, and a user-authored global prompt are never overwritten; the app menu's "Use Bundled Global Prompt…" switches an existing prompt to the bundled one with a timestamped backup. See the [migration runbook](./harness-home-migration.md).
+On its first successful startup, the app uses the official Harness Home (`$DSH_HOME` when explicitly set, otherwise `~/.dsh`). It copy-merges supported data from the retired Electron-specific Home, installs all 8 bundled plugins through the official CLI using the pnpm runtime inside the app (desktop, ui-motion 1.1.0, model2-selector 1.1.0, ui-polish, updater-check, prompt-principles, vision-router, better-sidebar + composition/superpowers/Routing Suite), synchronizes Superpowers 6.2.0 under `<DSH_HOME>/skills`, installs the bundled Global Agent Operating Protocol as `<DSH_HOME>/AGENTS.md` when no global prompt exists yet, provisions the global `dsh` command through the official `npm install -g` flow using the app's pinned version (`@deepseek-ai/dsh@0.1.0-rc.8`), and atomically installs `anchored-standard` / `router-standard` / `router-spec` presets. Existing target files, unrelated plugins, unmarked user-owned Skills or Agent Presets, and a user-authored global prompt are never overwritten; the app menu's "Use Bundled Global Prompt…" switches an existing prompt to the bundled one with a timestamped backup. See the [migration runbook](./harness-home-migration.md).
+
+## Verify installation
+
+```bash
+node scripts/verify-macos-artifact.mjs release/DeepSeek-Harness-Code-*.dmg --universal
+```
+
+The verifier mounts the DMG read-only and checks runtime closure (35 artifacts, 8 critical versions, plugin roots, SHA-256 routing digests), Anchored Standard provenance, ad-hoc signature, and Universal Mach-O architecture.

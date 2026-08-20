@@ -72,11 +72,11 @@ try {
     "node-runtime/pnpm-lock.yaml",
     "node-runtime/pnpm.mjs",
     "node-runtime/worker.js",
-    "global-agent-prompt/AGENTS.md",
+    "global-agent-prompt/protocol.md",
     "prompt-principles-plugin/index.js",
     "prompt-principles-plugin/client.js",
     "prompt-principles-plugin/cordis.patch.yml",
-    "node-runtime/vendor/dsh-vision-router-1.4.4.tgz",
+    "node-runtime/vendor/dsh-vision-router-1.7.1.tgz",
     "node-runtime/vendor/dsh-better-sidebar-0.12.3.tgz",
     "node-runtime/vendor/deepseek-harness-composition-1.0.0.tgz",
   ].map((relativePath) => join(resourcesRoot, relativePath));
@@ -96,7 +96,7 @@ try {
     await readFile(join(resourcesRoot, "node-runtime", "package.json"), "utf8"),
   );
   if (
-    nodeRuntimePackage.dependencies?.["@deepseek-ai/dsh"] !== "0.1.0-rc.6" ||
+    nodeRuntimePackage.dependencies?.["@deepseek-ai/dsh"] !== "0.1.0-rc.8" ||
     nodeRuntimePackage.dependencies?.["dsh-find-plugin"] !== "0.3.6"
   ) {
     throw new Error(
@@ -158,7 +158,7 @@ try {
   }
   for (const [directory, packageName, version] of [
     ["dsh-ui-motion", "dsh-ui-motion", "1.0.0"],
-    ["dsh-model-two-level-selector", "dsh-model2-selector", "1.0.0"],
+    ["dsh-model-two-level-selector", "dsh-model2-selector", "1.1.0"],
   ]) {
     const manifest = JSON.parse(
       await readFile(join(resourcesRoot, directory, "package.json"), "utf8"),

@@ -6,7 +6,7 @@
   <p><a href="./README.md">English</a> · <a href="./README.zh-CN.md">简体中文</a></p>
   <p><a href="#dhc-的集成理念">集成理念</a> · <a href="#愿景">愿景</a> · <a href="#一整套-deepseek-harness-发行版">完整 Harness</a> · <a href="#让-beta1-体验更加现代化">BETA1 改进</a> · <a href="#不只是网页套壳">为什么不同</a> · <a href="#为长期运行而设计">长期稳定性</a> · <a href="#架构">架构</a> · <a href="#从源码构建">构建</a></p>
   <p>
-    <img src="https://img.shields.io/badge/version-0.1.0_BETA1-2563eb?style=flat-square" alt="版本 0.1.0-BETA1" />
+    <img src="https://img.shields.io/badge/version-0.1.0_BETA2-2563eb?style=flat-square" alt="版本 0.1.0-BETA2" />
     <img src="https://img.shields.io/badge/license-MIT-16a34a?style=flat-square" alt="MIT 许可证" />
     <img src="https://img.shields.io/badge/macOS-12%2B-111827?style=flat-square&amp;logo=apple" alt="macOS 12+" />
     <img src="https://img.shields.io/badge/Windows-10%2B-0078D4?style=flat-square&amp;logo=windows" alt="Windows 10+" />
@@ -15,7 +15,7 @@
   <p>
     <img src="https://img.shields.io/badge/Electron-43-47848F?style=flat-square&amp;logo=electron&amp;logoColor=white" alt="Electron 43" />
     <img src="https://img.shields.io/badge/TypeScript-5.9-3178C6?style=flat-square&amp;logo=typescript&amp;logoColor=white" alt="TypeScript 5.9" />
-    <img src="https://img.shields.io/badge/DeepSeek_Harness-rc.6-4F46E5?style=flat-square" alt="DeepSeek Harness rc.6" />
+    <img src="https://img.shields.io/badge/DeepSeek_Harness-rc.8-4F46E5?style=flat-square" alt="DeepSeek Harness rc.8" />
   </p>
 </div>
 
@@ -163,14 +163,14 @@ DeepSeek Harness Code 使用明确的生命周期控制覆盖这些已知失效�
 - **内置全局 Agent 提示词**——随包携带经过评审的《全局 Agent 运行协议》并安装为 `<DSH_HOME>/AGENTS.md`：用户没有全局提示词时自动安装；仅在副本仍由应用管理且未被修改时随版本更新；绝不覆盖用户自有的提示词。菜单中的「Use Bundled Global Prompt…」可将现有提示词一键切换为内置版（自动生成带时间戳的备份）。
 - **全局 `dsh` 命令**——首次启动即通过官方 `npm install -g` 流程安装本应用固定版本的 `@deepseek-ai/dsh`，此后在任何新终端里都能直接使用 `dsh`，与官方 CLI 安装体验完全一致。用户自有的全局 `dsh` 绝不会被覆盖；供给失败不阻塞启动，仅提示一行手动安装命令。
 - **本地化 Agent Preset**——`anchored-standard`、`router-standard`、`router-spec` 均提供简短的中英双语名称与描述，且不改变 Preset ID 或路由行为。
-- **安全的实验集成**——Anchored Standard 是独立的官方格式 Bundle；在固定的 Harness rc.6 API 上会安全回退到 Standard。
+- **安全的实验集成**——Anchored Standard 是独立的官方格式 Bundle；在固定的 Harness rc.8 API 上会安全回退到 Standard。
 
 ## 功能矩阵
 
 | 领域           | 已包含能力                                                                         |
 | -------------- | ---------------------------------------------------------------------------------- |
 | 桌面宿主       | 强化 Electron 窗口、启动页、原生菜单、托盘、关闭偏好                               |
-| Harness 运行时 | 固定 `@deepseek-ai/dsh` rc.6、仅回环地址 Web 服务、官方单一 Harness Home           |
+| Harness 运行时 | 固定 `@deepseek-ai/dsh` rc.8、仅回环地址 Web 服务、官方单一 Harness Home           |
 | V4 模型        | 官方 V4 Pro/Flash 目录与 `off` / `high` / `max` 推理控制                           |
 | 一体化能力栈   | Skills、工具、Goal、Plan、Workflow、Todo、Jobs、提问、审批与 Subagent              |
 | 内置 Skills    | Superpowers 6.2.0 合集安装进官方 Harness Home，不覆盖用户 Skills                   |

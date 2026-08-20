@@ -1,0 +1,68 @@
+diff --git a/lib/client.js b/lib/client.js
+index 84b746e8f5cbac31aa0177f42eec92a2709ca4c4..89ddd1f879ea7bbe955af5b1e7f2ab7a2b817044 100644
+--- a/lib/client.js
++++ b/lib/client.js
+@@ -32,6 +32,14 @@ window.__ModuleLoader__.load({
+ 			presetMinimalDescription: "Two-tool coding agent with persistent bash and str_replace_editor.",
+ 			presetCordisName: "Creator mode",
+ 			presetCordisDescription: "Built for creating custom agent presets, with all Standard mode capabilities plus runtime inspection, plugin experiments, and preset-authoring guidance.",
++			presetAnchoredStandardName: "Progressive Standard Mode",
++			presetAnchoredStandardDescription: "Provides chain-of-thought for DeepSeek V4 Pro and progressively unlocks tools.",
++			presetProductRoutingName: "Deep Routing Mode",
++			presetProductRoutingDescription: "A deep-routing mode for complex tasks that can delegate to Codex and Claude Code product subagents while retaining full Standard capabilities.",
++			presetRouterSpecName: "Deep Analysis Routing Mode",
++			presetRouterSpecDescription: "Analyzes the problem and structures a plan before acting; suited to fixes, debugging, and refactoring, then unlocks the full Standard toolset after the first tool call.",
++			presetRouterStandardName: "Standard Routing Mode",
++			presetRouterStandardDescription: "Automatically decides whether to analyze or act first, then unlocks the full Standard toolset after the first tool call.",
+ 			duplicate: "Duplicate",
+ 			duplicateUnavailable: "This deployment has no writable preset directory",
+ 			delete: "Delete",
+@@ -88,6 +96,14 @@ window.__ModuleLoader__.load({
+ 			presetMinimalDescription: "仅提供持久 bash 与 str_replace_editor 的双工具编码 Agent。",
+ 			presetCordisName: "创造模式",
+ 			presetCordisDescription: "用于创建自定义 Agent preset：具备标准模式的全部能力，并提供运行时检查、插件实验和 preset 创作指导。",
++			presetAnchoredStandardName: "渐进式标准模式",
++			presetAnchoredStandardDescription: "专为 DeepSeek V4 Pro 提供思维链，并逐步开放工具的模式。",
++			presetProductRoutingName: "深度路由模式",
++			presetProductRoutingDescription: "面向复杂任务的深度路由模式，可调用 Codex 与 Claude Code 产品子代理协同处理，并保留标准模式的完整能力。",
++			presetRouterSpecName: "路由深度思考模式",
++			presetRouterSpecDescription: "先深入分析并梳理方案，再开始执行；适合修复、排障和重构，首次调用工具后开放标准模式的全部工具。",
++			presetRouterStandardName: "路由标准模式",
++			presetRouterStandardDescription: "根据任务自动判断先分析还是先执行；首次调用工具后开放标准模式的全部工具。",
+ 			duplicate: "复制",
+ 			duplicateUnavailable: "此部署未配置可写的预设目录",
+ 			delete: "删除",
+@@ -140,6 +156,24 @@ window.__ModuleLoader__.load({
+ 				description: "presetCordisDescription"
+ 			}
+ 		};
++		const PRODUCT_PRESET_KEYS = {
++			"anchored-standard": {
++				name: "presetAnchoredStandardName",
++				description: "presetAnchoredStandardDescription"
++			},
++			"cordis-with-products": {
++				name: "presetProductRoutingName",
++				description: "presetProductRoutingDescription"
++			},
++			"router-spec": {
++				name: "presetRouterSpecName",
++				description: "presetRouterSpecDescription"
++			},
++			"router-standard": {
++				name: "presetRouterStandardName",
++				description: "presetRouterStandardDescription"
++			}
++		};
+ 		/**
+ 		* Resolve preset display copy without making user-authored metadata translatable.
+ 		* @param preset - roster row whose copy is being rendered.
+@@ -147,7 +181,7 @@ window.__ModuleLoader__.load({
+ 		* @returns localized copy for a known shipped preset, otherwise file metadata.
+ 		*/
+ 		function presetDisplayText(preset, t) {
+-			const keys = preset.trust === "system" ? BUILT_IN_PRESET_KEYS[preset.id] : void 0;
++			const keys = PRODUCT_PRESET_KEYS[preset.id] ?? (preset.trust === "system" ? BUILT_IN_PRESET_KEYS[preset.id] : void 0);
+ 			if (keys !== void 0) return {
+ 				name: t(keys.name),
+ 				description: t(keys.description)

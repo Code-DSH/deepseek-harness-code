@@ -56,7 +56,7 @@ dsh-web-ui（`zhu1090093659/dsh-web-ui`）的皮肤机制：
 
 ## 5. 文档
 
-- AGENTS.md §8「皮肤兼容（令牌驱动）」：面板表面令牌、透明度阈值、z-index 层级、根锚点 `[data-dsh-better-sidebar]`、类名非契约。
+- `docs/integration-reference.md` §8「皮肤兼容（令牌驱动）」：面板表面令牌、透明度阈值、z-index 层级、根锚点 `[data-dsh-better-sidebar]`、类名非契约。
 - README 不在本批更新（发布时随版本条目更新）。
 
 ## 6. 实施偏差记录

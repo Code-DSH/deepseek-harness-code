@@ -1,4 +1,3 @@
-import { execFileSync } from "node:child_process";
 import {
   copyFile,
   mkdir,
@@ -31,6 +30,8 @@ const icnsOutput = join(outputRoot, "deepseek-harness-code.icns");
 const icoOutput = join(outputRoot, "deepseek-harness-code.ico");
 const pngOutput = join(outputRoot, "deepseek-harness-code.png");
 const trayPngOutput = join(outputRoot, "deepseek-harness-code-tray.png");
+const installerReadmeOutput = join(outputRoot, "INSTALL-UNSIGNED-macOS.txt");
+const thirdPartyNoticesOutput = join(outputRoot, "THIRD-PARTY-NOTICES.md");
 const work = await mkdtemp(join(tmpdir(), "deepseek-harness-icon-"));
 const iconset = join(work, "DeepSeekHarness.iconset");
 
@@ -79,6 +80,34 @@ async function writeIco() {
   await writeFile(icoOutput, Buffer.concat([header, ...images]));
 }
 
+async function writeIcns() {
+  const icnsEntries = [
+    ["icp4", "icon_16x16.png"],
+    ["icp5", "icon_32x32.png"],
+    ["icp6", "icon_32x32@2x.png"],
+    ["ic07", "icon_128x128.png"],
+    ["ic08", "icon_128x128@2x.png"],
+    ["ic09", "icon_256x256@2x.png"],
+    ["ic10", "icon_512x512@2x.png"],
+  ];
+  const chunks = await Promise.all(
+    icnsEntries.map(async ([type, source]) => {
+      const image = await readFile(join(iconset, source));
+      const header = Buffer.alloc(8);
+      header.write(type, 0, 4, "ascii");
+      header.writeUInt32BE(image.length + 8, 4);
+      return Buffer.concat([header, image]);
+    }),
+  );
+  const header = Buffer.alloc(8);
+  header.write("icns", 0, 4, "ascii");
+  header.writeUInt32BE(
+    chunks.reduce((total, chunk) => total + chunk.length, 8),
+    4,
+  );
+  await writeFile(icnsOutput, Buffer.concat([header, ...chunks]));
+}
+
 async function rasterize(svgPath, pngPath, size) {
   await sharp(svgPath, { density: 144 })
     .resize(size, size, { fit: "fill" })
@@ -86,13 +115,45 @@ async function rasterize(svgPath, pngPath, size) {
     .toFile(pngPath);
 }
 
-function isMac() {
-  return process.platform === "darwin";
-}
-
 try {
   await mkdir(iconset, { recursive: true });
   await mkdir(outputRoot, { recursive: true });
+  await writeFile(
+    installerReadmeOutput,
+    [
+      "DeepSeek Harness Code 安装说明",
+      "",
+      "本应用是独立社区封装（community wrapper），并非 DeepSeek 官方发布，也未经过 Apple 公证。",
+      "",
+      "1. 将“DeepSeek Harness Code.app”拖入“应用程序”文件夹。",
+      "2. 若 macOS 因互联网下载隔离属性阻止打开，请仅对本应用执行：",
+      "",
+      'xattr -dr com.apple.quarantine "/Applications/DeepSeek Harness Code.app"',
+      "",
+      "3. 然后从“应用程序”重新打开。",
+      "",
+      "安全提示：请先确认 DMG 来源及校验值。不要全局关闭或绕过 Gatekeeper。",
+      "",
+    ].join("\n"),
+  );
+  await writeFile(
+    thirdPartyNoticesOutput,
+    [
+      "# Third-party notices",
+      "",
+      "DeepSeek Harness Code is an independent community wrapper and is not an official DeepSeek release.",
+      "",
+      "- DeepSeek Harness and the black graphic used in the DeepSeek Harness Code icon are distributed under the upstream MIT license. The pinned source package is `@deepseek-ai/dsh@0.1.0-rc.8`.",
+      "- `dsh-anchored-standard` is distributed under the MIT license. The bundled Agent Preset is pinned to upstream commit `db4527a2a70a9032d3a8525ce3c0ea6ef528d6fc`; its original file hashes are in `UPSTREAM-SHA256SUMS`, and local compatibility/strict-failure changes are listed in `LOCAL-PATCHES.md`.",
+      "- Superpowers 6.2.0 is distributed under the MIT license. Its bundled skill collection is installed locally into the app-owned Harness home, and the complete license ships at `superpowers-skills/LICENSE`.",
+      "- Electron is distributed under the MIT license.",
+      "- `thinking-orbs@0.3.1` is distributed under the MIT license. Its rotating `working` canvas is bundled into the desktop Web plugin; the complete notice ships with that plugin.",
+      "- Bundled JavaScript packages retain their own package metadata and license files.",
+      "",
+      "No Apple notarization or Developer ID signature is claimed. The macOS application uses an ad-hoc signature solely so bundled code can load consistently on Apple Silicon.",
+      "",
+    ].join("\n"),
+  );
   const officialIcon = await readFile(source, "utf8");
   const mark = officialIcon.match(/<path id="path"[^>]*\/>/u)?.[0];
   if (mark === undefined)
@@ -121,19 +182,7 @@ try {
   for (const [name, size] of variants) {
     await rasterize(svgOutput, join(iconset, name), size);
   }
-  // iconutil ships with macOS; the committed .icns remains valid on other
-  // platforms where the tool is unavailable.
-  if (isMac()) {
-    execFileSync("iconutil", ["-c", "icns", iconset, "-o", icnsOutput], {
-      stdio: "inherit",
-    });
-  } else {
-    process.stderr.write(
-      "iconutil unavailable on this platform; keeping the committed .icns file\n",
-    );
-    if (outputRoot !== buildRoot)
-      await copyFile(join(buildRoot, "deepseek-harness-code.icns"), icnsOutput);
-  }
+  await writeIcns();
   await copyFile(join(iconset, "icon_512x512@2x.png"), pngOutput);
   await rasterize(traySvg, trayPngOutput, 64);
   await writeIco();

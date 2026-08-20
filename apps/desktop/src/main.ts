@@ -31,7 +31,10 @@ import {
   reserveLoopbackPort,
   startWithPortRetries,
 } from "./lifecycle/port-retry.js";
-import { registerDesktopLifecycle } from "./lifecycle/app-lifecycle.js";
+import {
+  createSingleFlightAction,
+  registerDesktopLifecycle,
+} from "./lifecycle/app-lifecycle.js";
 import {
   HarnessRuntimeController,
   type HarnessChild,
@@ -52,6 +55,7 @@ import {
   validateSmokeRuntimeProvenance,
   type SmokeReadyEvidence,
 } from "./lifecycle/smoke-contract.js";
+import { UpdaterHost } from "./lifecycle/updater-host.js";
 import {
   ensureRuntimePackages,
   type NodeRuntimePaths,
@@ -67,6 +71,7 @@ import {
   resolveSystemNode,
   type ResolvedSystemNode,
 } from "./lifecycle/system-node.js";
+import { getNodeDownloadUrls } from "./lifecycle/node-downloader.js";
 import { replaceWindowKeepingHostAlive } from "./lifecycle/window-recovery.js";
 import {
   ensureOfficialHarnessInstall,
@@ -98,6 +103,7 @@ let controller: HarnessRuntimeController | undefined;
 let harnessOrigin = "";
 let healthTimer: ReturnType<typeof setInterval> | undefined;
 let watchdogHost: WatchdogHost | undefined;
+let updaterHost: UpdaterHost | undefined;
 let tray: Tray | undefined;
 let preferences: DesktopPreferencesState = { ...DEFAULT_DESKTOP_PREFERENCES };
 let anchoredPresetNotice: RuntimeNotice | undefined;
@@ -142,7 +148,11 @@ app.setPath(
 // same profile, and the pile-up makes the app appear to hang.
 const hasSingleInstanceLock = app.requestSingleInstanceLock();
 if (!hasSingleInstanceLock) {
-  app.quit();
+  dialog.showErrorBox(
+    "DeepSeek Harness Code 已在运行",
+    "另一实例正在运行（可能是崩溃后 watchdog 自动重启的实例）。请在任务管理器中结束残留进程后重试。",
+  );
+  app.exit(0);
 }
 
 function settingsPath(): string {
@@ -351,27 +361,33 @@ function nodeRuntimeResourcePath(): string {
 
 async function showNodeRequiredDialog(
   failedError?: Error,
-): Promise<"retry" | "open-page" | "quit"> {
+): Promise<"manual" | "retry" | "quit"> {
+  const isMissing = failedError === undefined;
+  const buttons = isMissing
+    ? ["Show Installer Link", "Retry detection", "Quit"]
+    : ["Retry detection", "Show Installer Link", "Quit"];
   const options: Electron.MessageBoxOptions = {
-    type: failedError === undefined ? "question" : "error",
-    buttons: ["Retry detection", "Open nodejs.org download page", "Quit"],
+    type: isMissing ? "question" : "error",
+    buttons,
     defaultId: 0,
-    cancelId: 2,
+    cancelId: buttons.length - 1,
     title: "Node.js required",
-    message:
-      failedError === undefined
-        ? "DeepSeek Harness Code needs an official Node.js installation to run the local Harness."
-        : "The pinned Harness packages could not be installed.",
-    detail:
-      failedError === undefined
-        ? `No usable Node.js installation was detected. Install the official Node.js ${MINIMUM_NODE_VERSION} or newer from ${NODE_DOWNLOAD_PAGE_URL}, then choose "Retry detection". Common install locations (nodejs.org installer, Homebrew, nvm, Volta, fnm, mise, nvm-windows, Scoop) are detected automatically.`
-        : `${failedError.message.slice(0, 2_000)}\n\nOfficial Node.js download: ${NODE_DOWNLOAD_PAGE_URL}`,
+    message: isMissing
+      ? "DeepSeek Harness Code needs an official system Node.js installation to run the local Harness."
+      : "The pinned Harness packages could not be installed.",
+    detail: isMissing
+      ? `No usable Node.js installation was detected. Install Node.js from the official installer, then retry detection. Version ${MINIMUM_NODE_VERSION} or newer is required.`
+      : `${failedError.message.slice(0, 2_000)}\n\nOfficial Node.js download: ${NODE_DOWNLOAD_PAGE_URL}`,
   };
   const result =
     mainWindow === undefined || mainWindow.isDestroyed()
       ? await dialog.showMessageBox(options)
       : await dialog.showMessageBox(mainWindow, options);
-  return (["retry", "open-page", "quit"] as const)[result.response] ?? "quit";
+  const response = result.response;
+  if (isMissing) {
+    return (["manual", "retry", "quit"] as const)[response] ?? "quit";
+  }
+  return (["retry", "manual", "quit"] as const)[response] ?? "quit";
 }
 
 async function prepareSystemNodeRuntime(): Promise<void> {
@@ -381,11 +397,22 @@ async function prepareSystemNodeRuntime(): Promise<void> {
     const node = resolveSystemNode();
     if (node === undefined) {
       const choice = await showNodeRequiredDialog();
-      if (choice === "open-page") {
-        await shell.openExternal(NODE_DOWNLOAD_PAGE_URL);
-        throw new Error(
-          `No usable Node.js installation was detected. Install the official Node.js ${MINIMUM_NODE_VERSION} or newer from ${NODE_DOWNLOAD_PAGE_URL} and relaunch.`,
-        );
+      if (choice === "manual") {
+        const urls = getNodeDownloadUrls(process.platform, process.arch);
+        const manualOpts: Electron.MessageBoxOptions = {
+          type: "info",
+          title: "Node.js installer link",
+          message: "Install Node.js manually",
+          detail: `Download and run the Node.js installer:\n${urls.installerUrl}\n\nAfter installing, click "Retry detection".`,
+          buttons: ["Open link", "Close"],
+        };
+        if (mainWindow && !mainWindow.isDestroyed()) {
+          await dialog.showMessageBox(mainWindow, manualOpts);
+        } else {
+          await dialog.showMessageBox(manualOpts);
+        }
+        await shell.openExternal(urls.installerUrl);
+        continue;
       }
       if (choice === "quit") {
         throw new Error(
@@ -433,8 +460,9 @@ async function prepareSystemNodeRuntime(): Promise<void> {
       const failedError =
         error instanceof Error ? error : new Error("Unknown runtime error");
       const choice = await showNodeRequiredDialog(failedError);
-      if (choice === "open-page") {
-        await shell.openExternal(NODE_DOWNLOAD_PAGE_URL);
+      if (choice === "manual") {
+        const urls = getNodeDownloadUrls(process.platform, process.arch);
+        await shell.openExternal(urls.installerUrl);
         throw failedError;
       }
       if (choice === "quit") throw failedError;
@@ -471,6 +499,12 @@ async function startHarness(): Promise<HarnessChild> {
   const modelSelectorPluginRoot = app.isPackaged
     ? join(process.resourcesPath, "dsh-model-two-level-selector")
     : join(app.getAppPath(), "packages", "dsh-model-two-level-selector");
+  const uiPolishPluginRoot = app.isPackaged
+    ? join(process.resourcesPath, "dsh-ui-polish")
+    : join(app.getAppPath(), "packages", "dsh-ui-polish");
+  const updaterCheckPluginRoot = app.isPackaged
+    ? join(process.resourcesPath, "dsh-updater-check")
+    : join(app.getAppPath(), "packages", "dsh-updater-check");
   const promptPrinciplesRoot = app.isPackaged
     ? join(process.resourcesPath, "prompt-principles-plugin")
     : join(app.getAppPath(), "packages", "prompt-principles-plugin");
@@ -520,12 +554,20 @@ async function startHarness(): Promise<HarnessChild> {
         packageRoot: modelSelectorPluginRoot,
       },
       {
-        packageName: "dsh-prompt-principles",
-        packageRoot: promptPrinciplesRoot,
+        packageName: "dsh-ui-polish",
+        packageRoot: uiPolishPluginRoot,
       },
       {
-        packageName: "dsh-vision-router",
-        packageRoot: runtime.dshVisionRouterRoot,
+        packageName: "dsh-updater-check",
+        packageRoot: updaterCheckPluginRoot,
+      },
+      {
+        packageName: "dsh-superpowers",
+        packageRoot: runtime.dshSuperpowersRoot,
+      },
+      {
+        packageName: "dsh-prompt-principles",
+        packageRoot: promptPrinciplesRoot,
       },
       {
         packageName: "dsh-better-sidebar",
@@ -538,10 +580,12 @@ async function startHarness(): Promise<HarnessChild> {
       {
         packageName: "@deepseek-ai/dsh-subagent-codex",
         packageRoot: runtime.dshSubagentCodexRoot,
+        linkOnly: true,
       },
       {
         packageName: "@deepseek-ai/dsh-subagent-claude-code",
         packageRoot: runtime.dshSubagentClaudeCodeRoot,
+        linkOnly: true,
       },
       {
         packageName: "@dsh-external/dsh-super-injector",
@@ -554,6 +598,10 @@ async function startHarness(): Promise<HarnessChild> {
       {
         packageName: "dsh-find-plugin",
         packageRoot: runtime.dshFindPluginRoot,
+      },
+      {
+        packageName: "dsh-vision-router",
+        packageRoot: runtime.dshVisionRouterRoot,
       },
     ],
     legacyPluginSpecs: migration.legacyPluginSpecs,
@@ -647,6 +695,14 @@ async function startHarness(): Promise<HarnessChild> {
       env: {
         ...process.env,
         ...spec.env,
+        // The runtime-bin/pnpm launcher resolves Node + pnpm + the store dir
+        // through these env vars. The first-launch install sets them, but the
+        // running Harness (and its one-click plugin updates, which re-invoke
+        // pnpm) must inherit them too, or the launcher's `exec` gets an empty
+        // Node path ("exec: : not found").
+        DHC_NODE_EXECUTABLE: systemNodeExecutable(),
+        DHC_PNPM_ENTRY: join(nodeRuntimeResourcePath(), "pnpm.mjs"),
+        DHC_PNPM_STORE_DIR: runtime.pnpmStoreDir,
         PATH: [
           runtimeBinRoot,
           dirname(systemNodeExecutable()),
@@ -799,58 +855,7 @@ function createTray(): void {
   tray.on("click", () => mainWindow?.show());
 }
 
-// A frozen or forcefully quit window leaves its Harness child behind; several
-// stale children then write the same profile and compete for ports, which
-// makes the app appear to hang. Reap them before starting a fresh child. The
-// pattern matches only the managed harness web entry.
-function terminateStaleHarnessChildren(): void {
-  const collect = (): number[] => {
-    if (process.platform === "win32") {
-      const result = spawnSync(
-        "powershell",
-        [
-          "-NoProfile",
-          "-Command",
-          "Get-CimInstance Win32_Process | Where-Object { $_.CommandLine -match 'dsh/lib/bin\\.js web' } | ForEach-Object { $_.ProcessId }",
-        ],
-        { encoding: "utf8", windowsHide: true },
-      );
-      if (result.error !== undefined) return [];
-      return String(result.stdout ?? "")
-        .split(/\s+/u)
-        .map((value) => Number.parseInt(value, 10))
-        .filter((value) => Number.isInteger(value) && value > 0);
-    }
-    const result = spawnSync("ps", ["-axo", "pid=,command="], {
-      encoding: "utf8",
-      windowsHide: true,
-    });
-    if (result.error !== undefined) return [];
-    const pids: number[] = [];
-    for (const line of String(result.stdout ?? "").split("\n")) {
-      const match = line.match(/^\s*(\d+)\s+(.+)$/u);
-      if (match === null) continue;
-      const command = match[2];
-      if (command === undefined) continue;
-      if (!command.includes("dsh") || !command.includes("bin.js web")) {
-        continue;
-      }
-      const pid = Number.parseInt(match[1] ?? "", 10);
-      if (Number.isInteger(pid) && pid > 0) pids.push(pid);
-    }
-    return pids;
-  };
-  for (const pid of collect()) {
-    try {
-      process.kill(pid, "SIGTERM");
-    } catch {
-      // Already gone.
-    }
-  }
-}
-
 async function launch(): Promise<void> {
-  terminateStaleHarnessChildren();
   watchdogHost = new WatchdogHost({
     appPath: app.getAppPath(),
     resourcesPath: process.resourcesPath,
@@ -966,6 +971,10 @@ async function launch(): Promise<void> {
       preferences = value;
     },
     paste: (target) => target.paste(),
+    checkForUpdates: () =>
+      updaterHost?.check({ silent: false }) ??
+      Promise.resolve({ available: false }),
+    listBundledPlugins: () => [],
   });
   buildMenu();
   createTray();
@@ -1006,6 +1015,11 @@ if (hasSingleInstanceLock) {
   });
 }
 
+const launchOnce = createSingleFlightAction(async () => {
+  await launch();
+  updaterHost = new UpdaterHost({ parentWindow: () => mainWindow });
+});
+
 const lifecycle = hasSingleInstanceLock
   ? registerDesktopLifecycle(
       {
@@ -1018,7 +1032,7 @@ const lifecycle = hasSingleInstanceLock
           if (BrowserWindow.getAllWindows().length === 0) createWindow();
           else mainWindow?.show();
         },
-        launch,
+        launch: launchOnce,
         shutdown: shutdownNormally,
         clearHealthTimer: () => {
           if (healthTimer !== undefined) clearInterval(healthTimer);

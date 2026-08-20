@@ -14,6 +14,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   ensureRuntimePackages,
   inspectNodeRuntime,
+  installRuntimePackages,
   resolveNodeRuntimePaths,
   sha256File,
 } from "../../apps/desktop/src/lifecycle/node-runtime.js";
@@ -58,6 +59,68 @@ async function createInstalledPackages(paths: {
 }
 
 describe("pinned runtime packages driven by the system Node", () => {
+  it("does not copy local Mimosa session state into the installed runtime", async () => {
+    const root = await mkdtemp(join(tmpdir(), "dhc-node-stage-"));
+    const resource = join(root, "resource");
+    const paths = resolveNodeRuntimePaths(join(root, "user-data"));
+    await mkdir(join(resource, "patches", ".mimosa", "hook-state"), {
+      recursive: true,
+    });
+    await mkdir(join(resource, "vendor", ".mimosa", "hook-state"), {
+      recursive: true,
+    });
+    await writeFile(join(resource, "package.json"), "{}\n");
+    await writeFile(
+      join(resource, "pnpm-lock.yaml"),
+      "lockfileVersion: '9.0'\n",
+    );
+    await writeFile(join(resource, "pnpm-workspace.yaml"), "packages: []\n");
+    await writeFile(join(resource, "pnpm.mjs"), "process.exit(0);\n");
+    await writeFile(join(resource, "patches", "runtime.patch"), "patch\n");
+    await writeFile(join(resource, "vendor", "plugin.tgz"), "plugin\n");
+    await writeFile(
+      join(resource, "patches", ".mimosa", "hook-state", "sess_test.json"),
+      "{}\n",
+    );
+    await writeFile(
+      join(resource, "vendor", ".mimosa", "hook-state", "sess_test.json"),
+      "{}\n",
+    );
+    await mkdir(join(paths.packagesDir, "patches", ".mimosa"), {
+      recursive: true,
+    });
+    await mkdir(join(paths.packagesDir, "vendor", ".mimosa"), {
+      recursive: true,
+    });
+    await writeFile(
+      join(paths.packagesDir, "patches", ".mimosa", "stale.json"),
+      "{}\n",
+    );
+    await writeFile(
+      join(paths.packagesDir, "vendor", ".mimosa", "stale.json"),
+      "{}\n",
+    );
+
+    await installRuntimePackages({
+      nodeExecutable: process.execPath,
+      pnpmEntry: join(resource, "pnpm.mjs"),
+      paths,
+    });
+
+    await expect(
+      access(join(paths.packagesDir, "patches", "runtime.patch")),
+    ).resolves.not.toThrow();
+    await expect(
+      access(join(paths.packagesDir, "vendor", "plugin.tgz")),
+    ).resolves.not.toThrow();
+    await expect(
+      access(join(paths.packagesDir, "patches", ".mimosa")),
+    ).rejects.toThrow();
+    await expect(
+      access(join(paths.packagesDir, "vendor", ".mimosa")),
+    ).rejects.toThrow();
+  });
+
   it("resolves the packages layout under user data", () => {
     const paths = resolveNodeRuntimePaths("/user-data");
     expect(paths.rootDir).toBe(join("/user-data", "node-runtime"));

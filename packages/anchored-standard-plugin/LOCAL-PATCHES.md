@@ -1,7 +1,11 @@
 # Local integration patches
 
-- Rename the installed preset to **Anchored Standard (Progressive)** so its UI
-  description matches the resident discovery catalog actually assembled.
+- Localize the installed preset's display copy: `preset/preset.yml` carries the
+  canonical Chinese name and description, and the patched
+  `@deepseek-ai/dsh-client-ui-agent-preset` client bundle translates the picker
+  copy through its zh/en dictionaries — the active Web locale decides the
+  language, so the UI description matches the resident discovery catalog
+  actually assembled.
 - Reject a request when any phase-required tool is absent. The upstream
   fallback exposes the full catalog; this integration instead fails only the
   selected preset so the user can return to the unchanged Standard preset.

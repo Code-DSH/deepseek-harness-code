@@ -189,7 +189,7 @@ export function apply(ctx: Context) {
 v0.12.1 补齐基座能力（完整类型导出、能力探测、状态订阅、tab 角标、生命周期回调、定向打开、插件自有设置等），详见下方接入文档。
 
 完整接入文档：
-- **[`AGENTS.md`](./AGENTS.md)**——仓库内维护的接入文档（全字段、匹配算法、HMR 陷阱、声明式设置、版本探测）；
+- **[`docs/integration-reference.md`](./docs/integration-reference.md)**——仓库内维护的接入参考（全字段、匹配算法、HMR 陷阱、声明式设置、版本探测）；
 - **[`docs/external-plugin-guide.md`](./docs/external-plugin-guide.md)**——面向外部插件开发者的接入指南（含完整最小示例）。
 
 ### ➕ 添加插件（推荐插件目录）

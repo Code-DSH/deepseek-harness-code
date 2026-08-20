@@ -388,7 +388,7 @@ async function assertResources(executable) {
     join(resources, "node-runtime", "pnpm.mjs"),
     join(resources, "routing-suite", "versions.json"),
     join(resources, "superpowers-skills", "UPSTREAM.json"),
-    join(resources, "global-agent-prompt", "AGENTS.md"),
+    join(resources, "global-agent-prompt", "protocol.md"),
   ];
   for (const path of required) {
     await assertPathWithinRoot(path, resources);

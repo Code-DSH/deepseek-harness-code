@@ -1,20 +1,62 @@
-import { readFile } from "node:fs/promises";
+import { execFile } from "node:child_process";
+import { access, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { createRequire } from "node:module";
 import { join } from "node:path";
+import { promisify } from "node:util";
 
 import { describe, expect, it } from "vitest";
 
 const projectRoot = process.cwd();
 const requireFromProject = createRequire(join(projectRoot, "package.json"));
 const pluginRoot = join(projectRoot, "packages", "desktop-plugin");
+const execFileAsync = promisify(execFile);
+const agentPresetPatchName =
+  "@deepseek-ai__dsh-client-ui-agent-preset@0.1.0-rc.8.patch";
+const sidebarPatchName = "@deepseek-ai__dsh-client-ui-sidebar@0.1.0-rc.8.patch";
 
 describe("packaged runtime dependency closure", () => {
+  it("excludes local Mimosa session state from the packaged runtime", async () => {
+    const relativeStatePath = join(
+      ".mimosa",
+      "hook-state",
+      "sess_runtime_staging_test.json",
+    );
+    const sourceStatePath = join(
+      projectRoot,
+      "config",
+      "node-runtime",
+      "patches",
+      relativeStatePath,
+    );
+    const stagedStatePath = join(
+      projectRoot,
+      "build",
+      "node-runtime",
+      "patches",
+      relativeStatePath,
+    );
+    await mkdir(join(sourceStatePath, ".."), { recursive: true });
+    await mkdir(join(stagedStatePath, ".."), { recursive: true });
+    await writeFile(sourceStatePath, "{}\n");
+    await writeFile(stagedStatePath, "{}\n");
+
+    try {
+      await execFileAsync(process.execPath, [
+        join(projectRoot, "scripts", "prepare-node-runtime.mjs"),
+      ]);
+      await expect(access(stagedStatePath)).rejects.toThrow();
+    } finally {
+      await rm(sourceStatePath, { force: true });
+      await rm(stagedStatePath, { force: true });
+    }
+  });
+
   it("pins the portable Node runtime package set and pnpm launcher", async () => {
     const manifest = JSON.parse(
       await readFile(join(projectRoot, "package.json"), "utf8"),
     ) as { dependencies: Record<string, string> };
     expect(manifest.dependencies["@deepseek-ai/dsh-home-paths"]).toBe(
-      "0.1.0-rc.6",
+      "0.1.0-rc.8",
     );
     expect(manifest.dependencies.pnpm).toBe("11.19.0");
 
@@ -24,7 +66,7 @@ describe("packaged runtime dependency closure", () => {
         "utf8",
       ),
     ) as { dependencies: Record<string, string> };
-    expect(runtimeManifest.dependencies["@deepseek-ai/dsh"]).toBe("0.1.0-rc.6");
+    expect(runtimeManifest.dependencies["@deepseek-ai/dsh"]).toBe("0.1.0-rc.8");
     expect(runtimeManifest.dependencies["dsh-find-plugin"]).toBe("0.3.6");
     const runtimeLock = await readFile(
       join(projectRoot, "config", "node-runtime", "pnpm-lock.yaml"),
@@ -63,6 +105,42 @@ describe("packaged runtime dependency closure", () => {
       "utf8",
     );
     expect(installedForwarder).toContain("shellQuote");
+  });
+
+  it("wires the Agent preset locale patch into both runtime workspaces", async () => {
+    const [rootWorkspace, runtimeWorkspace, closureScript] = await Promise.all([
+      readFile(join(projectRoot, "pnpm-workspace.yaml"), "utf8"),
+      readFile(
+        join(projectRoot, "config", "node-runtime", "pnpm-workspace.yaml"),
+        "utf8",
+      ),
+      readFile(
+        join(projectRoot, "scripts", "check-runtime-closure.mjs"),
+        "utf8",
+      ),
+    ]);
+
+    expect(rootWorkspace).toContain(agentPresetPatchName);
+    expect(runtimeWorkspace).toContain(agentPresetPatchName);
+    expect(closureScript).toContain(agentPresetPatchName);
+  });
+
+  it("wires the macOS sidebar safe-area patch into both runtime workspaces", async () => {
+    const [rootWorkspace, runtimeWorkspace, closureScript] = await Promise.all([
+      readFile(join(projectRoot, "pnpm-workspace.yaml"), "utf8"),
+      readFile(
+        join(projectRoot, "config", "node-runtime", "pnpm-workspace.yaml"),
+        "utf8",
+      ),
+      readFile(
+        join(projectRoot, "scripts", "check-runtime-closure.mjs"),
+        "utf8",
+      ),
+    ]);
+
+    expect(rootWorkspace).toContain(sidebarPatchName);
+    expect(runtimeWorkspace).toContain(sidebarPatchName);
+    expect(closureScript).toContain(sidebarPatchName);
   });
 
   it("keeps integrated plugin patches on official bare package names", async () => {
@@ -114,7 +192,7 @@ describe("packaged runtime dependency closure", () => {
       await readFile(join(projectRoot, "package.json"), "utf8"),
     ) as { dependencies: Record<string, string> };
     expect(manifest.dependencies["@deepseek-ai/dsh-workflow"]).toBe(
-      "0.1.0-rc.6",
+      "0.1.0-rc.8",
     );
   });
 
@@ -124,13 +202,13 @@ describe("packaged runtime dependency closure", () => {
     ) as { dependencies: Record<string, string> };
 
     expect(manifest.dependencies["@deepseek-ai/dsh-compaction"]).toBe(
-      "0.1.0-rc.6",
+      "0.1.0-rc.8",
     );
     expect(manifest.dependencies["@deepseek-ai/dsh-invariants"]).toBe(
-      "0.1.0-rc.6",
+      "0.1.0-rc.8",
     );
     expect(manifest.dependencies["@deepseek-ai/dsh-client-ui-primitives"]).toBe(
-      "0.1.0-rc.6",
+      "0.1.0-rc.8",
     );
   });
 

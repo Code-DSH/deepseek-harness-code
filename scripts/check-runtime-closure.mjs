@@ -15,12 +15,12 @@ const pluginManifest = JSON.parse(
 const requireFromPlugin = createRequire(join(pluginRoot, "package.json"));
 
 const criticalRuntimeVersions = new Map([
-  ["@deepseek-ai/dsh", "0.1.0-rc.6"],
-  ["@deepseek-ai/dsh-compaction", "0.1.0-rc.6"],
-  ["@deepseek-ai/dsh-invariants", "0.1.0-rc.6"],
-  ["@deepseek-ai/dsh-workflow", "0.1.0-rc.6"],
-  ["@deepseek-ai/dsh-client-ui-primitives", "0.1.0-rc.6"],
-  ["@deepseek-ai/dsh-home-paths", "0.1.0-rc.6"],
+  ["@deepseek-ai/dsh", "0.1.0-rc.8"],
+  ["@deepseek-ai/dsh-compaction", "0.1.0-rc.8"],
+  ["@deepseek-ai/dsh-invariants", "0.1.0-rc.8"],
+  ["@deepseek-ai/dsh-workflow", "0.1.0-rc.8"],
+  ["@deepseek-ai/dsh-client-ui-primitives", "0.1.0-rc.8"],
+  ["@deepseek-ai/dsh-home-paths", "0.1.0-rc.8"],
   ["pnpm", "11.19.0"],
   ["dsh-find-plugin", "0.3.6"],
 ]);
@@ -44,6 +44,22 @@ const runtimeArtifacts = [
   "packages/dsh-model-two-level-selector/lib/index.js",
   "packages/dsh-model-two-level-selector/lib/client.js",
   "packages/dsh-model-two-level-selector/cordis.patch.yml",
+  "packages/dsh-ui-polish/package.json",
+  "packages/dsh-ui-polish/index.js",
+  "packages/dsh-ui-polish/lib/index.js",
+  "packages/dsh-ui-polish/lib/client.js",
+  "packages/dsh-ui-polish/cordis.patch.yml",
+  "packages/dsh-updater-check/package.json",
+  "packages/dsh-updater-check/index.js",
+  "packages/dsh-updater-check/lib/index.js",
+  "packages/dsh-updater-check/lib/client.js",
+  "packages/dsh-updater-check/cordis.patch.yml",
+  "packages/dsh-superpowers/package.json",
+  "packages/dsh-superpowers/lib/index.js",
+  "packages/dsh-superpowers/lib/client.js",
+  "packages/dsh-superpowers/lib/judge.js",
+  "packages/dsh-superpowers/lib/prompt.js",
+  "packages/dsh-superpowers/cordis.patch.yml",
   "packages/anchored-standard-plugin/package.json",
   "packages/anchored-standard-plugin/preset/agent.cordis.yml",
   "packages/anchored-standard-plugin/preset/preset.yml",
@@ -108,6 +124,10 @@ for (const entry of ["pnpm.mjs", "worker.js"]) {
 }
 
 const nodeRuntimeResourceRoot = join(projectRoot, "build", "node-runtime");
+const presetLocalePatch =
+  "@deepseek-ai__dsh-client-ui-agent-preset@0.1.0-rc.8.patch";
+const sidebarSafeAreaPatch =
+  "@deepseek-ai__dsh-client-ui-sidebar@0.1.0-rc.8.patch";
 for (const relativePath of [
   "package.json",
   "pnpm-lock.yaml",
@@ -116,27 +136,49 @@ for (const relativePath of [
 ]) {
   await access(join(nodeRuntimeResourceRoot, relativePath));
 }
+for (const runtimePatch of [presetLocalePatch, sidebarSafeAreaPatch]) {
+  const sourcePatch = await readFile(
+    join(projectRoot, "config", "node-runtime", "patches", runtimePatch),
+  );
+  const stagedPatch = await readFile(
+    join(nodeRuntimeResourceRoot, "patches", runtimePatch),
+  );
+  if (!sourcePatch.equals(stagedPatch)) {
+    throw new Error(`build/node-runtime must carry the exact ${runtimePatch}`);
+  }
+}
 const nodeRuntimePackage = JSON.parse(
   await readFile(join(nodeRuntimeResourceRoot, "package.json"), "utf8"),
 );
 if (
-  nodeRuntimePackage.dependencies?.["@deepseek-ai/dsh"] !== "0.1.0-rc.6" ||
+  nodeRuntimePackage.dependencies?.["@deepseek-ai/dsh"] !== "0.1.0-rc.8" ||
   nodeRuntimePackage.dependencies?.["dsh-find-plugin"] !== "0.3.6"
 ) {
   throw new Error(
-    "build/node-runtime must pin @deepseek-ai/dsh@0.1.0-rc.6 and dsh-find-plugin@0.3.6",
+    "build/node-runtime must pin @deepseek-ai/dsh@0.1.0-rc.8 and dsh-find-plugin@0.3.6",
   );
 }
 const packagedPnpmLock = await readFile(
   join(nodeRuntimeResourceRoot, "pnpm-lock.yaml"),
   "utf8",
 );
+const packagedPnpmWorkspace = await readFile(
+  join(nodeRuntimeResourceRoot, "pnpm-workspace.yaml"),
+  "utf8",
+);
 if (
   !packagedPnpmLock.includes("'@deepseek-ai/dsh':") ||
-  !packagedPnpmLock.includes("dsh-find-plugin:")
+  !packagedPnpmLock.includes("dsh-find-plugin:") ||
+  !packagedPnpmLock.includes(
+    "@deepseek-ai/dsh-client-ui-agent-preset@0.1.0-rc.8",
+  ) ||
+  !packagedPnpmLock.includes("@deepseek-ai/dsh-client-ui-sidebar@0.1.0-rc.8") ||
+  !packagedPnpmLock.includes("patch_hash=") ||
+  !packagedPnpmWorkspace.includes(presetLocalePatch) ||
+  !packagedPnpmWorkspace.includes(sidebarSafeAreaPatch)
 ) {
   throw new Error(
-    "build/node-runtime lockfile is missing the pinned Harness runtime packages",
+    "build/node-runtime is missing pinned Harness packages or required client patches",
   );
 }
 
@@ -183,7 +225,10 @@ if (!findPluginPatch.includes("name: 'dsh-find-plugin'")) {
 
 for (const [directory, packageName, version] of [
   ["dsh-ui-motion", "dsh-ui-motion", "1.0.0"],
-  ["dsh-model-two-level-selector", "dsh-model2-selector", "1.0.0"],
+  ["dsh-model-two-level-selector", "dsh-model2-selector", "1.1.0"],
+  ["dsh-ui-polish", "dsh-ui-polish", "1.1.0"],
+  ["dsh-updater-check", "dsh-updater-check", "1.0.0"],
+  ["dsh-superpowers", "dsh-superpowers", "0.1.0"],
 ]) {
   const pluginRoot = join(projectRoot, "packages", directory);
   const pluginPackage = JSON.parse(
@@ -195,10 +240,8 @@ for (const [directory, packageName, version] of [
     );
   }
   const patch = await readFile(join(pluginRoot, "cordis.patch.yml"), "utf8");
-  if (
-    !patch.includes(`name: '${packageName}'`) ||
-    patch.includes("./node_modules/")
-  ) {
+  const quotedBareName = new RegExp(`name:\\s*(["'])${packageName}\\1`, "u");
+  if (!quotedBareName.test(patch) || patch.includes("./node_modules/")) {
     throw new Error(`${packageName} must retain its official bare-name patch`);
   }
 }
@@ -258,6 +301,18 @@ const modeBoostManifest = JSON.parse(
 );
 if (!injectorPatch.includes("name: '@dsh-external/dsh-super-injector'")) {
   throw new Error("routing injector must retain its official bare-name patch");
+}
+const injectorClient = await readFile(
+  join(projectRoot, "build", "routing-suite", "injector", "lib", "client.js"),
+  "utf8",
+);
+if (
+  !injectorClient.includes("SuperInjectorPage") ||
+  !injectorClient.includes("slots.register")
+) {
+  throw new Error(
+    "routing injector client must carry the settings-page fix (slots.register(options, Component) with the page as the 2nd positional argument)",
+  );
 }
 if (
   modeBoostManifest.dsh?.bundle?.patch !== "./cordis.patch.yml" ||
@@ -322,6 +377,6 @@ process.stdout.write(
     runtimeArtifacts: runtimeArtifacts.length,
     productionDependencies: resolvedDependencies.length,
     criticalRuntimePackages: criticalRuntimeVersions.size,
-    bundledPluginPackages: 6,
+    bundledPluginPackages: 10,
   })}\n`,
 );

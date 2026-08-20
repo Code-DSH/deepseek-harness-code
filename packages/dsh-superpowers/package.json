@@ -1,0 +1,33 @@
+{
+  "name": "dsh-superpowers",
+  "description": "Superpowers → 重型编码模式（Coding）：一个模式开关。重型模式挂载 subagent / subagent_fork / workflow / ralph 等重型工具并注入 Coding Focus 提示（专注代码与 To-do List）；轻度模式不挂载重型工具。按任务难度自动判定，用户可手动覆盖。",
+  "version": "0.1.0",
+  "private": true,
+  "main": "lib/index.js",
+  "exports": {
+    ".": "./lib/index.js",
+    "./client": "./lib/client.js",
+    "./package.json": "./package.json"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "inject": [
+        "@deepseek-ai/dsh-client-runtime",
+        "@deepseek-ai/dsh-client-ui-slots",
+        "@deepseek-ai/dsh-client-ui-primitives",
+        "@deepseek-ai/dsh-client-connection"
+      ],
+      "platform": "web"
+    }
+  },
+  "dependencies": {
+    "@deepseek-ai/schemastery": "3.18.1"
+  },
+  "peerDependencies": {
+    "react": "^18.2.0"
+  },
+  "license": "BSD-3-Clause"
+}

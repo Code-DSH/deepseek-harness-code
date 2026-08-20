@@ -1,32 +1,12 @@
 # Project Status
 
-- Phase: every fetched local/remote branch change is consolidated into `main` — the cloud pull request
-  [Code-DSH/deepseek-harness-code#3](https://github.com/Code-DSH/deepseek-harness-code/pull/3) was merged
-  (merge commit `dc245bc`), and local `main` is fast-forwarded and fully in sync with `origin/main`.
-- Current milestone: first public preview release **DeepSeek Harness Code (DHSC) 0.1.0-BETA1** — macOS
-  Universal DMG and Windows NSIS installers; Linux (AppImage/deb) builds now pass in cloud CI and are
-  ready for upcoming releases.
+- Phase: `main` is the sole integration branch. BETA2 is accepted through a CI-gated release PR, then tagged `v0.1.0-BETA2` only from a local `main` synchronized exactly with `origin/main`.
+- Current milestone: **DeepSeek Harness Code (DHSC) 0.1.0-BETA2** — integration build advancing from BETA1; Universal macOS DMG + Windows NSIS verified via `pnpm dist:mac --universal` / `pnpm dist:win`; Linux AppImage/deb CI-green on native runners.
+- Previous milestone: **0.1.0-BETA1** released on GitHub as `v0.1.0-BETA1` (see `docs/releases/0.1.0-BETA1.md`) — 221 MB Universal DMG + Windows x64/arm64 NSIS.
 - Repository: `https://github.com/Code-DSH/deepseek-harness-code` (public)
-- Release: tagged `v0.1.0-BETA1` as a GitHub pre-release (see `docs/releases/v0.1.0-BETA1.md`)
-- Integrated surface: official Harness Home resolution, copy-only legacy migration, application-bundled
-  pnpm launcher, six-package public `dsh plugin --profile web add` coordination, bare-package loader
-  restoration, checksum-pinned Routing Suite resources (`dsh-ui-motion@1.0.0`,
-  `dsh-model2-selector@1.0.0`, Super Injector, Mode Boost), `dsh-find-plugin@0.3.6`, bilingual managed
-  presets (`anchored-standard`, `router-standard`, `router-spec`), Superpowers Skills, sandboxed desktop
-  host, and independent Watchdog
-- Built-in modes: Standard (default), progressive `anchored-standard`, managed `router-standard` and
-  `router-spec` presets; plus native two-level model selector and UI-motion integration
-- Release artifact: `release/DeepSeek-Harness-Code-0.1.0-BETA1-mac-universal.dmg`
-  (221,144,460 bytes; runs on the auto-detected system official Node.js >=22.13 instead of downloading a portable runtime or bundling node_modules; Windows x64 setup `25eb564b0003a0518ed16f86554fe96976be60fe0f70b8ea7fda130804732fd0`; Windows arm64 setup `aaa2a5ccd3ae52451c394e278eac22ccdc8fed3f0df36a43f1140d118794c878`)
-- Build evidence: `pnpm dist:mac` exited 0; `pnpm verify:mac release/DeepSeek-Harness-Code-0.1.0-BETA1-mac-universal.dmg --universal`
-  exited 0 after mounted-image plugin/runtime/signature/architecture checks; Windows NSIS installers
-  built on native Windows runners through the tag-triggered packaging workflow; Linux AppImage/deb
-  jobs also pass on ubuntu-latest runners in the tag-triggered packaging workflow
-- Test scope: the previously completed full suite plus packaging build, runtime closure, six-plugin
-  package closure, documentation links, formatting, and mounted-DMG verification
-- Plugin snapshots: the earlier desktop state remains at `archive/desktop-plugin-before-app-merge-20260816`;
-  release `0.1.0-BETA1` vendors the exact installed UI Motion and Model2 compiled closures under `packages/`
-- Historical artifact: any earlier `0.3.x` DMG predates this complete integrated-plugin snapshot and must
-  not be presented as the new build
-- External limits: native Linux visual gates, live-provider soak, and paired V4 Pro capability validation
-  remain pending; this macOS release is unsigned and not notarized
+- Integrated surface (BETA2): official Harness Home resolution (`@deepseek-ai/dsh-home-paths@0.1.0-rc.8`), copy-only legacy migration, application-bundled pnpm launcher, **8 integrated plugins** (`desktop-plugin`, `dsh-ui-motion@1.1.0`, `dsh-model2-selector@1.1.0`, `dsh-ui-polish`, `dsh-updater-check@1.0.0`, `dsh-prompt-principles`, `dsh-vision-router@1.7.1`, `dsh-better-sidebar@0.12.3` + `dsh-superpowers` + `anchored-standard` preset + `app-composition` MCP/subagent bridges) reconciled via public `dsh plugin --profile web add`, checksum-pinned Routing Suite (`injector 0.3.3` `355238fa...`, `mode-boost 0.1.0` `72836d64...`, `router-preset 0.2.0 eff787e` `a8f3616f...`), Superpowers Skills 6.2.0, Global Agent Prompt, sandboxed desktop host, independent Watchdog, system Node auto-detection (>=22.13)
+- Built-in modes: Standard (default), progressive `anchored-standard`, managed `router-standard` / `router-spec` + `mode-boost` host plane
+- Build evidence: `pnpm build` → `pnpm preflight:runtime` (51 runtime artifacts + 35 production dependencies + 8 critical versions + 10 bundled plugin packages) → tag-triggered native packaging; the macOS job runs `node scripts/verify-macos-artifact.mjs --universal` before uploading the DMG, Windows builds x64/arm64 NSIS, and Linux builds x64/arm64 AppImage/deb
+- Test scope: unit (304 passing, 3 intentionally skipped) → anchored (108) → plugin/real Harness (24) → package (33) → e2e (2 Playwright Chromium cases); `pnpm check` (typecheck + lint + format:check + verify:docs + verify:security) and `pnpm check:memory` gate the release
+- Plugin snapshots: BETA2 vendors the 8 compiled plugin closures under `packages/` and `build/routing-suite/`; BETA1 snapshot remains at `docs/releases/0.1.0-BETA1.md`
+- External limits: native visual inspection, live-provider soak, and paired V4 Pro anchoring validation remain pending; this release is unsigned/ad-hoc and not notarized.

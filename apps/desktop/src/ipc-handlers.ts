@@ -2,9 +2,11 @@ import {
   desktopPreferencesSchema,
   desktopPreferencesStateSchema,
   runtimeStateSchema,
+  type BundledPluginEntry,
   type DesktopPreferences,
   type DesktopPreferencesState,
   type RuntimeState,
+  type UpdaterCheckOutcome,
 } from "./shared/contracts.js";
 
 export interface MainIpc {
@@ -29,6 +31,8 @@ export interface DesktopIpcActions {
   getPreferences(): DesktopPreferencesState;
   setPreferences(value: DesktopPreferences): Promise<void>;
   paste(target: PasteTarget): void;
+  checkForUpdates(): Promise<UpdaterCheckOutcome>;
+  listBundledPlugins(): BundledPluginEntry[];
 }
 
 function isPasteTarget(value: unknown): value is PasteTarget {
@@ -48,6 +52,8 @@ export function registerDesktopIpc(
     runtimeStateSchema.parse(actions.getRuntimeState()),
   );
   ipc.handle("runtime:restart", () => actions.restartHarness());
+  ipc.handle("updater:check", () => actions.checkForUpdates());
+  ipc.handle("bundled-plugins:list", () => actions.listBundledPlugins());
   ipc.handle("logs:open", () => actions.openLogs());
   ipc.handle("preferences:get", () =>
     desktopPreferencesStateSchema.parse(actions.getPreferences()),

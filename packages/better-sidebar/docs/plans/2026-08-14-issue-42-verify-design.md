@@ -43,7 +43,7 @@
 
 `Error: AttachConsole failed`（node-pty `conpty_console_list_agent.js`）是 **node-pty 上游行为**：`kill()` 清理路径 fork 的 console-list 辅助进程在无控制台宿主（launcher/服务方式启动的 `dsh`）下 `AttachConsole(shellPid)` 失败。终端功能本身不受影响（spawn/输入输出正常），仅刷服务器日志。
 
-- 插件侧不可消除：不改 DSH 源码、不 patch node-pty 依赖是仓库硬约束（见 AGENTS.md §0），且 `IPty.kill()` 是 node-pty 的唯一 kill 通道；
+- 插件侧不可消除：不改 DSH 源码、不 patch node-pty 依赖是仓库硬约束（见 `docs/integration-reference.md` §0），且 `IPty.kill()` 是 node-pty 的唯一 kill 通道；
 - 建议：保持现状（无功能影响），上游如提供无控制台规避选项再跟进；reporter 若在意日志噪音，可反馈 microsoft/node-pty。
 
 > 交叉引用（issue #140）：与本文档「仅刷日志」不同，**依赖缺失/损坏**（node-pty 安装不完整导致模块加载失败）已有插件侧降级处理——宿主半懒加载 node-pty，失败时终端 tab 显示可复制的修复命令（`scripts/install.sh --repair` / `install.ps1 -Repair`），详见 `src/pty-deps.ts` 与 `tests/pty-deps.spec.ts`。

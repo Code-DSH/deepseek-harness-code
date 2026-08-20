@@ -71,8 +71,8 @@ async function createPackagedPreset(
     writeFile(join(presetRoot, "agent.cordis.yml"), composition),
     writeFile(
       join(presetRoot, "preset.yml"),
-      "name: 渐进式标准模式 / Anchored Standard (Progressive)\n" +
-        "description: 首轮仅提供 Minimal 的真实双工具。 / Progressive Standard mode.\n",
+      "name: Progressive Standard Mode\n" +
+        "description: Provides chain-of-thought for DeepSeek V4 Pro and progressively unlocks tools.\n",
     ),
     writeFile(
       join(presetRoot, "tool-bootstrap.mjs"),
@@ -116,9 +116,10 @@ describe("managed Anchored Standard agent preset", () => {
     });
     expect(marker.sourceDigest).toMatch(/^[a-f0-9]{64}$/);
     const metadata = await readFile(join(target, "preset.yml"), "utf8");
-    expect(metadata).toContain("渐进式标准模式");
-    expect(metadata).toContain("Anchored Standard (Progressive)");
-    expect(metadata).toContain("Progressive Standard mode");
+    expect(metadata).toContain("name: Progressive Standard Mode");
+    expect(metadata).toContain("Provides chain-of-thought for DeepSeek V4 Pro");
+    expect(metadata).not.toContain("渐进式标准模式");
+    expect(metadata).not.toContain(" / ");
   });
 
   it("is idempotent and upgrades only an unmodified managed copy", async () => {

@@ -1,0 +1,6 @@
+# dsh-ui-polish bundle layer: one loader row (bare package name so the
+# client-modules registry qualifies the entry and serves lib/client.js).
+- insert:
+    - id: dsh-ui-polish
+      name: "dsh-ui-polish"
+      config: {}

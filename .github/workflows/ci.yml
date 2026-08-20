@@ -29,6 +29,7 @@ jobs:
           node-version: 24.18.0
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - run: pnpm build:icon
       - run: pnpm check
 
   # Code compliance: dependency vulnerability audit, runtime closure of the
@@ -51,6 +52,8 @@ jobs:
         run: pnpm audit --prod
       - name: Build distribution artifacts
         run: pnpm build
+      - name: Generate license notices and installer assets
+        run: pnpm build:icon
       - name: Runtime closure check
         run: node scripts/check-runtime-closure.mjs
       - name: License notices present

@@ -11,7 +11,7 @@ read_when: [installing, upgrading, or diagnosing missing Harness data]
 skip_when: [changing renderer-only behavior]
 priority: must
 freshness_class: project
-last_verified: 2026-08-16T20:22:00+08:00
+last_verified: 2026-08-20T00:00:00+08:00
 owners: [project]
 source_of_truth:
   - ../../apps/desktop/src/lifecycle/desktop-plugin-link.ts
@@ -27,14 +27,14 @@ tags: [migration, official-cli, dsh-home]
 
 ## Current Contract
 
-DeepSeek Harness Code and standalone DeepSeek Harness share one official Home. A nonblank `DSH_HOME` overrides the location; otherwise the pinned official resolver selects `~/.dsh`. Electron's `userData` directory remains only for desktop preferences, watchdog state, logs, and the generated pnpm launcher.
+DeepSeek Harness Code and standalone DeepSeek Harness share one official Home. A nonblank `DSH_HOME` overrides the location; otherwise the pinned official resolver (`@deepseek-ai/dsh-home-paths@0.1.0-rc.8`) selects `~/.dsh`. Electron's `userData` directory remains only for desktop preferences, watchdog state, logs, and the generated pnpm launcher.
 
 On every launch, the sequence is:
 
 1. Resolve the official Home and the retired source at `<Electron userData>/dsh-home`.
 2. Copy only target-absent supported data from the retired source.
 3. Reconcile missing legacy profile dependencies and all integrated plugins through `dsh plugin --profile web add`.
-4. Synchronize app-owned Superpowers Skills and Agent Presets.
+4. Synchronize app-owned Superpowers Skills and Agent Presets, plus the Global Agent Prompt.
 5. Start `dsh web` with the same official Home and `--expose-internals`.
 
 Repeated runs are idempotent. The public CLI retains unrelated dependencies and bundle entries.
@@ -52,20 +52,28 @@ The copy allow-list is credentials, anonymous ID, settings, root patch/activity 
 
 ## Integrated Plugins
 
-The app bundles and installs these packages using the same official mechanism as `dsh plugin add`:
+The app bundles and installs these packages using the same official mechanism as `dsh plugin add` (via the auto-detected system Node >=22.13 + bundled pnpm runtime):
 
 - `deepseek-harness-desktop-plugin`
-- `dsh-ui-motion`
-- `dsh-model2-selector`
-- `@dsh-external/dsh-super-injector`
-- `@dsh-external/dsh-mode-boost`
-- `dsh-find-plugin`
+- `dsh-ui-motion@1.1.0`
+- `dsh-model2-selector@1.1.0`
+- `dsh-ui-polish`
+- `dsh-updater-check@1.0.0`
+- `dsh-prompt-principles`
+- `dsh-vision-router@1.7.1`
+- `dsh-better-sidebar@0.12.3`
+- `dsh-superpowers` (coding-mode gate)
+- `@dsh-external/dsh-super-injector@0.3.3`
+- `@dsh-external/dsh-mode-boost@0.1.0`
+- `dsh-find-plugin@0.3.6`
+- `deepseek-harness-composition` (MCP everything + Context7, subagent codex/claude)
+- `anchored-standard` preset (synchronized as Agent Preset, not a Web bundle)
 
-The generated `pnpm`/`pnpm.cmd` launcher points to the pnpm runtime inside the application and is prepended to the child command's private `PATH` together with the detected system Node's bin directory. It does not change the user's shell or require a system pnpm installation (a system official Node.js >=22.13 is required and auto-detected). The plugin patches retain bare package names.
+The generated `pnpm`/`pnpm.cmd` launcher points to the pnpm runtime inside the application and is prepended to the child command's private `PATH` together with the detected system Node's bin directory. It does not change the user's shell or require a system pnpm installation (a system official Node.js >=22.13 is required and auto-detected). The plugin patches retain bare package names under `--expose-internals`.
 
 ## Conflict Diagnosis
 
-Conflict and skipped-link paths are written as bounded startup diagnostics without file contents. If startup fails while reinstalling a legacy registry plugin, confirm network/registry availability and relaunch; the migration and official reconciliation safely retry. Existing official Home data and the retired source remain available.
+Conflict and skipped-link paths are written as bounded startup diagnostics without file contents. If startup fails while reinstalling a legacy registry plugin, confirm network/registry availability and relaunch; the migration and official reconciliation safely retry. Existing official Home data and the retired source remain available. A corrupted profile `node_modules` (e.g., self-referential symlink) is detected and rebuilt once before failing.
 
 ## Rollback
 
@@ -73,7 +81,7 @@ Quit the app before inspection. Do not delete either Home. The retired source re
 
 ## Validation
 
-The prior unit suite covers absent sources, nonconflicting merges, target-wins conflicts, modes, symlink rejection, plugin-spec normalization, rerun idempotence, and injected mid-copy rollback. The prior Electron Node-mode integration test uses bundled pnpm and the public CLI to install the original four packages, then starts the pinned Harness and fetches the desktop client from its boot graph. Release `0.3.3` extends the same coordinator with two compiled local plugin snapshots and checks their identities, entry/client closure, and bare-name patches both before packaging and inside the mounted DMG. The release build and mounted-image verifier both exited 0; the full previously green test suite was intentionally not rerun for this packaging-only addition.
+The prior unit suite covers absent sources, nonconflicting merges, target-wins conflicts, modes, symlink rejection, plugin-spec normalization, rerun idempotence, and injected mid-copy rollback. The prior Electron Node-mode integration test uses bundled pnpm and the public CLI to install the original four packages, then starts the pinned Harness and fetches the desktop client from its boot graph. Release `0.1.0-BETA2` extends the same coordinator to 8 plugins plus composition/superpowers/routing and checks their identities, entry/client closure, and bare-name patches both before packaging and inside the mounted DMG. The release build and mounted-image verifier both exit 0; the previously green test suite remains the package gate.
 
 ## Related Documents
 
@@ -84,5 +92,6 @@ The prior unit suite covers absent sources, nonconflicting merges, target-wins c
 
 ## Change Log
 
-- `2026-08-16T19:00:00+08:00` — Documented the implementation-backed official single-Home migration and plugin installation contract.
+- `2026-08-20T00:00:00+08:00` — Expanded to 8 integrated plugins + composition/superpowers; documented Global Prompt sync and bare-name + --expose-internals contract.
 - `2026-08-16T20:22:00+08:00` — Added the two installed local Web plugins to the immutable installer resources and official CLI reconciliation set.
+- `2026-08-16T19:00:00+08:00` — Documented the implementation-backed official single-Home migration and plugin installation contract.

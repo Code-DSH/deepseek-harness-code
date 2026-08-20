@@ -165,9 +165,9 @@ describe("DeepSeek Harness Code distribution contract", () => {
     expect(verifyScript).toContain("node-runtime/package.json");
     expect(verifyScript).toContain("node-runtime/pnpm-lock.yaml");
     expect(verifyScript).toContain("node-runtime/pnpm.mjs");
-    expect(verifyScript).toContain("global-agent-prompt/AGENTS.md");
+    expect(verifyScript).toContain("global-agent-prompt/protocol.md");
     expect(verifyScript).toContain(
-      "node-runtime/vendor/dsh-vision-router-1.4.4.tgz",
+      "node-runtime/vendor/dsh-vision-router-1.7.1.tgz",
     );
     expect(verifyScript).toContain(
       "node-runtime/vendor/dsh-better-sidebar-0.12.3.tgz",
@@ -245,6 +245,9 @@ describe("DeepSeek Harness Code distribution contract", () => {
     expect(workflow).toContain("expected-architecture: x64");
     expect(workflow).toContain("windows-${EXPECTED_ARCHITECTURE}-setup.exe");
     expect(workflow).toContain("mac-universal.dmg");
+    expect(workflow).toContain(
+      'node scripts/verify-macos-artifact.mjs "$ARTIFACT" --universal',
+    );
     expect(workflow).toContain("linux-${EXPECTED_ARCHITECTURE}.AppImage");
     expect(workflow).toContain("linux-${EXPECTED_ARCHITECTURE}.deb");
     expect(workflow).toContain("artifact-sha256");
@@ -404,6 +407,19 @@ describe("DeepSeek Harness Code distribution contract", () => {
       stdio: "ignore",
     });
     expect(stdout.trim()).toBe("");
+  });
+
+  test("tracks only the repository-root AGENTS.md entry", () => {
+    const trackedEntries = execFileSync(
+      "git",
+      ["ls-files", "*AGENTS.md", "*agent.md"],
+      {
+        cwd: projectRoot,
+        encoding: "utf8",
+      },
+    );
+
+    expect(trackedEntries.trim()).toBe("AGENTS.md");
   });
 
   test("contains no product workflow or package reference to agent evidence paths", async () => {

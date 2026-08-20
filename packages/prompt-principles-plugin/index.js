@@ -223,9 +223,8 @@ var Schema = function(options) {
     return refs[options.uid];
   }
   Object.assign(schema, options);
-  if (typeof schema.callback === "string") try {
-    schema.callback = new Function("return " + schema.callback)();
-  } catch {
+  if (typeof schema.callback === "string") {
+    // String callbacks are not supported in the built plugin; require function callbacks
   }
   Object.defineProperty(schema, "uid", { value: globalThis.__schemastery_index__++ });
   Object.setPrototypeOf(schema, Schema.prototype);

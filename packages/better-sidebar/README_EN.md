@@ -189,7 +189,7 @@ export function apply(ctx: Context) {
 v0.12.1+ base capabilities (complete type exports, capability detection, state subscription, tab badge, lifecycle callbacks, targeted open, plugin-owned settings, etc.) — see the integration docs below.
 
 Full integration docs:
-- **[`AGENTS.md`](./AGENTS.md)** — the in-repo integration doc (full fields, matching algorithm, HMR pitfalls, declarative settings, version detection);
+- **[`docs/integration-reference.md`](./docs/integration-reference.md)** — the in-repo integration reference (full fields, matching algorithm, HMR pitfalls, declarative settings, version detection);
 - **[`docs/external-plugin-guide.md`](./docs/external-plugin-guide.md)** — the external-plugin guide (with a complete minimal example).
 
 ### ➕ Add Plugins (recommended plugin catalog)

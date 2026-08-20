@@ -18,7 +18,7 @@
    the label tokens. The panels use the generic card surface
    `--dsw-alias-bg-layer-1`, which every dsh-web-ui skin overrides — so
    switching skins in the dsh-web-ui skin center re-skins the sidebar panels
-   automatically (see AGENTS.md §8). */
+   automatically (see docs/integration-reference.md §8). */
 
 /* The persistent expand/collapse cluster at the top-right corner: two rail
    controls side by side (bottom panel's glyph LEFT of the right panel's).

@@ -68,6 +68,17 @@ export const runtimeStateSchema = z
 
 export type RuntimeState = z.infer<typeof runtimeStateSchema>;
 
+export interface UpdaterCheckOutcome {
+  available: boolean;
+  version?: string;
+}
+
+export interface BundledPluginEntry {
+  name: string;
+  description: string;
+  dir: string;
+}
+
 export interface DeepSeekDesktopBridge {
   preferences: {
     get(): Promise<DesktopPreferencesState>;
@@ -78,6 +89,12 @@ export interface DeepSeekDesktopBridge {
     restartHarness(): Promise<void>;
     openLogs(): Promise<void>;
     subscribe(listener: (state: RuntimeState) => void): () => void;
+  };
+  updater: {
+    check(): Promise<UpdaterCheckOutcome>;
+  };
+  bundledPlugins: {
+    list(): Promise<BundledPluginEntry[]>;
   };
 }
 

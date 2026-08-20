@@ -6,8 +6,11 @@ playwright-report/
 coverage/
 .cache/
 .mimosa/
+.omo/
 .worktrees/
+.jspace/
 *.log
 .DS_Store
 build/routing-suite/
 build/node-runtime/
+build/

@@ -14,8 +14,8 @@
     "README.md"
   ],
   "dependencies": {
-    "@deepseek-ai/dsh-mcp-client": "0.1.0-rc.6",
-    "@deepseek-ai/dsh-subagent-codex": "0.1.0-rc.6",
-    "@deepseek-ai/dsh-subagent-claude-code": "0.1.0-rc.6"
+    "@deepseek-ai/dsh-mcp-client": "0.1.0-rc.8",
+    "@deepseek-ai/dsh-subagent-codex": "0.1.0-rc.8",
+    "@deepseek-ai/dsh-subagent-claude-code": "0.1.0-rc.8"
   }
 }
