@@ -43,11 +43,11 @@ const expectedMetadata = {
 describe("packaged runtime listener selection", () => {
   test("isolates Harness Home and disables only the Linux CI sandbox", () => {
     expect(buildPackagedSmokeLaunch("linux", "/tmp/smoke-user-data")).toEqual({
-      args: ["--no-sandbox"],
+      args: ["--user-data-dir=/tmp/smoke-user-data", "--no-sandbox"],
       env: { DSH_HOME: "/tmp/smoke-user-data/dsh-home" },
     });
     expect(buildPackagedSmokeLaunch("win32", "C:\\smoke-user-data")).toEqual({
-      args: [],
+      args: ["--user-data-dir=C:\\smoke-user-data"],
       env: { DSH_HOME: join("C:\\smoke-user-data", "dsh-home") },
     });
   });

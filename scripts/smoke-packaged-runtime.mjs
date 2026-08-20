@@ -63,8 +63,10 @@ function findExecutable() {
 }
 
 function buildPackagedSmokeLaunch(platform, userDataPath) {
+  const args = [`--user-data-dir=${userDataPath}`];
+  if (platform === "linux") args.push("--no-sandbox");
   return {
-    args: platform === "linux" ? ["--no-sandbox"] : [],
+    args,
     env: { DSH_HOME: join(userDataPath, "dsh-home") },
   };
 }
