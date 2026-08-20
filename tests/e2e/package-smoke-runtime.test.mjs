@@ -176,12 +176,17 @@ describe("packaged runtime listener selection", () => {
         systemNode: { executable: "/usr/bin/node", version: "24.1.0" },
         timestamps: {
           readyAt: "2026-08-19T00:00:01.000Z",
-          finalAt: "2026-08-19T00:00:02.000Z",
+          finalAt: "2026-08-19T00:07:00.000Z",
         },
       },
     };
 
-    expect(verifySmokeEvidence(evidence, expectedMetadata)).toEqual({
+    expect(
+      verifySmokeEvidence(evidence, {
+        ...expectedMetadata,
+        maxDurationMs: 10 * 60_000,
+      }),
+    ).toEqual({
       origin: "http://127.0.0.1:41002",
       appPid: 7000,
       harnessPid: 7002,

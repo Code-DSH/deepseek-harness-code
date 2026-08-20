@@ -313,7 +313,12 @@ function verifySmokeEvidence(evidence, expected) {
     finalAt < readyAt
   )
     throw new Error("smoke evidence timestamps are not ordered");
-  if (finalAt - startedAt > 5 * 60_000)
+  const requestedWindow = expected.maxDurationMs;
+  const freshnessWindow =
+    Number.isFinite(requestedWindow) && requestedWindow > 0
+      ? Math.min(requestedWindow, 15 * 60_000)
+      : 5 * 60_000;
+  if (finalAt - startedAt > freshnessWindow)
     throw new Error("smoke evidence exceeds the freshness window");
   return {
     origin: ready.harnessOrigin,
@@ -853,6 +858,7 @@ async function main() {
       artifactFilename,
       artifactSha256,
       startedAt,
+      maxDurationMs: timeoutMs,
     };
     const identity = verifySmokeReadyEvidence(readyEvidence, expectedMetadata);
     await assertRuntimeProvenance(
