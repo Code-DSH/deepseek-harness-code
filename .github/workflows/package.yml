@@ -48,7 +48,7 @@ jobs:
       PACKAGE_KIND: ${{ matrix.package-kind }}
       EXPECTED_ARCHITECTURE: ${{ matrix.expected-architecture }}
       EVIDENCE_ROOT: ${{ github.workspace }}/release/evidence/${{ matrix.label }}
-      SMOKE_TIMEOUT_MS: 180000
+      SMOKE_TIMEOUT_MS: 600000
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4

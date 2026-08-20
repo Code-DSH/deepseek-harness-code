@@ -256,7 +256,7 @@ describe("DeepSeek Harness Code distribution contract", () => {
     );
     expect(artifactValidationStep).not.toContain("mapfile -t");
     expect(workflow).toContain("Validate tag version");
-    expect(workflow).toContain("SMOKE_TIMEOUT_MS: 180000");
+    expect(workflow).toContain("SMOKE_TIMEOUT_MS: 600000");
     expect(workflow).toContain(
       'executable="$squashfs_root/deepseek-harness-code"',
     );
