@@ -4,13 +4,17 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
+patchedDependencies:
+  '@deepseek-ai/dsh': fad28ef41e0a33bc789dc3d6957891d50b6da52ce8f0cd696e9bee8384ad12e2
+  '@deepseek-ai/dsh-client-ui-agent-preset@0.1.0-rc.8': 9de884e1540dcccb27ef8cb5be9f559fdf61d56df9d59d55b2e86f53bed9e376
+
 importers:
 
   .:
     dependencies:
       '@deepseek-ai/dsh':
         specifier: 0.1.0-rc.8
-        version: 0.1.0-rc.8(5c8902eadad878b96ad1cc92022fa94f)
+        version: 0.1.0-rc.8(patch_hash=fad28ef41e0a33bc789dc3d6957891d50b6da52ce8f0cd696e9bee8384ad12e2)(54cfbd11d0100271f5a7dc026270e224)
       '@deepseek-ai/dsh-subagent-claude-code':
         specifier: 0.1.0-rc.8
         version: 0.1.0-rc.8(db61a6c7fae99ddf466993b4a294d2ca)
@@ -34,7 +38,7 @@ importers:
         version: file:vendor/dsh-superpowers-0.1.0.tgz(react@18.3.1)
       dsh-vision-router:
         specifier: file:vendor/dsh-vision-router-1.7.1.tgz
-        version: file:vendor/dsh-vision-router-1.7.1.tgz(@deepseek-ai/dsh-anonymous-user-id@0.1.0-rc.8(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-brand@0.1.0-rc.8(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.8(@deepseek-ai/cordis@4.0.1)))(@deepseek-ai/dsh-home-paths@0.1.0-rc.8(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.8(@deepseek-ai/cordis@4.0.1)))(@deepseek-ai/dsh-invariants@0.1.0-rc.8(@deepseek-ai/cordis@4.0.1)))(@deepseek-ai/dsh-llm-deepseek@0.1.0-rc.8(b93837ac2ec05315f24565055aeb328a))(sharp@0.35.3)
+        version: file:vendor/dsh-vision-router-1.7.1.tgz(@deepseek-ai/dsh-anonymous-user-id@0.1.0-rc.8(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-brand@0.1.0-rc.8(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.8(@deepseek-ai/cordis@4.0.1)))(@deepseek-ai/dsh-home-paths@0.1.0-rc.8(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.8(@deepseek-ai/cordis@4.0.1)))(@deepseek-ai/dsh-invariants@0.1.0-rc.8(@deepseek-ai/cordis@4.0.1)))(@deepseek-ai/dsh-llm-deepseek@0.1.0-rc.8(b93837ac2ec05315f24565055aeb328a))(debug@4.4.3)(sharp@0.35.3(@types/node@26.2.0))
 
 packages:
 
@@ -3394,26 +3398,26 @@ packages:
     resolution: {integrity: sha512-6QvTW9mrGeIegrFXdtQi9pk7O/nSK6lSdXW2eqUspN5LWD7UTji2Fqw5V2YLjBpHEoU9Xl/eUWNpDeZvoyOv2w==}
 
   dsh-better-sidebar@file:vendor/dsh-better-sidebar-0.12.3.tgz:
-    resolution: {integrity: sha512-enaniSZvfI8ctGwFzVRAnFwgWErY51UpyH1t3gQEcK6e4tmbks7NGU5sTpqjfXxFS4/sHpPhXfgxepLNjavBXw==, tarball: file:vendor/dsh-better-sidebar-0.12.3.tgz}
+    resolution: {integrity: sha512-oIaG4d86GFR3odBwym6gG42LkPlON8x8PRLchtE4ZwS8nuWwQpI1PHci8EaN0D3RynS9FkaM6G1eGPazwPnXIQ==, tarball: file:vendor/dsh-better-sidebar-0.12.3.tgz}
     version: 0.12.3
     engines: {node: '>=20'}
     peerDependencies:
       '@deepseek-ai/cordis': ^4.0.1
-      '@deepseek-ai/dsh-agent': ^0.1.0-rc.6
-      '@deepseek-ai/dsh-client-locale': ^0.1.0-rc.6
-      '@deepseek-ai/dsh-client-runtime': ^0.1.0-rc.6
-      '@deepseek-ai/dsh-client-schema-form': ^0.1.0-rc.6
-      '@deepseek-ai/dsh-client-ui-conversation': ^0.1.0-rc.6
-      '@deepseek-ai/dsh-client-ui-primitives': ^0.1.0-rc.6
-      '@deepseek-ai/dsh-client-ui-settings': ^0.1.0-rc.6
-      '@deepseek-ai/dsh-client-ui-slots': ^0.1.0-rc.6
-      '@deepseek-ai/dsh-client-web-react': ^0.1.0-rc.6
-      '@deepseek-ai/dsh-host-webserver': ^0.1.0-rc.6
-      '@deepseek-ai/dsh-invariants': ^0.1.0-rc.6
-      '@deepseek-ai/dsh-llm': ^0.1.0-rc.6
-      '@deepseek-ai/dsh-session': ^0.1.0-rc.6
-      '@deepseek-ai/dsh-settings': ^0.1.0-rc.6
-      '@deepseek-ai/dsh-tools': ^0.1.0-rc.6
+      '@deepseek-ai/dsh-agent': ^0.1.0-rc.8
+      '@deepseek-ai/dsh-client-locale': ^0.1.0-rc.8
+      '@deepseek-ai/dsh-client-runtime': ^0.1.0-rc.8
+      '@deepseek-ai/dsh-client-schema-form': ^0.1.0-rc.7
+      '@deepseek-ai/dsh-client-ui-conversation': ^0.1.0-rc.8
+      '@deepseek-ai/dsh-client-ui-primitives': ^0.1.0-rc.8
+      '@deepseek-ai/dsh-client-ui-settings': ^0.1.0-rc.8
+      '@deepseek-ai/dsh-client-ui-slots': ^0.1.0-rc.8
+      '@deepseek-ai/dsh-client-web-react': ^0.1.0-rc.7
+      '@deepseek-ai/dsh-host-webserver': ^0.1.0-rc.8
+      '@deepseek-ai/dsh-invariants': ^0.1.0-rc.8
+      '@deepseek-ai/dsh-llm': ^0.1.0-rc.8
+      '@deepseek-ai/dsh-session': ^0.1.0-rc.8
+      '@deepseek-ai/dsh-settings': ^0.1.0-rc.8
+      '@deepseek-ai/dsh-tools': ^0.1.0-rc.8
       cordis: ^4.0.0-rc.7
       react: ^18.2.0
       react-dom: ^18.2.0
@@ -5096,14 +5100,14 @@ snapshots:
       '@deepseek-ai/cordis': 4.0.1(@deepseek-ai/cordis-plugin-include@1.0.6)(@deepseek-ai/cordis-plugin-loader@1.0.2)
       '@deepseek-ai/dsh-invariants': 0.1.0-rc.8(@deepseek-ai/cordis@4.0.1)
 
-  '@deepseek-ai/dsh-attachment-local@0.1.0-rc.8(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-attachment@0.1.0-rc.8(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-brand@0.1.0-rc.8(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.8(@deepseek-ai/cordis@4.0.1)))(@deepseek-ai/dsh-invariants@0.1.0-rc.8(@deepseek-ai/cordis@4.0.1)))(@deepseek-ai/dsh-home-paths@0.1.0-rc.8(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.8(@deepseek-ai/cordis@4.0.1)))(@deepseek-ai/dsh-invariants@0.1.0-rc.8(@deepseek-ai/cordis@4.0.1))':
+  '@deepseek-ai/dsh-attachment-local@0.1.0-rc.8(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-attachment@0.1.0-rc.8(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-brand@0.1.0-rc.8(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.8(@deepseek-ai/cordis@4.0.1)))(@deepseek-ai/dsh-invariants@0.1.0-rc.8(@deepseek-ai/cordis@4.0.1)))(@deepseek-ai/dsh-home-paths@0.1.0-rc.8(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.8(@deepseek-ai/cordis@4.0.1)))(@deepseek-ai/dsh-invariants@0.1.0-rc.8(@deepseek-ai/cordis@4.0.1))(@types/node@26.2.0)':
     dependencies:
       '@deepseek-ai/cordis': 4.0.1(@deepseek-ai/cordis-plugin-include@1.0.6)(@deepseek-ai/cordis-plugin-loader@1.0.2)
       '@deepseek-ai/dsh-attachment': 0.1.0-rc.8(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-brand@0.1.0-rc.8(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.8(@deepseek-ai/cordis@4.0.1)))(@deepseek-ai/dsh-invariants@0.1.0-rc.8(@deepseek-ai/cordis@4.0.1))
       '@deepseek-ai/dsh-home-paths': 0.1.0-rc.8(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.8(@deepseek-ai/cordis@4.0.1))
       '@deepseek-ai/dsh-invariants': 0.1.0-rc.8(@deepseek-ai/cordis@4.0.1)
       '@deepseek-ai/schemastery': 3.18.1
-      sharp: 0.35.3
+      sharp: 0.35.3(@types/node@26.2.0)
     transitivePeerDependencies:
       - '@types/node'
 
@@ -5113,7 +5117,7 @@ snapshots:
       '@deepseek-ai/dsh-brand': 0.1.0-rc.8(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.8(@deepseek-ai/cordis@4.0.1))
       '@deepseek-ai/dsh-invariants': 0.1.0-rc.8(@deepseek-ai/cordis@4.0.1)
 
-  '@deepseek-ai/dsh-base@0.1.0-rc.8(9a2483e9e2f7ec504c7c1ba122d1e771)':
+  '@deepseek-ai/dsh-base@0.1.0-rc.8(d27adbaa9c0d5320ac4ca8119678b398)':
     dependencies:
       '@deepseek-ai/cordis': 4.0.1(@deepseek-ai/cordis-plugin-include@1.0.6)(@deepseek-ai/cordis-plugin-loader@1.0.2)
       '@deepseek-ai/cordis-plugin-hmr': 1.0.16(@deepseek-ai/cordis-plugin-timer@1.1.3(@deepseek-ai/cordis@4.0.1))(@deepseek-ai/cordis@4.0.1)
@@ -5123,7 +5127,7 @@ snapshots:
       '@deepseek-ai/dsh-agent-instructions': 0.1.0-rc.8(111243419de64bd6433d6e1a2109dfd3)
       '@deepseek-ai/dsh-agent-loop': 0.1.0-rc.8(a317d1ec57d098cd167626be76ba7c2a)
       '@deepseek-ai/dsh-api-gateway': 0.1.0-rc.8(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-client-connection@0.1.0-rc.8)(@deepseek-ai/dsh-invariants@0.1.0-rc.8(@deepseek-ai/cordis@4.0.1))(@deepseek-ai/dsh-typert-registry@0.1.0-rc.8(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.8(@deepseek-ai/cordis@4.0.1)))
-      '@deepseek-ai/dsh-attachment-local': 0.1.0-rc.8(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-attachment@0.1.0-rc.8(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-brand@0.1.0-rc.8(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.8(@deepseek-ai/cordis@4.0.1)))(@deepseek-ai/dsh-invariants@0.1.0-rc.8(@deepseek-ai/cordis@4.0.1)))(@deepseek-ai/dsh-home-paths@0.1.0-rc.8(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.8(@deepseek-ai/cordis@4.0.1)))(@deepseek-ai/dsh-invariants@0.1.0-rc.8(@deepseek-ai/cordis@4.0.1))
+      '@deepseek-ai/dsh-attachment-local': 0.1.0-rc.8(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-attachment@0.1.0-rc.8(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-brand@0.1.0-rc.8(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.8(@deepseek-ai/cordis@4.0.1)))(@deepseek-ai/dsh-invariants@0.1.0-rc.8(@deepseek-ai/cordis@4.0.1)))(@deepseek-ai/dsh-home-paths@0.1.0-rc.8(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.8(@deepseek-ai/cordis@4.0.1)))(@deepseek-ai/dsh-invariants@0.1.0-rc.8(@deepseek-ai/cordis@4.0.1))(@types/node@26.2.0)
       '@deepseek-ai/dsh-bash-sandbox': 0.1.0-rc.8(f456439a9d6247d4a8c53f7c55501ae8)
       '@deepseek-ai/dsh-command-compact': 0.1.0-rc.8(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-commands@0.1.0-rc.8(72bbe6fdb3741b872b5fbe4132676802))(@deepseek-ai/dsh-compaction@0.1.0-rc.8(3cc0be3a739161751497b5d470122ec7))(@deepseek-ai/dsh-invariants@0.1.0-rc.8(@deepseek-ai/cordis@4.0.1))
       '@deepseek-ai/dsh-command-feedback': 0.1.0-rc.8(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-anonymous-user-id@0.1.0-rc.8(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-brand@0.1.0-rc.8(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.8(@deepseek-ai/cordis@4.0.1)))(@deepseek-ai/dsh-home-paths@0.1.0-rc.8(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.8(@deepseek-ai/cordis@4.0.1)))(@deepseek-ai/dsh-invariants@0.1.0-rc.8(@deepseek-ai/cordis@4.0.1)))(@deepseek-ai/dsh-commands@0.1.0-rc.8(72bbe6fdb3741b872b5fbe4132676802))(@deepseek-ai/dsh-invariants@0.1.0-rc.8(@deepseek-ai/cordis@4.0.1))(@deepseek-ai/dsh-session-telemetry@0.1.0-rc.8(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-agent@0.1.0-rc.8(92f269661ea5e195fab72177f1a12db7))(@deepseek-ai/dsh-invariants@0.1.0-rc.8(@deepseek-ai/cordis@4.0.1))(@deepseek-ai/dsh-session@0.1.0-rc.8(fbdb1d988541b64ff002d18c4ded7293)))(@deepseek-ai/dsh-session@0.1.0-rc.8(fbdb1d988541b64ff002d18c4ded7293))
@@ -5333,7 +5337,7 @@ snapshots:
       '@deepseek-ai/dsh-invariants': 0.1.0-rc.8(@deepseek-ai/cordis@4.0.1)
       '@deepseek-ai/schemastery': 3.18.1
 
-  '@deepseek-ai/dsh-client-ui-agent-preset@0.1.0-rc.8(abe0b9dfd38fa46e4e0c3e43822b09cb)':
+  '@deepseek-ai/dsh-client-ui-agent-preset@0.1.0-rc.8(patch_hash=9de884e1540dcccb27ef8cb5be9f559fdf61d56df9d59d55b2e86f53bed9e376)(abe0b9dfd38fa46e4e0c3e43822b09cb)':
     dependencies:
       '@deepseek-ai/cordis': 4.0.1(@deepseek-ai/cordis-plugin-include@1.0.6)(@deepseek-ai/cordis-plugin-loader@1.0.2)
       '@deepseek-ai/dsh-api-remotes': 0.1.0-rc.8(595254fcd6f0e2eefb415cb6827720e3)
@@ -7088,7 +7092,7 @@ snapshots:
       '@deepseek-ai/dsh-client-locale': 0.1.0-rc.8(453c7063ea05c0099665fd03f72a5a15)
       '@deepseek-ai/dsh-client-modules': 0.1.0-rc.8(@deepseek-ai/cordis-plugin-loader@1.0.2)(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-host-webserver@0.1.0-rc.8(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.8(@deepseek-ai/cordis@4.0.1)))(@deepseek-ai/dsh-invariants@0.1.0-rc.8(@deepseek-ai/cordis@4.0.1))
       '@deepseek-ai/dsh-client-runtime': 0.1.0-rc.8(0e60b9f95af714a85e67a98df3af0bfd)
-      '@deepseek-ai/dsh-client-ui-agent-preset': 0.1.0-rc.8(abe0b9dfd38fa46e4e0c3e43822b09cb)
+      '@deepseek-ai/dsh-client-ui-agent-preset': 0.1.0-rc.8(patch_hash=9de884e1540dcccb27ef8cb5be9f559fdf61d56df9d59d55b2e86f53bed9e376)(abe0b9dfd38fa46e4e0c3e43822b09cb)
       '@deepseek-ai/dsh-client-ui-attachment': 0.1.0-rc.8(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-attachment@0.1.0-rc.8(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-brand@0.1.0-rc.8(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.8(@deepseek-ai/cordis@4.0.1)))(@deepseek-ai/dsh-invariants@0.1.0-rc.8(@deepseek-ai/cordis@4.0.1)))(@deepseek-ai/dsh-client-runtime@0.1.0-rc.8(0e60b9f95af714a85e67a98df3af0bfd))(@deepseek-ai/dsh-client-ui-conversation@0.1.0-rc.8(69f512d5d94bef85ee1384e69b5079f1))(@deepseek-ai/dsh-invariants@0.1.0-rc.8(@deepseek-ai/cordis@4.0.1))
       '@deepseek-ai/dsh-client-ui-brand-official': 0.1.0-rc.8(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-client-runtime@0.1.0-rc.8(0e60b9f95af714a85e67a98df3af0bfd))(@deepseek-ai/dsh-client-ui-conversation@0.1.0-rc.8(69f512d5d94bef85ee1384e69b5079f1))(@deepseek-ai/dsh-client-ui-sidebar@0.1.0-rc.8(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-client-locale@0.1.0-rc.8(453c7063ea05c0099665fd03f72a5a15))(@deepseek-ai/dsh-client-runtime@0.1.0-rc.8(0e60b9f95af714a85e67a98df3af0bfd))(@deepseek-ai/dsh-client-ui-layout@0.1.0-rc.8(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-client-runtime@0.1.0-rc.8(0e60b9f95af714a85e67a98df3af0bfd))(@deepseek-ai/dsh-client-ui-theme@0.1.0-rc.8(29c8c46563873354807bb3d0da9ffe69))(@deepseek-ai/dsh-invariants@0.1.0-rc.8(@deepseek-ai/cordis@4.0.1)))(@deepseek-ai/dsh-invariants@0.1.0-rc.8(@deepseek-ai/cordis@4.0.1)))(@deepseek-ai/dsh-invariants@0.1.0-rc.8(@deepseek-ai/cordis@4.0.1))
       '@deepseek-ai/dsh-client-ui-commands': 0.1.0-rc.8(12ef393e30a5c4a9eea744b5ccf23a29)
@@ -7250,7 +7254,7 @@ snapshots:
       '@deepseek-ai/dsh-storage-domain': 0.1.0-rc.8(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.8(@deepseek-ai/cordis@4.0.1))(@deepseek-ai/dsh-storage@0.1.0-rc.8(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.8(@deepseek-ai/cordis@4.0.1)))
       zod: 4.4.3
 
-  '@deepseek-ai/dsh@0.1.0-rc.8(5c8902eadad878b96ad1cc92022fa94f)':
+  '@deepseek-ai/dsh@0.1.0-rc.8(patch_hash=fad28ef41e0a33bc789dc3d6957891d50b6da52ce8f0cd696e9bee8384ad12e2)(54cfbd11d0100271f5a7dc026270e224)':
     dependencies:
       '@deepseek-ai/cordis': 4.0.1(@deepseek-ai/cordis-plugin-include@1.0.6)(@deepseek-ai/cordis-plugin-loader@1.0.2)
       '@deepseek-ai/cordis-plugin-hmr': 1.0.16(@deepseek-ai/cordis-plugin-timer@1.1.3(@deepseek-ai/cordis@4.0.1))(@deepseek-ai/cordis@4.0.1)
@@ -7260,8 +7264,8 @@ snapshots:
       '@deepseek-ai/dsh-agent-instructions': 0.1.0-rc.8(111243419de64bd6433d6e1a2109dfd3)
       '@deepseek-ai/dsh-agent-tool-presentation': 0.1.0-rc.8(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.8(@deepseek-ai/cordis@4.0.1))(@deepseek-ai/dsh-tools@0.1.0-rc.8(ac9081d1e007de8a90a707560a8ae1c3))
       '@deepseek-ai/dsh-app-boot': 0.1.0-rc.8(3f7b9427fdd0d9933a654a9a1ecf4964)
-      '@deepseek-ai/dsh-base': 0.1.0-rc.8(9a2483e9e2f7ec504c7c1ba122d1e771)
-      '@deepseek-ai/dsh-client-ui-agent-preset': 0.1.0-rc.8(abe0b9dfd38fa46e4e0c3e43822b09cb)
+      '@deepseek-ai/dsh-base': 0.1.0-rc.8(d27adbaa9c0d5320ac4ca8119678b398)
+      '@deepseek-ai/dsh-client-ui-agent-preset': 0.1.0-rc.8(patch_hash=9de884e1540dcccb27ef8cb5be9f559fdf61d56df9d59d55b2e86f53bed9e376)(abe0b9dfd38fa46e4e0c3e43822b09cb)
       '@deepseek-ai/dsh-client-ui-cordis': 0.1.0-rc.8(1b14b812f3779cdb3972b74d6bd95be5)
       '@deepseek-ai/dsh-cmdline': 0.1.0-rc.8(@deepseek-ai/cordis-plugin-loader@1.0.2)(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.8(@deepseek-ai/cordis@4.0.1))
       '@deepseek-ai/dsh-command-compact': 0.1.0-rc.8(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-commands@0.1.0-rc.8(72bbe6fdb3741b872b5fbe4132676802))(@deepseek-ai/dsh-compaction@0.1.0-rc.8(3cc0be3a739161751497b5d470122ec7))(@deepseek-ai/dsh-invariants@0.1.0-rc.8(@deepseek-ai/cordis@4.0.1))
@@ -7551,14 +7555,14 @@ snapshots:
   '@img/sharp-win32-x64@0.35.3':
     optional: true
 
-  '@jimp/bmp@0.14.0(@jimp/custom@0.14.0)':
+  '@jimp/bmp@0.14.0(@jimp/custom@0.14.0(debug@4.4.3))':
     dependencies:
       '@babel/runtime': 7.29.7
-      '@jimp/custom': 0.14.0
+      '@jimp/custom': 0.14.0(debug@4.4.3)
       '@jimp/utils': 0.14.0
       bmp-js: 0.1.0
 
-  '@jimp/core@0.14.0':
+  '@jimp/core@0.14.0(debug@4.4.3)':
     dependencies:
       '@babel/runtime': 7.29.7
       '@jimp/utils': 0.14.0
@@ -7566,7 +7570,7 @@ snapshots:
       buffer: 5.7.1
       exif-parser: 0.1.12
       file-type: 9.0.0
-      load-bmfont: 1.4.2
+      load-bmfont: 1.4.2(debug@4.4.3)
       mkdirp: 0.5.6
       phin: 2.9.3
       pixelmatch: 4.0.2
@@ -7574,225 +7578,225 @@ snapshots:
     transitivePeerDependencies:
       - debug
 
-  '@jimp/custom@0.14.0':
+  '@jimp/custom@0.14.0(debug@4.4.3)':
     dependencies:
       '@babel/runtime': 7.29.7
-      '@jimp/core': 0.14.0
+      '@jimp/core': 0.14.0(debug@4.4.3)
     transitivePeerDependencies:
       - debug
 
-  '@jimp/gif@0.14.0(@jimp/custom@0.14.0)':
+  '@jimp/gif@0.14.0(@jimp/custom@0.14.0(debug@4.4.3))':
     dependencies:
       '@babel/runtime': 7.29.7
-      '@jimp/custom': 0.14.0
+      '@jimp/custom': 0.14.0(debug@4.4.3)
       '@jimp/utils': 0.14.0
       gifwrap: 0.9.4
       omggif: 1.0.10
 
-  '@jimp/jpeg@0.14.0(@jimp/custom@0.14.0)':
+  '@jimp/jpeg@0.14.0(@jimp/custom@0.14.0(debug@4.4.3))':
     dependencies:
       '@babel/runtime': 7.29.7
-      '@jimp/custom': 0.14.0
+      '@jimp/custom': 0.14.0(debug@4.4.3)
       '@jimp/utils': 0.14.0
       jpeg-js: 0.4.4
 
-  '@jimp/plugin-blit@0.14.0(@jimp/custom@0.14.0)':
+  '@jimp/plugin-blit@0.14.0(@jimp/custom@0.14.0(debug@4.4.3))':
     dependencies:
       '@babel/runtime': 7.29.7
-      '@jimp/custom': 0.14.0
+      '@jimp/custom': 0.14.0(debug@4.4.3)
       '@jimp/utils': 0.14.0
 
-  '@jimp/plugin-blur@0.14.0(@jimp/custom@0.14.0)':
+  '@jimp/plugin-blur@0.14.0(@jimp/custom@0.14.0(debug@4.4.3))':
     dependencies:
       '@babel/runtime': 7.29.7
-      '@jimp/custom': 0.14.0
+      '@jimp/custom': 0.14.0(debug@4.4.3)
       '@jimp/utils': 0.14.0
 
-  '@jimp/plugin-circle@0.14.0(@jimp/custom@0.14.0)':
+  '@jimp/plugin-circle@0.14.0(@jimp/custom@0.14.0(debug@4.4.3))':
     dependencies:
       '@babel/runtime': 7.29.7
-      '@jimp/custom': 0.14.0
+      '@jimp/custom': 0.14.0(debug@4.4.3)
       '@jimp/utils': 0.14.0
 
-  '@jimp/plugin-color@0.14.0(@jimp/custom@0.14.0)':
+  '@jimp/plugin-color@0.14.0(@jimp/custom@0.14.0(debug@4.4.3))':
     dependencies:
       '@babel/runtime': 7.29.7
-      '@jimp/custom': 0.14.0
+      '@jimp/custom': 0.14.0(debug@4.4.3)
       '@jimp/utils': 0.14.0
       tinycolor2: 1.6.0
 
-  '@jimp/plugin-contain@0.14.0(@jimp/custom@0.14.0)(@jimp/plugin-blit@0.14.0(@jimp/custom@0.14.0))(@jimp/plugin-resize@0.14.0(@jimp/custom@0.14.0))(@jimp/plugin-scale@0.14.0(@jimp/custom@0.14.0)(@jimp/plugin-resize@0.14.0(@jimp/custom@0.14.0)))':
+  '@jimp/plugin-contain@0.14.0(@jimp/custom@0.14.0(debug@4.4.3))(@jimp/plugin-blit@0.14.0(@jimp/custom@0.14.0(debug@4.4.3)))(@jimp/plugin-resize@0.14.0(@jimp/custom@0.14.0(debug@4.4.3)))(@jimp/plugin-scale@0.14.0(@jimp/custom@0.14.0(debug@4.4.3))(@jimp/plugin-resize@0.14.0(@jimp/custom@0.14.0(debug@4.4.3))))':
     dependencies:
       '@babel/runtime': 7.29.7
-      '@jimp/custom': 0.14.0
-      '@jimp/plugin-blit': 0.14.0(@jimp/custom@0.14.0)
-      '@jimp/plugin-resize': 0.14.0(@jimp/custom@0.14.0)
-      '@jimp/plugin-scale': 0.14.0(@jimp/custom@0.14.0)(@jimp/plugin-resize@0.14.0(@jimp/custom@0.14.0))
+      '@jimp/custom': 0.14.0(debug@4.4.3)
+      '@jimp/plugin-blit': 0.14.0(@jimp/custom@0.14.0(debug@4.4.3))
+      '@jimp/plugin-resize': 0.14.0(@jimp/custom@0.14.0(debug@4.4.3))
+      '@jimp/plugin-scale': 0.14.0(@jimp/custom@0.14.0(debug@4.4.3))(@jimp/plugin-resize@0.14.0(@jimp/custom@0.14.0(debug@4.4.3)))
       '@jimp/utils': 0.14.0
 
-  '@jimp/plugin-cover@0.14.0(@jimp/custom@0.14.0)(@jimp/plugin-crop@0.14.0(@jimp/custom@0.14.0))(@jimp/plugin-resize@0.14.0(@jimp/custom@0.14.0))(@jimp/plugin-scale@0.14.0(@jimp/custom@0.14.0)(@jimp/plugin-resize@0.14.0(@jimp/custom@0.14.0)))':
+  '@jimp/plugin-cover@0.14.0(@jimp/custom@0.14.0(debug@4.4.3))(@jimp/plugin-crop@0.14.0(@jimp/custom@0.14.0(debug@4.4.3)))(@jimp/plugin-resize@0.14.0(@jimp/custom@0.14.0(debug@4.4.3)))(@jimp/plugin-scale@0.14.0(@jimp/custom@0.14.0(debug@4.4.3))(@jimp/plugin-resize@0.14.0(@jimp/custom@0.14.0(debug@4.4.3))))':
     dependencies:
       '@babel/runtime': 7.29.7
-      '@jimp/custom': 0.14.0
-      '@jimp/plugin-crop': 0.14.0(@jimp/custom@0.14.0)
-      '@jimp/plugin-resize': 0.14.0(@jimp/custom@0.14.0)
-      '@jimp/plugin-scale': 0.14.0(@jimp/custom@0.14.0)(@jimp/plugin-resize@0.14.0(@jimp/custom@0.14.0))
+      '@jimp/custom': 0.14.0(debug@4.4.3)
+      '@jimp/plugin-crop': 0.14.0(@jimp/custom@0.14.0(debug@4.4.3))
+      '@jimp/plugin-resize': 0.14.0(@jimp/custom@0.14.0(debug@4.4.3))
+      '@jimp/plugin-scale': 0.14.0(@jimp/custom@0.14.0(debug@4.4.3))(@jimp/plugin-resize@0.14.0(@jimp/custom@0.14.0(debug@4.4.3)))
       '@jimp/utils': 0.14.0
 
-  '@jimp/plugin-crop@0.14.0(@jimp/custom@0.14.0)':
+  '@jimp/plugin-crop@0.14.0(@jimp/custom@0.14.0(debug@4.4.3))':
     dependencies:
       '@babel/runtime': 7.29.7
-      '@jimp/custom': 0.14.0
+      '@jimp/custom': 0.14.0(debug@4.4.3)
       '@jimp/utils': 0.14.0
 
-  '@jimp/plugin-displace@0.14.0(@jimp/custom@0.14.0)':
+  '@jimp/plugin-displace@0.14.0(@jimp/custom@0.14.0(debug@4.4.3))':
     dependencies:
       '@babel/runtime': 7.29.7
-      '@jimp/custom': 0.14.0
+      '@jimp/custom': 0.14.0(debug@4.4.3)
       '@jimp/utils': 0.14.0
 
-  '@jimp/plugin-dither@0.14.0(@jimp/custom@0.14.0)':
+  '@jimp/plugin-dither@0.14.0(@jimp/custom@0.14.0(debug@4.4.3))':
     dependencies:
       '@babel/runtime': 7.29.7
-      '@jimp/custom': 0.14.0
+      '@jimp/custom': 0.14.0(debug@4.4.3)
       '@jimp/utils': 0.14.0
 
-  '@jimp/plugin-fisheye@0.14.0(@jimp/custom@0.14.0)':
+  '@jimp/plugin-fisheye@0.14.0(@jimp/custom@0.14.0(debug@4.4.3))':
     dependencies:
       '@babel/runtime': 7.29.7
-      '@jimp/custom': 0.14.0
+      '@jimp/custom': 0.14.0(debug@4.4.3)
       '@jimp/utils': 0.14.0
 
-  '@jimp/plugin-flip@0.14.0(@jimp/custom@0.14.0)(@jimp/plugin-rotate@0.14.0(@jimp/custom@0.14.0)(@jimp/plugin-blit@0.14.0(@jimp/custom@0.14.0))(@jimp/plugin-crop@0.14.0(@jimp/custom@0.14.0))(@jimp/plugin-resize@0.14.0(@jimp/custom@0.14.0)))':
+  '@jimp/plugin-flip@0.14.0(@jimp/custom@0.14.0(debug@4.4.3))(@jimp/plugin-rotate@0.14.0(@jimp/custom@0.14.0(debug@4.4.3))(@jimp/plugin-blit@0.14.0(@jimp/custom@0.14.0(debug@4.4.3)))(@jimp/plugin-crop@0.14.0(@jimp/custom@0.14.0(debug@4.4.3)))(@jimp/plugin-resize@0.14.0(@jimp/custom@0.14.0(debug@4.4.3))))':
     dependencies:
       '@babel/runtime': 7.29.7
-      '@jimp/custom': 0.14.0
-      '@jimp/plugin-rotate': 0.14.0(@jimp/custom@0.14.0)(@jimp/plugin-blit@0.14.0(@jimp/custom@0.14.0))(@jimp/plugin-crop@0.14.0(@jimp/custom@0.14.0))(@jimp/plugin-resize@0.14.0(@jimp/custom@0.14.0))
+      '@jimp/custom': 0.14.0(debug@4.4.3)
+      '@jimp/plugin-rotate': 0.14.0(@jimp/custom@0.14.0(debug@4.4.3))(@jimp/plugin-blit@0.14.0(@jimp/custom@0.14.0(debug@4.4.3)))(@jimp/plugin-crop@0.14.0(@jimp/custom@0.14.0(debug@4.4.3)))(@jimp/plugin-resize@0.14.0(@jimp/custom@0.14.0(debug@4.4.3)))
       '@jimp/utils': 0.14.0
 
-  '@jimp/plugin-gaussian@0.14.0(@jimp/custom@0.14.0)':
+  '@jimp/plugin-gaussian@0.14.0(@jimp/custom@0.14.0(debug@4.4.3))':
     dependencies:
       '@babel/runtime': 7.29.7
-      '@jimp/custom': 0.14.0
+      '@jimp/custom': 0.14.0(debug@4.4.3)
       '@jimp/utils': 0.14.0
 
-  '@jimp/plugin-invert@0.14.0(@jimp/custom@0.14.0)':
+  '@jimp/plugin-invert@0.14.0(@jimp/custom@0.14.0(debug@4.4.3))':
     dependencies:
       '@babel/runtime': 7.29.7
-      '@jimp/custom': 0.14.0
+      '@jimp/custom': 0.14.0(debug@4.4.3)
       '@jimp/utils': 0.14.0
 
-  '@jimp/plugin-mask@0.14.0(@jimp/custom@0.14.0)':
+  '@jimp/plugin-mask@0.14.0(@jimp/custom@0.14.0(debug@4.4.3))':
     dependencies:
       '@babel/runtime': 7.29.7
-      '@jimp/custom': 0.14.0
+      '@jimp/custom': 0.14.0(debug@4.4.3)
       '@jimp/utils': 0.14.0
 
-  '@jimp/plugin-normalize@0.14.0(@jimp/custom@0.14.0)':
+  '@jimp/plugin-normalize@0.14.0(@jimp/custom@0.14.0(debug@4.4.3))':
     dependencies:
       '@babel/runtime': 7.29.7
-      '@jimp/custom': 0.14.0
+      '@jimp/custom': 0.14.0(debug@4.4.3)
       '@jimp/utils': 0.14.0
 
-  '@jimp/plugin-print@0.14.0(@jimp/custom@0.14.0)(@jimp/plugin-blit@0.14.0(@jimp/custom@0.14.0))':
+  '@jimp/plugin-print@0.14.0(@jimp/custom@0.14.0(debug@4.4.3))(@jimp/plugin-blit@0.14.0(@jimp/custom@0.14.0(debug@4.4.3)))(debug@4.4.3)':
     dependencies:
       '@babel/runtime': 7.29.7
-      '@jimp/custom': 0.14.0
-      '@jimp/plugin-blit': 0.14.0(@jimp/custom@0.14.0)
+      '@jimp/custom': 0.14.0(debug@4.4.3)
+      '@jimp/plugin-blit': 0.14.0(@jimp/custom@0.14.0(debug@4.4.3))
       '@jimp/utils': 0.14.0
-      load-bmfont: 1.4.2
+      load-bmfont: 1.4.2(debug@4.4.3)
     transitivePeerDependencies:
       - debug
 
-  '@jimp/plugin-resize@0.14.0(@jimp/custom@0.14.0)':
+  '@jimp/plugin-resize@0.14.0(@jimp/custom@0.14.0(debug@4.4.3))':
     dependencies:
       '@babel/runtime': 7.29.7
-      '@jimp/custom': 0.14.0
+      '@jimp/custom': 0.14.0(debug@4.4.3)
       '@jimp/utils': 0.14.0
 
-  '@jimp/plugin-rotate@0.14.0(@jimp/custom@0.14.0)(@jimp/plugin-blit@0.14.0(@jimp/custom@0.14.0))(@jimp/plugin-crop@0.14.0(@jimp/custom@0.14.0))(@jimp/plugin-resize@0.14.0(@jimp/custom@0.14.0))':
+  '@jimp/plugin-rotate@0.14.0(@jimp/custom@0.14.0(debug@4.4.3))(@jimp/plugin-blit@0.14.0(@jimp/custom@0.14.0(debug@4.4.3)))(@jimp/plugin-crop@0.14.0(@jimp/custom@0.14.0(debug@4.4.3)))(@jimp/plugin-resize@0.14.0(@jimp/custom@0.14.0(debug@4.4.3)))':
     dependencies:
       '@babel/runtime': 7.29.7
-      '@jimp/custom': 0.14.0
-      '@jimp/plugin-blit': 0.14.0(@jimp/custom@0.14.0)
-      '@jimp/plugin-crop': 0.14.0(@jimp/custom@0.14.0)
-      '@jimp/plugin-resize': 0.14.0(@jimp/custom@0.14.0)
+      '@jimp/custom': 0.14.0(debug@4.4.3)
+      '@jimp/plugin-blit': 0.14.0(@jimp/custom@0.14.0(debug@4.4.3))
+      '@jimp/plugin-crop': 0.14.0(@jimp/custom@0.14.0(debug@4.4.3))
+      '@jimp/plugin-resize': 0.14.0(@jimp/custom@0.14.0(debug@4.4.3))
       '@jimp/utils': 0.14.0
 
-  '@jimp/plugin-scale@0.14.0(@jimp/custom@0.14.0)(@jimp/plugin-resize@0.14.0(@jimp/custom@0.14.0))':
+  '@jimp/plugin-scale@0.14.0(@jimp/custom@0.14.0(debug@4.4.3))(@jimp/plugin-resize@0.14.0(@jimp/custom@0.14.0(debug@4.4.3)))':
     dependencies:
       '@babel/runtime': 7.29.7
-      '@jimp/custom': 0.14.0
-      '@jimp/plugin-resize': 0.14.0(@jimp/custom@0.14.0)
+      '@jimp/custom': 0.14.0(debug@4.4.3)
+      '@jimp/plugin-resize': 0.14.0(@jimp/custom@0.14.0(debug@4.4.3))
       '@jimp/utils': 0.14.0
 
-  '@jimp/plugin-shadow@0.14.0(@jimp/custom@0.14.0)(@jimp/plugin-blur@0.14.0(@jimp/custom@0.14.0))(@jimp/plugin-resize@0.14.0(@jimp/custom@0.14.0))':
+  '@jimp/plugin-shadow@0.14.0(@jimp/custom@0.14.0(debug@4.4.3))(@jimp/plugin-blur@0.14.0(@jimp/custom@0.14.0(debug@4.4.3)))(@jimp/plugin-resize@0.14.0(@jimp/custom@0.14.0(debug@4.4.3)))':
     dependencies:
       '@babel/runtime': 7.29.7
-      '@jimp/custom': 0.14.0
-      '@jimp/plugin-blur': 0.14.0(@jimp/custom@0.14.0)
-      '@jimp/plugin-resize': 0.14.0(@jimp/custom@0.14.0)
+      '@jimp/custom': 0.14.0(debug@4.4.3)
+      '@jimp/plugin-blur': 0.14.0(@jimp/custom@0.14.0(debug@4.4.3))
+      '@jimp/plugin-resize': 0.14.0(@jimp/custom@0.14.0(debug@4.4.3))
       '@jimp/utils': 0.14.0
 
-  '@jimp/plugin-threshold@0.14.0(@jimp/custom@0.14.0)(@jimp/plugin-color@0.14.0(@jimp/custom@0.14.0))(@jimp/plugin-resize@0.14.0(@jimp/custom@0.14.0))':
+  '@jimp/plugin-threshold@0.14.0(@jimp/custom@0.14.0(debug@4.4.3))(@jimp/plugin-color@0.14.0(@jimp/custom@0.14.0(debug@4.4.3)))(@jimp/plugin-resize@0.14.0(@jimp/custom@0.14.0(debug@4.4.3)))':
     dependencies:
       '@babel/runtime': 7.29.7
-      '@jimp/custom': 0.14.0
-      '@jimp/plugin-color': 0.14.0(@jimp/custom@0.14.0)
-      '@jimp/plugin-resize': 0.14.0(@jimp/custom@0.14.0)
+      '@jimp/custom': 0.14.0(debug@4.4.3)
+      '@jimp/plugin-color': 0.14.0(@jimp/custom@0.14.0(debug@4.4.3))
+      '@jimp/plugin-resize': 0.14.0(@jimp/custom@0.14.0(debug@4.4.3))
       '@jimp/utils': 0.14.0
 
-  '@jimp/plugins@0.14.0(@jimp/custom@0.14.0)':
+  '@jimp/plugins@0.14.0(@jimp/custom@0.14.0(debug@4.4.3))(debug@4.4.3)':
     dependencies:
       '@babel/runtime': 7.29.7
-      '@jimp/custom': 0.14.0
-      '@jimp/plugin-blit': 0.14.0(@jimp/custom@0.14.0)
-      '@jimp/plugin-blur': 0.14.0(@jimp/custom@0.14.0)
-      '@jimp/plugin-circle': 0.14.0(@jimp/custom@0.14.0)
-      '@jimp/plugin-color': 0.14.0(@jimp/custom@0.14.0)
-      '@jimp/plugin-contain': 0.14.0(@jimp/custom@0.14.0)(@jimp/plugin-blit@0.14.0(@jimp/custom@0.14.0))(@jimp/plugin-resize@0.14.0(@jimp/custom@0.14.0))(@jimp/plugin-scale@0.14.0(@jimp/custom@0.14.0)(@jimp/plugin-resize@0.14.0(@jimp/custom@0.14.0)))
-      '@jimp/plugin-cover': 0.14.0(@jimp/custom@0.14.0)(@jimp/plugin-crop@0.14.0(@jimp/custom@0.14.0))(@jimp/plugin-resize@0.14.0(@jimp/custom@0.14.0))(@jimp/plugin-scale@0.14.0(@jimp/custom@0.14.0)(@jimp/plugin-resize@0.14.0(@jimp/custom@0.14.0)))
-      '@jimp/plugin-crop': 0.14.0(@jimp/custom@0.14.0)
-      '@jimp/plugin-displace': 0.14.0(@jimp/custom@0.14.0)
-      '@jimp/plugin-dither': 0.14.0(@jimp/custom@0.14.0)
-      '@jimp/plugin-fisheye': 0.14.0(@jimp/custom@0.14.0)
-      '@jimp/plugin-flip': 0.14.0(@jimp/custom@0.14.0)(@jimp/plugin-rotate@0.14.0(@jimp/custom@0.14.0)(@jimp/plugin-blit@0.14.0(@jimp/custom@0.14.0))(@jimp/plugin-crop@0.14.0(@jimp/custom@0.14.0))(@jimp/plugin-resize@0.14.0(@jimp/custom@0.14.0)))
-      '@jimp/plugin-gaussian': 0.14.0(@jimp/custom@0.14.0)
-      '@jimp/plugin-invert': 0.14.0(@jimp/custom@0.14.0)
-      '@jimp/plugin-mask': 0.14.0(@jimp/custom@0.14.0)
-      '@jimp/plugin-normalize': 0.14.0(@jimp/custom@0.14.0)
-      '@jimp/plugin-print': 0.14.0(@jimp/custom@0.14.0)(@jimp/plugin-blit@0.14.0(@jimp/custom@0.14.0))
-      '@jimp/plugin-resize': 0.14.0(@jimp/custom@0.14.0)
-      '@jimp/plugin-rotate': 0.14.0(@jimp/custom@0.14.0)(@jimp/plugin-blit@0.14.0(@jimp/custom@0.14.0))(@jimp/plugin-crop@0.14.0(@jimp/custom@0.14.0))(@jimp/plugin-resize@0.14.0(@jimp/custom@0.14.0))
-      '@jimp/plugin-scale': 0.14.0(@jimp/custom@0.14.0)(@jimp/plugin-resize@0.14.0(@jimp/custom@0.14.0))
-      '@jimp/plugin-shadow': 0.14.0(@jimp/custom@0.14.0)(@jimp/plugin-blur@0.14.0(@jimp/custom@0.14.0))(@jimp/plugin-resize@0.14.0(@jimp/custom@0.14.0))
-      '@jimp/plugin-threshold': 0.14.0(@jimp/custom@0.14.0)(@jimp/plugin-color@0.14.0(@jimp/custom@0.14.0))(@jimp/plugin-resize@0.14.0(@jimp/custom@0.14.0))
+      '@jimp/custom': 0.14.0(debug@4.4.3)
+      '@jimp/plugin-blit': 0.14.0(@jimp/custom@0.14.0(debug@4.4.3))
+      '@jimp/plugin-blur': 0.14.0(@jimp/custom@0.14.0(debug@4.4.3))
+      '@jimp/plugin-circle': 0.14.0(@jimp/custom@0.14.0(debug@4.4.3))
+      '@jimp/plugin-color': 0.14.0(@jimp/custom@0.14.0(debug@4.4.3))
+      '@jimp/plugin-contain': 0.14.0(@jimp/custom@0.14.0(debug@4.4.3))(@jimp/plugin-blit@0.14.0(@jimp/custom@0.14.0(debug@4.4.3)))(@jimp/plugin-resize@0.14.0(@jimp/custom@0.14.0(debug@4.4.3)))(@jimp/plugin-scale@0.14.0(@jimp/custom@0.14.0(debug@4.4.3))(@jimp/plugin-resize@0.14.0(@jimp/custom@0.14.0(debug@4.4.3))))
+      '@jimp/plugin-cover': 0.14.0(@jimp/custom@0.14.0(debug@4.4.3))(@jimp/plugin-crop@0.14.0(@jimp/custom@0.14.0(debug@4.4.3)))(@jimp/plugin-resize@0.14.0(@jimp/custom@0.14.0(debug@4.4.3)))(@jimp/plugin-scale@0.14.0(@jimp/custom@0.14.0(debug@4.4.3))(@jimp/plugin-resize@0.14.0(@jimp/custom@0.14.0(debug@4.4.3))))
+      '@jimp/plugin-crop': 0.14.0(@jimp/custom@0.14.0(debug@4.4.3))
+      '@jimp/plugin-displace': 0.14.0(@jimp/custom@0.14.0(debug@4.4.3))
+      '@jimp/plugin-dither': 0.14.0(@jimp/custom@0.14.0(debug@4.4.3))
+      '@jimp/plugin-fisheye': 0.14.0(@jimp/custom@0.14.0(debug@4.4.3))
+      '@jimp/plugin-flip': 0.14.0(@jimp/custom@0.14.0(debug@4.4.3))(@jimp/plugin-rotate@0.14.0(@jimp/custom@0.14.0(debug@4.4.3))(@jimp/plugin-blit@0.14.0(@jimp/custom@0.14.0(debug@4.4.3)))(@jimp/plugin-crop@0.14.0(@jimp/custom@0.14.0(debug@4.4.3)))(@jimp/plugin-resize@0.14.0(@jimp/custom@0.14.0(debug@4.4.3))))
+      '@jimp/plugin-gaussian': 0.14.0(@jimp/custom@0.14.0(debug@4.4.3))
+      '@jimp/plugin-invert': 0.14.0(@jimp/custom@0.14.0(debug@4.4.3))
+      '@jimp/plugin-mask': 0.14.0(@jimp/custom@0.14.0(debug@4.4.3))
+      '@jimp/plugin-normalize': 0.14.0(@jimp/custom@0.14.0(debug@4.4.3))
+      '@jimp/plugin-print': 0.14.0(@jimp/custom@0.14.0(debug@4.4.3))(@jimp/plugin-blit@0.14.0(@jimp/custom@0.14.0(debug@4.4.3)))(debug@4.4.3)
+      '@jimp/plugin-resize': 0.14.0(@jimp/custom@0.14.0(debug@4.4.3))
+      '@jimp/plugin-rotate': 0.14.0(@jimp/custom@0.14.0(debug@4.4.3))(@jimp/plugin-blit@0.14.0(@jimp/custom@0.14.0(debug@4.4.3)))(@jimp/plugin-crop@0.14.0(@jimp/custom@0.14.0(debug@4.4.3)))(@jimp/plugin-resize@0.14.0(@jimp/custom@0.14.0(debug@4.4.3)))
+      '@jimp/plugin-scale': 0.14.0(@jimp/custom@0.14.0(debug@4.4.3))(@jimp/plugin-resize@0.14.0(@jimp/custom@0.14.0(debug@4.4.3)))
+      '@jimp/plugin-shadow': 0.14.0(@jimp/custom@0.14.0(debug@4.4.3))(@jimp/plugin-blur@0.14.0(@jimp/custom@0.14.0(debug@4.4.3)))(@jimp/plugin-resize@0.14.0(@jimp/custom@0.14.0(debug@4.4.3)))
+      '@jimp/plugin-threshold': 0.14.0(@jimp/custom@0.14.0(debug@4.4.3))(@jimp/plugin-color@0.14.0(@jimp/custom@0.14.0(debug@4.4.3)))(@jimp/plugin-resize@0.14.0(@jimp/custom@0.14.0(debug@4.4.3)))
       timm: 1.7.1
     transitivePeerDependencies:
       - debug
 
-  '@jimp/png@0.14.0(@jimp/custom@0.14.0)':
+  '@jimp/png@0.14.0(@jimp/custom@0.14.0(debug@4.4.3))':
     dependencies:
       '@babel/runtime': 7.29.7
-      '@jimp/custom': 0.14.0
+      '@jimp/custom': 0.14.0(debug@4.4.3)
       '@jimp/utils': 0.14.0
       pngjs: 3.4.0
 
-  '@jimp/tiff@0.14.0(@jimp/custom@0.14.0)':
+  '@jimp/tiff@0.14.0(@jimp/custom@0.14.0(debug@4.4.3))':
     dependencies:
       '@babel/runtime': 7.29.7
-      '@jimp/custom': 0.14.0
+      '@jimp/custom': 0.14.0(debug@4.4.3)
       utif: 2.0.1
 
-  '@jimp/types@0.14.0(@jimp/custom@0.14.0)':
+  '@jimp/types@0.14.0(@jimp/custom@0.14.0(debug@4.4.3))':
     dependencies:
       '@babel/runtime': 7.29.7
-      '@jimp/bmp': 0.14.0(@jimp/custom@0.14.0)
-      '@jimp/custom': 0.14.0
-      '@jimp/gif': 0.14.0(@jimp/custom@0.14.0)
-      '@jimp/jpeg': 0.14.0(@jimp/custom@0.14.0)
-      '@jimp/png': 0.14.0(@jimp/custom@0.14.0)
-      '@jimp/tiff': 0.14.0(@jimp/custom@0.14.0)
+      '@jimp/bmp': 0.14.0(@jimp/custom@0.14.0(debug@4.4.3))
+      '@jimp/custom': 0.14.0(debug@4.4.3)
+      '@jimp/gif': 0.14.0(@jimp/custom@0.14.0(debug@4.4.3))
+      '@jimp/jpeg': 0.14.0(@jimp/custom@0.14.0(debug@4.4.3))
+      '@jimp/png': 0.14.0(@jimp/custom@0.14.0(debug@4.4.3))
+      '@jimp/tiff': 0.14.0(@jimp/custom@0.14.0(debug@4.4.3))
       timm: 1.7.1
 
   '@jimp/utils@0.14.0':
@@ -8372,9 +8376,9 @@ snapshots:
 
   ccount@2.0.1: {}
 
-  centra@2.7.0:
+  centra@2.7.0(debug@4.4.3):
     dependencies:
-      follow-redirects: 1.16.0
+      follow-redirects: 1.16.0(debug@4.4.3)
     transitivePeerDependencies:
       - debug
 
@@ -8554,16 +8558,16 @@ snapshots:
       '@deepseek-ai/schemastery': 3.18.1
       react: 18.3.1
 
-  dsh-vision-router@file:vendor/dsh-vision-router-1.7.1.tgz(@deepseek-ai/dsh-anonymous-user-id@0.1.0-rc.8(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-brand@0.1.0-rc.8(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.8(@deepseek-ai/cordis@4.0.1)))(@deepseek-ai/dsh-home-paths@0.1.0-rc.8(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.8(@deepseek-ai/cordis@4.0.1)))(@deepseek-ai/dsh-invariants@0.1.0-rc.8(@deepseek-ai/cordis@4.0.1)))(@deepseek-ai/dsh-llm-deepseek@0.1.0-rc.8(b93837ac2ec05315f24565055aeb328a))(sharp@0.35.3):
+  dsh-vision-router@file:vendor/dsh-vision-router-1.7.1.tgz(@deepseek-ai/dsh-anonymous-user-id@0.1.0-rc.8(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-brand@0.1.0-rc.8(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.8(@deepseek-ai/cordis@4.0.1)))(@deepseek-ai/dsh-home-paths@0.1.0-rc.8(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.8(@deepseek-ai/cordis@4.0.1)))(@deepseek-ai/dsh-invariants@0.1.0-rc.8(@deepseek-ai/cordis@4.0.1)))(@deepseek-ai/dsh-llm-deepseek@0.1.0-rc.8(b93837ac2ec05315f24565055aeb328a))(debug@4.4.3)(sharp@0.35.3(@types/node@26.2.0)):
     dependencies:
       '@deepseek-ai/schemastery': 3.18.1
-      potrace: 2.1.8
+      potrace: 2.1.8(debug@4.4.3)
       puppeteer-core: 25.8.0
       undici: 7.29.0
     optionalDependencies:
       '@deepseek-ai/dsh-anonymous-user-id': 0.1.0-rc.8(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-brand@0.1.0-rc.8(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.8(@deepseek-ai/cordis@4.0.1)))(@deepseek-ai/dsh-home-paths@0.1.0-rc.8(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.8(@deepseek-ai/cordis@4.0.1)))(@deepseek-ai/dsh-invariants@0.1.0-rc.8(@deepseek-ai/cordis@4.0.1))
       '@deepseek-ai/dsh-llm-deepseek': 0.1.0-rc.8(b93837ac2ec05315f24565055aeb328a)
-      sharp: 0.35.3
+      sharp: 0.35.3(@types/node@26.2.0)
     transitivePeerDependencies:
       - bufferutil
       - debug
@@ -8678,7 +8682,9 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  follow-redirects@1.16.0: {}
+  follow-redirects@1.16.0(debug@4.4.3):
+    optionalDependencies:
+      debug: 4.4.3
 
   formdata-polyfill@4.0.10:
     dependencies:
@@ -8843,12 +8849,12 @@ snapshots:
 
   isexe@2.0.0: {}
 
-  jimp@0.14.0:
+  jimp@0.14.0(debug@4.4.3):
     dependencies:
       '@babel/runtime': 7.29.7
-      '@jimp/custom': 0.14.0
-      '@jimp/plugins': 0.14.0(@jimp/custom@0.14.0)
-      '@jimp/types': 0.14.0(@jimp/custom@0.14.0)
+      '@jimp/custom': 0.14.0(debug@4.4.3)
+      '@jimp/plugins': 0.14.0(@jimp/custom@0.14.0(debug@4.4.3))(debug@4.4.3)
+      '@jimp/types': 0.14.0(@jimp/custom@0.14.0(debug@4.4.3))
       regenerator-runtime: 0.13.11
     transitivePeerDependencies:
       - debug
@@ -8920,14 +8926,14 @@ snapshots:
     dependencies:
       immediate: 3.0.6
 
-  load-bmfont@1.4.2:
+  load-bmfont@1.4.2(debug@4.4.3):
     dependencies:
       buffer-equal: 0.0.1
       mime: 1.6.0
       parse-bmfont-ascii: 1.0.6
       parse-bmfont-binary: 1.0.6
       parse-bmfont-xml: 1.1.6
-      phin: 3.7.1
+      phin: 3.7.1(debug@4.4.3)
       xhr: 2.6.0
       xtend: 4.0.2
     transitivePeerDependencies:
@@ -9433,9 +9439,9 @@ snapshots:
 
   phin@2.9.3: {}
 
-  phin@3.7.1:
+  phin@3.7.1(debug@4.4.3):
     dependencies:
-      centra: 2.7.0
+      centra: 2.7.0(debug@4.4.3)
     transitivePeerDependencies:
       - debug
 
@@ -9451,9 +9457,9 @@ snapshots:
 
   pngjs@3.4.0: {}
 
-  potrace@2.1.8:
+  potrace@2.1.8(debug@4.4.3):
     dependencies:
-      jimp: 0.14.0
+      jimp: 0.14.0(debug@4.4.3)
     transitivePeerDependencies:
       - debug
 
@@ -9618,7 +9624,7 @@ snapshots:
 
   setprototypeof@1.2.0: {}
 
-  sharp@0.35.3:
+  sharp@0.35.3(@types/node@26.2.0):
     dependencies:
       '@img/colour': 1.1.0
       detect-libc: 2.1.2
@@ -9649,6 +9655,7 @@ snapshots:
       '@img/sharp-win32-arm64': 0.35.3
       '@img/sharp-win32-ia32': 0.35.3
       '@img/sharp-win32-x64': 0.35.3
+      '@types/node': 26.2.0
 
   shebang-command@2.0.0:
     dependencies:

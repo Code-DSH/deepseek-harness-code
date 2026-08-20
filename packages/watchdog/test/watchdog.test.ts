@@ -40,6 +40,7 @@ describe("watchdog process contract", () => {
       schedule: () => undefined,
       launch: (executable, args) => launches.push({ executable, args }),
       notify: (message) => acknowledgements.push(message),
+      exit: () => undefined,
     });
 
     watchdog.receive("shutdown");
@@ -67,11 +68,12 @@ describe("watchdog process contract", () => {
       },
       launch: (launchedExecutable, args) =>
         launches.push({ executable: launchedExecutable, args }),
+      exit: () => undefined,
     });
 
     watchdog.disconnect();
 
-    expect(scheduled).toEqual([1_000]);
+    expect(scheduled).toEqual([5_000]);
     expect(launches).toEqual([
       {
         executable,
@@ -94,6 +96,7 @@ describe("watchdog process contract", () => {
         now: () => time,
         schedule: () => decisions.push("restart"),
         launch: () => undefined,
+        exit: () => undefined,
       });
 
     createWatchdog(1_000).disconnect();
@@ -120,6 +123,7 @@ describe("watchdog process contract", () => {
       now: () => 1_000,
       schedule: (_callback, delayMs) => scheduled.push(delayMs),
       launch: () => undefined,
+      exit: () => undefined,
     });
     first.disconnect();
     const later = new Watchdog({
@@ -130,11 +134,12 @@ describe("watchdog process contract", () => {
       now: () => 301_001,
       schedule: (_callback, delayMs) => scheduled.push(delayMs),
       launch: () => undefined,
+      exit: () => undefined,
     });
 
     later.disconnect();
 
-    expect(scheduled).toEqual([1_000, 1_000]);
+    expect(scheduled).toEqual([5_000, 5_000]);
   });
 });
 

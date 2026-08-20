@@ -24,7 +24,7 @@ export class RecoveryPolicy {
     this.#crashes = this.#crashes.filter((time) => now - time < this.#windowMs);
     this.#crashes.push(now);
     if (this.#crashes.length >= this.#limit) return { action: "open-circuit" };
-    const delayMs = 1_000 * 2 ** (this.#crashes.length - 1);
+    const delayMs = 5_000 * 2 ** (this.#crashes.length - 1);
     return { action: "restart", delayMs };
   }
 }

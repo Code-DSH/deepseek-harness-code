@@ -160,7 +160,11 @@ app.setPath(
 // same profile, and the pile-up makes the app appear to hang.
 const hasSingleInstanceLock = app.requestSingleInstanceLock();
 if (!hasSingleInstanceLock) {
-  app.quit();
+  dialog.showErrorBox(
+    "DeepSeek Harness Code 已在运行",
+    "另一实例正在运行（可能是崩溃后 watchdog 自动重启的实例）。请在任务管理器中结束残留进程后重试。",
+  );
+  app.exit(0);
 }
 
 function settingsPath(): string {

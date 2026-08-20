@@ -14,7 +14,7 @@ Harness 的 Agent 预设选择器通过 `agentPreset.list` 取得 roster。官�
 
 ### 采用：扩展客户端已存在的预设文案映射
 
-通过 pnpm patch 扩展 `@deepseek-ai/dsh-client-ui-agent-preset@0.1.0-rc.6`：
+通过 pnpm patch 扩展 `@deepseek-ai/dsh-client-ui-agent-preset@0.1.0-rc.8`：
 
 - 在该包现有的中英文词典中加入四个非官方预设的名称和描述。
 - 把四个明确 ID 加入 `presetDisplayText()` 使用的本地化映射。
@@ -64,7 +64,7 @@ Host 不拥有浏览器的实时 locale，且同一 Host 可被不同语言客�
 - 缺少 patch 时，metadata fallback 仍是完整英文，不出现空名称或空描述。
 - 未知自定义预设不做猜测，不按名称分割 `/`，避免破坏用户文本。
 - 预设 ID、trust、默认值和安装摘要规则保持不变。
-- patch 绑定精确版本 `0.1.0-rc.6`；升级 Harness 时必须重新审计上游 `presetDisplayText()` 和 locale 字典结构。
+- patch 绑定精确版本 `0.1.0-rc.8`；升级 Harness 时必须重新审计上游 `presetDisplayText()` 和 locale 字典结构。
 - 本地用户预设冲突与 managed marker 逻辑维持现状。
 
 ## 测试与验收

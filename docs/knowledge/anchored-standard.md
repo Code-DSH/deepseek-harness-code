@@ -41,7 +41,7 @@ The mechanism is feasible on pinned `@deepseek-ai/dsh@0.1.0-rc.8` as a per-sessi
 
 - Upstream: [`xiaobright/dsh-anchored-standard`](https://github.com/xiaobright/dsh-anchored-standard), commit `db4527a2a70a9032d3a8525ce3c0ea6ef528d6fc`, MIT.
 - Bundled package: `packages/anchored-standard-plugin` version `0.2.0`.
-- Local patches are limited to the localized **渐进式标准模式 / Anchored Standard (Progressive)** display copy (Chinese-only `preset.yml` plus zh/en picker dictionaries in the patched `@deepseek-ai/dsh-client-ui-agent-preset` client bundle), rc.8 packaging/lifecycle integration, and strict failure when a phase-required tool is absent.
+- Local patches are limited to locale-aware **渐进式标准模式 / Progressive Standard Mode** display copy (English-only `preset.yml` fallback plus an exact rc.8 `@deepseek-ai/dsh-client-ui-agent-preset` patch for zh/en picker dictionaries), rc.8 packaging/lifecycle integration, and strict failure when a phase-required tool is absent. The same allowlist also localizes `cordis-with-products`, `router-spec`, and `router-standard`; unknown user presets keep their own metadata.
 - Installer provenance includes `LICENSE`, `NOTICE`, `UPSTREAM.json`, `LOCAL-PATCHES.md`, package version, and an app-managed SHA-256 marker.
 - Installation: atomic sync to `<DSH_HOME>/.agent-presets/anchored-standard` with ownership marker; user-owned same-name presets are never overwritten; invalid packaged resources produce an `unavailable` notice and Standard remains operational.
 

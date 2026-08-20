@@ -5,6 +5,7 @@ import { validateLaunchTarget } from "./validation.js";
 export type Schedule = (callback: () => void, delayMs: number) => unknown;
 export type Launch = (executable: string, args: readonly string[]) => void;
 export type Notify = (message: "shutdown-ack") => void;
+export type Exit = (code: number) => void;
 
 export interface WatchdogOptions {
   executable: string;
@@ -14,6 +15,7 @@ export interface WatchdogOptions {
   schedule?: Schedule;
   launch: Launch;
   notify?: Notify;
+  exit?: Exit;
 }
 
 export class Watchdog {
@@ -24,6 +26,7 @@ export class Watchdog {
   readonly #schedule: Schedule;
   readonly #launch: Launch;
   readonly #notify: Notify | undefined;
+  readonly #exit: Exit;
   #normalShutdown = false;
   #disconnected = false;
 
@@ -38,6 +41,7 @@ export class Watchdog {
       ((callback, delayMs) => setTimeout(callback, delayMs));
     this.#launch = options.launch;
     this.#notify = options.notify;
+    this.#exit = options.exit ?? ((code) => process.exit(code));
   }
 
   receive(message: unknown): void {
@@ -55,7 +59,7 @@ export class Watchdog {
     const now = this.#now();
     const crashes = this.#crashStore.recordCrash(now, 300_000);
     const policy = new RecoveryPolicy({ windowMs: 300_000, limit: 3 });
-    let decision: RecoveryDecision = { action: "restart", delayMs: 1_000 };
+    let decision: RecoveryDecision = { action: "restart", delayMs: 5_000 };
     for (const crash of crashes) decision = policy.recordCrash(crash);
     if (decision.action === "open-circuit") {
       this.#crashStore.openCircuit({
@@ -63,10 +67,14 @@ export class Watchdog {
         crashCount: crashes.length,
         openedAt: now,
       });
+      this.#exit(0);
       return;
     }
     this.#schedule(
-      () => this.#launch(this.#executable, [...this.#args]),
+      () => {
+        this.#launch(this.#executable, [...this.#args]);
+        this.#exit(0);
+      },
       decision.delayMs,
     );
   }

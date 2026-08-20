@@ -51,14 +51,14 @@ const DEFAULT_OUT = join(projectRoot, "build", "routing-suite");
 
 const ROUTING_PRESET_METADATA = {
   "router-standard": {
-    name: "路由标准模式",
+    name: "Standard Routing Mode",
     description:
-      "根据任务自动选择「先执行」或「先分析」的首轮策略；首次调用工具后恢复完整标准工具集。",
+      "Automatically decides whether to analyze or act first, then unlocks the full Standard toolset after the first tool call.",
   },
   "router-spec": {
-    name: "路由深度思考模式",
+    name: "Deep Analysis Routing Mode",
     description:
-      "先深入分析并梳理方案，再动手执行，适合修复、排查、重构等需要先理解问题的任务；首次调用工具后恢复完整标准工具集。",
+      "Analyzes the problem and structures a plan before acting; suited to fixes, debugging, and refactoring, then unlocks the full Standard toolset after the first tool call.",
   },
 };
 

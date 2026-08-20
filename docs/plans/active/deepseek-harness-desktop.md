@@ -97,6 +97,7 @@ Follow [testing strategy](../../engineering/testing.md). Every runtime change st
 - 2026-08-16 — The prior streaming dissolve and active ThinkingOrb integration were retired after visual defects. The desktop bundle now defers all streaming and Think rendering to the official Harness component tree; the packaging gate is rerun against this native-rendering configuration.
 - 2026-08-17 — Switched to system Node auto-detection, fixed macOS icudtl/GPU crash (clean bundle reinstall), fixed plugin-tree missing `dsh-subagent-*` composition links, verified warm start ~6 s, single-instance lock, and 8-preset mode menu.
 - 2026-08-20 — Bumped to `0.1.0-BETA2` / `rc.8`: 8 integrated plugins (ui-polish, updater-check, prompt-principles, vision-router, better-sidebar service, superpowers, code-brand, composition), immutable routing snapshot with SHA-256 pins, global prompt + global `dsh` CLI ownership model, system Node host contract, runtime closure 35 artifacts / 8 critical versions, docs synchronized across workspace and repository.
+- 2026-08-20 — Integrated the unfinished `fix/preset-locale-copy` worktree onto rc.8: four product-owned preset IDs now use locale-aware zh/en client copy with English-only managed fallbacks, while unknown user presets remain metadata-driven. First-launch runtime staging now excludes and self-cleans accidental `.mimosa` hook state that previously surfaced as a misleading Node package installation failure.
 
 ## Discoveries and Deviations
 

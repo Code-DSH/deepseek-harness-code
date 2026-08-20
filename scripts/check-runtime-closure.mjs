@@ -124,6 +124,8 @@ for (const entry of ["pnpm.mjs", "worker.js"]) {
 }
 
 const nodeRuntimeResourceRoot = join(projectRoot, "build", "node-runtime");
+const presetLocalePatch =
+  "@deepseek-ai__dsh-client-ui-agent-preset@0.1.0-rc.8.patch";
 for (const relativePath of [
   "package.json",
   "pnpm-lock.yaml",
@@ -131,6 +133,15 @@ for (const relativePath of [
   "worker.js",
 ]) {
   await access(join(nodeRuntimeResourceRoot, relativePath));
+}
+const sourcePresetLocalePatch = await readFile(
+  join(projectRoot, "config", "node-runtime", "patches", presetLocalePatch),
+);
+const stagedPresetLocalePatch = await readFile(
+  join(nodeRuntimeResourceRoot, "patches", presetLocalePatch),
+);
+if (!sourcePresetLocalePatch.equals(stagedPresetLocalePatch)) {
+  throw new Error("build/node-runtime must carry the exact Agent preset locale patch");
 }
 const nodeRuntimePackage = JSON.parse(
   await readFile(join(nodeRuntimeResourceRoot, "package.json"), "utf8"),
@@ -147,12 +158,21 @@ const packagedPnpmLock = await readFile(
   join(nodeRuntimeResourceRoot, "pnpm-lock.yaml"),
   "utf8",
 );
+const packagedPnpmWorkspace = await readFile(
+  join(nodeRuntimeResourceRoot, "pnpm-workspace.yaml"),
+  "utf8",
+);
 if (
   !packagedPnpmLock.includes("'@deepseek-ai/dsh':") ||
-  !packagedPnpmLock.includes("dsh-find-plugin:")
+  !packagedPnpmLock.includes("dsh-find-plugin:") ||
+  !packagedPnpmLock.includes(
+    "@deepseek-ai/dsh-client-ui-agent-preset@0.1.0-rc.8",
+  ) ||
+  !packagedPnpmLock.includes("patch_hash=") ||
+  !packagedPnpmWorkspace.includes(presetLocalePatch)
 ) {
   throw new Error(
-    "build/node-runtime lockfile is missing the pinned Harness runtime packages",
+    "build/node-runtime is missing pinned Harness packages or the Agent preset locale patch",
   );
 }
 

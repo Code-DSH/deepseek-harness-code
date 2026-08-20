@@ -4,9 +4,11 @@
 
 **Goal:** Make the four product-owned non-system Agent Presets render Chinese-only copy in the Chinese UI and English-only copy in the English UI, without changing preset behavior.
 
-**Architecture:** Extend the exact-version `@deepseek-ai/dsh-client-ui-agent-preset@0.1.0-rc.6` client patch with an allowlisted product-preset locale map that feeds the package's existing `presetDisplayText()` path. Keep Host/API contracts unchanged, convert managed `preset.yml` files to English fallback metadata, and apply the patch in both the development workspace and the packaged first-launch node runtime.
+**Architecture:** Extend the exact-version `@deepseek-ai/dsh-client-ui-agent-preset@0.1.0-rc.8` client patch with an allowlisted product-preset locale map that feeds the package's existing `presetDisplayText()` path. Keep Host/API contracts unchanged, convert managed `preset.yml` files to English fallback metadata, and apply the patch in both the development workspace and the packaged first-launch node runtime.
 
 **Tech Stack:** TypeScript, Vitest, pnpm patched dependencies, compiled Harness client JavaScript, YAML metadata, Node.js ESM build scripts.
+
+**Implementation status (2026-08-20):** Tasks 1–4 are integrated on `main` against rc.8, including both lockfiles, runtime closure, English fallbacks, and the applied-bundle regression. Task 5 automated verification and final branch integration are in progress; GUI language switching remains a separate installed-artifact check.
 
 ## Global Constraints
 
@@ -17,15 +19,15 @@
 - `cordis-with-products` must display as `深度路由模式` / `Deep Routing Mode`.
 - Unknown user-authored presets must continue to display their own metadata unchanged.
 - Do not modify the installed official Harness checkout; ship changes through repository-owned pnpm patches.
-- Patch only exact upstream version `@deepseek-ai/dsh-client-ui-agent-preset@0.1.0-rc.6`.
+- Patch only exact upstream version `@deepseek-ai/dsh-client-ui-agent-preset@0.1.0-rc.8`.
 
 ---
 
 ## File Structure
 
 - `tests/unit/agent-preset-localization.test.ts` — source-level regression contract for locale keys, allowlisted IDs, fallback behavior, and runtime patch wiring.
-- `patches/@deepseek-ai__dsh-client-ui-agent-preset@0.1.0-rc.6.patch` — development/runtime client localization patch.
-- `config/node-runtime/patches/@deepseek-ai__dsh-client-ui-agent-preset@0.1.0-rc.6.patch` — identical packaged-runtime patch copied into the installer resource.
+- `patches/@deepseek-ai__dsh-client-ui-agent-preset@0.1.0-rc.8.patch` — development/runtime client localization patch.
+- `config/node-runtime/patches/@deepseek-ai__dsh-client-ui-agent-preset@0.1.0-rc.8.patch` — identical packaged-runtime patch copied into the installer resource.
 - `pnpm-workspace.yaml` and `config/node-runtime/pnpm-workspace.yaml` — patched dependency declarations.
 - `pnpm-lock.yaml` and `config/node-runtime/pnpm-lock.yaml` — exact patch hashes and dependency snapshots.
 - `packages/anchored-standard-plugin/preset/preset.yml` — English-only fallback metadata for Anchored Standard.
@@ -60,7 +62,7 @@ import { describe, expect, it } from "vitest";
 
 const projectRoot = join(import.meta.dirname, "..", "..");
 const patchName =
-  "@deepseek-ai__dsh-client-ui-agent-preset@0.1.0-rc.6.patch";
+  "@deepseek-ai__dsh-client-ui-agent-preset@0.1.0-rc.8.patch";
 
 async function readProject(path: string): Promise<string> {
   return readFile(join(projectRoot, path), "utf8");
@@ -106,7 +108,7 @@ describe("custom Agent preset locale patch", () => {
       ]);
     expect(runtimePatch).toBe(rootPatch);
     const declaration =
-      '"@deepseek-ai/dsh-client-ui-agent-preset@0.1.0-rc.6": patches/' +
+      '"@deepseek-ai/dsh-client-ui-agent-preset@0.1.0-rc.8": patches/' +
       patchName;
     expect(rootWorkspace).toContain(declaration);
     expect(runtimeWorkspace).toContain(declaration);
@@ -136,7 +138,7 @@ In `tests/unit/routing-suite.test.ts`, assert installed `router-standard/preset.
 
 - [ ] **Step 3: Add packaged-runtime closure expectations**
 
-Extend `tests/unit/package-runtime-closure.test.ts` to read both workspace YAML files and `scripts/check-runtime-closure.mjs`, then assert all three mention `@deepseek-ai__dsh-client-ui-agent-preset@0.1.0-rc.6.patch`.
+Extend `tests/unit/package-runtime-closure.test.ts` to read both workspace YAML files and `scripts/check-runtime-closure.mjs`, then assert all three mention `@deepseek-ai__dsh-client-ui-agent-preset@0.1.0-rc.8.patch`.
 
 - [ ] **Step 4: Run focused tests and verify RED**
 
@@ -167,8 +169,8 @@ git commit -m "test: define locale-aware custom preset copy"
 ### Task 2: Implement the client locale allowlist patch
 
 **Files:**
-- Create: `patches/@deepseek-ai__dsh-client-ui-agent-preset@0.1.0-rc.6.patch`
-- Create: `config/node-runtime/patches/@deepseek-ai__dsh-client-ui-agent-preset@0.1.0-rc.6.patch`
+- Create: `patches/@deepseek-ai__dsh-client-ui-agent-preset@0.1.0-rc.8.patch`
+- Create: `config/node-runtime/patches/@deepseek-ai__dsh-client-ui-agent-preset@0.1.0-rc.8.patch`
 - Modify: `pnpm-workspace.yaml:20-23`
 - Modify: `config/node-runtime/pnpm-workspace.yaml:17-21`
 - Modify: `pnpm-lock.yaml`
@@ -245,7 +247,7 @@ Keep the existing fallback block unchanged.
 Add the exact-version entry to both workspace YAML files:
 
 ```yaml
-"@deepseek-ai/dsh-client-ui-agent-preset@0.1.0-rc.6": patches/@deepseek-ai__dsh-client-ui-agent-preset@0.1.0-rc.6.patch
+"@deepseek-ai/dsh-client-ui-agent-preset@0.1.0-rc.8": patches/@deepseek-ai__dsh-client-ui-agent-preset@0.1.0-rc.8.patch
 ```
 
 Copy the same patch bytes into `config/node-runtime/patches/`.
@@ -379,7 +381,7 @@ Immediately after `nodeRuntimeResourceRoot` is defined, require the source patch
 
 ```js
 const presetLocalePatch =
-  "@deepseek-ai__dsh-client-ui-agent-preset@0.1.0-rc.6.patch";
+  "@deepseek-ai__dsh-client-ui-agent-preset@0.1.0-rc.8.patch";
 await access(join(projectRoot, "config", "node-runtime", "patches", presetLocalePatch));
 await access(join(nodeRuntimeResourceRoot, "patches", presetLocalePatch));
 ```
@@ -394,7 +396,7 @@ Run:
 pnpm build:node-runtime
 ```
 
-Expected: `build/node-runtime/patches/@deepseek-ai__dsh-client-ui-agent-preset@0.1.0-rc.6.patch` exists and matches the source patch byte-for-byte.
+Expected: `build/node-runtime/patches/@deepseek-ai__dsh-client-ui-agent-preset@0.1.0-rc.8.patch` exists and matches the source patch byte-for-byte.
 
 - [ ] **Step 3: Inspect the dependency tree after pnpm applies the patch**
 
@@ -464,7 +466,7 @@ Document that:
 - bilingual-in-one-field metadata was replaced by locale-aware client copy;
 - the four allowlisted non-system IDs are localized;
 - other user presets remain metadata-driven;
-- the packaged runtime carries an exact rc.6 patch;
+- the packaged runtime carries an exact rc.8 patch;
 - managed metadata is English fallback only;
 - preset behavior and IDs are unchanged.
 

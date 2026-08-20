@@ -88,7 +88,12 @@ async function createRoutingSuiteSnapshot(
       join(presetDir, "agent.cordis.yml"),
       "- id: bootstrap\n  name: ./router-core.mjs\n",
     );
-    await writeFile(join(presetDir, "preset.yml"), `name: ${presetId}\n`);
+    await writeFile(
+      join(presetDir, "preset.yml"),
+      presetId === "router-standard"
+        ? "name: Standard Routing Mode\n"
+        : "name: Deep Analysis Routing Mode\n",
+    );
     await writeFile(
       join(presetDir, "router-core.mjs"),
       "export const route = true\n",
@@ -154,11 +159,12 @@ describe("dsh-routing-suite auto-load pipeline", () => {
       const installed = join(dshHome, ".agent-presets", presetId);
       const metadata = await readFile(join(installed, "preset.yml"), "utf8");
       expect(metadata).toContain(
-        presetId === "router-standard" ? "路由标准模式" : "路由深度思考模式",
+        presetId === "router-standard"
+          ? "name: Standard Routing Mode"
+          : "name: Deep Analysis Routing Mode",
       );
-      expect(metadata).not.toContain("/");
-      expect(metadata).not.toContain(`name: ${presetId}`);
-      expect(metadata).not.toContain("暂无描述");
+      expect(metadata).not.toContain(" / ");
+      expect(metadata).not.toMatch(/[\u3400-\u9fff]/u);
       expect(
         await readFile(join(installed, "agent.cordis.yml"), "utf8"),
       ).toContain("router-core.mjs");
