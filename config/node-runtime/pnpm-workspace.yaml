@@ -17,6 +17,7 @@ supportedArchitectures:
 patchedDependencies:
   "@deepseek-ai/dsh": patches/@deepseek-ai__dsh.patch
   "@deepseek-ai/dsh-client-ui-agent-preset@0.1.0-rc.8": patches/@deepseek-ai__dsh-client-ui-agent-preset@0.1.0-rc.8.patch
+  "@deepseek-ai/dsh-client-ui-sidebar@0.1.0-rc.8": patches/@deepseek-ai__dsh-client-ui-sidebar@0.1.0-rc.8.patch
 
 minimumReleaseAgeExclude:
   - "@deepseek-ai/dsh-agent-default-model@0.1.0-rc.8"

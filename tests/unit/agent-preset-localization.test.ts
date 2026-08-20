@@ -3,9 +3,8 @@ import { join } from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-const projectRoot = join(import.meta.dirname, "..", "..");
-const patchName =
-  "@deepseek-ai__dsh-client-ui-agent-preset@0.1.0-rc.8.patch";
+const projectRoot = process.cwd();
+const patchName = "@deepseek-ai__dsh-client-ui-agent-preset@0.1.0-rc.8.patch";
 
 async function readProject(path: string): Promise<string> {
   return readFile(join(projectRoot, path), "utf8");

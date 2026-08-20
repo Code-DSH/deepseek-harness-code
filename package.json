@@ -24,7 +24,7 @@
     "test:unit": "vitest run tests/unit packages/desktop-plugin/test packages/watchdog/test packages/prompt-principles-plugin/test",
     "test:anchored": "pnpm --dir packages/anchored-standard-plugin test",
     "test:plugin": "vitest run --config tests/e2e/plugin-vitest.config.ts",
-    "test:package": "vitest run --config tests/e2e/package-vitest.config.ts",
+    "test:package": "pnpm build:icon && vitest run --config tests/e2e/package-vitest.config.ts",
     "test:e2e": "playwright test",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",

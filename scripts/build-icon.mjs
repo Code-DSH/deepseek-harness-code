@@ -31,6 +31,8 @@ const icnsOutput = join(outputRoot, "deepseek-harness-code.icns");
 const icoOutput = join(outputRoot, "deepseek-harness-code.ico");
 const pngOutput = join(outputRoot, "deepseek-harness-code.png");
 const trayPngOutput = join(outputRoot, "deepseek-harness-code-tray.png");
+const installerReadmeOutput = join(outputRoot, "INSTALL-UNSIGNED-macOS.txt");
+const thirdPartyNoticesOutput = join(outputRoot, "THIRD-PARTY-NOTICES.md");
 const work = await mkdtemp(join(tmpdir(), "deepseek-harness-icon-"));
 const iconset = join(work, "DeepSeekHarness.iconset");
 
@@ -93,6 +95,42 @@ function isMac() {
 try {
   await mkdir(iconset, { recursive: true });
   await mkdir(outputRoot, { recursive: true });
+  await writeFile(
+    installerReadmeOutput,
+    [
+      "DeepSeek Harness Code 安装说明",
+      "",
+      "本应用是独立社区封装（community wrapper），并非 DeepSeek 官方发布，也未经过 Apple 公证。",
+      "",
+      "1. 将“DeepSeek Harness Code.app”拖入“应用程序”文件夹。",
+      "2. 若 macOS 因互联网下载隔离属性阻止打开，请仅对本应用执行：",
+      "",
+      'xattr -dr com.apple.quarantine "/Applications/DeepSeek Harness Code.app"',
+      "",
+      "3. 然后从“应用程序”重新打开。",
+      "",
+      "安全提示：请先确认 DMG 来源及校验值。不要全局关闭或绕过 Gatekeeper。",
+      "",
+    ].join("\n"),
+  );
+  await writeFile(
+    thirdPartyNoticesOutput,
+    [
+      "# Third-party notices",
+      "",
+      "DeepSeek Harness Code is an independent community wrapper and is not an official DeepSeek release.",
+      "",
+      "- DeepSeek Harness and the black graphic used in the DeepSeek Harness Code icon are distributed under the upstream MIT license. The pinned source package is `@deepseek-ai/dsh@0.1.0-rc.8`.",
+      "- `dsh-anchored-standard` is distributed under the MIT license. The bundled Agent Preset is pinned to upstream commit `db4527a2a70a9032d3a8525ce3c0ea6ef528d6fc`; its original file hashes are in `UPSTREAM-SHA256SUMS`, and local compatibility/strict-failure changes are listed in `LOCAL-PATCHES.md`.",
+      "- Superpowers 6.2.0 is distributed under the MIT license. Its bundled skill collection is installed locally into the app-owned Harness home, and the complete license ships at `superpowers-skills/LICENSE`.",
+      "- Electron is distributed under the MIT license.",
+      "- `thinking-orbs@0.3.1` is distributed under the MIT license. Its rotating `working` canvas is bundled into the desktop Web plugin; the complete notice ships with that plugin.",
+      "- Bundled JavaScript packages retain their own package metadata and license files.",
+      "",
+      "No Apple notarization or Developer ID signature is claimed. The macOS application uses an ad-hoc signature solely so bundled code can load consistently on Apple Silicon.",
+      "",
+    ].join("\n"),
+  );
   const officialIcon = await readFile(source, "utf8");
   const mark = officialIcon.match(/<path id="path"[^>]*\/>/u)?.[0];
   if (mark === undefined)

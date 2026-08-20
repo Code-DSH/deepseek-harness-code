@@ -6,6 +6,7 @@ playwright-report/
 coverage/
 .cache/
 .mimosa/
+.omo/
 .worktrees/
 .jspace/
 *.log

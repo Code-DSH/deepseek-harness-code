@@ -8,7 +8,7 @@
 
 **Tech Stack:** TypeScript, Vitest, pnpm patched dependencies, compiled Harness client JavaScript, YAML metadata, Node.js ESM build scripts.
 
-**Implementation status (2026-08-20):** Tasks 1–4 are integrated on `main` against rc.8, including both lockfiles, runtime closure, English fallbacks, and the applied-bundle regression. Task 5 automated verification and final branch integration are in progress; GUI language switching remains a separate installed-artifact check.
+**Implementation status (2026-08-20):** Tasks 1–5 are integrated on `main` against rc.8, including both lockfiles, runtime closure, English fallbacks, and the applied-bundle regression. Build, 303 unit tests, 108 Anchored tests, 24 plugin tests, 32 package tests, 2 Playwright tests, `check`, and runtime preflight pass; GUI language switching remains a separate installed-artifact check.
 
 ## Global Constraints
 
@@ -42,12 +42,14 @@
 ### Task 1: Add failing localization and fallback-metadata tests
 
 **Files:**
+
 - Create: `tests/unit/agent-preset-localization.test.ts`
 - Modify: `tests/unit/anchored-standard-preset.test.ts:72-76,118-122`
 - Modify: `tests/unit/routing-suite.test.ts:84-96` and the managed-install assertions
 - Modify: `tests/unit/package-runtime-closure.test.ts`
 
 **Interfaces:**
+
 - Consumes: repository patch files, workspace YAML files, managed preset metadata sources.
 - Produces: red tests defining all four locale entries, exact copy, allowlist behavior, English-only fallback metadata, and dual-runtime patch wiring.
 
@@ -61,8 +63,7 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
 const projectRoot = join(import.meta.dirname, "..", "..");
-const patchName =
-  "@deepseek-ai__dsh-client-ui-agent-preset@0.1.0-rc.8.patch";
+const patchName = "@deepseek-ai__dsh-client-ui-agent-preset@0.1.0-rc.8.patch";
 
 async function readProject(path: string): Promise<string> {
   return readFile(join(projectRoot, path), "utf8");
@@ -72,17 +73,18 @@ describe("custom Agent preset locale patch", () => {
   it("defines exact zh/en copy for every product-owned custom preset", async () => {
     const patch = await readProject(join("patches", patchName));
     for (const text of [
-      "presetAnchoredStandardName: \"Progressive Standard Mode\"",
-      "presetAnchoredStandardDescription: \"Provides chain-of-thought for DeepSeek V4 Pro and progressively unlocks tools.\"",
-      "presetProductRoutingName: \"Deep Routing Mode\"",
-      "presetRouterSpecName: \"Deep Analysis Routing Mode\"",
-      "presetRouterStandardName: \"Standard Routing Mode\"",
-      "presetAnchoredStandardName: \"渐进式标准模式\"",
-      "presetAnchoredStandardDescription: \"专为 DeepSeek V4 Pro 提供思维链，并逐步开放工具的模式。\"",
-      "presetProductRoutingName: \"深度路由模式\"",
-      "presetRouterSpecName: \"路由深度思考模式\"",
-      "presetRouterStandardName: \"路由标准模式\"",
-    ]) expect(patch).toContain(text);
+      'presetAnchoredStandardName: "Progressive Standard Mode"',
+      'presetAnchoredStandardDescription: "Provides chain-of-thought for DeepSeek V4 Pro and progressively unlocks tools."',
+      'presetProductRoutingName: "Deep Routing Mode"',
+      'presetRouterSpecName: "Deep Analysis Routing Mode"',
+      'presetRouterStandardName: "Standard Routing Mode"',
+      'presetAnchoredStandardName: "渐进式标准模式"',
+      'presetAnchoredStandardDescription: "专为 DeepSeek V4 Pro 提供思维链，并逐步开放工具的模式。"',
+      'presetProductRoutingName: "深度路由模式"',
+      'presetRouterSpecName: "路由深度思考模式"',
+      'presetRouterStandardName: "路由标准模式"',
+    ])
+      expect(patch).toContain(text);
   });
 
   it("allowlists four product IDs without translating arbitrary user presets", async () => {
@@ -92,9 +94,10 @@ describe("custom Agent preset locale patch", () => {
       "cordis-with-products",
       "router-spec",
       "router-standard",
-    ]) expect(patch).toContain(`${JSON.stringify(id)}:`);
+    ])
+      expect(patch).toContain(`${JSON.stringify(id)}:`);
     expect(patch).toContain("PRODUCT_PRESET_KEYS[preset.id]");
-    expect(patch).toContain("preset.trust === \"system\"");
+    expect(patch).toContain('preset.trust === "system"');
     expect(patch).toContain("name: preset.name ?? preset.id");
   });
 
@@ -122,7 +125,7 @@ In `tests/unit/anchored-standard-preset.test.ts`, create fixture metadata with:
 
 ```ts
 "name: Progressive Standard Mode\n" +
-  "description: Provides chain-of-thought for DeepSeek V4 Pro and progressively unlocks tools.\n"
+  "description: Provides chain-of-thought for DeepSeek V4 Pro and progressively unlocks tools.\n";
 ```
 
 Then assert:
@@ -134,7 +137,7 @@ expect(metadata).not.toContain("渐进式标准模式");
 expect(metadata).not.toContain(" / ");
 ```
 
-In `tests/unit/routing-suite.test.ts`, assert installed `router-standard/preset.yml` contains `Standard Routing Mode`, installed `router-spec/preset.yml` contains `Deep Analysis Routing Mode`, and neither contains ` / ` or CJK characters.
+In `tests/unit/routing-suite.test.ts`, assert installed `router-standard/preset.yml` contains `Standard Routing Mode`, installed `router-spec/preset.yml` contains `Deep Analysis Routing Mode`, and neither contains `/` or CJK characters.
 
 - [ ] **Step 3: Add packaged-runtime closure expectations**
 
@@ -169,6 +172,7 @@ git commit -m "test: define locale-aware custom preset copy"
 ### Task 2: Implement the client locale allowlist patch
 
 **Files:**
+
 - Create: `patches/@deepseek-ai__dsh-client-ui-agent-preset@0.1.0-rc.8.patch`
 - Create: `config/node-runtime/patches/@deepseek-ai__dsh-client-ui-agent-preset@0.1.0-rc.8.patch`
 - Modify: `pnpm-workspace.yaml:20-23`
@@ -177,6 +181,7 @@ git commit -m "test: define locale-aware custom preset copy"
 - Modify: `config/node-runtime/pnpm-lock.yaml`
 
 **Interfaces:**
+
 - Consumes: upstream compiled `lib/client.js` and its existing `en`, `zh`, `BUILT_IN_PRESET_KEYS`, and `presetDisplayText()` symbols.
 - Produces: locale keys plus `PRODUCT_PRESET_KEYS`, with unchanged unknown-user fallback.
 
@@ -216,27 +221,28 @@ Patch immediately after `BUILT_IN_PRESET_KEYS`:
 const PRODUCT_PRESET_KEYS = {
   "anchored-standard": {
     name: "presetAnchoredStandardName",
-    description: "presetAnchoredStandardDescription"
+    description: "presetAnchoredStandardDescription",
   },
   "cordis-with-products": {
     name: "presetProductRoutingName",
-    description: "presetProductRoutingDescription"
+    description: "presetProductRoutingDescription",
   },
   "router-spec": {
     name: "presetRouterSpecName",
-    description: "presetRouterSpecDescription"
+    description: "presetRouterSpecDescription",
   },
   "router-standard": {
     name: "presetRouterStandardName",
-    description: "presetRouterStandardDescription"
-  }
+    description: "presetRouterStandardDescription",
+  },
 };
 ```
 
 Replace the first line of `presetDisplayText()` with:
 
 ```js
-const keys = PRODUCT_PRESET_KEYS[preset.id] ??
+const keys =
+  PRODUCT_PRESET_KEYS[preset.id] ??
   (preset.trust === "system" ? BUILT_IN_PRESET_KEYS[preset.id] : void 0);
 ```
 
@@ -292,6 +298,7 @@ git commit -m "fix: localize product-owned agent presets"
 ### Task 3: Convert managed preset metadata to English fallback
 
 **Files:**
+
 - Modify: `packages/anchored-standard-plugin/preset/preset.yml`
 - Modify: `apps/desktop/src/lifecycle/routing-suite-link.ts:13-24`
 - Modify: `scripts/fetch-routing-suite.mjs:52-63`
@@ -299,6 +306,7 @@ git commit -m "fix: localize product-owned agent presets"
 - Test: `tests/unit/routing-suite.test.ts`
 
 **Interfaces:**
+
 - Consumes: the client locale patch from Task 2.
 - Produces: complete non-empty English fallback metadata without bilingual separators.
 
@@ -349,7 +357,7 @@ Run:
 pnpm build:routing-suite
 ```
 
-Read `build/routing-suite/preset/router-standard/preset.yml` and `router-spec/preset.yml`; confirm both are English-only and contain no ` / ` separator.
+Read `build/routing-suite/preset/router-standard/preset.yml` and `router-spec/preset.yml`; confirm both are English-only and contain no `/` separator.
 
 - [ ] **Step 5: Commit managed fallback metadata**
 
@@ -367,11 +375,13 @@ git commit -m "fix: remove bilingual preset metadata fallbacks"
 ### Task 4: Enforce packaged runtime closure and verify the applied bundle
 
 **Files:**
+
 - Modify: `scripts/check-runtime-closure.mjs`
 - Modify: `tests/unit/package-runtime-closure.test.ts`
 - Test: `tests/unit/agent-preset-localization.test.ts`
 
 **Interfaces:**
+
 - Consumes: both exact patch copies and regenerated lockfiles.
 - Produces: build/preflight failure if the installer omits the localization patch.
 
@@ -382,7 +392,9 @@ Immediately after `nodeRuntimeResourceRoot` is defined, require the source patch
 ```js
 const presetLocalePatch =
   "@deepseek-ai__dsh-client-ui-agent-preset@0.1.0-rc.8.patch";
-await access(join(projectRoot, "config", "node-runtime", "patches", presetLocalePatch));
+await access(
+  join(projectRoot, "config", "node-runtime", "patches", presetLocalePatch),
+);
 await access(join(nodeRuntimeResourceRoot, "patches", presetLocalePatch));
 ```
 
@@ -449,6 +461,7 @@ git commit -m "test: enforce preset locale patch closure"
 ### Task 5: Update implementation docs and perform final verification
 
 **Files:**
+
 - Modify: `docs/knowledge/anchored-standard.md`
 - Modify: `docs/engineering/testing.md`
 - Modify: `docs/superpowers/specs/2026-08-17-agent-preset-locale-copy-design.md` only if implementation differs from the approved design
@@ -456,6 +469,7 @@ git commit -m "test: enforce preset locale patch closure"
 - Local verification only: `${DSH_HOME}/.agent-presets/cordis-with-products/preset.yml`
 
 **Interfaces:**
+
 - Consumes: completed locale patch, managed metadata, and runtime closure evidence.
 - Produces: implementation-backed documentation and verified current-environment copy.
 

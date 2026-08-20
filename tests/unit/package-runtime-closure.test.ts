@@ -12,6 +12,7 @@ const pluginRoot = join(projectRoot, "packages", "desktop-plugin");
 const execFileAsync = promisify(execFile);
 const agentPresetPatchName =
   "@deepseek-ai__dsh-client-ui-agent-preset@0.1.0-rc.8.patch";
+const sidebarPatchName = "@deepseek-ai__dsh-client-ui-sidebar@0.1.0-rc.8.patch";
 
 describe("packaged runtime dependency closure", () => {
   it("excludes local Mimosa session state from the packaged runtime", async () => {
@@ -113,12 +114,33 @@ describe("packaged runtime dependency closure", () => {
         join(projectRoot, "config", "node-runtime", "pnpm-workspace.yaml"),
         "utf8",
       ),
-      readFile(join(projectRoot, "scripts", "check-runtime-closure.mjs"), "utf8"),
+      readFile(
+        join(projectRoot, "scripts", "check-runtime-closure.mjs"),
+        "utf8",
+      ),
     ]);
 
     expect(rootWorkspace).toContain(agentPresetPatchName);
     expect(runtimeWorkspace).toContain(agentPresetPatchName);
     expect(closureScript).toContain(agentPresetPatchName);
+  });
+
+  it("wires the macOS sidebar safe-area patch into both runtime workspaces", async () => {
+    const [rootWorkspace, runtimeWorkspace, closureScript] = await Promise.all([
+      readFile(join(projectRoot, "pnpm-workspace.yaml"), "utf8"),
+      readFile(
+        join(projectRoot, "config", "node-runtime", "pnpm-workspace.yaml"),
+        "utf8",
+      ),
+      readFile(
+        join(projectRoot, "scripts", "check-runtime-closure.mjs"),
+        "utf8",
+      ),
+    ]);
+
+    expect(rootWorkspace).toContain(sidebarPatchName);
+    expect(runtimeWorkspace).toContain(sidebarPatchName);
+    expect(closureScript).toContain(sidebarPatchName);
   });
 
   it("keeps integrated plugin patches on official bare package names", async () => {

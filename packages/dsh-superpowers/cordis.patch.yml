@@ -2,5 +2,5 @@
 # client-modules registry qualifies the entry and serves lib/client.js).
 - insert:
     - id: dsh-superpowers
-      name: 'dsh-superpowers'
+      name: "dsh-superpowers"
       config: {}

@@ -70,12 +70,9 @@ export class Watchdog {
       this.#exit(0);
       return;
     }
-    this.#schedule(
-      () => {
-        this.#launch(this.#executable, [...this.#args]);
-        this.#exit(0);
-      },
-      decision.delayMs,
-    );
+    this.#schedule(() => {
+      this.#launch(this.#executable, [...this.#args]);
+      this.#exit(0);
+    }, decision.delayMs);
   }
 }

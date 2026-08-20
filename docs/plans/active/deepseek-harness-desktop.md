@@ -98,13 +98,14 @@ Follow [testing strategy](../../engineering/testing.md). Every runtime change st
 - 2026-08-17 — Switched to system Node auto-detection, fixed macOS icudtl/GPU crash (clean bundle reinstall), fixed plugin-tree missing `dsh-subagent-*` composition links, verified warm start ~6 s, single-instance lock, and 8-preset mode menu.
 - 2026-08-20 — Bumped to `0.1.0-BETA2` / `rc.8`: 8 integrated plugins (ui-polish, updater-check, prompt-principles, vision-router, better-sidebar service, superpowers, code-brand, composition), immutable routing snapshot with SHA-256 pins, global prompt + global `dsh` CLI ownership model, system Node host contract, runtime closure 35 artifacts / 8 critical versions, docs synchronized across workspace and repository.
 - 2026-08-20 — Integrated the unfinished `fix/preset-locale-copy` worktree onto rc.8: four product-owned preset IDs now use locale-aware zh/en client copy with English-only managed fallbacks, while unknown user presets remain metadata-driven. First-launch runtime staging now excludes and self-cleans accidental `.mimosa` hook state that previously surfaced as a misleading Node package installation failure.
+- 2026-08-20 — Consolidated all branch/worktree differences on `main`, restored the exact rc.8 macOS sidebar safe-area patch, made package tests regenerate ignored installer assets, and verified build + 303 unit + 108 Anchored + 24 plugin + 32 package + 2 Playwright tests, `check`, and the 51-artifact runtime closure.
 
 ## Discoveries and Deviations
 
 - Local machine has Node 26.7.0 and npm 11.19.0 but no global pnpm; project commands use an exact temporary pnpm 11.19.0 runner.
 - Harness rc.8 returns 404 for `/api/health` and `/api/`; host health uses child liveness plus the 2xx Web root.
 - electron-builder 26.15.3 uses `singleArchFiles` / `x64ArchFiles`; no `universalArchFiles` option exists. Both official Electron 43.4.0 macOS architecture archives are cached locally for packaging.
-- The approved “1/2/4-second backoff” and “third crash opens the circuit” cannot both schedule a third restart. The implementation chooses the safer explicit circuit rule: restart after 1 and 2 seconds, then open the circuit on the third abnormal exit within five minutes.
+- The approved “5/10/20-second backoff” and “third crash opens the circuit” cannot both schedule a third restart. The implementation chooses the safer explicit circuit rule: restart after 5 and 10 seconds, then open the circuit on the third abnormal exit within five minutes.
 - Harness package discovery returned an empty client graph from the tested ASAR layout. The verified release uses `asar: false` and an app-owned official bundle manifest, producing 39+ entries.
 - Universal assembly preserves paired architecture-qualified native packages; shared Electron and Chromium Mach-O files are true Universal binaries.
 - Harness rc.8 may serve the Web root before Cordis registers `agentPreset.list`; integration readiness now waits on that exact API condition and six consecutive diagnostic repetitions passed.

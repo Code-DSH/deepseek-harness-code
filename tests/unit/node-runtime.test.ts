@@ -70,7 +70,10 @@ describe("pinned runtime packages driven by the system Node", () => {
       recursive: true,
     });
     await writeFile(join(resource, "package.json"), "{}\n");
-    await writeFile(join(resource, "pnpm-lock.yaml"), "lockfileVersion: '9.0'\n");
+    await writeFile(
+      join(resource, "pnpm-lock.yaml"),
+      "lockfileVersion: '9.0'\n",
+    );
     await writeFile(join(resource, "pnpm-workspace.yaml"), "packages: []\n");
     await writeFile(join(resource, "pnpm.mjs"), "process.exit(0);\n");
     await writeFile(join(resource, "patches", "runtime.patch"), "patch\n");

@@ -34,12 +34,12 @@ Host 不拥有浏览器的实时 locale，且同一 Host 可被不同语言客�
 
 ## 文案契约
 
-| Preset ID | 中文名称 | 中文描述 | English name | English description |
-| --- | --- | --- | --- | --- |
-| `anchored-standard` | 渐进式标准模式 | 专为 DeepSeek V4 Pro 提供思维链，并逐步开放工具的模式。 | Progressive Standard Mode | Provides chain-of-thought for DeepSeek V4 Pro and progressively unlocks tools. |
-| `cordis-with-products` | 深度路由模式 | 面向复杂任务的深度路由模式，可调用 Codex 与 Claude Code 产品子代理协同处理，并保留标准模式的完整能力。 | Deep Routing Mode | A deep-routing mode for complex tasks that can delegate to Codex and Claude Code product subagents while retaining full Standard capabilities. |
-| `router-spec` | 路由深度思考模式 | 先深入分析并梳理方案，再开始执行；适合修复、排障和重构，首次调用工具后开放标准模式的全部工具。 | Deep Analysis Routing Mode | Analyzes the problem and structures a plan before acting; suited to fixes, debugging, and refactoring, then unlocks the full Standard toolset after the first tool call. |
-| `router-standard` | 路由标准模式 | 根据任务自动判断先分析还是先执行；首次调用工具后开放标准模式的全部工具。 | Standard Routing Mode | Automatically decides whether to analyze or act first, then unlocks the full Standard toolset after the first tool call. |
+| Preset ID              | 中文名称         | 中文描述                                                                                               | English name               | English description                                                                                                                                                      |
+| ---------------------- | ---------------- | ------------------------------------------------------------------------------------------------------ | -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `anchored-standard`    | 渐进式标准模式   | 专为 DeepSeek V4 Pro 提供思维链，并逐步开放工具的模式。                                                | Progressive Standard Mode  | Provides chain-of-thought for DeepSeek V4 Pro and progressively unlocks tools.                                                                                           |
+| `cordis-with-products` | 深度路由模式     | 面向复杂任务的深度路由模式，可调用 Codex 与 Claude Code 产品子代理协同处理，并保留标准模式的完整能力。 | Deep Routing Mode          | A deep-routing mode for complex tasks that can delegate to Codex and Claude Code product subagents while retaining full Standard capabilities.                           |
+| `router-spec`          | 路由深度思考模式 | 先深入分析并梳理方案，再开始执行；适合修复、排障和重构，首次调用工具后开放标准模式的全部工具。         | Deep Analysis Routing Mode | Analyzes the problem and structures a plan before acting; suited to fixes, debugging, and refactoring, then unlocks the full Standard toolset after the first tool call. |
+| `router-standard`      | 路由标准模式     | 根据任务自动判断先分析还是先执行；首次调用工具后开放标准模式的全部工具。                               | Standard Routing Mode      | Automatically decides whether to analyze or act first, then unlocks the full Standard toolset after the first tool call.                                                 |
 
 打包/托管预设的 `preset.yml` 不再把中英文用 `/` 拼接。文件只保留英文 fallback 文案，供没有本产品 Web patch 的消费者使用；本产品 Web UI 始终按当前 locale 显示上表中的单一语言。`cordis-with-products` 是当前用户本地预设，不新增到发行包，也不改变其 composition。
 

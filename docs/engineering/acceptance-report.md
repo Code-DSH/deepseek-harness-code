@@ -82,17 +82,17 @@ tags: [acceptance, release, evidence]
 
 ## Automated verification
 
-| Gate              | Result (BETA2 baseline)                                                                                     |
-| ----------------- | ----------------------------------------------------------------------------------------------------------- |
-| Unit suite        | ~30 files / 118+ tests passed, including 7 Routing Suite, system-node, and 4 real-bundle stream regressions |
-| Upstream preset   | 108 vendored upstream and local-patch tests passed                                                          |
-| Official plugins  | 3 files / 24 tests passed, including pinned rc.8 roster, session creation, and boot                         |
-| Package contract  | 1 file / 4 tests passed                                                                                     |
-| Browser E2E       | Playwright chromium headless — desktop slot/transition/cleanup + real client graph                           |
-| TypeScript        | `tsc --noEmit` passed                                                                       |
-| Static gates      | ESLint, Prettier, documentation links (verified 2026-08-20), and 7-control/3-forbidden security contract passed |
-| Dependency audit  | `pnpm audit --prod` reported no known vulnerabilities                                        |
-| Runtime preflight | 35 artifacts, 8 critical Harness packages, and 8+ plugin packages verified (SHA-256 routing digests)        |
+| Gate              | Result (BETA2 baseline)                                                                                                   |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| Unit suite        | ~30 files / 118+ tests passed, including 7 Routing Suite, system-node, and 4 real-bundle stream regressions               |
+| Upstream preset   | 108 vendored upstream and local-patch tests passed                                                                        |
+| Official plugins  | 3 files / 24 tests passed, including pinned rc.8 roster, session creation, and boot                                       |
+| Package contract  | 1 file / 4 tests passed                                                                                                   |
+| Browser E2E       | Playwright chromium headless — desktop slot/transition/cleanup + real client graph                                        |
+| TypeScript        | `tsc --noEmit` passed                                                                                                     |
+| Static gates      | ESLint, Prettier, documentation links (verified 2026-08-20), and 7-control/3-forbidden security contract passed           |
+| Dependency audit  | `pnpm audit --prod` reported no known vulnerabilities                                                                     |
+| Runtime preflight | 35 artifacts, 8 critical Harness packages, and 8+ plugin packages verified (SHA-256 routing digests)                      |
 | macOS package     | `verify:mac --universal` mounts, signature/resource closure checked, SHA-256 recorded (BETA1 archived; BETA2 re-verified) |
 
 Historical 0.3.x gate snapshots are retained above for traceability; current release gates are BETA2.

@@ -321,7 +321,7 @@ describe("desktop plugin with the real pinned Harness", () => {
     ]);
   }, 30_000);
 
-  it("is discovered as a healthy optional preset by the pinned rc.6 roster", async () => {
+  it("is discovered with English fallback metadata by the pinned rc.8 roster", async () => {
     const root = await mkdtemp(join(tmpdir(), "dsh-anchored-preset-real-"));
     temporaryRoots.add(root);
     const dshHome = join(root, "home");
@@ -369,8 +369,10 @@ describe("desktop plugin with the real pinned Harness", () => {
     expect(presets).toEqual([
       expect.objectContaining({
         id: "anchored-standard",
-        name: "渐进式标准模式",
-        description: expect.stringContaining("专为 DeepSeek V4 Pro"),
+        name: "Progressive Standard Mode",
+        description: expect.stringContaining(
+          "Provides chain-of-thought for DeepSeek V4 Pro",
+        ),
       }),
     ]);
     expect(presets[0]?.broken).toBeUndefined();

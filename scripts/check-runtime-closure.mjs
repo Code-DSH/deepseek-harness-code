@@ -126,6 +126,8 @@ for (const entry of ["pnpm.mjs", "worker.js"]) {
 const nodeRuntimeResourceRoot = join(projectRoot, "build", "node-runtime");
 const presetLocalePatch =
   "@deepseek-ai__dsh-client-ui-agent-preset@0.1.0-rc.8.patch";
+const sidebarSafeAreaPatch =
+  "@deepseek-ai__dsh-client-ui-sidebar@0.1.0-rc.8.patch";
 for (const relativePath of [
   "package.json",
   "pnpm-lock.yaml",
@@ -134,14 +136,16 @@ for (const relativePath of [
 ]) {
   await access(join(nodeRuntimeResourceRoot, relativePath));
 }
-const sourcePresetLocalePatch = await readFile(
-  join(projectRoot, "config", "node-runtime", "patches", presetLocalePatch),
-);
-const stagedPresetLocalePatch = await readFile(
-  join(nodeRuntimeResourceRoot, "patches", presetLocalePatch),
-);
-if (!sourcePresetLocalePatch.equals(stagedPresetLocalePatch)) {
-  throw new Error("build/node-runtime must carry the exact Agent preset locale patch");
+for (const runtimePatch of [presetLocalePatch, sidebarSafeAreaPatch]) {
+  const sourcePatch = await readFile(
+    join(projectRoot, "config", "node-runtime", "patches", runtimePatch),
+  );
+  const stagedPatch = await readFile(
+    join(nodeRuntimeResourceRoot, "patches", runtimePatch),
+  );
+  if (!sourcePatch.equals(stagedPatch)) {
+    throw new Error(`build/node-runtime must carry the exact ${runtimePatch}`);
+  }
 }
 const nodeRuntimePackage = JSON.parse(
   await readFile(join(nodeRuntimeResourceRoot, "package.json"), "utf8"),
@@ -168,11 +172,13 @@ if (
   !packagedPnpmLock.includes(
     "@deepseek-ai/dsh-client-ui-agent-preset@0.1.0-rc.8",
   ) ||
+  !packagedPnpmLock.includes("@deepseek-ai/dsh-client-ui-sidebar@0.1.0-rc.8") ||
   !packagedPnpmLock.includes("patch_hash=") ||
-  !packagedPnpmWorkspace.includes(presetLocalePatch)
+  !packagedPnpmWorkspace.includes(presetLocalePatch) ||
+  !packagedPnpmWorkspace.includes(sidebarSafeAreaPatch)
 ) {
   throw new Error(
-    "build/node-runtime is missing pinned Harness packages or the Agent preset locale patch",
+    "build/node-runtime is missing pinned Harness packages or required client patches",
   );
 }
 
@@ -234,10 +240,8 @@ for (const [directory, packageName, version] of [
     );
   }
   const patch = await readFile(join(pluginRoot, "cordis.patch.yml"), "utf8");
-  if (
-    !patch.includes(`name: '${packageName}'`) ||
-    patch.includes("./node_modules/")
-  ) {
+  const quotedBareName = new RegExp(`name:\\s*(["'])${packageName}\\1`, "u");
+  if (!quotedBareName.test(patch) || patch.includes("./node_modules/")) {
     throw new Error(`${packageName} must retain its official bare-name patch`);
   }
 }

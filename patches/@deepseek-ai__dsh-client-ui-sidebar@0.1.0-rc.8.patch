@@ -1,0 +1,19 @@
+diff --git a/lib/client.js b/lib/client.js
+index acfa7adf8c044977ea840a6cc1a9d2ff7a6c7586..824cf800553b589b161438fc8b4424570d548816 100644
+--- a/lib/client.js
++++ b/lib/client.js
+@@ -32,6 +32,14 @@ window.__ModuleLoader__.load({
+ 			tag.textContent = css;
+ 			document.head.appendChild(tag);
+ 		}
++		const desktopInsetTagId = "@deepseek-ai/dsh-client-ui-sidebar/DesktopInset.css";
++		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(desktopInsetTagId) + "]") === null) {
++			const tag = document.createElement("style");
++			tag.dataset.plugin = "@deepseek-ai/dsh-client-ui-sidebar";
++			tag.dataset.pluginCss = desktopInsetTagId;
++			tag.textContent = ':root[data-dsh-desktop-platform="macos"] .hHd-Xa_root{padding-top:46px}:root[data-dsh-desktop-platform="macos"] .hHd-Xa_root.hHd-Xa_collapsed{padding-top:58px}';
++			document.head.appendChild(tag);
++		}
+ 		var SidebarRoot_module_css_default = {
+ 			"brand": "hHd-Xa_brand",
+ 			"brandIdentity": "hHd-Xa_brandIdentity",

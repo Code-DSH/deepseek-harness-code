@@ -1,11 +1,4 @@
-import {
-  chmod,
-  copyFile,
-  cp,
-  mkdir,
-  readFile,
-  rm,
-} from "node:fs/promises";
+import { chmod, copyFile, cp, mkdir, readFile, rm } from "node:fs/promises";
 import { createRequire } from "node:module";
 import { basename, dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
