@@ -89,7 +89,7 @@ tags: [acceptance, release, evidence]
 | Unit suite        | 48 files / 304 tests passed (3 intentionally skipped), including Routing Suite, system-node, and stream regressions       |
 | Upstream preset   | 108 vendored upstream and local-patch tests passed                                                                        |
 | Official plugins  | 3 files / 24 tests passed, including pinned rc.8 roster, session creation, and boot                                       |
-| Package contract  | 2 files / 35 tests passed                                                                                                 |
+| Package contract  | 2 files / 36 tests passed                                                                                                 |
 | Browser E2E       | 2 Playwright Chromium tests — desktop slot/transition/cleanup + real client graph                                         |
 | TypeScript        | `tsc --noEmit` passed                                                                                                     |
 | Static gates      | ESLint, Prettier, documentation links (verified 2026-08-20), and 7-control/6-forbidden security contract passed           |

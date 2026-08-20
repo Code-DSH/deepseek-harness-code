@@ -62,6 +62,13 @@ function findExecutable() {
   throw new Error("SMOKE_EXECUTABLE or --executable is required");
 }
 
+function buildPackagedSmokeLaunch(platform, userDataPath) {
+  return {
+    args: platform === "linux" ? ["--no-sandbox"] : [],
+    env: { DSH_HOME: join(userDataPath, "dsh-home") },
+  };
+}
+
 async function checksum(path) {
   const info = await stat(path);
   if (!info.isFile()) {
@@ -703,7 +710,8 @@ async function main() {
   }, process.exit.bind(process));
   process.on("SIGINT", onInterrupt);
   process.on("SIGTERM", onInterrupt);
-  child = spawn(executable, [], {
+  const packagedLaunch = buildPackagedSmokeLaunch(process.platform, userData);
+  child = spawn(executable, packagedLaunch.args, {
     cwd: root,
     env: {
       ...process.env,
@@ -712,6 +720,7 @@ async function main() {
       XDG_DATA_HOME: join(userData, "data"),
       XDG_STATE_HOME: join(userData, "state"),
       XDG_CACHE_HOME: join(userData, "cache"),
+      ...packagedLaunch.env,
       SMOKE_MODE: "ci",
       SMOKE_EVIDENCE_PATH: resolve(appEvidencePath),
       SMOKE_ACK_PATH: resolve(`${appEvidencePath}.ack`),
@@ -843,6 +852,7 @@ export {
   waitForSmokeAcknowledgement,
   validateArtifactContract,
   parseWindowsPeMachine,
+  buildPackagedSmokeLaunch,
   redactPackagedDiagnostic,
 };
 
