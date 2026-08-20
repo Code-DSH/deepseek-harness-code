@@ -68,14 +68,14 @@
 ### Task 4: Verify discovery and replacement
 
 - [x] Configure the updater source to check the published manifest and verify the old `BETA2` version detects `0.1.0-BETA2-1` in the real-version regression test.
-- [ ] Confirm the desktop UI reports `0.1.0-BETA2-1` as available from the old installed build after the Mac is unlocked.
-- [ ] Download and apply the replacement package using the supported updater path.
-- [ ] Confirm the restarted app version and both terminal patch expressions after update.
-- [ ] Re-run the original Bash command and record completion evidence.
+- [x] Confirm the desktop UI reports `0.1.0-BETA2-1` as available from the old installed build after the Mac is unlocked.
+- [x] Download and apply the replacement package using the supported updater path.
+- [x] Confirm the restarted app version and both terminal patch expressions after update.
+- [x] Re-run the original Bash command and record completion evidence.
 
 ## Completion Evidence
 
 - Patch file and lock hash are present in source and `build/node-runtime`.
 - Focused regression, full tests, typecheck/lint/format/docs/security, build, and package verification pass.
 - Remote tag/release/assets/manifest are visible from GitHub.
-- The local app reports the new version, applies the update, and loads the patched terminal-bash file.
+- The local app reports the new version, applies the update, and loads the patched terminal-bash file. The post-update UI run of the exact path command returned `BASH_PATCH_OK`; session statistics report `工具调用 0.8s`.
