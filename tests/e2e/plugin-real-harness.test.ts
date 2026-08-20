@@ -4,7 +4,7 @@ import { createServer, type Server } from "node:http";
 import { mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { createRequire } from "node:module";
-import { dirname, join } from "node:path";
+import { dirname, isAbsolute, join } from "node:path";
 import { pathToFileURL } from "node:url";
 import vm from "node:vm";
 
@@ -499,9 +499,9 @@ describe("desktop plugin with the real pinned Harness", () => {
     const origin = `http://127.0.0.1:${port}`;
     if (
       typeof bootElectronExecutable !== "string" ||
-      !bootElectronExecutable.startsWith("/") ||
+      !isAbsolute(bootElectronExecutable) ||
       typeof bootDshEntry !== "string" ||
-      !bootDshEntry.startsWith("/")
+      !isAbsolute(bootDshEntry)
     ) {
       throw new Error("boot paths must be absolute");
     }
