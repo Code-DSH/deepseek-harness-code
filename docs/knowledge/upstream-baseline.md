@@ -94,7 +94,7 @@ Retain `@deepseek-ai/dsh-tool-ask-user`, `@deepseek-ai/dsh-user-questions`, and 
 | Superpowers        | `dsh-superpowers`                 | 1.0.0+  | coding-mode gate + prompt injection                 | `lib/*`                                     |
 | Anchored Standard  | `anchored-standard-plugin`        | 0.2.0   | progressive preset (`anchored-standard`)            | preset `agent.cordis.yml`                   |
 | Superpowers Skills | `superpowers`                     | 6.2.0   | offline skill collection                            | `skills/**`                                 |
-| Global Prompt      | `global-agent-prompt`             | —       | `AGENTS.md` operating protocol                      | `AGENTS.md`                                 |
+| Global Prompt      | `global-agent-prompt`             | —       | `protocol.md` operating protocol                    | `AGENTS.md`                                 |
 
 All plugins are mounted through `dsh plugin --profile web add` using the bundled pnpm runtime; no manual `package.json` edits.
 

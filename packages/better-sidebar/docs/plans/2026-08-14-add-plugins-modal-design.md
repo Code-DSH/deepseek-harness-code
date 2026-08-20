@@ -66,4 +66,4 @@
 - [x] 点「跳转」：`window.open` 新标签页直达插件仓库
 - [x] 内置 Office 预览已移除；chunk 白名单 2 个；无「内置插件」残留文案
 - [x] 版本号 v0.12.0 三处一致；`pnpm typecheck` / `pnpm test` / `pnpm build` 全绿
-- [x] README/README_EN/AGENTS.md 更新到位
+- [x] README/README_EN/接入参考文档更新到位

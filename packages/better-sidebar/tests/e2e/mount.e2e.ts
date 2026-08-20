@@ -134,7 +134,7 @@ test('plugin mounts into the DSH shell and survives a built-in tab sweep', async
   const tabBar = sidebar.locator('[title]')
   await expect(tabBar.first()).toBeAttached({ timeout: 90_000 })
 
-  // The skinning contract is token-driven (AGENTS.md §8): the panels consume
+  // The skinning contract is token-driven (docs/integration-reference.md §8): the panels consume
   // `--dsw-alias-bg-layer-1`, so switching a skin re-skins the sidebar with
   // no per-skin code. The layout push variable must be live once the panel
   // mounts (its absence would mean the panel never opened with the session).

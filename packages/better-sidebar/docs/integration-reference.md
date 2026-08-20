@@ -1,4 +1,4 @@
-# dsh-better-sidebar 插件接入文档
+# dsh-better-sidebar 插件接入参考
 
 > 面向**消费插件开发者**：如何让你的插件向 better-sidebar 注册新的侧边栏页面（tab）和文件类型预览器。
 
@@ -9,7 +9,7 @@ better-sidebar 从 v0.4.0 起暴露 `ctx.betterSidebar` 服务（Cordis context 
 ## 0. 仓库硬约束（所有本仓库插件必须遵守）
 
 - **禁止修改 DeepSeek Harness (DSH) 源码**：对官方源码 checkout（`~/.dsh/source/current`）零写入——不得改 harness 包、不得把 harness 改动提交到它的分支。
-- **代码改动必须走 PR**：功能 / 修复 / 测试等非文档改动一律在分支上开发（`feat/*` / `fix/*`），用 `gh pr create` 发起 PR，review 合并后才进 main；**仅纯文档类改动**（README / AGENTS.md / docs/ 等）允许直接推送到 main。
+- **代码改动必须走 PR**：功能 / 修复 / 测试等非文档改动一律在分支上开发（`feat/*` / `fix/*`），用 `gh pr create` 发起 PR，review 合并后才进 main；**仅纯文档类改动**（README / docs/ 等）允许直接推送到 main。
 - **挂载只走 `cordis.patch.yml` + profile 机制**（`~/.dsh/profiles/<profile>/`），插件永远作为独立包被 profile 引用，不反向侵入 DSH。
 - 需要 harness 没有的能力时，用 DSH **现成的只读/公开 API** 或插件自有路由实现（参考 §7 的 `jobs.output` 事件回放：读会话事件日志而非动注册表）；如果确实做不到，先向用户说明取舍，而不是直接改 DSH。
 

@@ -72,7 +72,7 @@ try {
     "node-runtime/pnpm-lock.yaml",
     "node-runtime/pnpm.mjs",
     "node-runtime/worker.js",
-    "global-agent-prompt/AGENTS.md",
+    "global-agent-prompt/protocol.md",
     "prompt-principles-plugin/index.js",
     "prompt-principles-plugin/client.js",
     "prompt-principles-plugin/cordis.patch.yml",

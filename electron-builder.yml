@@ -93,7 +93,7 @@ extraResources:
   - from: config/global-agent-prompt
     to: global-agent-prompt
     filter:
-      - AGENTS.md
+      - protocol.md
   - from: build/routing-suite
     to: routing-suite
     filter:

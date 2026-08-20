@@ -8,7 +8,7 @@
 
 **Tech Stack:** TypeScript, Vitest, pnpm patched dependencies, compiled Harness client JavaScript, YAML metadata, Node.js ESM build scripts.
 
-**Implementation status (2026-08-20):** Tasks 1–5 are integrated on `main` against rc.8, including both lockfiles, runtime closure, English fallbacks, and the applied-bundle regression. Build, 303 unit tests, 108 Anchored tests, 24 plugin tests, 32 package tests, 2 Playwright tests, `check`, and runtime preflight pass; GUI language switching remains a separate installed-artifact check.
+**Implementation status (2026-08-20):** Tasks 1–5 are integrated on `main` against rc.8, including both lockfiles, runtime closure, English fallbacks, and the applied-bundle regression. Build, 303 unit tests, 108 Anchored tests, 24 plugin tests, 33 package tests, 2 Playwright tests, `check`, and runtime preflight pass; GUI language switching remains a separate installed-artifact check.
 
 ## Global Constraints
 

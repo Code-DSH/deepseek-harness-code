@@ -12,7 +12,7 @@ import {
 async function createResource(root: string, content: string): Promise<string> {
   const resource = join(root, "resource");
   await mkdir(resource, { recursive: true });
-  await writeFile(join(resource, "AGENTS.md"), content);
+  await writeFile(join(resource, "protocol.md"), content);
   return resource;
 }
 
@@ -68,7 +68,7 @@ describe("bundled global AGENTS.md installation", () => {
       dshHome,
       resourceRoot: resource,
     });
-    await writeFile(join(resource, "AGENTS.md"), PROMPT_V2);
+    await writeFile(join(resource, "protocol.md"), PROMPT_V2);
 
     const result = await installGlobalAgentPromptForStartup({
       dshHome,

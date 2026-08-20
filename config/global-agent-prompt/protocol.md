@@ -1,6 +1,6 @@
 # Global Agent Operating Protocol
 
-This file is the user-level agent context, packed into the context baseline at every session start by DSH (source: `~/.dsh/AGENTS.md`). Changes take effect on the next successful read/write/edit operation or on session resume.
+This protocol becomes the user-level agent context, packed into the context baseline at every session start by DSH (target: `~/.dsh/AGENTS.md`). Changes take effect on the next successful read/write/edit operation or on session resume.
 
 ## 1. Intent Routing (Task Classification First)
 

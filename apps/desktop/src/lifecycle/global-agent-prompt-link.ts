@@ -13,6 +13,7 @@ import { join } from "node:path";
 const MANAGED_MARKER = ".agents-md.managed.json";
 const MARKER_SCHEMA_VERSION = 1;
 const MARKER_OWNER = "deepseek-harness-code";
+const BUNDLED_FILE = "protocol.md";
 const TARGET_FILE = "AGENTS.md";
 
 export type GlobalAgentPromptStartupStatus =
@@ -114,7 +115,7 @@ export async function installGlobalAgentPromptForStartup(input: {
   dshHome: string;
   resourceRoot: string;
 }): Promise<GlobalAgentPromptStartupResult> {
-  const bundledPath = join(input.resourceRoot, TARGET_FILE);
+  const bundledPath = join(input.resourceRoot, BUNDLED_FILE);
   if (!(await pathExists(bundledPath))) {
     return { status: "unavailable" };
   }
@@ -158,7 +159,7 @@ export async function adoptBundledGlobalAgentPrompt(input: {
   resourceRoot: string;
   now?: () => Date;
 }): Promise<GlobalAgentPromptAdoptResult> {
-  const bundledPath = join(input.resourceRoot, TARGET_FILE);
+  const bundledPath = join(input.resourceRoot, BUNDLED_FILE);
   if (!(await pathExists(bundledPath))) {
     return { status: "unavailable" };
   }
