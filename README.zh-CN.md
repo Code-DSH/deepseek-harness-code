@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="./build/deepseek-harness-code.png" width="136" alt="DeepSeek Harness Code 图标" />
+  <img src="./docs/assets/deepseek-harness-code.png" width="136" alt="DeepSeek Harness Code 图标" />
   <h1>DeepSeek Harness Code</h1>
   <h3>完整、现代化的 DeepSeek Harness 组装集成桌面发行版——用户不需要自己组装一套脆弱的工具链。官方 Harness 给的是积木，DHC 给的是拼好的成品。</h3>
   <p>DeepSeek Harness Code 把完整 Harness 运行时、插件、Skills、工具、Agent 工作流、强化桌面宿主和独立 Watchdog 整合成一套开箱即用的产品。</p>
@@ -21,6 +21,16 @@
 
 > [!IMPORTANT]
 > DeepSeek Harness Code 是一个社区项目，并非 DeepSeek 官方发行版，与 DeepSeek 不存在隶属或关联关系。
+
+## QQ 社区
+
+欢迎加入 DHC 社区 QQ 群，交流使用经验、问题反馈和项目讨论。
+
+- **QQ群号：** `1107534919`
+
+<p>
+  <img src="./docs/assets/qq-group-1107534919.jpg" width="360" alt="DHC 社区 QQ 群二维码" />
+</p>
 
 ## DHC 的集成理念
 
