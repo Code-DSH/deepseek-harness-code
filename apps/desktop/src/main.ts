@@ -32,7 +32,10 @@ import {
   reserveLoopbackPort,
   startWithPortRetries,
 } from "./lifecycle/port-retry.js";
-import { registerDesktopLifecycle } from "./lifecycle/app-lifecycle.js";
+import {
+  createSingleFlightAction,
+  registerDesktopLifecycle,
+} from "./lifecycle/app-lifecycle.js";
 import {
   HarnessRuntimeController,
   type HarnessChild,
@@ -113,7 +116,6 @@ let mainWindow: BrowserWindow | undefined;
 let controller: HarnessRuntimeController | undefined;
 let harnessOrigin = "";
 let healthTimer: ReturnType<typeof setInterval> | undefined;
-let quitting = false;
 let watchdogHost: WatchdogHost | undefined;
 let updaterHost: UpdaterHost | undefined;
 let tray: Tray | undefined;
@@ -1290,30 +1292,14 @@ if (hasSingleInstanceLock) {
     mainWindow.show();
     mainWindow.focus();
   });
-  app
-    .whenReady()
-    .then(() => {
-      app.on("activate", () => {
-        if (BrowserWindow.getAllWindows().length === 0) createWindow();
-        else mainWindow?.show();
-      });
-      return launch();
-    })
-    .then(() => {
-      updaterHost = new UpdaterHost({ parentWindow: () => mainWindow });
-      updaterHost.cleanupTemp();
-      updaterHost.schedule();
-    })
-    .catch(reportLaunchFailure);
-  app.on("before-quit", (event) => {
-    if (quitting) return;
-    event.preventDefault();
-    quitting = true;
-    if (healthTimer !== undefined) clearInterval(healthTimer);
-    updaterHost?.stop();
-    void shutdownNormally();
-  });
 }
+
+const launchOnce = createSingleFlightAction(async () => {
+  await launch();
+  updaterHost = new UpdaterHost({ parentWindow: () => mainWindow });
+  updaterHost.cleanupTemp();
+  updaterHost.schedule();
+});
 
 const lifecycle = hasSingleInstanceLock
   ? registerDesktopLifecycle(
@@ -1327,10 +1313,11 @@ const lifecycle = hasSingleInstanceLock
           if (BrowserWindow.getAllWindows().length === 0) createWindow();
           else mainWindow?.show();
         },
-        launch,
+        launch: launchOnce,
         shutdown: shutdownNormally,
         clearHealthTimer: () => {
           if (healthTimer !== undefined) clearInterval(healthTimer);
+          updaterHost?.stop();
         },
         reportLaunchFailure,
       },

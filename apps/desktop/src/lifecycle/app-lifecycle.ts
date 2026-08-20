@@ -20,6 +20,16 @@ export type DesktopLifecycleAuthority = {
   readonly isQuitting: () => boolean;
 };
 
+export function createSingleFlightAction(
+  action: () => Promise<void>,
+): () => Promise<void> {
+  let inFlight: Promise<void> | undefined;
+  return () => {
+    inFlight ??= action();
+    return inFlight;
+  };
+}
+
 export function registerDesktopLifecycle(
   app: DesktopLifecycleApp,
   actions: DesktopLifecycleActions,
