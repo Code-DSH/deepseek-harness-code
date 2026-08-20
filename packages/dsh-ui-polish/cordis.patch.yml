@@ -2,5 +2,5 @@
 # client-modules registry qualifies the entry and serves lib/client.js).
 - insert:
     - id: dsh-ui-polish
-      name: "dsh-ui-polish"
+      name: 'dsh-ui-polish'
       config: {}
