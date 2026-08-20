@@ -256,6 +256,11 @@ describe("DeepSeek Harness Code distribution contract", () => {
     );
     expect(artifactValidationStep).not.toContain("mapfile -t");
     expect(workflow).toContain("Validate tag version");
+    expect(workflow).toContain("SMOKE_TIMEOUT_MS: 180000");
+    expect(workflow).toContain(
+      'executable="$squashfs_root/deepseek-harness-code"',
+    );
+    expect(workflow).toContain("xvfb-run -a pnpm smoke:package");
     expect(workflow).toContain("artifact-sha256");
     expect(workflow).not.toContain(".omo");
     expect(workflow).toContain("release/evidence/${{ matrix.label }}");
@@ -298,6 +303,8 @@ describe("DeepSeek Harness Code distribution contract", () => {
     expect(smokeScript).toContain("SMOKE_RUN_ID");
     expect(smokeScript).toContain("randomUUID");
     expect(smokeScript).toContain("parseWindowsPeMachine");
+    expect(smokeScript).toContain('child.stdout?.on("data"');
+    expect(smokeScript).toContain('child.stderr?.on("data"');
   });
 
   test("parses the package workflow as YAML", async () => {

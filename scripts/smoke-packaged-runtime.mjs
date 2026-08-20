@@ -716,6 +716,11 @@ async function main() {
     detached: process.platform !== "win32",
     windowsHide: true,
   });
+  // Always consume both pipes. First-launch package installation and Harness
+  // diagnostics can exceed an OS pipe buffer; leaving them unread can block
+  // the packaged process before it publishes ready evidence.
+  child.stdout?.on("data", () => undefined);
+  child.stderr?.on("data", () => undefined);
   const deadline = Date.now() + timeoutMs;
   try {
     child.once("exit", (code, signal) => {
