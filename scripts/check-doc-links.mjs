@@ -1,5 +1,5 @@
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
-import { dirname, extname, join, resolve } from "node:path";
+import { dirname, extname, join, relative, resolve, sep } from "node:path";
 
 const root = resolve(import.meta.dirname, "..");
 const documents = [
@@ -28,6 +28,11 @@ for (const document of documents) {
     const target = decodeURIComponent(rawTarget.split("#", 1)[0]);
     if (!target) continue;
     const resolved = resolve(dirname(document), target);
+    const targetFromRoot = relative(root, resolved);
+    if (targetFromRoot === ".." || targetFromRoot.startsWith(`..${sep}`)) {
+      missing.push(`${document.slice(root.length + 1)} -> ${rawTarget}`);
+      continue;
+    }
     if (!existsSync(resolved))
       missing.push(`${document.slice(root.length + 1)} -> ${rawTarget}`);
   }

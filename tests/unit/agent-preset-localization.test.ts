@@ -1,5 +1,6 @@
-import { readFile, readdir } from "node:fs/promises";
-import { join } from "node:path";
+import { readFile } from "node:fs/promises";
+import { createRequire } from "node:module";
+import { dirname, join } from "node:path";
 
 import { describe, expect, it } from "vitest";
 
@@ -55,23 +56,12 @@ describe("custom Agent preset locale patch", () => {
   });
 
   it("applies the locale patch without removing the user metadata fallback", async () => {
-    const virtualStore = join(projectRoot, "node_modules", ".pnpm");
-    const packageDirectory = (await readdir(virtualStore)).find((entry) =>
-      entry.startsWith(
-        "@deepseek-ai+dsh-client-ui-agent-preset@0.1.0-rc.8_patch_hash=",
-      ),
+    const require = createRequire(join(projectRoot, "package.json"));
+    const packageRoot = dirname(
+      require.resolve("@deepseek-ai/dsh-client-ui-agent-preset/package.json"),
     );
-    expect(packageDirectory).toBeDefined();
     const client = await readFile(
-      join(
-        virtualStore,
-        packageDirectory!,
-        "node_modules",
-        "@deepseek-ai",
-        "dsh-client-ui-agent-preset",
-        "lib",
-        "client.js",
-      ),
+      join(packageRoot, "lib", "client.js"),
       "utf8",
     );
     expect(client).toContain("PRODUCT_PRESET_KEYS");
