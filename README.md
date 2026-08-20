@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="./build/deepseek-harness-code.png" width="136" alt="DeepSeek Harness Code icon" />
+  <img src="./docs/assets/deepseek-harness-code.png" width="136" alt="DeepSeek Harness Code icon" />
   <h1>DeepSeek Harness Code</h1>
   <h3>The complete, modern DeepSeek Harness assembled desktop integration distribution — users should not have to assemble a fragile toolchain themselves; Official Harness provides the building blocks, DHC provides the assembled product.</h3>
   <p>DeepSeek Harness Code brings the full Harness runtime, plugins, Skills, tools, agent workflows, a hardened desktop host, and an independent Watchdog together in one integrated package.</p>
@@ -21,6 +21,16 @@
 
 > [!IMPORTANT]
 > DeepSeek Harness Code is a community project. It is not an official DeepSeek release and is not affiliated with DeepSeek.
+
+## QQ community
+
+Join the DHC community QQ group to share feedback, usage tips, and project discussions.
+
+- **QQ group:** `1107534919`
+
+<p>
+  <img src="./docs/assets/qq-group-1107534919.jpg" width="360" alt="DHC QQ community group QR code" />
+</p>
 
 ## The DHC integration philosophy
 
