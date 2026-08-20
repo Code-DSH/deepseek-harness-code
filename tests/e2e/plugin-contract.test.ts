@@ -80,12 +80,13 @@ function loadClientExports(
       },
     },
   });
-  vm.runInNewContext(source, {
+  const ctx = vm.createContext({
     window,
     document: documentValue,
     setTimeout,
     clearTimeout,
   });
+  new vm.Script(source).runInContext(ctx);
   expect(registration).toBeDefined();
   const react = {
     createElement: (
@@ -221,14 +222,14 @@ describe("desktop plugin package contract", () => {
       "@deepseek-ai/dsh-client-locale",
     );
     expect(manifest.peerDependencies?.["@deepseek-ai/dsh-client-locale"]).toBe(
-      "^0.1.0-rc.6",
+      "^0.1.0-rc.7",
     );
     expect(
       manifest.peerDependencies?.["@deepseek-ai/dsh-client-ui-primitives"],
-    ).toBe("^0.1.0-rc.6");
+    ).toBe("^0.1.0-rc.7");
     expect(
       manifest.peerDependencies?.["@deepseek-ai/dsh-client-ui-layout"],
-    ).toBe("^0.1.0-rc.6");
+    ).toBe("^0.1.0-rc.7");
   });
 
   it("does not replace the official question protocol packages", () => {
@@ -264,7 +265,7 @@ describe("desktop plugin package contract", () => {
         "@deepseek-ai/dsh-client-ui-user-questions",
         "@deepseek-ai/dsh-tool-ask-user",
         "@deepseek-ai/dsh-user-questions",
-      ].every((name) => manifest.dependencies[name] === "0.1.0-rc.6"),
+      ].every((name) => manifest.dependencies[name] === "0.1.0-rc.8"),
     ).toBe(true);
     expect(askUserSource).toContain("multi_select");
     expect(askUserSource).toContain("custom");
@@ -780,10 +781,11 @@ describe("desktop plugin package contract", () => {
         },
       },
     });
-    vm.runInNewContext(readFileSync(sidebarClient, "utf8"), {
+    const ctx = vm.createContext({
       document: dom.window.document,
       window: dom.window,
     });
+    new vm.Script(readFileSync(sidebarClient, "utf8")).runInContext(ctx);
     const noop = () => undefined;
     sidebarRegistration?.factory((id) => {
       if (id === "react") return new Proxy({}, { get: () => noop });

@@ -51,14 +51,14 @@ const DEFAULT_OUT = join(projectRoot, "build", "routing-suite");
 
 const ROUTING_PRESET_METADATA = {
   "router-standard": {
-    name: "路由标准模式 / Router Standard",
+    name: "路由标准模式",
     description:
-      "根据任务类型自动选择偏执行或偏分析的首轮策略；首次调用工具后恢复完整标准工具集。 / Automatically chooses an execution- or analysis-oriented first turn based on the task, then restores the full Standard toolset after the first tool call.",
+      "根据任务自动选择「先执行」或「先分析」的首轮策略；首次调用工具后恢复完整标准工具集。",
   },
   "router-spec": {
-    name: "路由深度思考模式 / Router Spec",
+    name: "路由深度思考模式",
     description:
-      "优先进行深入分析和规格梳理，适合修复、排查、重构等需要先理解问题的任务；首次调用工具后恢复完整标准工具集。 / Prioritizes deep analysis and specification before action for fixes, debugging, and refactors, then restores the full Standard toolset after the first tool call.",
+      "先深入分析并梳理方案，再动手执行，适合修复、排查、重构等需要先理解问题的任务；首次调用工具后恢复完整标准工具集。",
   },
 };
 
@@ -201,6 +201,30 @@ async function assembleFromTarball(source, cacheDir, outDir, components) {
   if (source.id === "injector") {
     const patchPath = join(target, "cordis.patch.yml");
     validateInjectorPatchContent(await readFile(patchPath, "utf8"));
+    // Overlay the internalized settings-page fix (vendor/super-injector-fix)
+    // onto the fetched 0.3.3 client half. The upstream host (lib/index.js)
+    // stays; only the client bundle is replaced so the settings "插件" section
+    // renders under the rc.6 slot contract (Component as the 2nd positional
+    // argument). The fix source lives outside the pnpm workspace so its
+    // internal upstream deps do not block the workspace install.
+    const fixedClient = await readFile(
+      join(projectRoot, "vendor", "super-injector-fix", "lib", "client.js"),
+      "utf8",
+    );
+    if (
+      !fixedClient.includes("SuperInjectorPage") ||
+      !fixedClient.includes("}, SuperInjectorPage)")
+    ) {
+      throw new Error(
+        "fetch-routing-suite: bundled super-injector client fix is missing the slots.register(options, Component) contract",
+      );
+    }
+    await writeFile(join(target, "lib", "client.js"), fixedClient, {
+      mode: 0o600,
+    });
+    process.stderr.write(
+      "fetch-routing-suite: applied super-injector settings-page client fix\n",
+    );
   }
   if (source.id === "mode-boost") {
     const manifestPath = join(target, "package.json");

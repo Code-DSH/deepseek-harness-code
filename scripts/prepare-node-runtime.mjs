@@ -26,7 +26,7 @@ const runtimeManifest = JSON.parse(
   await readFile(join(sourceRoot, "package.json"), "utf8"),
 );
 if (
-  runtimeManifest.dependencies?.["@deepseek-ai/dsh"] !== "0.1.0-rc.6" ||
+  runtimeManifest.dependencies?.["@deepseek-ai/dsh"] !== "0.1.0-rc.8" ||
   runtimeManifest.dependencies?.["dsh-find-plugin"] !== "0.3.6"
 ) {
   throw new Error(
@@ -71,6 +71,6 @@ process.stdout.write(
   `${JSON.stringify({
     runtimeResource: "build/node-runtime",
     pnpmVersion: pnpmManifest.version,
-    packages: ["@deepseek-ai/dsh@0.1.0-rc.6", "dsh-find-plugin@0.3.6"],
+    packages: ["@deepseek-ai/dsh@0.1.0-rc.8", "dsh-find-plugin@0.3.6"],
   })}\n`,
 );

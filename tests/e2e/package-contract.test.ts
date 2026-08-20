@@ -155,7 +155,7 @@ describe("DeepSeek Harness Code distribution contract", () => {
     expect(verifyScript).toContain("node-runtime/pnpm.mjs");
     expect(verifyScript).toContain("global-agent-prompt/AGENTS.md");
     expect(verifyScript).toContain(
-      "node-runtime/vendor/dsh-vision-router-1.4.4.tgz",
+      "node-runtime/vendor/dsh-vision-router-1.7.1.tgz",
     );
     expect(verifyScript).toContain(
       "node-runtime/vendor/dsh-better-sidebar-0.12.3.tgz",

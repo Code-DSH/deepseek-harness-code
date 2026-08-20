@@ -1,0 +1,25 @@
+{
+  "name": "dsh-code-brand",
+  "description": "DeepSeek Harness Code 品牌角标：在左侧面板品牌行 HARNESS 徽标右侧显示一枚蓝色圆角 code 徽标（Code 整合包标识）。纯注入式 UI 插件，不修改任何官方文件。",
+  "version": "1.0.0",
+  "private": true,
+  "main": "lib/index.js",
+  "exports": {
+    ".": "./lib/index.js",
+    "./client": "./lib/client.js",
+    "./package.json": "./package.json"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "inject": [
+        "@deepseek-ai/dsh-client-runtime",
+        "@deepseek-ai/dsh-client-ui-slots"
+      ],
+      "platform": "web"
+    }
+  },
+  "license": "BSD-3-Clause"
+}

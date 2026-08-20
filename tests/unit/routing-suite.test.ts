@@ -153,7 +153,10 @@ describe("dsh-routing-suite auto-load pipeline", () => {
     for (const presetId of ["router-standard", "router-spec"]) {
       const installed = join(dshHome, ".agent-presets", presetId);
       const metadata = await readFile(join(installed, "preset.yml"), "utf8");
-      expect(metadata).toContain("/");
+      expect(metadata).toContain(
+        presetId === "router-standard" ? "路由标准模式" : "路由深度思考模式",
+      );
+      expect(metadata).not.toContain("/");
       expect(metadata).not.toContain(`name: ${presetId}`);
       expect(metadata).not.toContain("暂无描述");
       expect(

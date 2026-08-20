@@ -16,7 +16,12 @@ describe("preload bridge", () => {
     const on = vi.fn(() => undefined);
     const bridge = createDesktopBridge({ invoke, on, removeListener });
 
-    expect(Object.keys(bridge).sort()).toEqual(["preferences", "runtime"]);
+    expect(Object.keys(bridge).sort()).toEqual([
+      "bundledPlugins",
+      "preferences",
+      "runtime",
+      "updater",
+    ]);
     expect(Object.keys(bridge.preferences).sort()).toEqual(["get", "set"]);
     expect(Object.keys(bridge.runtime).sort()).toEqual([
       "getState",

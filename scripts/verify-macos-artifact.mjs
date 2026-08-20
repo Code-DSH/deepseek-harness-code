@@ -76,7 +76,7 @@ try {
     "prompt-principles-plugin/index.js",
     "prompt-principles-plugin/client.js",
     "prompt-principles-plugin/cordis.patch.yml",
-    "node-runtime/vendor/dsh-vision-router-1.4.4.tgz",
+    "node-runtime/vendor/dsh-vision-router-1.7.1.tgz",
     "node-runtime/vendor/dsh-better-sidebar-0.12.3.tgz",
     "node-runtime/vendor/deepseek-harness-composition-1.0.0.tgz",
   ].map((relativePath) => join(resourcesRoot, relativePath));

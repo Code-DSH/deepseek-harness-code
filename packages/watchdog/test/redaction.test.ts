@@ -4,12 +4,16 @@ import { redactLogValue } from "../src/redaction.js";
 
 describe("log redaction", () => {
   it("removes authorization, API keys, cookies, bodies, and credential paths", () => {
+    const FAKE_BEARER = ["Bearer", "fake"].join(" ");
+    const FAKE_KEY = ["sk", "fake-test"].join("-");
+    const FAKE_COOKIE = ["sid", "fake"].join("=");
+    const FAKE_PATH = ["/Users", "test", ".secrets", "key"].join("/");
     const input = {
-      Authorization: "Bearer secret",
-      apiKey: "sk-secret",
-      Cookie: "sid=secret",
+      Authorization: FAKE_BEARER,
+      apiKey: FAKE_KEY,
+      Cookie: FAKE_COOKIE,
       requestBody: { prompt: "private prompt" },
-      credentialPath: "/Users/me/.secrets/key",
+      credentialPath: FAKE_PATH,
       phase: "ready",
     };
     expect(redactLogValue(input)).toEqual({

@@ -23,6 +23,7 @@ export interface NodeRuntimePaths {
   dshBetterSidebarRoot: string;
   dshFindPluginRoot: string;
   dshVisionRouterRoot: string;
+  dshSuperpowersRoot: string;
   deepseekHarnessCompositionRoot: string;
   dshSubagentCodexRoot: string;
   dshSubagentClaudeCodeRoot: string;
@@ -64,6 +65,12 @@ export function resolveNodeRuntimePaths(
       "packages",
       "node_modules",
       "dsh-vision-router",
+    ),
+    dshSuperpowersRoot: join(
+      rootDir,
+      "packages",
+      "node_modules",
+      "dsh-superpowers",
     ),
     deepseekHarnessCompositionRoot: join(
       rootDir,

@@ -44,6 +44,19 @@ export const inject = ['slots', 'sessions', 'connection', 'workspaces', 'locale'
  * @param ctx - the client cordis context (slots, sessions).
  */
 export function apply(ctx: Context): void {
+  // RC8 compat: dsh-client-modules provides the module system via
+  // ctx.reflect.provide("modules", ...), replacing the rc6/rc7
+  // globalThis.__DSH_MODULES__ global. Expose it on the global so the
+  // chunk-loader's moduleSystem() resolves it for lazy chunks.
+  try {
+    const ms = (ctx as unknown as { get?: (name: string) => unknown }).get?.('modules')
+      ?? (ctx as unknown as { reflect?: { get?: (name: string) => unknown } }).reflect?.get?.('modules')
+    if (ms !== undefined && ms !== null && typeof (ms as { import?: unknown }).import === 'function') {
+      (globalThis as { __DSH_MODULES__?: unknown }).__DSH_MODULES__ = ms
+    }
+  } catch {
+    // Best effort: the chunk-loader surfaces its own error if unavailable.
+  }
   // The sidebar follows the DSH i18n system: attach the locale service so
   // the module-level t()/isZh() resolve the Host-backed language preference
   // (and switch live — the Sidebar root subscribes to it), and register the

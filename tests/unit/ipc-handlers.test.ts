@@ -31,15 +31,19 @@ describe("desktop IPC handlers", () => {
         }),
         setPreferences,
         paste,
+        listBundledPlugins: () => [],
+        checkForUpdates: vi.fn(async () => ({ available: false })),
       },
     );
 
     expect([...handlers.keys()].sort()).toEqual([
+      "bundled-plugins:list",
       "logs:open",
       "preferences:get",
       "preferences:set",
       "runtime:get",
       "runtime:restart",
+      "updater:check",
     ]);
     await expect(
       handlers.get("preferences:set")!(undefined, {

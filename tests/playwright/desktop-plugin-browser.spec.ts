@@ -225,6 +225,12 @@ test("renders the rotating Orb inside the native status row and cleans up", asyn
         openLogs: async () => undefined,
         subscribe: () => () => undefined,
       },
+      updater: {
+        check: async () => ({ available: false }),
+      },
+      bundledPlugins: {
+        list: async () => [],
+      },
     };
   });
   await page.addScriptTag({ path: pluginClient });

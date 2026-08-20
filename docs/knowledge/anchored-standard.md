@@ -41,7 +41,7 @@ The mechanism is feasible on pinned `@deepseek-ai/dsh@0.1.0-rc.6` as a per-sessi
 
 - Upstream: [`xiaobright/dsh-anchored-standard`](https://github.com/xiaobright/dsh-anchored-standard), commit `db4527a2a70a9032d3a8525ce3c0ea6ef528d6fc`, MIT.
 - Bundled package: `packages/anchored-standard-plugin` version `0.2.0`.
-- Local patches are limited to the truthful bilingual **渐进式标准模式 / Anchored Standard (Progressive)** display copy, rc.6 packaging/lifecycle integration, and strict failure when a phase-required tool is absent.
+- Local patches are limited to the localized **渐进式标准模式 / Anchored Standard (Progressive)** display copy (Chinese-only `preset.yml` plus zh/en picker dictionaries in the patched `@deepseek-ai/dsh-client-ui-agent-preset` client bundle), rc.6 packaging/lifecycle integration, and strict failure when a phase-required tool is absent.
 - Installer provenance includes `LICENSE`, `NOTICE`, `UPSTREAM.json`, `LOCAL-PATCHES.md`, package version, and an app-managed SHA-256 marker.
 
 ## Runtime contract

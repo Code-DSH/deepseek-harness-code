@@ -12,14 +12,14 @@ const ROUTING_VERSIONS_FILE = "versions.json";
 
 export const ROUTING_PRESET_METADATA: Record<string, PresetDisplayMetadata> = {
   "router-standard": {
-    name: "路由标准模式 / Router Standard",
+    name: "路由标准模式",
     description:
-      "根据任务类型自动选择偏执行或偏分析的首轮策略；首次调用工具后恢复完整标准工具集。 / Automatically chooses an execution- or analysis-oriented first turn based on the task, then restores the full Standard toolset after the first tool call.",
+      "根据任务自动选择「先执行」或「先分析」的首轮策略；首次调用工具后恢复完整标准工具集。",
   },
   "router-spec": {
-    name: "路由深度思考模式 / Router Spec",
+    name: "路由深度思考模式",
     description:
-      "优先进行深入分析和规格梳理，适合修复、排查、重构等需要先理解问题的任务；首次调用工具后恢复完整标准工具集。 / Prioritizes deep analysis and specification before action for fixes, debugging, and refactors, then restores the full Standard toolset after the first tool call.",
+      "先深入分析并梳理方案，再动手执行，适合修复、排查、重构等需要先理解问题的任务；首次调用工具后恢复完整标准工具集。",
   },
 };
 
