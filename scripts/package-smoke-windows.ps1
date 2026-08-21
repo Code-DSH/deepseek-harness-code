@@ -117,14 +117,16 @@ function Resolve-DhscInstalledApplication {
     if (Test-DhscDirectAppLayout $canonicalRoot) {
       return New-DhscInstalledApplication -Root $canonicalRoot -Source "custom"
     }
-    $directChildLayouts = @(
-      Get-ChildItem -LiteralPath $canonicalRoot -Directory -Force -ErrorAction Stop |
-        Where-Object { Test-DhscDirectAppLayout $_.FullName }
+    $nestedLayouts = @(
+      Get-ChildItem -LiteralPath $canonicalRoot -Recurse -File -Force -Filter "DeepSeek Harness Code.exe" -ErrorAction Stop |
+        ForEach-Object { $_.DirectoryName } |
+        Sort-Object -Unique |
+        Where-Object { Test-DhscDirectAppLayout $_ }
     )
-    if ($directChildLayouts.Count -ne 1) {
-      throw "registered custom install root did not contain exactly one direct app layout"
+    if ($nestedLayouts.Count -ne 1) {
+      throw "registered custom install root did not contain exactly one app layout"
     }
-    return New-DhscInstalledApplication -Root $directChildLayouts[0].FullName -Source "custom"
+    return New-DhscInstalledApplication -Root $nestedLayouts[0] -Source "custom"
   }
   $programsRoot = Get-DhscCanonicalPath (Join-Path $LocalAppData "Programs")
   if (-not (Test-DhscStrictDescendant -Root $canonicalRoot -Parent $programsRoot)) {

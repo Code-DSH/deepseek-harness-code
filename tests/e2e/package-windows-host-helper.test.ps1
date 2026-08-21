@@ -26,7 +26,7 @@ $customRoot = Join-Path $fixtureRoot "runner-owned-custom"
 $nestedCustomRoot = Join-Path $fixtureRoot "runner-owned-parent"
 $nestedAppRoot = Join-Path $nestedCustomRoot "DeepSeek Harness Code"
 $registryCustomParent = Join-Path $fixtureRoot "registry-custom-parent"
-$registryCustomRoot = Join-Path $registryCustomParent "installer-selected-location"
+$registryCustomRoot = Join-Path (Join-Path $registryCustomParent "installer-selected-parent") "actual-product-location"
 $ambiguousCustomParent = Join-Path $fixtureRoot "ambiguous-custom-parent"
 $registeredRoot = Join-Path $programsRoot "DeepSeek Harness Code"
 $outsideRoot = Join-Path $fixtureRoot "outside-sentinel"
@@ -55,7 +55,7 @@ try {
   }
   $customFromRegistry = Resolve-DhscInstalledApplication -CustomRoot $registryCustomParent -RegistryEntries @($customRegistryEntry) -LocalAppData $localAppData
   Assert-True ($customFromRegistry.Source -eq "custom") "registry parent inside runner custom boundary was not accepted"
-  Assert-True ($customFromRegistry.Root -eq [IO.Path]::GetFullPath($registryCustomRoot)) "single direct app child was not resolved"
+  Assert-True ($customFromRegistry.Root -eq [IO.Path]::GetFullPath($registryCustomRoot)) "single nested app layout was not resolved"
 
   $ambiguousRegistryEntry = [pscustomobject]@{
     DisplayName = "DeepSeek Harness Code"
@@ -64,7 +64,7 @@ try {
   }
   Assert-Throws {
     Resolve-DhscInstalledApplication -CustomRoot $ambiguousCustomParent -RegistryEntries @($ambiguousRegistryEntry) -LocalAppData $localAppData
-  } "ambiguous direct app children were accepted"
+  } "ambiguous nested app layouts were accepted"
 
   $wideEntry = [pscustomobject]@{
     DisplayName = "DeepSeek Harness Code"
