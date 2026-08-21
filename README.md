@@ -1,12 +1,12 @@
 <div align="center">
   <img src="./docs/assets/deepseek-harness-code.png" width="136" alt="DeepSeek Harness Code icon" />
   <h1>DeepSeek Harness Code</h1>
-  <h3>The complete, modern DeepSeek Harness assembled desktop integration distribution — users should not have to assemble a fragile toolchain themselves; Official Harness provides the building blocks, DHC provides the assembled product.</h3>
-  <p>DeepSeek Harness Code brings the full Harness runtime, plugins, Skills, tools, agent workflows, a hardened desktop host, and an independent Watchdog together in one integrated package.</p>
+  <h3>A durable Code Agent desktop — not a chat wrapper. Users should not have to assemble a fragile toolchain themselves; Official Harness provides the building blocks, DHC provides the assembled Code Agent system.</h3>
+  <p>DeepSeek Harness Code integrates the full Harness runtime, official plugins, Skills, tools, agent workflows, and a hardened desktop host with independent Watchdog into one installable, recoverable, long-running Code Agent.</p>
   <p><a href="./README.md">English</a> · <a href="./README.zh-CN.md">简体中文</a></p>
-  <p><a href="#the-dhc-integration-philosophy">Integration philosophy</a> · <a href="#vision">Vision</a> · <a href="#one-complete-deepseek-harness-distribution">Complete Harness</a> · <a href="#modernizing-the-beta1-experience">BETA1 improvements</a> · <a href="#beyond-a-web-wrapper">Why it is different</a> · <a href="#built-for-long-running-work">Reliability</a> · <a href="#architecture">Architecture</a> · <a href="#build-from-source">Build</a></p>
+  <p><a href="#the-dhc-integration-philosophy">Integration philosophy</a> · <a href="#vision">Vision</a> · <a href="#the-code-agent-loop">Agent loop</a> · <a href="#architecture">Architecture</a> · <a href="#beyond-a-web-wrapper">Why not a wrapper</a> · <a href="#built-for-long-running-work">Long-running</a> · <a href="#build-from-source">Build</a></p>
   <p>
-    <img src="https://img.shields.io/badge/version-0.1.0_BETA2-2563eb?style=flat-square" alt="Version 0.1.0-BETA2" />
+    <img src="https://img.shields.io/badge/version-0.1.0_BETA2--1-2563eb?style=flat-square" alt="Version 0.1.0-BETA2-1" />
     <img src="https://img.shields.io/badge/license-MIT-16a34a?style=flat-square" alt="MIT License" />
     <img src="https://img.shields.io/badge/macOS-12%2B-111827?style=flat-square&amp;logo=apple" alt="macOS 12+" />
     <img src="https://img.shields.io/badge/Windows-10%2B-0078D4?style=flat-square&amp;logo=windows" alt="Windows 10+" />
@@ -16,6 +16,7 @@
     <img src="https://img.shields.io/badge/Electron-43-47848F?style=flat-square&amp;logo=electron&amp;logoColor=white" alt="Electron 43" />
     <img src="https://img.shields.io/badge/TypeScript-5.9-3178C6?style=flat-square&amp;logo=typescript&amp;logoColor=white" alt="TypeScript 5.9" />
     <img src="https://img.shields.io/badge/DeepSeek_Harness-rc.8-4F46E5?style=flat-square" alt="DeepSeek Harness rc.8" />
+    <img src="https://img.shields.io/badge/Code_Agent-durable-0ea5e9?style=flat-square" alt="Code Agent" />
   </p>
 </div>
 
@@ -34,23 +35,78 @@ Join the DHC community QQ group to share feedback, usage tips, and project discu
 
 ## The DHC integration philosophy
 
-DHC is the desktop integration bundle for DeepSeek Harness Code: a more complete desktop experience, modern support, a fuller Harness surface, stronger engineering capabilities, and a more complete set of Skills and user needs—assembled into one working Agent application and toolkit. **Users should not have to assemble a fragile toolchain themselves**. Official Harness provides the building blocks; DHC provides the assembled product.
+DHC is the **desktop integration bundle for DeepSeek Harness Code** — a more complete desktop experience, modern support, a fuller Harness surface, stronger engineering capabilities, and a more complete set of Skills and user needs — assembled into one working Code Agent application.
 
-This project is the **desktop integration bundle for DeepSeek Harness**. It is not merely DeepSeek Harness by itself and not a thin Web wrapper. The bundle combines the official Harness runtime and capabilities with the new Skills, additional Skills, plugins, tools, workflows, agent foundations, desktop integration, diagnostics, and recovery mechanisms that DHC adds around it. DHC turns those pieces into one tested, installable Agent application and toolkit with a managed lifecycle and a coherent path from launch to long-running work.
+**Users should not have to assemble a fragile toolchain themselves.** Official Harness provides the building blocks; DHC provides the assembled product.
+
+This project is not merely DeepSeek Harness by itself and not a thin Web wrapper. The bundle combines the official Harness runtime with the Skills, plugins, tools, workflows, agent foundations, desktop integration, diagnostics, and recovery mechanisms that DHC adds around it. DHC turns those pieces into one *tested, installable, lifecycle-managed* Agent application with a coherent path from launch to long-running work.
 
 DHC remains a community project built on the official Harness format and runtime. It does not ship model weights, replace the official provider boundary, or claim to be an official DeepSeek release.
 
+---
+
 ## Vision
 
-DeepSeek should be more than a conversation trapped inside a browser page. It should be a dependable working environment: one that can stay open through long coding sessions, own its runtime, recover from defined failures, preserve sessions, expose useful diagnostics, and feel at home on the desktop.
+> **A durable Code Agent, not a chat wrapper.**
 
-Our goal is to modernize the complete DeepSeek Harness experience without replacing its session model or inventing a parallel agent protocol. We package the Harness runtime, plugins, Skills, agent tools, workflows, desktop integration, diagnostics, and tested recovery as one coherent product instead of asking users to assemble them piece by piece.
+### Why "chat" is not enough
 
-**This project is not about putting a website inside a window. It is about making DeepSeek Harness sustainable for real, long-running work.**
+DeepSeek in a browser tab is a remarkable conversation engine. But real engineering does not happen in a single turn. It happens across hours: reading a codebase, forming a plan, touching twenty files, running tests, seeing them fail, adjusting, and delivering a verifiable result that survives a restart.
+
+A chat wrapper optimizes for the *next message*. A Code Agent must optimize for the *whole task* — and for the machine, session, and process that have to stay alive long enough to finish it.
+
+Typical wrappers leave the hard parts to the user:
+
+- the browser tab owns its own lifecycle — if the renderer freezes, the only recovery is "reload and lose context";
+- the toolchain is scattered — Node version, pnpm, plugins, Skills, and prompts must be assembled by hand and break on every OS or update;
+- the agent has no durable memory — sessions evaporate, compaction is ad-hoc, and Skills are just prompt snippets;
+- failures are silent — a dead Harness child, an overlapping health check, an unbounded log file, and the user is the monitor.
+
+We believe this is the wrong boundary. **The desktop should own durability, the Harness should own the protocol, and the Agent should own the task.** DHC is the integration point where those three meet.
+
+### What a Code Agent actually requires
+
+A Code Agent is not "a model + a terminal." It is a closed loop that must be *designed, kept alive, and made observable*. From real long-session work, five requirements emerge:
+
+**1. A tool-rich loop that can reason before it acts.** The agent needs Goal → Plan → Todo → Tools → Jobs → Workflow → Compaction → Checkpoint, not a flat list of tool calls. The first request matters disproportionately: if 25 tools are dumped on V4 Pro immediately, the model collapses into a shallow `Let me...` trajectory. If only `bash` and `str_replace_editor` are shown first, it tends to recover a deeper `We need...` plan. DHC's `anchored-standard` preset models this directly — bootstrap with 2 tools, promote to resident discovery tools after the first durable call, and require explicit `dev_tool_search` to unlock the rest. No private wire mutation, no hidden CoT extraction.
+
+**2. Durable sessions with recoverable runtime.** The agent's memory is its session history, checkpoints, and Skills. If the process that hosts it can die without recovery, the agent cannot be trusted with long work. DHC probes Harness every 5s (non-overlapping), restarts serially after 3 failures or child exit, rebuilds a frozen renderer after 30s *without* killing a healthy Harness, and keeps sessions on the single official Home (`$DSH_HOME` → `~/.dsh`).
+
+**3. A workbench, not a prompt box.** Real coding needs a file explorer, editor tabs, terminal, git, and browser — side by side with the conversation. `dsh-better-sidebar` provides a VS Code-like workbench inside the Harness Web UI, `dsh-vision-router` brings 11 pixel tools with OVH fallback, and MCP bridges (everything + Context7) plus `codex`/`claude-code` subagents give the agent a way to delegate and verify.
+
+**4. Knowledge that is installed, not pasted.** Skills are not copy-pasted prompts. They are versioned, filesystem-discovered packages (`Superpowers 6.2.0`) installed into `<DSH_HOME>/skills` with ownership markers, plus a `Global Agent Operating Protocol` (`<DSH_HOME>/AGENTS.md`) that is installed when absent and only upgraded while still app-managed. User-owned Skills are never overwritten.
+
+**5. Human-in-the-loop as a first-class protocol.** A Code Agent must be able to ask, be approved, be skipped, and be reviewed. DHC preserves the official question protocol (`@deepseek-ai/dsh-tool-ask-user`, `dsh-user-questions`) with stable IDs, single/multiple selection, custom answers, and plan review — and never invents a parallel wire format.
+
+### DHC as a Code Agent Operating System
+
+Put together, DHC behaves less like an app and more like a small **Code Agent OS**:
+
+| OS concern | DHC answer |
+|---|---|
+| **Process model** | Electron Main owns window/tray/lifecycle; Harness runs as loopback child (`dsh web --host 127.0.0.1 --port <port> --expose-internals`) on the auto-detected system Node (≥22.13); Watchdog is an independent IPC-only process that can only relaunch the validated binary. |
+| **Package manager** | Pinned `@deepseek-ai/dsh@0.1.0-rc.8` + 8+ plugins installed via public `dsh plugin --profile web add` with bundled pnpm; `asar:false` restores the full 39-entry client boot graph; `check-runtime-closure` verifies 51 artifacts + SHA-256 routing digests before any packaging. |
+| **Filesystem** | Single official Home via `@deepseek-ai/dsh-home-paths`; copy-only, target-wins, symlink-rejecting migration from the retired Electron Home; `10MB×5` redacted log rotation; global `dsh` via `npm install -g` (fail-open, never overwrites user global). |
+| **Security** | Sandboxed renderer (`contextIsolation`, `sandbox`, `nodeIntegration:false`), only `preferences`/`runtime` preload groups (zod-validated), loopback-only Harness, `allow`/`open-external` navigation policy. |
+| **UI** | Harness owns all conversation paint; DHC hosts only a 20px `ThinkingOrb` portal inside the native `role=status` row, sidebar `46px/58px` traffic-light inset, and route transitions that never force layout. |
+
+This is why DHC bundles Chromium, Harness, plugins, Skills, and Watchdog *inside the .app* yet runs on the *system* Node — the app is self-contained, but the runtime is the user's official toolchain, auto-detected even under a minimal GUI `PATH`.
+
+### Toward autonomous delivery
+
+A durable Code Agent is a means, not an end. The horizon is not "better chat," but **verifiable, reproducible delivery**:
+
+- A user states a goal. The agent plans with Todo granularity, uses tools under approval, runs jobs and workflows, compacts context without losing intent, and delivers artifacts that can be re-run and re-verified.
+- Skills provide reusable, testable procedural knowledge instead of one-off prompts.
+- Long sessions become soak-tested, benchmarked, and recoverable — not feared.
+
+The roadmap reflects this: reproducible memory/soak benchmarks, native Linux GA (AppImage/deb already CI-green), full validation of the anchored tool-surface path, fault-injection without request replay, and tracking the fast-moving upstream plugin API behind pinned, SHA-256-verified boundaries.
+
+**DHC's job is to make that horizon installable today — one Universal DMG, one NSIS, one AppImage — without asking users to become integrators.**
 
 ## One complete DeepSeek Harness distribution
 
-The product is a complete, coherent Harness distribution—not a model launcher and not a folder of unrelated add-ons. The official Harness base and Web bundles bring the useful parts of the DeepSeek agent stack into one application:
+The product is a complete, coherent Harness distribution — not a model launcher and not a folder of unrelated add-ons. The official Harness base and Web bundles bring the useful parts of the DeepSeek agent stack into one application:
 
 - **Models and reasoning** — V4 Pro and V4 Flash catalog, model selection, provider settings, reasoning effort, retry policy, and streaming protocol handling.
 - **Skills system** — Skills runtime, filesystem discovery, Skills UI, badges, and the official Skill tool.
@@ -60,6 +116,24 @@ The product is a complete, coherent Harness distribution—not a model launcher 
 - **Desktop reliability** — native lifecycle, secure bridge, health recovery, rotating diagnostics, and independent Watchdog.
 
 Everything is pinned, packaged, and validated as one product boundary so users do not have to assemble a fragile toolchain by hand.
+
+## The Code Agent loop
+
+DHC does not replace the Harness protocol — it makes the protocol durable enough for real work. The loop that runs inside every session is:
+
+```
+Goal → Plan → Todo → Tools (bash · edit · search · web · subagent)
+        ↕               ↕
+   User Questions   Jobs / Workflow / Compaction / Checkpoint
+        ↕               ↕
+     Approval      Session persistence + Skill knowledge
+```
+
+- **Bootstrap:** `system-prompt/assemble` exposes exactly `bash` + `str_replace_editor`. `agent/pre-step` filters only automatic `agent-instructions`/`skill-catalog` during bootstrap.
+- **Promotion:** first durable tool call or assistant message → Minimal + `dev_tool_search`/`skill_search`/`skill_load`. Further tools appear only after explicit `dev_tool_search` unlock recorded in durable session events.
+- **Resilience:** compaction starts a new epoch with a controlled work set; subagents start resident; missing phase-required tools fail the preset instead of silently returning the full catalog — so Standard stays operational.
+
+This loop is why the desktop host matters: the same session that planned for 45 minutes must still be there after a renderer rebuild or a Harness restart. The host guarantees that; the provider guarantees the intelligence.
 
 ## Modernizing the BETA1 experience
 
@@ -75,9 +149,9 @@ The aim is not to fork Harness into a competing protocol. It is to preserve the 
 
 ## A more complete V4 Pro experience
 
-V4 Pro is one of the important capabilities improved by this integrated foundation—not the product's sole center. The pinned official Harness adapter publishes both `deepseek-v4-pro` and `deepseek-v4-flash` to the model selector, with a 1,000,000-token context catalog and supported `off`, `high`, and `max` reasoning efforts. V4 Flash remains available for fast, economical tasks, while V4 Pro can be used for demanding planning, architecture, debugging, and long-horizon coding work.
+V4 Pro is one of the important capabilities improved by this integrated foundation — not the product's sole center. The pinned official Harness adapter publishes both `deepseek-v4-pro` and `deepseek-v4-flash` to the model selector, with a 1,000,000-token context catalog and supported `off`, `high`, and `max` reasoning efforts. V4 Flash remains available for fast, economical tasks, while V4 Pro can be used for demanding planning, architecture, debugging, and long-horizon coding work.
 
-This application bundles the integration and runtime—not the model weights. Provider credentials stay in official Harness settings, and requests continue through the official DeepSeek provider boundary.
+This application bundles the integration and runtime — not the model weights. Provider credentials stay in official Harness settings, and requests continue through the official DeepSeek provider boundary.
 
 ### Tool-surface anchoring for V4 Pro
 
@@ -139,7 +213,7 @@ DeepSeek Harness Code takes a different approach:
 | Security boundary   | Often exposes broad preload access       | Loopback-only Harness and two validated preload capability groups                                                                                                                                              |
 | Distribution        | Requires an external site or runtime     | Self-contained application packaging that runs on the system official Node.js: common install locations (nodejs.org installer, Homebrew, nvm, Volta, fnm, mise, nvm-windows, Scoop) are detected automatically |
 
-We respect the usefulness of lightweight wrappers. They solve “open this website like an app.” DeepSeek Harness Code solves a different problem: **operate Harness as a resilient desktop coding system.**
+We respect the usefulness of lightweight wrappers. They solve “open this website like an app.” DeepSeek Harness Code solves a different problem: **operate Harness as a resilient desktop Code Agent system.**
 
 ## Built for long-running work
 
@@ -213,11 +287,25 @@ DeepSeek Harness Code bundles the community [dsh-routing-suite](https://github.c
 
 ## Architecture
 
-![DeepSeek Harness Code architecture](./docs/architecture/system.svg)
+<p align="center">
+  <img src="./docs/architecture/system.svg" alt="DeepSeek Harness Code — Code Agent Desktop Architecture (English)" width="100%" />
+  <br />
+  <em>Figure 1 — Code Agent desktop architecture. Electron Main owns window/child/bridge; Harness owns sessions/protocol; Watchdog owns relaunch; Preload owns validation. See <a href="./docs/architecture/overview.md">overview</a> and <a href="./docs/architecture/lifecycle.md">lifecycle</a> for full boundaries. Chinese version: <a href="./docs/architecture/system-zh.svg">system-zh.svg</a></em>
+</p>
+
+Code Agent architecture in one picture:
+
+- **Desktop Host** (Electron Main) creates the window, resolves the system Node, reconciles plugins via the public CLI, starts `dsh web` on a loopback port, and health-checks it with non-overlapping 5s probes.
+- **Preload Bridge** is the only renderer↔main seam — two capability groups (`preferences`, `runtime`), zod-validated, no shell or arbitrary IPC, sandboxed renderer.
+- **BrowserWindow** hosts the official Harness Web UI (conversation, sidebar 46/58px inset, ThinkingOrb portal) plus the workbench (`better-sidebar`) and polish layers.
+- **Harness Child** runs the full agent runtime (Goal/Plan/Todo/Jobs/Workflow, session persistence, compaction, checkpoints) on `127.0.0.1` under the official Home.
+- **Intelligence Plane** shapes what the model sees: V4 Pro/Flash adapter, anchored tool surface, prompt-principles layering, Superpowers coding-mode gate, vision chain, and the immutable routing suite (injector/mode-boost/router-preset, all SHA-256 pinned).
+- **Watchdog** watches the main process over an OS IPC pipe and restarts it with bounded backoff (1s → 2s → circuit breaker) — independent of Harness health.
+- **Persistence** is always outside `.app` — `$DSH_HOME` or `~/.dsh`, with `10MB×5` redacted logs and ownership-safe Skills/presets/AGENTS.md.
 
 The Electron main process owns the window, the local Harness child, readiness checks, and the narrow preload bridge. Harness binds only to `127.0.0.1` and stores sessions in the official Home (`$DSH_HOME` or `~/.dsh`). Official-format bundles are reconciled by the public Harness plugin CLI and extend the Web client without replacing its protocol. The independent Watchdog has no network listener and can relaunch only the validated application command.
 
-Read the [system overview](./docs/architecture/overview.md) and [lifecycle design](./docs/architecture/lifecycle.md) for the complete boundaries.
+Read the [system overview](./docs/architecture/overview.md) and [lifecycle design](./docs/architecture/lifecycle.md) for the complete boundaries. Light/dark variants adapt automatically; `system-zh.svg` is the Chinese mirror.
 
 ## Security model
 
@@ -313,20 +401,22 @@ node scripts/verify-macos-artifact.mjs \
 ## Documentation
 
 - [Project intent](./docs/project/intent.md)
-- [Architecture overview](./docs/architecture/overview.md)
-- [Lifecycle and recovery](./docs/architecture/lifecycle.md)
+- [Architecture overview](./docs/architecture/overview.md) — process boundaries, intelligence plane, plugin inventory
+- [Lifecycle and recovery](./docs/architecture/lifecycle.md) — startup, health, watchdog, shutdown
+- [Architecture diagram (EN)](./docs/architecture/system.svg) · [架构图（中文）](./docs/architecture/system-zh.svg)
 - [Testing strategy](./docs/engineering/testing.md)
 - [Acceptance evidence](./docs/engineering/acceptance-report.md)
 - [Troubleshooting](./docs/operations/troubleshooting.md)
 - [Unsigned macOS installation](./docs/operations/install-unsigned.md)
 
-## Roadmap
+## Roadmap — toward a verifiable Code Agent
 
-- Publish reproducible memory and long-session soak benchmarks across supported platforms.
-- Ship native Linux AppImage/deb packages (defined and CI-ready; not included in the 0.1.0-BETA1 preview).
-- Complete and validate the V4 Pro first-request tool-surface anchoring and dynamic-promotion path across supported Harness sessions.
-- Continue tracking the rapidly evolving official Harness plugin API behind pinned compatibility boundaries.
-- Expand fault-injection coverage without replaying user requests or weakening the security model.
+- **Reproducible durability benchmarks** — publish cross-platform memory/soak metrics with the implemented 5s probe / 30s renderer / 8s shutdown contract as baseline.
+- **Native Linux GA** — AppImage/deb are CI-green on native runners; include in the next release after the BETA1 preview.
+- **Anchored tool-surface validation** — complete paired Project2-grade validation (Standard vs anchored, ≥10 runs each, schema hash/score/variance only) for the first-request anchoring + dynamic promotion path.
+- **Fault-injection depth** — expand renderer/Harness/Watchdog injection without replaying requests or weakening the sandbox/loopback/watchdog boundaries.
+- **Skill-driven delivery** — grow the Superpowers + prompt-principles + routing-preset corpus as versioned, testable procedural knowledge, not ad-hoc prompts.
+- **Upstream tracking** — keep following the fast-moving Harness plugin API behind pinned `rc.8` + SHA-256 routing invariants; no silent routing download.
 
 ## Contributing
 
@@ -340,7 +430,7 @@ DeepSeek Harness Code is released under the MIT License.
 
 ## Acknowledgements
 
-This project builds on the official [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) runtime and the open-source Electron ecosystem. DeepSeek and its maintainers created the foundation; this community project focuses on desktop lifecycle, integration, recovery, packaging, and long-session usability.
+This project builds on the official [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) runtime and the open-source Electron ecosystem. DeepSeek and its maintainers created the foundation; this community project focuses on desktop lifecycle, integration, recovery, packaging, and long-session Code Agent usability.
 
 ## Disclaimer
 
