@@ -1,11 +1,13 @@
 import { spawn, spawnSync, type ChildProcess } from "node:child_process";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { delimiter, dirname, join } from "node:path";
+import { networkInterfaces } from "node:os";
 import { pathToFileURL } from "node:url";
 
 import {
   app,
   BrowserWindow,
+  clipboard,
   dialog,
   ipcMain,
   Menu,
@@ -59,6 +61,10 @@ import {
 import { UpdaterHost } from "./lifecycle/updater-host.js";
 import { LanProxyHost } from "./lifecycle/lan-proxy.js";
 import {
+  LanAccessController,
+  resolveLanIpv4Addresses,
+} from "./lifecycle/lan-access-controller.js";
+import {
   ensureRuntimePackages,
   type NodeRuntimePaths,
 } from "./lifecycle/node-runtime.js";
@@ -87,12 +93,12 @@ import {
 } from "./lifecycle/routing-suite-link.js";
 import { classifyNavigation } from "./security/navigation-policy.js";
 import type {
-  DesktopPreferences,
   DesktopPreferencesState,
   RuntimeNotice,
 } from "./shared/contracts.js";
 import {
   DEFAULT_DESKTOP_PREFERENCES,
+  mergeDesktopPreferences,
   parsePersistedDesktopPreferences,
 } from "./shared/contracts.js";
 import {
@@ -109,6 +115,16 @@ let updaterHost: UpdaterHost | undefined;
 const lanProxyHost = new LanProxyHost();
 let tray: Tray | undefined;
 let preferences: DesktopPreferencesState = { ...DEFAULT_DESKTOP_PREFERENCES };
+const lanAccessController = new LanAccessController({
+  proxy: lanProxyHost,
+  persistEnabled: async (enabled) => {
+    const next = { ...preferences, lanAccessEnabled: enabled };
+    await setPreferences(next);
+    preferences = next;
+  },
+  resolveAddresses: () => resolveLanIpv4Addresses(networkInterfaces()),
+  writeClipboard: (value) => clipboard.writeText(value),
+});
 let anchoredPresetNotice: RuntimeNotice | undefined;
 let routingSuiteNotice: RuntimeNotice | undefined;
 let nodeRuntimePaths: NodeRuntimePaths | undefined;
@@ -175,7 +191,7 @@ async function getPreferences(): Promise<DesktopPreferencesState> {
   return { ...DEFAULT_DESKTOP_PREFERENCES };
 }
 
-async function setPreferences(value: DesktopPreferences): Promise<void> {
+async function setPreferences(value: DesktopPreferencesState): Promise<void> {
   const target = settingsPath();
   await mkdir(dirname(target), { recursive: true });
   await writeFile(target, JSON.stringify(value), {
@@ -276,7 +292,9 @@ async function handleWindowClose(window: BrowserWindow): Promise<void> {
     preferences.closeBehavior,
     chooseCloseBehavior,
     async (value) => {
-      const next = { ...preferences, closeBehavior: value };
+      const next = mergeDesktopPreferences(preferences, {
+        closeBehavior: value,
+      });
       await setPreferences(next);
       preferences = next;
     },
@@ -886,6 +904,9 @@ async function launch(): Promise<void> {
     isChildAlive: isHarnessChildAlive,
     runtimeNotice: () => routingSuiteNotice ?? anchoredPresetNotice,
     onReady: async (origin, child) => {
+      await lanAccessController
+        .onHarnessReady(origin)
+        .catch(reportRuntimeFailure);
       await mainWindow?.loadURL(origin);
       if (smokeConfig === undefined || child.pid === undefined) return;
       const provenance = {
@@ -973,9 +994,13 @@ async function launch(): Promise<void> {
     },
     getPreferences: () => preferences,
     setPreferences: async (value) => {
-      await setPreferences(value);
-      preferences = value;
+      const next = mergeDesktopPreferences(preferences, value);
+      await setPreferences(next);
+      preferences = next;
     },
+    getLanAccess: () => lanAccessController.get(),
+    setLanAccess: (value) => lanAccessController.set(value),
+    copyLanAccessUrl: async () => lanAccessController.copyUrl(),
     paste: (target) => target.paste(),
     checkForUpdates: () =>
       updaterHost?.check({ silent: false }) ??
@@ -986,6 +1011,7 @@ async function launch(): Promise<void> {
   createTray();
   if (process.platform === "darwin") app.dock?.show();
   preferences = await getPreferences();
+  lanAccessController.loadPersistedEnabled(preferences.lanAccessEnabled);
   await controller.start();
   healthTimer = setInterval(
     () => void controller?.checkHealth().catch(reportRuntimeFailure),

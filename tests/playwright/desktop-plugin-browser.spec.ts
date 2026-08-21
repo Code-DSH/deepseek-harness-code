@@ -216,8 +216,16 @@ test("renders the rotating Orb inside the native status row and cleans up", asyn
     };
     target.deepseekDesktop = {
       preferences: {
-        get: async () => ({ closeBehavior: "minimize" }),
+        get: async () => ({
+          closeBehavior: "minimize",
+          lanAccessEnabled: false,
+        }),
         set: async () => undefined,
+      },
+      lanAccess: {
+        get: async () => ({ enabled: false, addresses: [] }),
+        set: async () => ({ enabled: false, addresses: [] }),
+        copyUrl: async () => undefined,
       },
       runtime: {
         getState: async () => ({ phase: "ready", restartCount: 0 }),

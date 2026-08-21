@@ -1,6 +1,8 @@
 import {
   desktopPreferencesSchema,
   desktopPreferencesStateSchema,
+  lanAccessSetSchema,
+  lanAccessStateSchema,
   runtimeStateSchema,
   type BundledPluginEntry,
   type DeepSeekDesktopBridge,
@@ -76,6 +78,19 @@ export function createDesktopBridge(ipc: RendererIpc): DeepSeekDesktopBridge {
           "preferences:set",
           desktopPreferencesSchema.parse(value),
         );
+      },
+    },
+    lanAccess: {
+      async get() {
+        return lanAccessStateSchema.parse(await ipc.invoke("lan-access:get"));
+      },
+      async set(value) {
+        return lanAccessStateSchema.parse(
+          await ipc.invoke("lan-access:set", lanAccessSetSchema.parse(value)),
+        );
+      },
+      async copyUrl() {
+        await ipc.invoke("lan-access:copy-url");
       },
     },
     runtime: {

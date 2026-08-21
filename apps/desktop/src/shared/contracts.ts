@@ -7,6 +7,7 @@ export type CloseBehavior = z.infer<typeof closeBehaviorSchema>;
 export const desktopPreferencesStateSchema = z
   .object({
     closeBehavior: closeBehaviorSchema,
+    lanAccessEnabled: z.boolean(),
   })
   .strict();
 
@@ -21,8 +22,16 @@ export type DesktopPreferencesState = z.infer<
 >;
 export type DesktopPreferences = z.infer<typeof desktopPreferencesSchema>;
 
+export function mergeDesktopPreferences(
+  current: DesktopPreferencesState,
+  patch: DesktopPreferences,
+): DesktopPreferencesState {
+  return { ...current, ...patch };
+}
+
 export const DEFAULT_DESKTOP_PREFERENCES: DesktopPreferencesState = {
   closeBehavior: "ask",
+  lanAccessEnabled: false,
 };
 
 /** Read the previous settings shape while deliberately discarding retired fields. */
@@ -35,10 +44,32 @@ export function parsePersistedDesktopPreferences(
   const closeBehavior = closeBehaviorSchema.safeParse(
     (value as Record<string, unknown>).closeBehavior,
   );
-  return closeBehavior.success
-    ? { closeBehavior: closeBehavior.data }
-    : { ...DEFAULT_DESKTOP_PREFERENCES };
+  if (!closeBehavior.success) return { ...DEFAULT_DESKTOP_PREFERENCES };
+  const lanAccessEnabled = z
+    .boolean()
+    .safeParse((value as Record<string, unknown>).lanAccessEnabled);
+  return {
+    closeBehavior: closeBehavior.data,
+    lanAccessEnabled: lanAccessEnabled.success ? lanAccessEnabled.data : false,
+  };
 }
+
+export const lanAccessSetSchema = z
+  .object({
+    enabled: z.boolean(),
+  })
+  .strict();
+
+export const lanAccessStateSchema = z
+  .object({
+    enabled: z.boolean(),
+    port: z.number().int().min(1).max(65_535).optional(),
+    addresses: z.array(z.ipv4()),
+  })
+  .strict();
+
+export type LanAccessSet = z.infer<typeof lanAccessSetSchema>;
+export type LanAccessState = z.infer<typeof lanAccessStateSchema>;
 
 export const runtimePhaseSchema = z.enum([
   "starting",
@@ -84,6 +115,11 @@ export interface DeepSeekDesktopBridge {
   preferences: {
     get(): Promise<DesktopPreferencesState>;
     set(value: DesktopPreferences): Promise<void>;
+  };
+  lanAccess: {
+    get(): Promise<LanAccessState>;
+    set(value: LanAccessSet): Promise<LanAccessState>;
+    copyUrl(): Promise<void>;
   };
   runtime: {
     getState(): Promise<RuntimeState>;

@@ -4,15 +4,19 @@ import {
   closeBehaviorSchema,
   DEFAULT_DESKTOP_PREFERENCES,
   desktopPreferencesSchema,
+  lanAccessSetSchema,
+  lanAccessStateSchema,
+  mergeDesktopPreferences,
   parsePersistedDesktopPreferences,
   runtimeStateSchema,
   setCloseBehaviorSchema,
 } from "../../apps/desktop/src/shared/contracts.js";
 
 describe("desktop bridge contracts", () => {
-  it("keeps only the close behavior in desktop preferences", () => {
+  it("defaults LAN access to disabled", () => {
     expect(DEFAULT_DESKTOP_PREFERENCES).toEqual({
       closeBehavior: "ask",
+      lanAccessEnabled: false,
     });
   });
 
@@ -37,16 +41,86 @@ describe("desktop bridge contracts", () => {
     ).toThrow();
   });
 
+  it("accepts only a boolean LAN access command", () => {
+    expect(lanAccessSetSchema.parse({ enabled: true })).toEqual({
+      enabled: true,
+    });
+    expect(() =>
+      lanAccessSetSchema.parse({ enabled: true, port: 8080 }),
+    ).toThrow();
+  });
+
+  it("accepts only redacted LAN state without tokens or access URLs", () => {
+    expect(
+      lanAccessStateSchema.parse({
+        enabled: true,
+        port: 43210,
+        addresses: ["192.168.1.12", "10.0.0.4"],
+      }),
+    ).toEqual({
+      enabled: true,
+      port: 43210,
+      addresses: ["192.168.1.12", "10.0.0.4"],
+    });
+    expect(() =>
+      lanAccessStateSchema.parse({
+        enabled: true,
+        port: 43210,
+        addresses: ["192.168.1.12"],
+        lanToken: "secret",
+      }),
+    ).toThrow();
+    expect(() =>
+      lanAccessStateSchema.parse({
+        enabled: true,
+        port: 43210,
+        addresses: ["192.168.1.12"],
+        accessUrl: "http://192.168.1.12:43210/?lanToken=secret",
+      }),
+    ).toThrow();
+    expect(() =>
+      lanAccessStateSchema.parse({
+        enabled: true,
+        port: 43210,
+        addresses: ["not-an-ip"],
+      }),
+    ).toThrow();
+  });
+
   it("reads a legacy anchored preference without exposing it", () => {
     expect(
       parsePersistedDesktopPreferences({
         closeBehavior: "quit",
         anchoredStandard: true,
       }),
-    ).toEqual({ closeBehavior: "quit" });
+    ).toEqual({ closeBehavior: "quit", lanAccessEnabled: false });
     expect(
       parsePersistedDesktopPreferences({ anchoredStandard: true }),
     ).toEqual(DEFAULT_DESKTOP_PREFERENCES);
+  });
+
+  it("preserves a valid persisted LAN preference", () => {
+    expect(
+      parsePersistedDesktopPreferences({
+        closeBehavior: "minimize",
+        lanAccessEnabled: true,
+      }),
+    ).toEqual({ closeBehavior: "minimize", lanAccessEnabled: true });
+    expect(
+      parsePersistedDesktopPreferences({
+        closeBehavior: "minimize",
+        lanAccessEnabled: "yes",
+      }),
+    ).toEqual({ closeBehavior: "minimize", lanAccessEnabled: false });
+  });
+
+  it("preserves LAN enablement when applying a close preference patch", () => {
+    expect(
+      mergeDesktopPreferences(
+        { closeBehavior: "ask", lanAccessEnabled: true },
+        { closeBehavior: "quit" },
+      ),
+    ).toEqual({ closeBehavior: "quit", lanAccessEnabled: true });
   });
 
   it("rejects runtime states with unknown properties", () => {

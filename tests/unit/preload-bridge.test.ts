@@ -6,10 +6,19 @@ import {
 } from "../../apps/desktop/src/preload-api.js";
 
 describe("preload bridge", () => {
-  it("exposes only the two approved capability APIs and uses fixed IPC channels", async () => {
+  it("exposes only approved capability APIs and uses fixed IPC channels", async () => {
     const invoke = vi.fn(async (channel: string) => {
       if (channel === "runtime:get") return { phase: "ready", restartCount: 0 };
-      if (channel === "close:get") return "ask";
+      if (channel === "lan-access:get" || channel === "lan-access:set") {
+        return {
+          enabled: true,
+          port: 43210,
+          addresses: ["192.168.1.12"],
+        };
+      }
+      if (channel === "lan-access:copy-url") {
+        return "http://192.168.1.12:43210/?lanToken=must-not-escape";
+      }
       return undefined;
     });
     const removeListener = vi.fn();
@@ -18,6 +27,7 @@ describe("preload bridge", () => {
 
     expect(Object.keys(bridge).sort()).toEqual([
       "bundledPlugins",
+      "lanAccess",
       "preferences",
       "runtime",
       "updater",
@@ -29,14 +39,46 @@ describe("preload bridge", () => {
       "restartHarness",
       "subscribe",
     ]);
+    expect(Object.keys(bridge.lanAccess).sort()).toEqual([
+      "copyUrl",
+      "get",
+      "set",
+    ]);
     await bridge.runtime.getState();
+    await expect(bridge.lanAccess.get()).resolves.toEqual({
+      enabled: true,
+      port: 43210,
+      addresses: ["192.168.1.12"],
+    });
+    await bridge.lanAccess.set({ enabled: false });
+    await expect(bridge.lanAccess.copyUrl()).resolves.toBeUndefined();
     await bridge.preferences.set({
       closeBehavior: "minimize",
     });
     expect(invoke).toHaveBeenCalledWith("runtime:get");
+    expect(invoke).toHaveBeenCalledWith("lan-access:get");
+    expect(invoke).toHaveBeenCalledWith("lan-access:set", {
+      enabled: false,
+    });
+    expect(invoke).toHaveBeenCalledWith("lan-access:copy-url");
     expect(invoke).toHaveBeenCalledWith("preferences:set", {
       closeBehavior: "minimize",
     });
+  });
+
+  it("rejects secret-bearing LAN state returned by main", async () => {
+    const bridge = createDesktopBridge({
+      invoke: vi.fn(async () => ({
+        enabled: true,
+        port: 43210,
+        addresses: ["192.168.1.12"],
+        lanToken: "secret",
+      })),
+      on: vi.fn(),
+      removeListener: vi.fn(),
+    });
+
+    await expect(bridge.lanAccess.get()).rejects.toThrow();
   });
 
   it("forwards only macOS Control+V through a fixed internal paste channel", () => {
