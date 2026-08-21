@@ -525,6 +525,8 @@ describe("DeepSeek Harness Code distribution contract", () => {
       );
     }
     expect(workflow).toContain("node quarantine cleanup failed");
+    expect(workflow).toContain("${BASHPID:-$$}");
+    expect(workflow).not.toContain("${BASHPID}-${index}");
     expect(workflow).not.toContain("SMOKE_FORCE_NODE_MISSING");
     const windowsStep = steps[0] ?? "";
     expect(windowsStep).toContain("scripts/package-smoke-windows.ps1");
