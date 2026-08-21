@@ -727,7 +727,7 @@ export async function ensureOfficialHarnessInstall(
       const exit = result.status === null ? "spawn" : String(result.status);
       const diagnostic = redactStartupDiagnostic(
         result.error?.message ?? String(result.stderr ?? ""),
-      );
+      ).slice(0, 2_000);
       throw new Error(
         `official plugin installation failed for ${installRequests.map((request) => request.packageName).join(", ")} (exit ${exit}): ${diagnostic}`,
       );

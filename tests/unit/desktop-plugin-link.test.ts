@@ -1329,7 +1329,8 @@ describe("official Harness plugin installation", () => {
   it("redacts and bounds a failed official plugin spawn error message", async () => {
     const root = await mkdtemp(join(tmpdir(), "dsh-plugin-redacted-error-"));
     const plugin = await createPlugin(root, "plugin", "redacted-plugin");
-    const rawMessage = `token=spawn-token ${"x".repeat(2_100)}`;
+    const rawMessage = `${"x".repeat(1_990)}token=tail`;
+    expect(rawMessage).toHaveLength(2_000);
     const runCommand = vi.fn<OfficialCommandRunner>(() => ({
       status: null,
       error: new Error(rawMessage),
@@ -1354,10 +1355,9 @@ describe("official Harness plugin installation", () => {
     );
 
     const diagnostic = errorMessage.slice(errorMessage.indexOf(": ") + 2);
-    expect(errorMessage).toContain("[REDACTED]");
-    expect(errorMessage).not.toContain("spawn-token");
+    expect(diagnostic).toContain("token=[");
+    expect(errorMessage).not.toContain("token=tail");
     expect(diagnostic.length).toBeLessThanOrEqual(2_000);
-    expect(diagnostic).not.toContain("x".repeat(2_000));
     expect(runCommand).toHaveBeenCalledTimes(2);
   });
 });
