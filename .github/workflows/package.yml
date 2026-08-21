@@ -199,7 +199,7 @@ jobs:
             local index=0 candidate hidden
             for candidate in "$@"; do
               index=$((index + 1))
-              hidden="${candidate}.deepseek-smoke-${GITHUB_RUN_ID}-${BASHPID}-${index}"
+              hidden="${candidate}.deepseek-smoke-${GITHUB_RUN_ID}-${BASHPID:-$$}-${index}"
               if [[ -e "$hidden" || -L "$hidden" ]]; then
                 printf 'node quarantine destination already exists (candidate %s)\n' "$index" >&2
                 return 1
@@ -277,7 +277,7 @@ jobs:
             local index=0 candidate hidden
             for candidate in "$@"; do
               index=$((index + 1))
-              hidden="${candidate}.deepseek-smoke-${GITHUB_RUN_ID}-${BASHPID}-${index}"
+              hidden="${candidate}.deepseek-smoke-${GITHUB_RUN_ID}-${BASHPID:-$$}-${index}"
               if [[ -e "$hidden" || -L "$hidden" ]]; then
                 printf 'node quarantine destination already exists (candidate %s)\n' "$index" >&2
                 return 1
@@ -442,7 +442,7 @@ jobs:
             local index=0 candidate hidden
             for candidate in "$@"; do
               index=$((index + 1))
-              hidden="${candidate}.deepseek-smoke-${GITHUB_RUN_ID}-${BASHPID}-${index}"
+              hidden="${candidate}.deepseek-smoke-${GITHUB_RUN_ID}-${BASHPID:-$$}-${index}"
               if [[ -e "$hidden" || -L "$hidden" ]]; then
                 printf 'node quarantine destination already exists (candidate %s)\n' "$index" >&2
                 return 1
