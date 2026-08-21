@@ -62,7 +62,7 @@ function Get-DhscRootFromUninstallString {
 function New-DhscInstalledApplication {
   param(
     [Parameter(Mandatory = $true)][string]$Root,
-    [Parameter(Mandatory = $true)][ValidateSet("custom", "registry")][string]$Source
+    [Parameter(Mandatory = $true)][ValidateSet("custom", "registry", "programs")][string]$Source
   )
 
   $canonicalRoot = Get-DhscCanonicalPath $Root
@@ -93,6 +93,19 @@ function Resolve-DhscInstalledApplication {
   $matchingEntries = @(
     $RegistryEntries | Where-Object { $_.DisplayName -eq "DeepSeek Harness Code" }
   )
+  $programsRoot = Get-DhscCanonicalPath (Join-Path $LocalAppData "Programs")
+  if ($matchingEntries.Count -eq 0) {
+    $fallbackRoots = @(
+      @(
+        (Join-Path $programsRoot "deepseek-harness-code"),
+        (Join-Path $programsRoot "DeepSeek Harness Code")
+      ) | Where-Object { Test-DhscDirectAppLayout $_ }
+    )
+    if ($fallbackRoots.Count -ne 1) {
+      throw "expected exactly one app uninstall entry or exact Programs layout, found $($fallbackRoots.Count)"
+    }
+    return New-DhscInstalledApplication -Root $fallbackRoots[0] -Source "programs"
+  }
   if ($matchingEntries.Count -ne 1) {
     throw "expected exactly one app uninstall entry, found $($matchingEntries.Count)"
   }
@@ -102,7 +115,6 @@ function Resolve-DhscInstalledApplication {
     $candidateRoot = Get-DhscRootFromUninstallString ([string]$entry.UninstallString)
   }
   $canonicalRoot = Get-DhscCanonicalPath $candidateRoot
-  $programsRoot = Get-DhscCanonicalPath (Join-Path $LocalAppData "Programs")
   if (-not (Test-DhscStrictDescendant -Root $canonicalRoot -Parent $programsRoot)) {
     throw "registered install root was outside the app-specific Programs boundary"
   }

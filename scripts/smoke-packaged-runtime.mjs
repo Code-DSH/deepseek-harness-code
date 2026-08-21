@@ -186,6 +186,183 @@ function systemNodeCandidateEntries(platform, environment, homeDirectory) {
   ];
 }
 
+const NODE_VERSION_WITH_V = /^v\d+\.\d+\.\d+$/u;
+const NODE_VERSION_PLAIN = /^\d+\.\d+\.\d+$/u;
+
+function systemNodeVersionDirectoryProbes(
+  platform,
+  environment,
+  homeDirectory,
+) {
+  const pathApi = platform === "win32" ? win32 : posix;
+  const { join: joinPath } = pathApi;
+  if (platform === "win32") {
+    const userProfile = environment.USERPROFILE ?? homeDirectory;
+    const appData =
+      environment.APPDATA ?? joinPath(userProfile, "AppData", "Roaming");
+    const localAppData =
+      environment.LOCALAPPDATA ?? joinPath(userProfile, "AppData", "Local");
+    const probes = [
+      {
+        id: "user-nvm",
+        directory: joinPath(appData, "nvm"),
+        entryPattern: NODE_VERSION_WITH_V,
+        relative: ["node.exe"],
+      },
+      {
+        id: "user-fnm",
+        directory: joinPath(appData, "fnm", "node-versions"),
+        entryPattern: NODE_VERSION_WITH_V,
+        relative: ["installation", "node.exe"],
+      },
+      {
+        id: "local-fnm",
+        directory: joinPath(localAppData, "fnm", "node-versions"),
+        entryPattern: NODE_VERSION_WITH_V,
+        relative: ["installation", "node.exe"],
+      },
+    ];
+    if (
+      typeof environment.NVM_HOME === "string" &&
+      environment.NVM_HOME !== ""
+    ) {
+      probes.unshift({
+        id: "environment-nvm",
+        directory: environment.NVM_HOME,
+        entryPattern: NODE_VERSION_WITH_V,
+        relative: ["node.exe"],
+      });
+    }
+    return probes;
+  }
+  if (platform !== "linux" && platform !== "darwin")
+    throw new Error(`unsupported Node quarantine platform ${platform}`);
+  const probes = [
+    {
+      id: "user-nvm",
+      directory: joinPath(homeDirectory, ".nvm", "versions", "node"),
+      entryPattern: NODE_VERSION_WITH_V,
+      relative: ["bin", "node"],
+    },
+  ];
+  if (platform === "darwin") {
+    probes.push({
+      id: "application-support-fnm",
+      directory: joinPath(
+        homeDirectory,
+        "Library",
+        "Application Support",
+        "fnm",
+        "node-versions",
+      ),
+      entryPattern: NODE_VERSION_WITH_V,
+      relative: ["installation", "bin", "node"],
+    });
+  }
+  probes.push(
+    {
+      id: "user-fnm",
+      directory: joinPath(homeDirectory, ".fnm", "node-versions"),
+      entryPattern: NODE_VERSION_WITH_V,
+      relative: ["installation", "bin", "node"],
+    },
+    {
+      id: "user-mise",
+      directory: joinPath(
+        homeDirectory,
+        ".local",
+        "share",
+        "mise",
+        "installs",
+        "node",
+      ),
+      entryPattern: NODE_VERSION_PLAIN,
+      relative: ["bin", "node"],
+    },
+    {
+      id: "user-volta-images",
+      directory: joinPath(homeDirectory, ".volta", "tools", "image", "node"),
+      entryPattern: NODE_VERSION_PLAIN,
+      relative: ["bin", "node"],
+    },
+  );
+  if (platform === "linux") {
+    probes.push({
+      id: "system-n",
+      directory: "/usr/local/n/versions/node",
+      entryPattern: NODE_VERSION_PLAIN,
+      relative: ["bin", "node"],
+    });
+  }
+  if (typeof environment.NVM_DIR === "string" && environment.NVM_DIR !== "") {
+    probes.push({
+      id: "environment-nvm",
+      directory: joinPath(environment.NVM_DIR, "versions", "node"),
+      entryPattern: NODE_VERSION_WITH_V,
+      relative: ["bin", "node"],
+    });
+  }
+  if (
+    typeof environment.VOLTA_HOME === "string" &&
+    environment.VOLTA_HOME !== ""
+  ) {
+    probes.push({
+      id: "environment-volta-images",
+      directory: joinPath(environment.VOLTA_HOME, "tools", "image", "node"),
+      entryPattern: NODE_VERSION_PLAIN,
+      relative: ["bin", "node"],
+    });
+  }
+  if (typeof environment.FNM_DIR === "string" && environment.FNM_DIR !== "") {
+    probes.push({
+      id: "environment-fnm",
+      directory: joinPath(environment.FNM_DIR, "node-versions"),
+      entryPattern: NODE_VERSION_WITH_V,
+      relative: ["installation", "bin", "node"],
+    });
+  }
+  return probes;
+}
+
+async function discoverSystemNodeVersionCandidates(
+  platform,
+  environment,
+  homeDirectory,
+  listDirectory = readdir,
+) {
+  const pathApi = platform === "win32" ? win32 : posix;
+  const candidates = [];
+  for (const probe of systemNodeVersionDirectoryProbes(
+    platform,
+    environment,
+    homeDirectory,
+  )) {
+    let versions;
+    try {
+      versions = await listDirectory(probe.directory);
+    } catch (error) {
+      if (
+        error instanceof Error &&
+        ["EACCES", "ENOENT", "ENOTDIR"].includes(error.code)
+      ) {
+        continue;
+      }
+      throw new Error(
+        `Node quarantine version directory inspection failed (${probe.id})`,
+      );
+    }
+    for (const version of versions
+      .filter((entry) => probe.entryPattern.test(entry))
+      .sort()) {
+      candidates.push({
+        id: `${probe.id}-${version}`,
+        path: pathApi.join(probe.directory, version, ...probe.relative),
+      });
+    }
+  }
+  return candidates;
+}
+
 function shouldQuarantineNodeCandidate({
   candidatePath,
   parentExecutablePath,
@@ -219,11 +396,25 @@ async function buildSystemNodeQuarantinePlan({
   const parentInfo = await stat(parentExecutablePath);
   const parentFileId = `${parentInfo.dev}:${parentInfo.ino}`;
   const plan = [];
-  for (const entry of systemNodeCandidateEntries(
+  const fixedCandidates = systemNodeCandidateEntries(
     platform,
     environment,
     homeDirectory,
-  )) {
+  );
+  const versionCandidates = await discoverSystemNodeVersionCandidates(
+    platform,
+    environment,
+    homeDirectory,
+  );
+  const pathApi = platform === "win32" ? win32 : posix;
+  const seen = new Set();
+  for (const entry of [...fixedCandidates, ...versionCandidates]) {
+    const normalizedPath =
+      platform === "win32"
+        ? pathApi.normalize(entry.path).toLowerCase()
+        : pathApi.normalize(entry.path);
+    if (seen.has(normalizedPath)) continue;
+    seen.add(normalizedPath);
     let candidateInfo;
     try {
       candidateInfo = await lstat(entry.path);
@@ -1381,6 +1572,7 @@ export {
   buildPackagedSmokeLaunch,
   buildPackagedSmokeEnvironment,
   systemNodeCandidateEntries,
+  discoverSystemNodeVersionCandidates,
   shouldQuarantineNodeCandidate,
   buildSystemNodeQuarantinePlan,
   waitForPackagedExit,

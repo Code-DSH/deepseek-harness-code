@@ -35,6 +35,10 @@ try {
   Assert-True ($custom.Source -eq "custom") "safe custom direct root was not accepted"
   Assert-True ($custom.Root -eq [IO.Path]::GetFullPath($customRoot)) "custom root was not canonical"
 
+  $programsFallback = Resolve-DhscInstalledApplication -CustomRoot (Join-Path $fixtureRoot "missing-custom") -RegistryEntries @() -LocalAppData $localAppData
+  Assert-True ($programsFallback.Source -eq "programs") "exact Programs fallback was not accepted"
+  Assert-True ($programsFallback.Root -eq [IO.Path]::GetFullPath($registeredRoot)) "Programs fallback root was not canonical"
+
   $wideEntry = [pscustomobject]@{
     DisplayName = "DeepSeek Harness Code"
     InstallLocation = $programsRoot

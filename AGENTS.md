@@ -1,6 +1,6 @@
 # AGENTS.md
 
-Electron 43 desktop host for DeepSeek Harness (`deepseek-harness-code@0.1.0-BETA2-2` candidate, `@deepseek-ai/dsh@0.1.0-rc.8`). BETA2-2 is pending a repaired native cloud package gate after Run 32468983175 failed at installed Windows x64 readiness; no BETA2-2 GitHub Release/assets exist yet. BETA2-1 remains the green current Latest. Community distribution — not official DeepSeek. Harness and desktop renderer stay loopback-only; disabled-by-default trusted-LAN access is an Electron-owned token-gated proxy. macOS distribution remains unsigned/ad-hoc.
+Electron 43 desktop host for DeepSeek Harness (`deepseek-harness-code@0.1.0-BETA2-2` candidate, `@deepseek-ai/dsh@0.1.0-rc.8`). BETA2-2 is pending a repaired native cloud package gate; no BETA2-2 GitHub Release/assets exist yet. At the operator's emergency request, the broken BETA2-1 GitHub Release/assets were removed on 2026-08-21 while its source tag was preserved. Community distribution — not official DeepSeek. Harness and desktop renderer stay loopback-only; disabled-by-default trusted-LAN access is an Electron-owned token-gated proxy. macOS distribution remains unsigned/ad-hoc.
 
 ## Setup
 
@@ -64,4 +64,4 @@ pnpm typecheck && pnpm lint && pnpm format:check  # structure slices (CI runs th
 - Preserve official Harness question protocol (`@deepseek-ai/dsh-tool-ask-user` etc.) — do not create a parallel wire format.
 - Never log credentials, auth headers, cookies, prompt bodies, or response bodies.
 - Runtime behavior changes are test-first; verify before claiming completion.
-- Cross-build is never native execution. Do not mark BETA2-2 green/published or record assets/hashes until exact repaired cloud Run/job evidence exists; delete BETA2-1 Release/assets only after BETA2-2 is Latest and independently verified, while retaining its source tag and archive.
+- Cross-build is never native execution. Do not mark BETA2-2 green/published or record assets/hashes until exact repaired cloud Run/job evidence exists. BETA2-1 downloads are already retired; retain its source tag and archive.

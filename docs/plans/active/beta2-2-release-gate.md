@@ -240,7 +240,7 @@ tags: [execplan, release, ci, beta2-2]
 
   Fresh evidence on exact candidate `f0414b7`: `pnpm build`, `pnpm test` (382 passed / 4 designed skips in the unit stage, 117 Anchored, 24 plugin, 58 package, and 3 Playwright), `pnpm check`, `pnpm preflight:runtime` (56 artifacts / 35 production dependencies / 8 critical versions / 10 plugins), and `pnpm check:memory` all exited 0. Universal macOS distribution plus real-DMG verification exited 0 on the immediately preceding code candidate `1b05f5c`; the only later production change was the focused Basic Auth diagnostic-redaction fix, which passed its direct tests and the exact-HEAD full build/test/check gates. The documentation gate checked 59 files. This local evidence does not satisfy the pending push/cloud/tag/release steps.
 
-- [ ] **Step 2: Push through the repository integration path**
+- [x] **Step 2: Push through the repository integration path**
 
   Push the feature branch, create/review/merge a PR to `main`, and confirm the resulting `main` CI has every job green.
 
@@ -256,9 +256,9 @@ tags: [execplan, release, ci, beta2-2]
 
   Wait for the tag workflow. Require all jobs green, `Publish GitHub release` green, the Release marked Latest/non-prerelease, all platform assets present, and `update-manifest.json` hashes matching downloaded artifacts.
 
-- [ ] **Step 6: Retire the broken Beta 2-1 download**
+- [x] **Step 6: Retire the broken Beta 2-1 download**
 
-  Delete GitHub Release/assets `v0.1.0-BETA2-1` only after Beta 2-2 is confirmed downloadable. Keep the source tag and archived documentation for audit/recovery. Verify Latest now resolves to Beta 2-2 and Beta 2-1 Release returns not found.
+  At the operator's emergency request, GitHub Release/assets `v0.1.0-BETA2-1` were deleted before Beta 2-2 publication on 2026-08-21. The source tag and archived documentation remain; `gh release view v0.1.0-BETA2-1` returns not found.
 
 - [ ] **Step 7: Write final evidence and commit documentation sync**
 
@@ -287,6 +287,7 @@ tags: [execplan, release, ci, beta2-2]
 
 ## Progress
 
+- 2026-08-21 — PR #19 merged as `main@34776bc`; merged-main CI Run `32489172332` passed all 9 jobs. The operator then explicitly changed the retirement order because of active severe user reports: BETA2-1 GitHub Release/assets were deleted immediately and absence was verified while its source tag remained. Pre-tag package Run `32489425705` exposed two additional runner-specific gaps without publishing anything: Linux x64/arm64 production resolution still found `n`-managed Node under `/usr/local/n/versions/node`, and Windows arm64 installed to an exact per-user Programs layout without a visible uninstall registry entry. The current fix mirrors every production version-manager probe in the temporary no-Node quarantine and accepts only the two exact app-specific Programs roots with a complete direct layout; local package tests (65 pass / 1 Windows-only designed skip), `pnpm check`, and `git diff --check` pass. Cloud rerun remains pending.
 - 2026-08-21 — PR #19 Windows CI Run `32487900919` provided an exact RED for the PowerShell helper: the first `Add-DhscDirectCleanupFailure -CleanupFailures` call rejected an initially empty `List<Exception>` because a mandatory collection parameter lacked `AllowEmptyCollection`. The same binding rule applied to empty Node move lists and the final cleanup list. The local fix adds `AllowEmptyCollection` to the two strongly typed `List<object>` move parameters and three strongly typed `List<Exception>` cleanup parameters only; null remains forbidden. Local focused/package/check gates are not a substitute for the pending PR #19 Windows rerun or full cloud acceptance.
 - 2026-08-21 — Cloud fix 1 review round 2 added a fail-closed custom-root cleanup scan and a uniform Windows cleanup exception contract: a manual .NET stack inspects each top-level child before descending and rejects every reparse point/junction before recursive deletion; cleanup collections contain Exceptions only, report `.Message`, and preserve the primary failure over cleanup failures. The Windows-only executable fixture now includes an outside-sentinel junction case plus typed direct/caught cleanup and final-priority cases. Local non-Windows package gates retain the designed Windows skip; Windows CI and cloud acceptance remain pending.
 - 2026-08-21 — Cloud fix 1 review round 1 tightened the Windows host boundary locally: uninstall-registry fallback now accepts one exact product entry only when exe/resources/exact uninstaller are direct siblings under a strict per-user Programs descendant; registry roots are never force-deleted, while only the runner-owned custom root may be removed recursively. Windows Node move/restore and install-root resolution now share a dot-source helper with an executable Windows-only fixture (non-Windows designed skip). Focused/package/check gates are local evidence only; a Windows CI execution and the full native cloud matrix remain pending.
