@@ -6,7 +6,7 @@
   <p><a href="./README.md">English</a> · <a href="./README.zh-CN.md">简体中文</a></p>
   <p><a href="#forged-for-code-a-deeply-specialized-coding-agent">Specialized Agent</a> · <a href="#integration-philosophy">Integration Philosophy</a> · <a href="#architecture">Architecture</a> · <a href="#beyond-a-web-wrapper">Why Not a Wrapper</a> · <a href="#built-for-long-running-work">Long-Running</a> · <a href="#build-from-source">Build</a></p>
   <p>
-    <img src="https://img.shields.io/badge/version-0.1.0_BETA2--1-2563eb?style=flat-square" alt="Version 0.1.0-BETA2-1" />
+    <img src="https://img.shields.io/badge/version-0.1.0_BETA2--2-2563eb?style=flat-square" alt="Version 0.1.0-BETA2-2" />
     <img src="https://img.shields.io/badge/license-MIT-16a34a?style=flat-square" alt="MIT License" />
     <img src="https://img.shields.io/badge/macOS-12%2B-111827?style=flat-square&amp;logo=apple" alt="macOS 12+" />
     <img src="https://img.shields.io/badge/Windows-10%2B-0078D4?style=flat-square&amp;logo=windows" alt="Windows 10+" />
@@ -141,6 +141,7 @@ Long sessions rarely crash dramatically — pressure accumulates: renderer stall
 - **System appearance** — light/dark startup UI, platform title bar, official monochrome assets, reduced-motion support.
 - **Smooth navigation** — View Transitions when available, CSS fallback otherwise, no forced layout.
 - **Workspace resilience** — validated Standard switching and official session restoration.
+- **Opt-in LAN access** — disabled by default; when enabled, an Electron-owned, token-gated HTTP proxy serves a trusted LAN while Harness and the desktop renderer stay on loopback.
 - **Skills** — Superpowers 6.2.0 installed to `<DSH_HOME>/skills`, never overwriting user-owned directories.
 - **Global Agent Protocol** — `<DSH_HOME>/AGENTS.md`: auto-installed when absent, upgraded only while still app-managed, never overwriting user-owned, with timestamped backup switch via `Use Bundled Global Prompt…`.
 - **Global `dsh`** — `npm install -g` of pinned `@deepseek-ai/dsh` on first launch, never overwriting user global, fail-open.
@@ -172,7 +173,7 @@ Bundled community [dsh-routing-suite](https://github.com/yjh051108/dsh-routing-s
 
 - **Offline snapshot** — three pinned components (`@dsh-external/dsh-super-injector`, `@dsh-external/dsh-mode-boost`, `router-standard` + `router-spec`) inside app resources.
 - **Pinned baseline** — `injector 0.3.3` / `mode-boost 0.1.0` / `router-preset 0.2.0@eff787e`, SHA-256 in `build/routing-suite/versions.json`.
-- **Official install** — via system Node + bundled pnpm `dsh plugin --profile web add` (desktop, ui-motion, model2, prompt-principles, vision-router, better-sidebar, composition, Super Injector, Mode Boost, find-plugin); Harness owns manifest, desktop only manages router presets and Skills. Corrupted `node_modules` self-reference is rebuilt once.
+- **Official install** — via system Node + bundled pnpm `dsh plugin --profile web add` (desktop, ui-motion, model2, prompt-principles, vision-router, better-sidebar, LAN access, composition, Super Injector, Mode Boost, find-plugin); Harness owns manifest, desktop only manages router presets and Skills. A validated app-owned reconciliation marker skips repeated CLI additions only for an unchanged managed roster; a missing or mismatched marker, changed package root/identity, missing profile dependency, or foreign store runs the official reconciliation again. Corrupted `node_modules` self-reference is rebuilt once.
 - **Reviewed updates** — only with new app release, SHA-256 verified before extraction, never downloading mutable code in background.
 - **Ownership-safe** — never overwrites unrelated plugins or user-owned presets, legacy Home copy-only migrated.
 
@@ -193,7 +194,7 @@ Full boundaries in [overview](./docs/architecture/overview.md) and [lifecycle](.
 - Sandboxed renderer, no Node integration.
 - Only `preferences` / `runtime` preload groups.
 - IPC payloads validated before desktop actions.
-- Harness binds only to loopback, not LAN.
+- Harness itself binds only to loopback. LAN access is disabled by default; an opt-in Electron reverse proxy may listen on `0.0.0.0` only behind a token gate, for trusted-LAN HTTP use only (no Internet-exposure or TLS claim).
 - Credentials stay in official Harness settings, never in bundle.
 - Logs exclude credentials, Authorization, Cookie, prompts, and responses.
 - External navigation `allow` / `open-external` policy.
@@ -247,7 +248,7 @@ npm exec --yes --package=pnpm@11.19.0 -- pnpm dist:win
 npm exec --yes --package=pnpm@11.19.0 -- pnpm dist:linux
 ```
 
-> Release packages are built by GitHub Actions on `v*` tag push; local `dist:*` is for verification only.
+> Release packages and `update-manifest.json` are produced by GitHub Actions only after verification on a `v*` tag push; local `dist:*` is for verification only.
 
 ## Verify
 

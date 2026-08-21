@@ -1,12 +1,12 @@
 # AGENTS.md
 
-Electron 43 desktop host for DeepSeek Harness (`@deepseek-ai/dsh@0.1.0-rc.8`). Community distribution — not official DeepSeek. Loopback-only Harness, unsigned/ad-hoc macOS.
+Electron 43 desktop host for DeepSeek Harness (`deepseek-harness-code@0.1.0-BETA2-2`, `@deepseek-ai/dsh@0.1.0-rc.8`). Community distribution — not official DeepSeek. Harness and desktop renderer stay loopback-only; disabled-by-default trusted-LAN access is an Electron-owned token-gated proxy. macOS distribution remains unsigned/ad-hoc.
 
 ## Setup
 
 - Node.js >=22.13 required (runtime + toolchain). `pnpm@11.19.0` pinned (`package.json:12`, `pnpm-workspace.yaml`). If missing: `npm exec --yes --package=pnpm@11.19.0 -- pnpm install --frozen-lockfile`.
 - `strict-peer-dependencies=false`, `save-exact=true`, `minimum-release-age=1440` except `@deepseek-ai/dsh`, `electron`, `electron-builder` (`.npmrc:1-6`).
-- Generated artifacts are gitignored and must not be committed: `dist/`, `release/`, `build/` (incl. `build/node-runtime/`, `build/routing-suite/`) (`.gitignore:2,16`).
+- Generated and controller-scratch artifacts are gitignored and must not be committed: `dist/`, `release/`, `build/` (incl. `build/node-runtime/`, `build/routing-suite/`), `.superpowers/` (`.gitignore`).
 
 ## Commands
 
@@ -38,11 +38,11 @@ pnpm typecheck && pnpm lint && pnpm format:check  # structure slices (CI runs th
 ## Architecture
 
 - **Main entry:** `apps/desktop/src/main.ts:1` (window, tray, lifecycle, preload bridge). Preload `apps/desktop/src/preload.ts` exposes only `preferences`+`runtime` capability groups (sandboxed renderer, no Node integration, `createSecureWebPreferences`).
-- **Lifecycle:** `apps/desktop/src/lifecycle/` — `runtime-controller.ts`, `port-retry.ts`, `watchdog-host.ts`, `system-node.ts` (auto-detects official Node across nodejs.org/Homebrew/nvm/Volta/fnm/mise/Scoop/nvm-windows via PATH + `NVM_DIR`/`VOLTA_HOME`/`FNM_DIR`), `node-runtime.ts`, `desktop-plugin-link.ts`. Harness launched as `dsh lib/bin.js web --host 127.0.0.1 --port <port> --expose-internals` with 5s probe interval, 30s readiness window, 3x `EADDRINUSE`-only port retry.
-- **Packaging:** `electron-builder.yml:5-7` — `asar:false`, `npmRebuild:false`, excludes `node_modules` from app; runtime installed at first launch into `app.getPath(userData)/node-runtime` via bundled pnpm (`build/node-runtime/pnpm.mjs`). `extraResources` bundles watchdog + node-runtime + desktop-plugin + dsh-ui-motion + dsh-model-two-level-selector + dsh-ui-polish + dsh-updater-check + prompt-principles + anchored-standard + superpowers-skills + global-agent-prompt + routing-suite (`electron-builder.yml:20-106`).
-- **Plugins:** `packages/desktop-plugin`, `packages/dsh-ui-motion`, `packages/dsh-model-two-level-selector`, `packages/dsh-ui-polish`, `packages/dsh-updater-check`, `packages/prompt-principles-plugin`, `packages/anchored-standard-plugin` (preset `anchored-standard`), `packages/watchdog`, `packages/better-sidebar`. Client bundles via esbuild (externals = Harness); desktop via `tsup.desktop.config.ts:3-21` (format cjs, target node24, `noExternal: [/^@deepseek-ai\//, /^zod$/]` — must stay bundled, packaged app has no `node_modules`).
+- **Lifecycle:** `apps/desktop/src/lifecycle/` — `runtime-controller.ts`, `port-retry.ts`, `watchdog-host.ts`, `system-node.ts` (auto-detects official Node across nodejs.org/Homebrew/nvm/Volta/fnm/mise/Scoop/nvm-windows via PATH + `NVM_DIR`/`VOLTA_HOME`/`FNM_DIR`), `node-runtime.ts`, `desktop-plugin-link.ts`, and the optional `lan-proxy.ts`. Harness launched as `dsh lib/bin.js web --host 127.0.0.1 --port <port> --expose-internals` with 5s probe interval, 30s readiness window, 3x `EADDRINUSE`-only port retry; the proxy may bind `0.0.0.0` only after explicit opt-in and forwards only authenticated traffic back to loopback.
+- **Packaging:** `electron-builder.yml:5-7` — `asar:false`, `npmRebuild:false`, excludes `node_modules` from app; runtime installed at first launch into `app.getPath(userData)/node-runtime` via bundled pnpm (`build/node-runtime/pnpm.mjs`). `extraResources` bundles watchdog + node-runtime + desktop-plugin + dsh-ui-motion + dsh-model-two-level-selector + dsh-ui-polish + dsh-updater-check + prompt-principles + dsh-lan-access + anchored-standard + superpowers-skills + global-agent-prompt + routing-suite (`electron-builder.yml:20-106`).
+- **Plugins:** `packages/desktop-plugin`, `packages/dsh-ui-motion`, `packages/dsh-model-two-level-selector`, `packages/dsh-ui-polish`, `packages/dsh-updater-check`, `packages/prompt-principles-plugin`, `packages/dsh-lan-access`, `packages/anchored-standard-plugin` (preset `anchored-standard`), `packages/watchdog`, `packages/better-sidebar`. Client bundles via esbuild (externals = Harness); desktop via `tsup.desktop.config.ts:3-21` (format cjs, target node24, `noExternal: [/^@deepseek-ai\//, /^zod$/]` — must stay bundled, packaged app has no `node_modules`).
 - **Routing Suite:** immutable snapshot in `build/routing-suite/` with SHA-256 in `versions.json` (injector 0.3.3 `355238fa…`, mode-boost 0.1.0 `72836d64…`, router-preset 0.2.0 at `eff787e` `a8f3616f…`). Build verifies digest before `tar`; installed app never auto-updates (`scripts/fetch-routing-suite.mjs`, `scripts/check-runtime-closure.mjs:242-331`).
-- **Data:** single official Home `$DSH_HOME` or `~/.dsh` (`@deepseek-ai/dsh-home-paths`), plugins reconciled via public `dsh plugin --profile web add` + `--expose-internals` — never edit profile manifests/bundles/`cordis.patch.yml` manually. Skills/presets/global prompt use ownership-safe sync (marker + digest, user-owned never overwritten).
+- **Data:** single official Home `$DSH_HOME` or `~/.dsh` (`@deepseek-ai/dsh-home-paths`), plugins reconciled via public `dsh plugin --profile web add` + `--expose-internals` — never edit profile manifests/bundles/`cordis.patch.yml` manually. An app-owned marker skips reconciliation only after validating the unchanged managed roster, package roots/identities, profile dependency, and store ownership; otherwise the official CLI runs. Skills/presets/global prompt use ownership-safe sync (marker + digest, user-owned never overwritten).
 
 ## Conventions & Gotchas
 
@@ -51,6 +51,7 @@ pnpm typecheck && pnpm lint && pnpm format:check  # structure slices (CI runs th
 - **Lint/format scope:** `eslint.config.mjs:7-27` and `.prettierignore:7-27` ignore `dist/`, `release/`, `build/`, `vendor/`, and generated `client.js`/`index.js`/`lib/**` bundles. Don't edit those generated files.
 - **TS:** `tsconfig.json:2-8` strict + `exactOptionalPropertyTypes`, `NodeNext` module, includes `apps/**/*.ts`, `packages/**/*.ts`, `tests/**/*.ts`.
 - **No request replay, no overlapping recovery, bounded shutdown (8s SIGTERM→SIGKILL) — see `docs/architecture/lifecycle.md`.** Single-flight startup prevents duplicate Watchdog/pnpm installs.
+- **Windows workspace boundary:** custom Bash resolves the DSH session policy and canonical workdir boundary; `str_replace_editor` uses the host sandboxed filesystem. rc.8 does not guarantee universal read isolation, and canonical preflight retains a filesystem TOCTOU residual risk.
 - **Renderer quirks:** `autoHideMenuBar` on win/linux (`main.ts:237`), 30s unresponsive threshold before window replacement, Harness process kept alive on renderer rebuild. `html`/`body`/AppFrame stay full-window; only sidebar inner content gets `46px`/`58px` macOS inset.
 
 ## Docs (read when changing those areas)

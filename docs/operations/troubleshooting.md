@@ -8,6 +8,10 @@ If automatic desktop recovery reaches three abnormal exits in five minutes, the 
 
 Harness rc.8 does not expose a working `/api/health` endpoint. A 404 there is expected; desktop readiness is the live child plus an HTTP 2xx response from the loopback Web root (`127.0.0.1:<port>`). Three consecutive failed 5 s probes or a child exit triggers serialized recovery.
 
+LAN access is disabled by default. When the user enables **LAN access** in its plugin settings, the separate Electron-owned proxy may listen on `0.0.0.0` while Harness and the desktop renderer stay on loopback. Treat its token-gated HTTP URL as trusted-LAN-only: it does not provide Internet exposure or TLS. Use the native **Copy** action rather than expecting the renderer to display the full token-bearing URL. Disable the setting to close the listener and invalidate the token.
+
+If an unchanged warm launch unexpectedly reruns every official plugin addition, inspect the startup diagnostics for an invalid reconciliation marker. The expected fallback is intentional when the marker is absent, a managed package root or identity changed, a profile dependency is missing, or the detected store is foreign; the host then repeats the official reconciliation rather than trusting stale state.
+
 Routing Suite and bundled Skills installation is optional and fail-open. A `routing-suite-unavailable` or `routing-suite-conflict` notice means Standard Harness startup continued without replacing user-owned presets; inspect the log lines prefixed `[DeepSeek Harness Code]`. Background routing refresh does not exist — routing is immutable per app release.
 
 Vision-router issues: ensure a `+ Auto Vision` model group is selected before sending images; pure-text `opencode-go` routes reject images before the vision chain runs. Check **Settings → Plugins → Plugin config → 视觉路由** for chain order and proxy settings. Pixel tools require `sharp`/`potrace`/`tesseract`/Chrome; missing `sharp` in a profile produces a runtime guidance message.
@@ -19,3 +23,5 @@ The packaged app intentionally does not use ASAR (`asar: false`). Re-enabling AS
 If first-launch package installation reports `ENOENT ... packages/patches/.mimosa/hook-state/sess_*.json`, the installed resources contain local tool-session state from an older build rather than a missing Node.js installation. Current builds exclude `.mimosa` from packaged patch/vendor resources and remove stale copies before invoking pnpm; reinstall the current build and retry detection.
 
 If the Harness child exits immediately with a missing bare package (e.g., `dsh-super-injector`), confirm `build/routing-suite/versions.json` SHA-256 pins match and that `pnpm build:routing-suite` passed before `pnpm dist:mac`.
+
+On Windows, custom Bash now follows the DSH session policy and rejects a canonicalized working directory outside the session workspace; `str_replace_editor` uses the host sandboxed filesystem. This narrows the app-created bypass but does not turn rc.8 into a universal read-isolation boundary: arbitrary user shell reads remain outside that promise, and a filesystem TOCTOU residual risk remains between canonical preflight and use.

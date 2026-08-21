@@ -2,7 +2,7 @@
 
 Use TDD for runtime behavior. Required layers are unit tests for state and security contracts, plugin DOM tests, real Harness roster/session integration, deterministic request-assembly tests, process fault injection, cross-platform Chromium Web tests, and macOS package/signature inspection.
 
-Harness 0.1.0-rc.8 exposes no verified `/api/health` route. Integration tests therefore assert child liveness and an HTTP 2xx Web-root response; they also assert that the service binds only to `127.0.0.1`.
+Harness 0.1.0-rc.8 exposes no verified `/api/health` route. Integration tests therefore assert child liveness and an HTTP 2xx Web-root response; they also assert that Harness itself binds only to `127.0.0.1`. BETA2-2 additionally requires focused warm-reconciliation invalidation tests; token-gated LAN proxy HTTP/WebSocket, disable/invalidation, and `0.0.0.0` listener tests; fixed IPC/token-redaction tests; and Windows custom-Bash sandbox-policy / canonical-workdir tests. These are release gates, not evidence of a completed interactive validation.
 
 Live acceptance is separate: credentials are entered in the Harness UI by the user and are never inspected by automation. The planned 45-minute V4 Flash observation and 20 interactions are recorded only when configured.
 
@@ -31,5 +31,9 @@ The desktop bundle leaves streamed prose, Think disclosures, native status copy,
 - The packaged 0.1.0-BETA2-1 build reuses the same pipeline, carries the terminal-bash patch hash, emits a macOS Universal ZIP for updates, and verifies the architecture-aware update manifest alongside the DMG, Windows NSIS, and Linux AppImage/deb artifacts.
 
 Detailed evidence and unexecuted external checks are in the [acceptance report](./acceptance-report.md).
+
+## BETA2-2 Release Gates
+
+Before a BETA2-2 tag is published, run the full project suite, structural checks, runtime-closure checks, and platform packaging CI. The release workflow produces the platform artifacts and `update-manifest.json` only after verification on tag CI. The subsequent isolated-data app launch and LAN opt-in/authenticate/disable interaction remain separate acceptance evidence; no result is implied here.
 
 The progressive mechanism and package lifecycle are release gates even without provider credentials. A V4 Pro quality claim is a separate paired experiment: fixed tasks, Standard and Anchored at least ten times each, schema hashes/completion/score/variance only, and no retained reasoning body.
