@@ -44,6 +44,8 @@ describe("DeepSeek Harness Code distribution contract", () => {
     const ciWorkflow = await readProjectFile(".github/workflows/ci.yml");
 
     expect(config).toContain("nsis");
+    expect(config).toContain("differentialPackage: false");
+    expect(config).toContain("useZip: true");
     expect(config).toContain("AppImage");
     expect(config).toContain("deb");
     expect(config).toContain("build/deepseek-harness-code.ico");
