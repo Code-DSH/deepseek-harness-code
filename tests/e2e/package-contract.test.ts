@@ -69,6 +69,15 @@ describe("DeepSeek Harness Code distribution contract", () => {
     expect(ciWorkflow).toContain("check:memory");
   });
 
+  test("caches Playwright browsers without repeating icon generation", async () => {
+    const ciWorkflow = await readProjectFile(".github/workflows/ci.yml");
+
+    expect(ciWorkflow).toContain("PLAYWRIGHT_BROWSERS_PATH");
+    expect(ciWorkflow).toContain("uses: actions/cache@v4");
+    expect(ciWorkflow).toContain("playwright-${{ runner.os }}-");
+    expect(ciWorkflow.match(/run: pnpm build:icon/g)).toHaveLength(1);
+  });
+
   test(
     "generates a self-contained SVG, ICNS, ICO, and PNG product icon",
     async () => {

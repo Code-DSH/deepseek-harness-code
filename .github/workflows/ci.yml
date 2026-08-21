@@ -52,8 +52,6 @@ jobs:
         run: pnpm audit --prod
       - name: Build distribution artifacts
         run: pnpm build
-      - name: Generate license notices and installer assets
-        run: pnpm build:icon
       - name: Runtime closure check
         run: node scripts/check-runtime-closure.mjs
       - name: License notices present
@@ -69,6 +67,8 @@ jobs:
         os: [ubuntu-latest, windows-latest, macos-latest]
     runs-on: ${{ matrix.os }}
     timeout-minutes: 45
+    env:
+      PLAYWRIGHT_BROWSERS_PATH: ${{ github.workspace }}/build/playwright
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -79,6 +79,12 @@ jobs:
           node-version: 24.18.0
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - name: Restore Playwright browser cache
+        id: playwright-cache
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.PLAYWRIGHT_BROWSERS_PATH }}
+          key: playwright-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
       - name: Build distribution artifacts
         # The unit closure contract and the packaged runtime suites exercise
         # generated outputs (dist/**, build/routing-suite), so tests run only
@@ -88,7 +94,7 @@ jobs:
         if: runner.os == 'Linux'
         run: pnpm exec playwright install --with-deps chromium
       - name: Install Playwright Chromium
-        if: runner.os != 'Linux'
+        if: runner.os != 'Linux' && steps.playwright-cache.outputs.cache-hit != 'true'
         run: pnpm exec playwright install chromium
       - run: pnpm test
 
@@ -110,8 +116,8 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm check:memory
 
-  # Platform packaging adaptation: build, regenerate icons, verify runtime
-  # closure, and produce a directory package on every supported OS.
+  # Platform packaging adaptation: build, verify runtime closure, and produce
+  # a directory package on every supported OS.
   adapt:
     name: Packaging adaptation (${{ matrix.label }})
     strategy:
@@ -140,6 +146,5 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm build
-      - run: pnpm build:icon
       - run: node scripts/check-runtime-closure.mjs
       - run: ${{ matrix.command }}
