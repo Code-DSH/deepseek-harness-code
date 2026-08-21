@@ -39,7 +39,7 @@ test('bootstrap editors consume the host sandboxed filesystem provider', () => {
     assert.doesNotMatch(yml, /@deepseek-ai\/dsh-fs-local/, `${dir} must not shadow the host fs service`)
     assert.match(
       yml,
-      /^\- id: bootstrap-filesystem\n  name: '@deepseek-ai\/dsh-tool-str-replace-editor'$/m,
+      /^- id: bootstrap-filesystem\n[ ]{2}name: '@deepseek-ai\/dsh-tool-str-replace-editor'$/m,
       `${dir} must keep str_replace_editor directly bound to the host fs service`,
     )
   }
