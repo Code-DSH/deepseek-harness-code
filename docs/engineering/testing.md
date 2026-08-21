@@ -6,6 +6,16 @@ Harness 0.1.0-rc.8 exposes no verified `/api/health` route. Integration tests th
 
 Live acceptance is separate: credentials are entered in the Harness UI by the user and are never inspected by automation. The planned 45-minute V4 Flash observation and 20 interactions are recorded only when configured.
 
+## Release evidence vocabulary
+
+- **产品 bug**：打包应用在用户机器上的安装、启动、恢复或功能路径失败，例如 BETA1 的 Watchdog/锁/端口清理问题、BETA2 的重复生命周期，以及 BETA2-2 首次标记中 Windows x64 安装后 600 秒未 ready。
+- **CI / 包装门禁 bug**：workflow、runner、资产校验、清理或证据采集本身不可靠，例如 BETA2 的 AppImage exit 127 诊断、deb 命令路径和 stale-evidence 防护。这类修复不能冒充产品功能修复。
+- **覆盖缺口**：workflow 没有在目标架构实际安装/解包并启动，或没有执行 no-Node 场景。交叉构建只能证明构建，不得标记为原生执行。
+
+BETA2 最终 package Run [32363049370](https://github.com/Code-DSH/deepseek-harness-code/actions/runs/32363049370) 成功，但旧 workflow 的真实安装+启动仅覆盖 Windows x64 NSIS 与 Linux x64 deb；Linux x64 AppImage 是解包+启动，macOS 是静态 DMG 检查，Windows/Linux arm64 是交叉构建。BETA2-1 Run [32389858728](https://github.com/Code-DSH/deepseek-harness-code/actions/runs/32389858728) 也全绿，不能因后续首次安装问题改写为红色。
+
+BETA2-2 候选 workflow 已定义 Windows x64/arm64 安装+启动+卸载、Linux x64/arm64 AppImage 解包+启动与 deb 安装+启动+purge、Universal macOS 在 Apple Silicon/Intel 复制+启动，以及每个原生产物的 runtime + node-required 场景。候选定义与实际证据必须分栏；在 repaired cloud Run 产生前，矩阵仍为 pending。精确表见[验收报告](./acceptance-report.md#beta2-2-exact-validation-matrix)。
+
 ## Current Desktop Rendering Contract
 
 The desktop bundle leaves streamed prose, Think disclosures, native status copy, elapsed-time calculation, and accessibility semantics to the official Harness DOM. It does not install a text mask, glyph copy, particle effect, fixed-position thinking indicator, status replacement, or DOM-mutation-driven page animation. While a turn is running, the plugin portals one rotating 20-pixel Orb into the direct native polite status row and the exact rc.8 patch shows Harness's own clock from `0s`; both fail open and disappear with the native row. On macOS all page surfaces begin at the top edge, while the pinned sidebar component alone uses `46px` expanded / `58px` collapsed top padding to clear native traffic lights. Superpowers 6.2.0 is copied from the packaged resource into the official `<DSH_HOME>/skills` root at startup; an unmarked same-named skill directory remains untouched. The better-sidebar workbench and ui-polish injections are isolated client bundles with lazy chunks and `data-uip-*` gates.
@@ -34,7 +44,9 @@ Detailed evidence and unexecuted external checks are in the [acceptance report](
 
 ## BETA2-2 Release Gates
 
-Before a BETA2-2 tag is published, run the full project suite, structural checks, runtime-closure checks, and platform packaging CI. The release workflow produces the platform artifacts and `update-manifest.json` only after verification on tag CI. The subsequent isolated-data app launch and LAN opt-in/authenticate/disable interaction remain separate acceptance evidence; no result is implied here.
+The first BETA2-2 tag did not publish: main CI Run [32468966137](https://github.com/Code-DSH/deepseek-harness-code/actions/runs/32468966137) had 9 green jobs, while package Run [32468983175](https://github.com/Code-DSH/deepseek-harness-code/actions/runs/32468983175) failed at the installed Windows x64 runtime gate after NSIS installation, Node 24.18.0 detection, and pinned Harness installation. No ready evidence arrived within 600 seconds; the app exited code 1 and the release job was skipped. This is packaged-runtime evidence, not an installer-build failure, and it does not identify an exact TypeScript throw site.
+
+Before BETA2-2 is published, rerun the full project suite, structural checks, runtime-closure checks, and the repaired native platform packaging workflow. The release workflow produces platform artifacts and `update-manifest.json` only after verification. The subsequent isolated-data LAN opt-in/authenticate/disable interaction remains separate acceptance evidence; no result is implied here.
 
 The package contract now executes the macOS verifier against controlled mounted-app fixtures and rejects a missing LAN five-file resource set, a wrong `dsh-lan-access@1.0.0` identity, or a non-bare patch. Smoke verification also requires `dsh-lan-access/package.json` in both the packaged resource inventory and the app's ready/final evidence. These focused source tests do not replace the pending `dist:mac` plus real-DMG `verify-macos-artifact` gate.
 

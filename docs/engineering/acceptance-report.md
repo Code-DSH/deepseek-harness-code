@@ -1,7 +1,7 @@
 ---
 id: engineering.acceptance-report
 title: DeepSeek Harness Code Acceptance Report
-summary: Current 0.1.0-BETA2-1 (rc.8 + 8 plugins + persistent Bash patch) evidence plus archived BETA2/BETA1/0.3.x startup recovery, Routing Suite, stream projection, and Universal release evidence.
+summary: BETA2-2 repaired native-package gate remains pending cloud evidence; includes the exact candidate-versus-executed matrix plus verified BETA2-1/BETA2/BETA1 history.
 kind: engineering
 status: canonical
 content_stage: implementation-backed
@@ -11,7 +11,7 @@ read_when: [reviewing release readiness or reproducing validation]
 skip_when: [isolated source edits before release]
 priority: must
 freshness_class: project
-last_verified: 2026-08-20T22:48:00+08:00
+last_verified: 2026-08-21T00:00:00+08:00
 owners: [primary-agent]
 source_of_truth: [../../apps, ../../packages, ../../tests, ../../release]
 related:
@@ -23,6 +23,38 @@ tags: [acceptance, release, evidence]
 
 # DeepSeek Harness Code Acceptance Report
 
+## Evidence state and bug classes
+
+- **Current release state**：BETA2-2 is `pending cloud release gate`. The first tag source exists at `012527f059c5888c64830c68a7182104f36998c4`, but package Run [32468983175](https://github.com/Code-DSH/deepseek-harness-code/actions/runs/32468983175) failed and no GitHub Release was created. There is no published BETA2-2 asset/hash evidence yet.
+- **产品 bug**影响打包应用行为：BETA1 Watchdog/锁/端口竞争、BETA2 重复 lifecycle/并发 pnpm、BETA2-1 persistent Bash hang，以及 BETA2-2 首次标记中安装后 Windows x64 runtime 未 ready。
+- **CI / 包装门禁 bug**影响发布证据可靠性：tag/ref、资产名、AppImage/deb 命令、清理、超时、用户数据隔离、证据新鲜度和 native architecture binding。
+- **覆盖缺口**表示从未在目标架构安装/解包并启动，或缺少 packaged no-Node 场景。Cross-build is never native execution.
+
+## BETA2-2 first gate and repairs
+
+- main CI Run [32468966137](https://github.com/Code-DSH/deepseek-harness-code/actions/runs/32468966137) completed all 9 jobs successfully.
+- In package Run [32468983175](https://github.com/Code-DSH/deepseek-harness-code/actions/runs/32468983175), linux-x64, linux-arm64, windows-arm64, and macos-universal jobs were green. The windows-x64 job installed NSIS, detected Node 24.18.0, installed the pinned Harness, then produced no ready evidence within 600 seconds and exited code 1. The release job was skipped.
+- This is an installed packaged-runtime gate failure, not an NSIS build failure. Available evidence does not identify a precise TypeScript throw site.
+- Repair commits `deacad0`, `096fe7d`, and `bddb6f7` batch the complete managed-plugin roster into one shell-free official CLI call per attempt and keep diagnostics redacted/bounded. Commits `bfca0f4` and `feb6355` define native Windows/Linux x64+arm64 and dual-native macOS smoke with exact listener PID, architecture binding, and ready duration. Commit `737d023` defines packaged-only no-Node guidance evidence for every native artifact.
+- Those commits define the candidate gate; they do not turn it green. Exact repaired cloud Run IDs, conclusions, durations, listener evidence, published assets, manifest, and hashes remain pending.
+
+## BETA2-2 exact validation matrix
+
+“候选定义”来自 repaired workflow contract；“实际证据”只记录已发生的 package Run 32468983175 和此前覆盖边界。Runner label 来源与 24 小时重验边界见 [GitHub Actions runner matrix](../knowledge/topics/github-actions-runner-matrix.md)。`pending` 不是失败，也不是通过。
+
+| 产物 / 目标架构                               | 候选 workflow 定义（build runner；安装/解包）                          | 实际 Node-present 结果                                                                  | 实际 no-Node 结果                                    | 实际 ready duration  | 实际进程 / loopback 结果                                             | 实际 CI Run                                                                                                                  |
+| --------------------------------------------- | ---------------------------------------------------------------------- | --------------------------------------------------------------------------------------- | ---------------------------------------------------- | -------------------- | -------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| Windows x64 NSIS                              | `windows-2025` x64；安装 → 启动 → 卸载；runtime + node-required        | **失败**：NSIS 已安装，检测 Node 24.18.0，pinned Harness 已安装，但应用 code 1          | 旧 workflow 未运行；候选场景已定义，云端证据 pending | `>600s` / 未 ready   | 无 ready evidence；旧证据不足以证明精确 listener PID/loopback 所有权 | [32468983175](https://github.com/Code-DSH/deepseek-harness-code/actions/runs/32468983175)（windows-x64 failed）              |
+| Windows arm64 NSIS                            | `windows-11-arm` arm64；安装 → 启动 → 卸载；runtime + node-required    | 旧 job green 只证明交叉构建，不是 arm64 原生启动；候选 native 结果 pending              | 未运行；候选场景已定义，pending                      | 未采集               | 未采集；无原生 PID/architecture/loopback 证据                        | [32468983175](https://github.com/Code-DSH/deepseek-harness-code/actions/runs/32468983175)（windows-arm64 green cross-build） |
+| Linux x64 AppImage                            | `ubuntu-24.04` x64；解包 → 启动；runtime + node-required               | 旧 workflow 已做 extract+start，package job green                                       | 未运行；候选场景已定义，pending                      | 旧证据未记录精确时长 | 旧 smoke 未绑定精确 listener PID；候选证据 pending                   | [32468983175](https://github.com/Code-DSH/deepseek-harness-code/actions/runs/32468983175)（linux-x64 green）                 |
+| Linux x64 deb                                 | `ubuntu-24.04` x64；安装 → 启动 → purge；runtime + node-required       | 旧 workflow 已做 install+start，package job green                                       | 未运行；候选场景已定义，pending                      | 旧证据未记录精确时长 | 旧 smoke 未绑定精确 listener PID；候选证据 pending                   | [32468983175](https://github.com/Code-DSH/deepseek-harness-code/actions/runs/32468983175)（linux-x64 green）                 |
+| Linux arm64 AppImage                          | `ubuntu-24.04-arm` arm64；解包 → 启动；runtime + node-required         | 旧 job green 只证明交叉构建，不是 arm64 原生启动；候选 native 结果 pending              | 未运行；候选场景已定义，pending                      | 未采集               | 未采集；无原生 PID/architecture/loopback 证据                        | [32468983175](https://github.com/Code-DSH/deepseek-harness-code/actions/runs/32468983175)（linux-arm64 green cross-build）   |
+| Linux arm64 deb                               | `ubuntu-24.04-arm` arm64；安装 → 启动 → purge；runtime + node-required | 旧 job green 只证明交叉构建，不是 arm64 原生启动；候选 native 结果 pending              | 未运行；候选场景已定义，pending                      | 未采集               | 未采集；无原生 PID/architecture/loopback 证据                        | [32468983175](https://github.com/Code-DSH/deepseek-harness-code/actions/runs/32468983175)（linux-arm64 green cross-build）   |
+| Universal macOS DMG/ZIP（Apple Silicon 执行） | `macos-15` arm64；复制 `.app` → 启动；runtime + node-required          | 旧 macos-universal job green 为静态 DMG/产物校验，不是 arm64 原生启动；候选结果 pending | 未运行；候选场景已定义，pending                      | 未采集               | 未采集；无原生 PID/architecture/loopback 证据                        | [32468983175](https://github.com/Code-DSH/deepseek-harness-code/actions/runs/32468983175)（macos-universal static green）    |
+| Universal macOS DMG/ZIP（Intel 执行）         | `macos-15-intel` x64；复制 `.app` → 启动；runtime + node-required      | 旧 macos-universal job green 为静态 DMG/产物校验，不是 x64 原生启动；候选结果 pending   | 未运行；候选场景已定义，pending                      | 未采集               | 未采集；无原生 PID/architecture/loopback 证据                        | [32468983175](https://github.com/Code-DSH/deepseek-harness-code/actions/runs/32468983175)（macos-universal static green）    |
+
+发布后再补：repaired Run URL、每个 job conclusion、实际 ready duration、精确 Electron/Harness/listener PID 与 `127.0.0.1` 绑定、no-Node 指引结果、资产名、manifest 和 SHA-256。没有这些字段时不得把矩阵标成 verified。
+
 ## 0.1.0-BETA2-1 implementation evidence
 
 - The pinned `@deepseek-ai/dsh-terminal-bash@0.1.0-rc.8` patch changes `CONTROLLED_PROMPT` to `__DSH_PERSISTENT_BASH_PROMPT__` and replaces the hard-coded prompt bound with `CONTROLLED_PROMPT.length + 1`. The patch is registered in both root and packaged runtime lockfiles with hash `ab9c3393...`.
@@ -31,7 +63,9 @@ tags: [acceptance, release, evidence]
 - The updater now remains user-confirmed: it selects the x64/arm64 or macOS universal asset, verifies SHA-256, invokes the platform replacement helper, and restarts only after the user chooses “Update and restart”. CI generates `update-manifest.json` from the release assets.
 - The updater host policy now explicitly allows GitHub’s signed `release-assets.githubusercontent.com` redirect target. The regression reproduces the real release redirect and the updater host/fetch/manifest suite passes 47 tests after the fix.
 - Large installer downloads now use 32 MiB HTTPS Range chunks with per-chunk timeout, retry, and size validation, so a CDN connection ending near 100 MB cannot leave the update flow hanging or corrupt the package.
-- Tagged workflow `32389858728` completed successfully for native macOS Universal, Windows x64/arm64, Linux x64/arm64 packaging and the GitHub Release publish job. Release `v0.1.0-BETA2-1` is Latest/non-prerelease and exposes eight installers plus `update-manifest.json`; the remote manifest selects the Universal macOS ZIP and architecture-specific Windows/Linux assets with 64-character SHA-256 values.
+- Tagged workflow `32389858728` completed successfully for macOS Universal, Windows x64/arm64, Linux x64/arm64 packaging jobs and the GitHub Release publish job. This describes successful asset production, not native execution of every architecture. Release `v0.1.0-BETA2-1` is Latest/non-prerelease and exposes eight installers plus `update-manifest.json`; the remote manifest selects the Universal macOS ZIP and architecture-specific Windows/Linux assets with 64-character SHA-256 values.
+- The green final run does not erase fresh-install usability problems. BETA2-1 synchronously invoked the official plugin CLI once per managed plugin, which was borderline on Windows and became a 600-second failure with the BETA2-2 roster. It also requires official system Node >=22.13 and never installs Node; the [Issue #17](https://github.com/Code-DSH/deepseek-harness-code/issues/17) reply claiming automatic Node installation was incorrect.
+- Replace this download only after BETA2-2 is Latest and its assets/manifest are independently verified. Then delete only the BETA2-1 GitHub Release/assets; retain its source tag and this record.
 
 ## 0.1.0-BETA2 integration evidence (current)
 
@@ -40,7 +74,7 @@ tags: [acceptance, release, evidence]
 - Harness Home resolution uses `@deepseek-ai/dsh-home-paths@0.1.0-rc.8`. Migration from `<Electron userData>/dsh-home` is copy-only, target-wins, symlink-rejecting, permission-preserving (0600/0700), idempotent, and rollback-safe.
 - The host installs **8+ integrated plugins** only through `dsh plugin --profile web add` using the bundled pnpm runtime: `deepseek-harness-desktop-plugin`, `dsh-ui-motion@1.1.0`, `dsh-model2-selector@1.1.0`, `dsh-ui-polish`, `dsh-updater-check@1.0.0`, `dsh-prompt-principles`, `dsh-vision-router@1.7.1`, `dsh-better-sidebar@0.12.3`, `dsh-superpowers`, `@dsh-external/dsh-super-injector@0.3.3`, `@dsh-external/dsh-mode-boost@0.1.0`, `dsh-find-plugin`, and `deepseek-harness-composition` (MCP bridges + subagent providers). The Harness child receives `--expose-internals`; all bare-name patches are retained. A corrupted profile `node_modules` triggers a one-time rebuild before failing.
 - Packaged extra resources include `routing-suite/` (SHA-256 pinned), `superpowers-skills/`, `global-agent-prompt/`, and the 8 plugin trees; `asar: false` preserves the full `window.__DSH_BOOT__` boot graph (39+ entries).
-- Current gates (BETA2 pipeline): `pnpm build` → `pnpm check:memory` → `pnpm preflight:runtime` (51 runtime artifacts + 35 production dependencies + 8 critical versions + 10 bundled plugin packages + SHA-256 digests + bare-name patches + orphan import rejection) → `pnpm check` (typecheck + lint + format:check + verify:docs + verify:security) → tag CI packaging. The macOS tag job runs `verify-macos-artifact.mjs --universal` before upload; Windows NSIS and Linux AppImage/deb build on native runners.
+- Historical BETA2 gates: `pnpm build` → `pnpm check:memory` → `pnpm preflight:runtime` (51 runtime artifacts + 35 production dependencies + 8 critical versions + 10 bundled plugin packages + SHA-256 digests + bare-name patches + orphan import rejection) → `pnpm check` (typecheck + lint + format:check + verify:docs + verify:security) → tag CI packaging. The macOS tag job ran `verify-macos-artifact.mjs --universal`; Windows/Linux arm64 asset builds were cross-build coverage, not native execution.
 - BETA2 accepted only an official system Node.js installation and never downloaded or added a private Node to PATH. Its updater host was informational only; BETA2-1 supersedes that boundary with user-confirmed replacement while retaining no background schedule or silent update. Startup no longer scans or terminates unrelated system Harness processes.
 
 ## 0.1.0-BETA1 historical artifact
@@ -50,7 +84,9 @@ tags: [acceptance, release, evidence]
 - Size: 221,134,518 bytes
 - SHA-256: `b1afaa874d00f1254c8d5542c64bc80969a804ad44d3ce96284c0ad73fcf25ce`
 - `verify:mac --universal` mounted the DMG read-only, verified the runtime dependency closure, Anchored Standard provenance, ad-hoc signature, and 49 Universal/architecture-qualified Mach-O files. A separate `codesign --verify --deep --strict` completed without error.
-- Integrated surface in BETA1: 6 plugins, rc.6, portable Node download still present; since BETA2 replaced by 8 plugins, rc.8, and system Node auto-detection.
+- Integrated surface in BETA1: 6 plugins and rc.6. Historical release prose incorrectly claimed portable Node download/no global Node: PR [#4](https://github.com/Code-DSH/deepseek-harness-code/pull/4), merge `0d0bb18`, is an ancestor of the BETA1 tag, so tagged code already required system Node. BETA2 retained the system-Node model and expanded detection.
+- [Issue #10](https://github.com/Code-DSH/deepseek-harness-code/issues/10) records the BETA1 product bugs: silent single-instance-lock failure, one resident Watchdog per relaunch, and a 1-second Windows cleanup race that could trigger `EADDRINUSE`.
+- No formal `BETA1-1` tag, Release, commit text, Issue, PR, or code reference exists. If that name meant BETA2-1, use the BETA2-1 section above.
 
 ## 0.3.2/0.3.1 historical evidence (archived)
 
@@ -94,7 +130,7 @@ tags: [acceptance, release, evidence]
 
 ## Automated verification
 
-| Gate              | Result (BETA2-1)                                                                                                             |
+| Gate              | Historical result (BETA2-1)                                                                                                  |
 | ----------------- | ---------------------------------------------------------------------------------------------------------------------------- |
 | Unit suite        | 51 files / 314 tests passed (3 intentionally skipped), including Routing Suite, system-node, updater, and stream regressions |
 | Upstream preset   | 108 vendored upstream and local-patch tests passed                                                                           |
@@ -107,7 +143,7 @@ tags: [acceptance, release, evidence]
 | Runtime preflight | 51 artifacts, 35 production dependencies, 8 critical packages, and 10 bundled plugin packages verified                       |
 | macOS package     | Local `verify:mac --universal` passed; tagged Universal macOS job passed and uploaded DMG + ZIP                              |
 
-Historical 0.3.x gate snapshots are retained above for traceability; current release gates are BETA2.
+Historical BETA2-1 and 0.3.x gate snapshots are retained for traceability; the current BETA2-2 repaired cloud gate is pending.
 
 ## Real renderer and performance evidence
 
@@ -135,8 +171,8 @@ The user-supplied community claim is experimental and is not a benchmark guarant
 ## Cross-platform status
 
 - macOS Universal DMG is locally built and inspected (`--universal`).
-- Windows NSIS installers are produced by native x64 + arm64 jobs in `.github/workflows/package.yml` (BETA1 shipped; BETA2 re-verified).
-- Linux AppImage/deb are defined in `electron-builder.yml` and pass on ubuntu-latest runners in the tag-triggered packaging workflow (BETA1 definitions-ready; BETA2 CI-green).
+- BETA2/BETA2-1 published Windows NSIS and Linux AppImage/deb assets, but their historical green workflows did not natively execute every architecture. Old true install+start coverage was Windows x64 NSIS and Linux x64 deb; Linux x64 AppImage was extract+start; Windows/Linux arm64 were cross-build only; macOS was static DMG inspection.
+- BETA2-2's candidate workflow assigns `windows-2025`, `windows-11-arm`, `ubuntu-24.04`, `ubuntu-24.04-arm`, `macos-15`, and `macos-15-intel` to the native matrix. Execution remains pending until exact cloud run/job evidence is recorded in the matrix above.
 
 ## External limits
 
