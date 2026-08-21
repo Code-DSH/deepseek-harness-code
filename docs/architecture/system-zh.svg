@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1280" viewBox="0 0 1600 1280" role="img" aria-labelledby="title desc">
   <title id="title">DeepSeek Harness Code — Code Agent 桌面系统架构</title>
-  <desc id="desc">DeepSeek Harness Code 是 Code Agent 桌面系统。Electron 主进程负责窗口与回环 Harness 子进程生命周期，安全 preload 桥仅暴露 preferences/runtime 两组能力，BrowserWindow 承载 Harness Web 界面并通过官方 Cordis 插件扩展，Harness 以回环子进程运行于系统 Node，提供官方 Home 与会话持久化，Anchored Standard、Prompt Principles、Superpowers、Vision Router 与路由套件塑造 Code Agent 循环，独立 Watchdog 提供有界恢复，Provider 边界保持在 DeepSeek API。</desc>
+  <desc id="desc">DeepSeek Harness Code 是 Code Agent 桌面系统。Electron 主进程负责窗口与回环 Harness 子进程生命周期，安全 preload 桥仅暴露 preferences、lanAccess、runtime、updater、bundledPlugins 五组固定能力，BrowserWindow 承载 Harness Web 界面并通过官方 Cordis 插件扩展，Harness 以回环子进程运行于系统 Node，提供官方 Home、公开 CLI 插件协调与会话持久化，Anchored Standard、Prompt Principles、Superpowers、Vision Router 与路由套件塑造 Code Agent 循环，独立 Watchdog 提供有界恢复，Provider 边界保持在 DeepSeek API。</desc>
   <defs>
     <style>
       :root { color-scheme: light dark; }
@@ -114,8 +114,8 @@
   <rect class="bridge" x="44" y="328" width="1110" height="72"/>
   <text class="subheading" x="60" y="350">隔离边界 — 安全 Preload 桥</text>
   <text class="small" x="60" y="370">contextIsolation: true · sandbox: true · nodeIntegration: false · createSecureWebPreferences</text>
-  <text class="label-sm" x="60" y="386">preferences</text><text class="small" x="150" y="386">读写 closeBehavior（zod 校验）</text>
-  <text class="label-sm" x="360" y="386">runtime</text><text class="small" x="420" y="386">get / subscribe / restartHarness / openLogs</text>
+  <text class="label-sm" x="60" y="386">Preload 能力</text><text class="small" x="155" y="386">preferences · lanAccess · runtime</text>
+  <text class="label-sm" x="500" y="386">固定 IPC</text><text class="small" x="565" y="386">updater · bundledPlugins · 载荷校验</text>
   <text class="tiny" x="660" y="386">无 shell · 无任意 IPC · 不记录凭据/提示词 · 导航策略</text>
 
   <!-- Row 3: Renderer + Harness Core -->
@@ -205,8 +205,8 @@
   <!-- Official plugin install bar -->
   <rect class="host" x="60" y="852" width="1080" height="64" rx="8"/>
   <text class="tiny" x="76" y="870">官方协调：</text><text class="small" x="140" y="870">dsh plugin --profile web add</text><text class="tiny" x="340" y="870"> 经系统 Node + 内置 pnpm · --expose-internals</text>
-  <text class="tiny" x="76" y="886">Harness 拥有 manifest/bundle/patch · 桌面永不手写 profile YAML</text>
-  <text class="tiny" x="76" y="902">Bundle：desktop-plugin · dsh-ui-motion · dsh-model2-selector · dsh-ui-polish · dsh-updater-check · prompt-principles · vision-router · better-sidebar · superpowers · composition · injector · mode-boost · dsh-find-plugin</text>
+  <text class="tiny" x="76" y="886">Harness 掌管正常协调 · 桌面仅在 CLI 成功后移除 rc.8 linkOnly 重复项</text>
+  <text class="tiny" x="76" y="902">Bundle：desktop-plugin · dsh-ui-motion · dsh-model2-selector · dsh-ui-polish · dsh-updater-check · dsh-lan-access · prompt-principles · vision-router · better-sidebar · superpowers · composition · injector · mode-boost · dsh-find-plugin</text>
 
   <!-- Row 5: Data + External -->
   <rect class="data" x="44" y="930" width="680" height="160"/>

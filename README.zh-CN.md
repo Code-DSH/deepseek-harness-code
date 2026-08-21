@@ -6,7 +6,7 @@
   <p><a href="./README.md">English</a> · <a href="./README.zh-CN.md">简体中文</a></p>
   <p><a href="#专为代码而铸深度特化的-coding-agent">特化 Agent</a> · <a href="#集成理念">集成理念</a> · <a href="#架构">架构</a> · <a href="#不只是网页套壳">为什么不同</a> · <a href="#为长期运行而设计">长期运行</a> · <a href="#从源码构建">构建</a></p>
   <p>
-    <img src="https://img.shields.io/badge/version-0.1.0_BETA2--1-2563eb?style=flat-square" alt="版本 0.1.0-BETA2-1" />
+    <img src="https://img.shields.io/badge/version-0.1.0_BETA2--2-2563eb?style=flat-square" alt="版本 0.1.0-BETA2-2" />
     <img src="https://img.shields.io/badge/license-MIT-16a34a?style=flat-square" alt="MIT 许可证" />
     <img src="https://img.shields.io/badge/macOS-12%2B-111827?style=flat-square&amp;logo=apple" alt="macOS 12+" />
     <img src="https://img.shields.io/badge/Windows-10%2B-0078D4?style=flat-square&amp;logo=windows" alt="Windows 10+" />
@@ -115,7 +115,7 @@ V4 Pro 是该整合基础增强的重要能力之一，而非唯一中心。固�
 | 内存压力     | 继承无界行为     | 限制增长路径、轮转日志、回收失效进程                        |
 | 诊断         | 仅浏览器控制台   | 脱敏的 Electron / Harness / Watchdog 日志，应用内可打开     |
 | 桌面集成     | 仅窗口外壳       | 原生托盘/菜单、关闭策略、系统主题、快捷键与会话感知恢复     |
-| 安全边界     | 宽权限 preload   | 仅回环 Harness + 两组已验证 preload 能力                    |
+| 安全边界     | 宽权限 preload   | 仅回环 Harness + 五组固定、已验证 preload 能力              |
 | 分发         | 依赖外部环境     | 自包含应用，常见位置自动探测（Homebrew / nvm / Volta 等）   |
 
 > 轻量套壳解决“像应用一样打开网页”；DHC 解决“把 Harness 作为有韧性的桌面编码系统来运行”。
@@ -141,6 +141,7 @@ V4 Pro 是该整合基础增强的重要能力之一，而非唯一中心。固�
 - **系统外观** — 浅/深色启动页、平台标题栏、官方单色资产与减动支持。
 - **平滑导航** — View Transitions 优先，CSS 回退次之，无强制布局。
 - **工作区韧性** — 已验证 Standard 切换与官方会话恢复。
+- **可选局域网访问** — 默认关闭；启用后由 Electron 自有 HTTP 代理把一次性链接令牌兑换为 HttpOnly Cookie，再向可信局域网提供访问；Harness 与桌面渲染器仍保持回环。
 - **Skills** — Superpowers 6.2.0 安装至 `<DSH_HOME>/skills`，用户同名目录永不覆盖。
 - **全局 Agent 协议** — `<DSH_HOME>/AGENTS.md`：无则安装、未改则随版升级、永不覆盖用户自有，菜单 `Use Bundled Global Prompt…` 带时间戳备份切换。
 - **全局 `dsh`** — 首次启动经 `npm install -g` 安装固定 `@deepseek-ai/dsh`，不覆用户全局，失败不阻塞。
@@ -172,7 +173,7 @@ V4 Pro 是该整合基础增强的重要能力之一，而非唯一中心。固�
 
 - **离线快照** — 安装包内置三组件（`@dsh-external/dsh-super-injector` Bundle 层、`@dsh-external/dsh-mode-boost` 宿主增强、`router-standard` + `router-spec` 预设）。
 - **固定基线** — `injector 0.3.3` / `mode-boost 0.1.0` / `router-preset 0.2.0@eff787e`，SHA-256 存于 `build/routing-suite/versions.json`。
-- **官方安装** — 经系统 Node + 内置 pnpm 执行 `dsh plugin --profile web add`（desktop、ui-motion、model2、prompt-principles、vision-router、better-sidebar、composition、Super Injector、Mode Boost、find-plugin）；Harness 掌管清单与补丁，桌面仅管理路由预设与 Skills。损坏的 `node_modules` 自引用等失败会一次性重建后重试。
+- **官方安装** — 经系统 Node + 内置 pnpm 执行 `dsh plugin --profile web add`（desktop、ui-motion、model2、prompt-principles、vision-router、better-sidebar、LAN access、composition、Super Injector、Mode Boost、find-plugin）。正常 manifest 协调由 Harness 掌管；桌面宿主唯一的兼容性例外，是成功执行官方 CLI 后仅移除 rc.8 两个 `linkOnly` 子 Agent bundle 名，不改无关条目。受校验的应用自有 marker 仅在受管清单、包路径/身份、profile 依赖与 pnpm store 均未变化时跳过重复 CLI；缺失或不匹配则重新协调。损坏的 `node_modules` 自引用等失败会一次性重建后重试。
 - **审核更新** — 仅随 App 发版更新，构建前校验 SHA-256，安装后永不后台下载可变代码。
 - **所有权安全** — 不覆盖无关插件与用户自有预设，旧 Home 仅复制迁移。
 
@@ -184,29 +185,29 @@ V4 Pro 是该整合基础增强的重要能力之一，而非唯一中心。固�
   <em>图 1 — Code Agent 桌面架构。Electron 主进程掌管窗口/子进程/桥接；Harness 掌管会话/协议；Watchdog 掌管重启；Preload 掌管校验。详见<a href="./docs/architecture/overview.md">系统概览</a>与<a href="./docs/architecture/lifecycle.md">生命周期</a>。English: <a href="./docs/architecture/system.svg">system.svg</a></em>
 </p>
 
-一图读懂：桌面宿主创建窗口、解析系统 Node、经公开 CLI 协调插件、在回环端口启动 `dsh web` 并以 5s 非重叠探测；Preload 仅 `preferences`/`runtime` 两组能力；BrowserWindow 承载官方 Harness Web 与工作台；Harness 子进程运行完整 Agent 运行时于 `127.0.0.1` 官方 Home；智能层塑造工具面与知识注入；Watchdog 经 IPC 有界重启；持久化始终在 `.app` 之外。
+一图读懂：桌面宿主创建窗口、解析系统 Node、经公开 CLI 协调插件、在回环端口启动 `dsh web` 并以 5s 非重叠探测；Preload 仅暴露 `preferences`、`lanAccess`、`runtime`、`updater`、`bundledPlugins` 五组固定能力；BrowserWindow 承载官方 Harness Web 与工作台；Harness 子进程运行完整 Agent 运行时于 `127.0.0.1` 官方 Home；智能层塑造工具面与知识注入；Watchdog 经 IPC 有界重启；持久化始终在 `.app` 之外。
 
 完整边界见[系统概览](./docs/architecture/overview.md)与[生命周期](./docs/architecture/lifecycle.md)，深浅色自适应。
 
 ## 安全模型
 
 - 沙箱渲染器，禁用 Node 集成。
-- 仅 `preferences` / `runtime` 两组 preload 能力。
+- 仅 `preferences`、`lanAccess`、`runtime`、`updater`、`bundledPlugins` 五组固定 preload 能力。
 - IPC 载荷校验后才触发桌面动作。
-- Harness 仅绑定回环，不暴露局域网。
+- Harness 始终仅绑定回环。局域网访问默认关闭；用户启用后，独立 Electron 代理才监听 `0.0.0.0`，把一次性链接令牌兑换为 HttpOnly Cookie，并仅向回环 Harness 转发已认证流量。这是可信局域网 HTTP，不承诺公网暴露或 TLS。
 - 凭据仅留官方 Harness 设置，不入应用包。
 - 日志排除凭据、Authorization、Cookie、Prompt 与响应。
 - 外部导航 `allow` / `open-external` 策略。
 
 ## 平台状态
 
-| 平台    | 目标                             | 当前状态                            |
-| ------- | -------------------------------- | ----------------------------------- |
-| macOS   | macOS 12+，Intel + Apple Silicon | Universal DMG 已验证，随 BETA1 发布 |
-| Windows | Windows 10+，x64 + arm64         | NSIS 在 Windows Runner 构建         |
-| Linux   | x64 + arm64                      | AppImage/deb 在 Linux Runner 通过   |
+| 平台    | 目标                             | BETA2-2 发布状态            |
+| ------- | -------------------------------- | --------------------------- |
+| macOS   | macOS 12+，Intel + Apple Silicon | Universal 包验证等待 tag CI |
+| Windows | Windows 10+，x64 + arm64         | 原生包验证等待 tag CI       |
+| Linux   | x64 + arm64                      | 原生包验证等待 tag CI       |
 
-跨平台定义已入仓，仅原生 Runner 构建验证后才视为正式发行。
+跨平台定义已入仓；BETA2-2 尚待验证与发布。只有相应 tag CI 在原生 Runner 验证过的产物才视为已发布。
 
 ## 在 macOS 上安装
 

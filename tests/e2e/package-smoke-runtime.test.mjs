@@ -44,7 +44,60 @@ const expectedMetadata = {
   startedAt: "2026-08-19T00:00:00.000Z",
 };
 
+function validSmokeEvidence(resources) {
+  return {
+    schema: 2,
+    runId: "run-1",
+    startedAt: expectedMetadata.startedAt,
+    ready: {
+      phase: "ready",
+      harnessOrigin: "http://127.0.0.1:41002",
+      appPid: 7000,
+      harnessPid: 7002,
+      listenerPid: 7002,
+      readinessProbePassed: true,
+      packaged: true,
+      ...expectedMetadata,
+      resources,
+      harnessHome: "/tmp/dsh",
+      resourceRoot: "/tmp/resources",
+      systemNode: { executable: "/usr/bin/node", version: "24.1.0" },
+      timestamps: { readyAt: "2026-08-19T00:00:01.000Z" },
+    },
+    final: {
+      phase: "final",
+      harnessOrigin: "http://127.0.0.1:41002",
+      appPid: 7000,
+      harnessPid: 7002,
+      listenerPid: 7002,
+      watchdogAcked: true,
+      harnessRetired: true,
+      ...expectedMetadata,
+      resources,
+      harnessHome: "/tmp/dsh",
+      resourceRoot: "/tmp/resources",
+      systemNode: { executable: "/usr/bin/node", version: "24.1.0" },
+      timestamps: {
+        readyAt: "2026-08-19T00:00:01.000Z",
+        finalAt: "2026-08-19T00:07:00.000Z",
+      },
+    },
+  };
+}
+
 describe("packaged runtime listener selection", () => {
+  test("rejects smoke evidence that omits the packaged LAN plugin manifest", () => {
+    expect(() =>
+      verifySmokeEvidence(
+        validSmokeEvidence(["/tmp/resources/desktop-plugin/package.json"]),
+        {
+          ...expectedMetadata,
+          maxDurationMs: 10 * 60_000,
+        },
+      ),
+    ).toThrow(/dsh-lan-access/u);
+  });
+
   test("waits for the packaged app to exit naturally after final evidence", async () => {
     const child = new EventEmitter();
     child.exitCode = null;
@@ -156,7 +209,10 @@ describe("packaged runtime listener selection", () => {
         readinessProbePassed: true,
         packaged: true,
         ...expectedMetadata,
-        resources: ["desktop-plugin/package.json"],
+        resources: [
+          "/tmp/resources/desktop-plugin/package.json",
+          "/tmp/resources/dsh-lan-access/package.json",
+        ],
         harnessHome: "/tmp/dsh",
         resourceRoot: "/tmp/resources",
         systemNode: { executable: "/usr/bin/node", version: "24.1.0" },
@@ -171,6 +227,10 @@ describe("packaged runtime listener selection", () => {
         watchdogAcked: true,
         harnessRetired: true,
         ...expectedMetadata,
+        resources: [
+          "/tmp/resources/desktop-plugin/package.json",
+          "/tmp/resources/dsh-lan-access/package.json",
+        ],
         harnessHome: "/tmp/dsh",
         resourceRoot: "/tmp/resources",
         systemNode: { executable: "/usr/bin/node", version: "24.1.0" },
@@ -431,6 +491,7 @@ describe("packaged runtime listener selection", () => {
         appPid: 7000,
         harnessPid: 7002,
         listenerPid: 7002,
+        resources: ["/tmp/resources/dsh-lan-access/package.json"],
         harnessHome: "/tmp/dsh",
         resourceRoot: "/tmp/resources",
         systemNode: { executable: "/usr/bin/node", version: "24.1.0" },
@@ -446,6 +507,7 @@ describe("packaged runtime listener selection", () => {
         watchdogAcked: true,
         harnessRetired: true,
         ...expectedMetadata,
+        resources: ["/tmp/resources/dsh-lan-access/package.json"],
         timestamps: {
           readyAt: "2026-08-18T00:00:00.000Z",
           finalAt: "2026-08-19T00:00:01.000Z",

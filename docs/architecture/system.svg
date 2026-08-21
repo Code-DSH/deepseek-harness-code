@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1280" viewBox="0 0 1600 1280" role="img" aria-labelledby="title desc">
   <title id="title">DeepSeek Harness Code — Code Agent Desktop Architecture</title>
-  <desc id="desc">DeepSeek Harness Code is a Code Agent desktop system. Electron Main owns lifecycle and loopback Harness child. Secure preload bridge exposes only preferences/runtime. BrowserWindow hosts Harness Web UI augmented by official Cordis plugins. Harness runs as loopback child on system Node with official Home, plugin reconciliation via public CLI, and persistent sessions. Anchored Standard, Prompt Principles, Superpowers, Vision Router and Routing Suite shape the Code Agent loop. Isolated Watchdog provides bounded recovery. Provider boundary stays at DeepSeek API.</desc>
+  <desc id="desc">DeepSeek Harness Code is a Code Agent desktop system. Electron Main owns lifecycle and the loopback Harness child. The secure preload bridge exposes only five fixed capability groups: preferences, lanAccess, runtime, updater, and bundledPlugins. BrowserWindow hosts Harness Web UI augmented by official Cordis plugins. Harness runs as a loopback child on system Node with official Home, public-CLI plugin reconciliation, and persistent sessions. Anchored Standard, Prompt Principles, Superpowers, Vision Router and Routing Suite shape the Code Agent loop. Isolated Watchdog provides bounded recovery. Provider boundary stays at DeepSeek API.</desc>
   <defs>
     <style>
       :root { color-scheme: light dark; }
@@ -115,8 +115,8 @@
   <rect class="bridge" x="44" y="328" width="1110" height="72"/>
   <text class="subheading" x="60" y="350">Isolation Boundary — Secure Preload Bridge</text>
   <text class="small" x="60" y="370">contextIsolation: true · sandbox: true · nodeIntegration: false · createSecureWebPreferences</text>
-  <text class="label-sm" x="60" y="386">preferences</text><text class="small" x="150" y="386">read/write closeBehavior (zod validated)</text>
-  <text class="label-sm" x="360" y="386">runtime</text><text class="small" x="420" y="386">get / subscribe / restartHarness / openLogs</text>
+  <text class="label-sm" x="60" y="386">Preload groups</text><text class="small" x="165" y="386">preferences · lanAccess · runtime</text>
+  <text class="label-sm" x="500" y="386">Fixed IPC</text><text class="small" x="570" y="386">updater · bundledPlugins · validated payloads</text>
   <text class="tiny" x="660" y="386">No shell · No arbitrary IPC · No credential/prompt logging · Navigation policy</text>
 
   <!-- Row 3: Renderer + Harness Core side by side -->
@@ -206,8 +206,8 @@
   <!-- Official plugin install bar -->
   <rect class="host" x="60" y="852" width="1080" height="64" rx="8"/>
   <text class="tiny" x="76" y="870">Official reconciliation:</text><text class="small" x="200" y="870">dsh plugin --profile web add</text><text class="tiny" x="380" y="870"> via system Node + bundled pnpm · --expose-internals</text>
-  <text class="tiny" x="76" y="886">Harness owns manifest/bundle/patch · desktop never edits profile YAML</text>
-  <text class="tiny" x="76" y="902">Bundles: desktop-plugin · dsh-ui-motion · dsh-model2-selector · dsh-ui-polish · dsh-updater-check · prompt-principles · vision-router · better-sidebar · superpowers · composition · injector · mode-boost · dsh-find-plugin</text>
+  <text class="tiny" x="76" y="886">Harness owns normal reconciliation · desktop only removes rc.8 linkOnly duplicates after CLI success</text>
+  <text class="tiny" x="76" y="902">Bundles: desktop-plugin · dsh-ui-motion · dsh-model2-selector · dsh-ui-polish · dsh-updater-check · dsh-lan-access · prompt-principles · vision-router · better-sidebar · superpowers · composition · injector · mode-boost · dsh-find-plugin</text>
 
   <!-- Row 5: Data + External -->
   <rect class="data" x="44" y="930" width="680" height="160"/>

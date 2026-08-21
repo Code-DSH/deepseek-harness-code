@@ -130,6 +130,11 @@ try {
     "dsh-model-two-level-selector/lib/index.js",
     "dsh-model-two-level-selector/lib/client.js",
     "dsh-model-two-level-selector/cordis.patch.yml",
+    "dsh-lan-access/package.json",
+    "dsh-lan-access/index.js",
+    "dsh-lan-access/lib/index.js",
+    "dsh-lan-access/lib/client.js",
+    "dsh-lan-access/cordis.patch.yml",
     "routing-suite/injector/package.json",
     "routing-suite/injector/cordis.patch.yml",
     "routing-suite/mode-boost/package.json",
@@ -159,6 +164,7 @@ try {
   for (const [directory, packageName, version] of [
     ["dsh-ui-motion", "dsh-ui-motion", "1.0.0"],
     ["dsh-model-two-level-selector", "dsh-model2-selector", "1.1.0"],
+    ["dsh-lan-access", "dsh-lan-access", "1.0.0"],
   ]) {
     const manifest = JSON.parse(
       await readFile(join(resourcesRoot, directory, "package.json"), "utf8"),
@@ -172,10 +178,8 @@ try {
         `unexpected packaged plugin identity: ${String(manifest.name)}@${String(manifest.version)}`,
       );
     }
-    if (
-      !patch.includes(`name: '${packageName}'`) ||
-      patch.includes("./node_modules/")
-    ) {
+    const quotedBareName = new RegExp(`name:\\s*(["'])${packageName}\\1`, "u");
+    if (!quotedBareName.test(patch) || patch.includes("./node_modules/")) {
       throw new Error(`${packageName} is not using its bare package name`);
     }
   }

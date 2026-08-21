@@ -305,6 +305,19 @@ function verifySmokeEvidence(evidence, expected) {
     !ready.systemNode?.executable
   )
     throw new Error("smoke evidence runtime provenance is incomplete");
+  const lanManifest = join(
+    ready.resourceRoot,
+    "dsh-lan-access",
+    "package.json",
+  );
+  if (
+    !Array.isArray(ready.resources) ||
+    !ready.resources.includes(lanManifest) ||
+    !Array.isArray(final.resources) ||
+    !final.resources.includes(lanManifest)
+  ) {
+    throw new Error("smoke evidence is missing dsh-lan-access/package.json");
+  }
   const startedAt = Date.parse(evidence.startedAt ?? "");
   const readyAt = Date.parse(ready.timestamps?.readyAt ?? "");
   const finalAt = Date.parse(final.timestamps?.finalAt ?? "");
@@ -415,6 +428,7 @@ async function assertResources(executable) {
   const required = [
     join(resources, "desktop-plugin", "package.json"),
     join(resources, "desktop-plugin", "client.js"),
+    join(resources, "dsh-lan-access", "package.json"),
     join(resources, "anchored-standard-plugin", "package.json"),
     join(resources, "anchored-standard-plugin", "UPSTREAM.json"),
     join(resources, "anchored-standard-plugin", "UPSTREAM-SHA256SUMS"),

@@ -946,6 +946,7 @@ async function launch(): Promise<void> {
             "anchored-standard-plugin",
             "package.json",
           ),
+          join(process.resourcesPath, "dsh-lan-access", "package.json"),
           join(process.resourcesPath, "node-runtime", "package.json"),
           join(process.resourcesPath, "routing-suite", "versions.json"),
         ],
