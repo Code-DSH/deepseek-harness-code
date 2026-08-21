@@ -1,12 +1,14 @@
 import {
   mkdir,
   mkdtemp,
+  rm,
   readFile,
   realpath,
   stat,
   symlink,
   writeFile,
 } from "node:fs/promises";
+import { mkdirSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { delimiter, dirname, join, resolve } from "node:path";
 
@@ -130,19 +132,16 @@ describe("official Harness plugin installation", () => {
       },
       userField: { preserved: true },
     };
-    await writeFile(
-      join(profileRoot, "package.json"),
-      `${JSON.stringify(profile)}\n`,
-    );
+    const profilePath = join(profileRoot, "package.json");
     await writeFile(
       join(profileRoot, "node_modules", ".modules.yaml"),
       `${JSON.stringify({ storeDir: "/managed/pnpm-store" })}\n`,
     );
-    const runCommand = vi.fn<OfficialCommandRunner>(() => ({
-      status: 0,
-      stdout: "",
-      stderr: "",
-    }));
+    const runCommand = vi.fn<OfficialCommandRunner>(() => {
+      mkdirSync(profileRoot, { recursive: true });
+      writeFileSync(profilePath, `${JSON.stringify(profile)}\n`);
+      return { status: 0, stdout: "", stderr: "" };
+    });
 
     const result = await ensureOfficialHarnessInstall({
       dshEntry: "/app/dsh.js",
@@ -246,6 +245,76 @@ describe("official Harness plugin installation", () => {
       dsh: { profile: { bundles: ["user-bundle"] } },
     });
   });
+
+  it.each([
+    ["missing", "missing"],
+    ["malformed", "malformed"],
+  ] as const)(
+    "treats a %s profile package manifest as marker-invalid but non-fatal",
+    async (_label, mutation) => {
+      const root = await mkdtemp(
+        join(tmpdir(), "dsh-plugin-profile-manifest-"),
+      );
+      const dshHome = join(root, "home");
+      const runtimeBinRoot = join(root, "app-data", "runtime-bin");
+      const linkOnlyPlugin = await createPlugin(
+        root,
+        "subagent-codex",
+        "@deepseek-ai/dsh-subagent-codex",
+      );
+      const packageRoot = await realpath(linkOnlyPlugin);
+      const profileRoot = join(dshHome, "profiles", "web");
+      const profilePath = join(profileRoot, "package.json");
+      await mkdir(join(profileRoot, "node_modules"), { recursive: true });
+      await writeFile(
+        profilePath,
+        `${JSON.stringify({
+          dependencies: {
+            "@deepseek-ai/dsh-subagent-codex": `link:${packageRoot}`,
+          },
+          dsh: { profile: { bundles: ["user-bundle"] } },
+        })}\n`,
+      );
+      await writeFile(
+        join(profileRoot, "node_modules", ".modules.yaml"),
+        `${JSON.stringify({ storeDir: "/managed/pnpm-store" })}\n`,
+      );
+      const runCommand = vi.fn<OfficialCommandRunner>(() => ({
+        status: 0,
+        stdout: "",
+        stderr: "",
+      }));
+      const input = {
+        dshEntry: "/app/dsh.js",
+        dshHome,
+        nodeExecutable: "/usr/bin/node",
+        pnpmEntry: "/app/pnpm.mjs",
+        pnpmStoreDir: "/managed/pnpm-store",
+        runtimeBinRoot,
+        integratedPlugins: [
+          {
+            packageName: "@deepseek-ai/dsh-subagent-codex",
+            packageRoot: linkOnlyPlugin,
+            linkOnly: true,
+          },
+        ],
+        legacyPluginSpecs: [],
+        runCommand,
+      } satisfies Parameters<typeof ensureOfficialHarnessInstall>[0];
+
+      await ensureOfficialHarnessInstall(input);
+      if (mutation === "missing") {
+        await rm(profilePath);
+      } else {
+        await writeFile(profilePath, "{not-json");
+      }
+
+      await expect(ensureOfficialHarnessInstall(input)).resolves.toMatchObject({
+        status: "installed",
+      });
+      expect(runCommand).toHaveBeenCalledTimes(2);
+    },
+  );
 
   it("reconciles again when a managed package identity changes", async () => {
     const root = await mkdtemp(join(tmpdir(), "dsh-plugin-identity-"));

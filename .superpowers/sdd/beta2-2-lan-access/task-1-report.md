@@ -52,3 +52,16 @@ only string entries whose names are explicitly marked `linkOnly: true` are
 removed from `dsh.profile.bundles`; dependencies, unrelated bundles, and all
 other profile fields are retained. Malformed profile reads remain non-fatal and
 force a fresh official reconciliation rather than trusting the marker.
+
+## Review gap follow-up
+
+- Updated the normal post-reconcile fixture so the synchronous official-command
+  runner writes the profile manifest containing the duplicate link-only bundle
+  during command processing, matching the real root-cause timing.
+- Added real filesystem fixtures for both a missing and malformed
+  `profiles/web/package.json`. After a healthy marker is created, each mutation
+  resolves non-fatally, attempts the official CLI again, and returns `installed`.
+- No production change was needed: the existing fail-open marker validation and
+  non-fatal cleanup paths passed the new cases immediately.
+- Focused Vitest: `18 tests passed`; TypeScript `--noEmit` and `git diff --check`
+  passed.
