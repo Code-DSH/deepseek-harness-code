@@ -23,6 +23,8 @@ import {
   win32 as windowsPath,
 } from "node:path";
 
+import { redactStartupDiagnostic } from "./startup-diagnostics.js";
+
 const ANCHORED_PRESET_ID = "anchored-standard";
 const SUPERPOWERS_PACKAGE_NAME = "superpowers";
 const SUPERPOWERS_SKILLS_DIRECTORY = "skills";
@@ -723,8 +725,9 @@ export async function ensureOfficialHarnessInstall(
     );
     if (result.error !== undefined || result.status !== 0) {
       const exit = result.status === null ? "spawn" : String(result.status);
-      const diagnostic =
-        result.error?.message ?? String(result.stderr ?? "").slice(0, 2_000);
+      const diagnostic = redactStartupDiagnostic(
+        result.error?.message ?? String(result.stderr ?? ""),
+      );
       throw new Error(
         `official plugin installation failed for ${installRequests.map((request) => request.packageName).join(", ")} (exit ${exit}): ${diagnostic}`,
       );

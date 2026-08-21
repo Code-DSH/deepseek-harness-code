@@ -1284,6 +1284,82 @@ describe("official Harness plugin installation", () => {
     expect(errorMessage.endsWith("x".repeat(2_000))).toBe(true);
     expect(errorMessage).not.toContain("x".repeat(2_001));
   });
+
+  it("redacts sensitive stderr before including it in an official plugin failure", async () => {
+    const root = await mkdtemp(join(tmpdir(), "dsh-plugin-redacted-stderr-"));
+    const plugin = await createPlugin(root, "plugin", "redacted-plugin");
+    const runCommand = vi.fn<OfficialCommandRunner>(() => ({
+      status: 17,
+      stderr:
+        "Authorization: Bearer authorization-secret cookie=session-secret api_key=api-key-secret password=password-secret secret=generic-secret token=token-secret",
+    }));
+
+    const errorMessage = await ensureOfficialHarnessInstall({
+      dshEntry: "/app/dsh.js",
+      dshHome: join(root, "home"),
+      nodeExecutable: "/usr/bin/node",
+      pnpmEntry: "/app/pnpm.mjs",
+      pnpmStoreDir: join(root, "pnpm-store"),
+      runtimeBinRoot: join(root, "runtime-bin"),
+      integratedPlugins: [
+        { packageName: "redacted-plugin", packageRoot: plugin },
+      ],
+      legacyPluginSpecs: [],
+      runCommand,
+    }).then(
+      () => "unexpected success",
+      (error: unknown) =>
+        error instanceof Error ? error.message : String(error),
+    );
+
+    expect(errorMessage).toContain("[REDACTED]");
+    for (const secret of [
+      "authorization-secret",
+      "session-secret",
+      "api-key-secret",
+      "password-secret",
+      "generic-secret",
+      "token-secret",
+    ]) {
+      expect(errorMessage).not.toContain(secret);
+    }
+    expect(runCommand).toHaveBeenCalledTimes(2);
+  });
+
+  it("redacts and bounds a failed official plugin spawn error message", async () => {
+    const root = await mkdtemp(join(tmpdir(), "dsh-plugin-redacted-error-"));
+    const plugin = await createPlugin(root, "plugin", "redacted-plugin");
+    const rawMessage = `token=spawn-token ${"x".repeat(2_100)}`;
+    const runCommand = vi.fn<OfficialCommandRunner>(() => ({
+      status: null,
+      error: new Error(rawMessage),
+    }));
+
+    const errorMessage = await ensureOfficialHarnessInstall({
+      dshEntry: "/app/dsh.js",
+      dshHome: join(root, "home"),
+      nodeExecutable: "/usr/bin/node",
+      pnpmEntry: "/app/pnpm.mjs",
+      pnpmStoreDir: join(root, "pnpm-store"),
+      runtimeBinRoot: join(root, "runtime-bin"),
+      integratedPlugins: [
+        { packageName: "redacted-plugin", packageRoot: plugin },
+      ],
+      legacyPluginSpecs: [],
+      runCommand,
+    }).then(
+      () => "unexpected success",
+      (error: unknown) =>
+        error instanceof Error ? error.message : String(error),
+    );
+
+    const diagnostic = errorMessage.slice(errorMessage.indexOf(": ") + 2);
+    expect(errorMessage).toContain("[REDACTED]");
+    expect(errorMessage).not.toContain("spawn-token");
+    expect(diagnostic.length).toBeLessThanOrEqual(2_000);
+    expect(diagnostic).not.toContain("x".repeat(2_000));
+    expect(runCommand).toHaveBeenCalledTimes(2);
+  });
 });
 
 describe("legacy Harness Home migration", () => {
