@@ -9,6 +9,7 @@ const root = dirname(dirname(fileURLToPath(import.meta.url)))
 
 /** Every installable mode directory, each independently copy-installable. */
 const MODE_DIRS = ['preset', 'zero-anchored-standard', 'whoami-standard']
+const SANDBOXED_EDITOR_ROW = /^- id: bootstrap-filesystem\r?\n[ ]{2}name: '@deepseek-ai\/dsh-tool-str-replace-editor'$/m
 
 test('no mode references plugins outside its own directory', () => {
   for (const dir of MODE_DIRS) {
@@ -39,8 +40,13 @@ test('bootstrap editors consume the host sandboxed filesystem provider', () => {
     assert.doesNotMatch(yml, /@deepseek-ai\/dsh-fs-local/, `${dir} must not shadow the host fs service`)
     assert.match(
       yml,
-      /^- id: bootstrap-filesystem\n[ ]{2}name: '@deepseek-ai\/dsh-tool-str-replace-editor'$/m,
+      SANDBOXED_EDITOR_ROW,
       `${dir} must keep str_replace_editor directly bound to the host fs service`,
     )
   }
+})
+
+test('bootstrap editor row matcher accepts CRLF checkouts', () => {
+  const yml = "- id: bootstrap-filesystem\r\n  name: '@deepseek-ai/dsh-tool-str-replace-editor'"
+  assert.match(yml, SANDBOXED_EDITOR_ROW)
 })
