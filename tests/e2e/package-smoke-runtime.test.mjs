@@ -7,7 +7,7 @@ import {
   writeFile,
 } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join, win32 } from "node:path";
 import { EventEmitter } from "node:events";
 
 import { describe, expect, test } from "vitest";
@@ -43,6 +43,10 @@ const expectedMetadata = {
   artifactSha256: "a".repeat(64),
   startedAt: "2026-08-19T00:00:00.000Z",
 };
+
+function fixtureResourcePath(segments, pathJoin = join) {
+  return pathJoin("/tmp/resources", ...segments);
+}
 
 function validSmokeEvidence(resources) {
   return {
@@ -86,6 +90,12 @@ function validSmokeEvidence(resources) {
 }
 
 describe("packaged runtime listener selection", () => {
+  test("builds positive resource fixtures with platform path semantics", () => {
+    expect(
+      fixtureResourcePath(["dsh-lan-access", "package.json"], win32.join),
+    ).toBe("\\tmp\\resources\\dsh-lan-access\\package.json");
+  });
+
   test("rejects smoke evidence that omits the packaged LAN plugin manifest", () => {
     expect(() =>
       verifySmokeEvidence(
@@ -210,8 +220,8 @@ describe("packaged runtime listener selection", () => {
         packaged: true,
         ...expectedMetadata,
         resources: [
-          "/tmp/resources/desktop-plugin/package.json",
-          "/tmp/resources/dsh-lan-access/package.json",
+          fixtureResourcePath(["desktop-plugin", "package.json"]),
+          fixtureResourcePath(["dsh-lan-access", "package.json"]),
         ],
         harnessHome: "/tmp/dsh",
         resourceRoot: "/tmp/resources",
@@ -228,8 +238,8 @@ describe("packaged runtime listener selection", () => {
         harnessRetired: true,
         ...expectedMetadata,
         resources: [
-          "/tmp/resources/desktop-plugin/package.json",
-          "/tmp/resources/dsh-lan-access/package.json",
+          fixtureResourcePath(["desktop-plugin", "package.json"]),
+          fixtureResourcePath(["dsh-lan-access", "package.json"]),
         ],
         harnessHome: "/tmp/dsh",
         resourceRoot: "/tmp/resources",
@@ -491,7 +501,7 @@ describe("packaged runtime listener selection", () => {
         appPid: 7000,
         harnessPid: 7002,
         listenerPid: 7002,
-        resources: ["/tmp/resources/dsh-lan-access/package.json"],
+        resources: [fixtureResourcePath(["dsh-lan-access", "package.json"])],
         harnessHome: "/tmp/dsh",
         resourceRoot: "/tmp/resources",
         systemNode: { executable: "/usr/bin/node", version: "24.1.0" },
@@ -507,7 +517,7 @@ describe("packaged runtime listener selection", () => {
         watchdogAcked: true,
         harnessRetired: true,
         ...expectedMetadata,
-        resources: ["/tmp/resources/dsh-lan-access/package.json"],
+        resources: [fixtureResourcePath(["dsh-lan-access", "package.json"])],
         timestamps: {
           readyAt: "2026-08-18T00:00:00.000Z",
           finalAt: "2026-08-19T00:00:01.000Z",

@@ -200,37 +200,41 @@ afterEach(async () => {
   );
 });
 
-describe("macOS artifact LAN plugin verification", () => {
-  test(
-    "rejects an artifact missing the LAN plugin resource set",
-    async () => {
-      await expect(runVerifier({})).rejects.toThrow(/dsh-lan-access/u);
-    },
-    VERIFIER_TIMEOUT_MS,
-  );
+describe.skipIf(process.platform === "win32")(
+  "macOS artifact LAN plugin verification",
+  () => {
+    test(
+      "rejects an artifact missing the LAN plugin resource set",
+      async () => {
+        await expect(runVerifier({})).rejects.toThrow(/dsh-lan-access/u);
+      },
+      VERIFIER_TIMEOUT_MS,
+    );
 
-  test(
-    "rejects a packaged LAN plugin with the wrong identity",
-    async () => {
-      await expect(
-        runVerifier({
-          lanManifest: { name: "not-dsh-lan-access", version: "1.0.0" },
-        }),
-      ).rejects.toThrow(/identity|dsh-lan-access/u);
-    },
-    VERIFIER_TIMEOUT_MS,
-  );
+    test(
+      "rejects a packaged LAN plugin with the wrong identity",
+      async () => {
+        await expect(
+          runVerifier({
+            lanManifest: { name: "not-dsh-lan-access", version: "1.0.0" },
+          }),
+        ).rejects.toThrow(/identity|dsh-lan-access/u);
+      },
+      VERIFIER_TIMEOUT_MS,
+    );
 
-  test(
-    "rejects a packaged LAN plugin without its bare-name patch",
-    async () => {
-      await expect(
-        runVerifier({
-          lanManifest: { name: "dsh-lan-access", version: "1.0.0" },
-          lanPatch: "- insert:\n    - name: './node_modules/dsh-lan-access'\n",
-        }),
-      ).rejects.toThrow(/bare package name|dsh-lan-access/u);
-    },
-    VERIFIER_TIMEOUT_MS,
-  );
-});
+    test(
+      "rejects a packaged LAN plugin without its bare-name patch",
+      async () => {
+        await expect(
+          runVerifier({
+            lanManifest: { name: "dsh-lan-access", version: "1.0.0" },
+            lanPatch:
+              "- insert:\n    - name: './node_modules/dsh-lan-access'\n",
+          }),
+        ).rejects.toThrow(/bare package name|dsh-lan-access/u);
+      },
+      VERIFIER_TIMEOUT_MS,
+    );
+  },
+);
