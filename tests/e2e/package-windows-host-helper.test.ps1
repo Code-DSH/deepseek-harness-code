@@ -24,6 +24,8 @@ $localAppData = Join-Path $fixtureRoot "LocalAppData"
 $programsRoot = Join-Path $localAppData "Programs"
 $customRoot = Join-Path $fixtureRoot "runner-owned-custom"
 $registeredRoot = Join-Path $programsRoot "DeepSeek Harness Code"
+$outsideRoot = Join-Path $fixtureRoot "outside-sentinel"
+$junctionPath = Join-Path $customRoot "outside-junction"
 
 try {
   New-AppLayout $customRoot
@@ -71,6 +73,44 @@ try {
     Resolve-DhscInstalledApplication -CustomRoot (Join-Path $fixtureRoot "missing-custom") -RegistryEntries @($badUninstallEntry) -LocalAppData $localAppData
   } "non-exact uninstaller filename was accepted"
 
+  New-Item -ItemType Directory -Force $outsideRoot | Out-Null
+  $sentinel = Join-Path $outsideRoot "sentinel.txt"
+  New-Item -ItemType File -Force $sentinel | Out-Null
+  New-Item -ItemType Junction -Path $junctionPath -Target $outsideRoot | Out-Null
+  Assert-Throws {
+    Remove-DhscRunnerOwnedCustomRoot -CustomRoot $customRoot -RunnerTemp $fixtureRoot
+  } "custom cleanup accepted a junction"
+  Assert-True (Test-Path -LiteralPath $sentinel -PathType Leaf) "junction cleanup changed the outside sentinel"
+  Assert-True (Test-Path -LiteralPath $customRoot -PathType Container) "junction rejection partially deleted the custom root"
+  Remove-Item -LiteralPath $junctionPath -Force
+
+  $cleanupFailures = New-DhscCleanupFailureList
+  Add-DhscDirectCleanupFailure -CleanupFailures $cleanupFailures -Message "restore direct failure"
+  try {
+    throw [InvalidOperationException]::new("uninstall caught failure")
+  } catch {
+    Add-DhscCaughtCleanupFailure -CleanupFailures $cleanupFailures -ErrorRecord $_
+  }
+  Assert-True ($cleanupFailures.Count -eq 2) "cleanup failure count was not preserved"
+  Assert-True ($cleanupFailures[0].GetType() -eq [Exception]) "direct cleanup failure type was not distinguishable"
+  Assert-True ($cleanupFailures[1].GetType() -eq [InvalidOperationException]) "caught cleanup failure type was not distinguishable"
+  Assert-True (($cleanupFailures | Where-Object { [string]::IsNullOrWhiteSpace($_.Message) }).Count -eq 0) "cleanup failure message was empty"
+  $reportedCleanup = [Collections.Generic.List[string]]::new()
+  $primaryFailure = [ApplicationException]::new("primary failure")
+  $finalFailure = $null
+  try {
+    Complete-DhscPackageStep -PrimaryFailure $primaryFailure -CleanupFailures $cleanupFailures -ReportCleanup {
+      param($Message)
+      $reportedCleanup.Add($Message) | Out-Null
+    }
+  } catch {
+    $finalFailure = $_.Exception
+  }
+  Assert-True ($finalFailure.GetType() -eq [ApplicationException]) "primary failure type lost final priority"
+  Assert-True ($finalFailure.Message -eq "primary failure") "primary failure message lost final priority"
+  Assert-True ($reportedCleanup.Count -eq 2) "cleanup messages were not all reported"
+  Assert-True (($reportedCleanup | Where-Object { [string]::IsNullOrWhiteSpace($_) }).Count -eq 0) "reported cleanup message was empty"
+
   $nodeRoot = Join-Path $fixtureRoot "nodes"
   New-Item -ItemType Directory -Force $nodeRoot | Out-Null
   $nodes = @("one", "two", "three") | ForEach-Object {
@@ -117,6 +157,7 @@ try {
   } "restore failure did not fail the helper"
   Move-Item -LiteralPath $restoreFailureMoves[0].Hidden -Destination $restoreFailureMoves[0].Original -ErrorAction Stop
 } finally {
+  if (Test-Path -LiteralPath $junctionPath) { Remove-Item -LiteralPath $junctionPath -Force }
   if (Test-Path -LiteralPath $fixtureRoot) { Remove-Item -LiteralPath $fixtureRoot -Recurse -Force }
 }
 

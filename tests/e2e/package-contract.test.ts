@@ -302,7 +302,9 @@ describe("DeepSeek Harness Code distribution contract", () => {
     expect(workflow).toContain("if: always()");
     expect(workflow).toContain("Start-Process -PassThru");
     expect(workflow).toContain("installer.ExitCode -eq 0");
-    expect(workflow).toContain("uninstaller.ExitCode -eq 0");
+    expect(workflow).toContain(
+      "installed application uninstaller exited nonzero",
+    );
     expect(workflow).toContain("finally");
     expect(workflow).toContain("set -euo pipefail");
     expect(workflow).toContain("dpkg-deb -f");
@@ -447,13 +449,11 @@ describe("DeepSeek Harness Code distribution contract", () => {
     expect(windowsFinally).toContain("Assert-DhscInstalledApplicationRemoved");
     expect(windowsFinally).not.toContain("if ($installSucceeded)");
     expect(uninstallAttempt).toBeGreaterThan(-1);
-    expect(windowsFinally).toContain("uninstaller.ExitCode -eq 0");
-    expect(forcedRemoval).toBeGreaterThan(uninstallAttempt);
-    expect(windowsStep).toContain("throw $primaryFailure");
-    expect(windowsStep.indexOf("throw $primaryFailure")).toBeLessThan(
-      windowsStep.indexOf("throw $cleanupFailures[0]"),
+    expect(windowsFinally).toContain(
+      "installed application uninstaller exited nonzero",
     );
-    expect(windowsStep).toContain('Write-Host "::error::Cleanup failed:');
+    expect(forcedRemoval).toBeGreaterThan(uninstallAttempt);
+    expect(windowsStep).toContain("Complete-DhscPackageStep");
     expect(linuxStep).toContain("original_exit=$?");
     expect(linuxStep).toContain('package_installed="false"');
     expect(linuxStep).toContain('package_installed="true"');
@@ -533,6 +533,7 @@ describe("DeepSeek Harness Code distribution contract", () => {
 
   test("resolves the exact Windows product install root without scanning LocalAppData", async () => {
     const workflow = await readProjectFile(".github/workflows/package.yml");
+    const helper = await readProjectFile("scripts/package-smoke-windows.ps1");
     const windowsStep = workflow.slice(
       workflow.indexOf("      - name: Smoke test Windows package"),
       workflow.indexOf("      - name: Verify macOS Universal DMG"),
@@ -550,6 +551,38 @@ describe("DeepSeek Harness Code distribution contract", () => {
     expect(windowsStep).not.toMatch(
       /Get-ChildItem[^\n]*\$env:(?:LOCALAPPDATA|USERPROFILE)/iu,
     );
+    expect(helper).toContain("Stack[IO.DirectoryInfo]");
+    expect(helper).toContain("EnumerateFileSystemInfos");
+    expect(helper).toContain("SearchOption]::TopDirectoryOnly");
+    expect(helper).toContain("FileAttributes]::ReparsePoint");
+    const customCleanup = helper.slice(
+      helper.indexOf("function Remove-DhscRunnerOwnedCustomRoot"),
+      helper.indexOf("function Assert-DhscInstalledApplicationRemoved"),
+    );
+    expect(customCleanup).toContain("Assert-DhscTreeHasNoReparsePoint");
+    expect(
+      customCleanup.indexOf("Assert-DhscTreeHasNoReparsePoint"),
+    ).toBeLessThan(customCleanup.indexOf("Remove-Item"));
+    expect(customCleanup).not.toContain("Get-ChildItem");
+  });
+
+  test("normalizes Windows cleanup failures as Exceptions and preserves primary failure priority", async () => {
+    const workflow = await readProjectFile(".github/workflows/package.yml");
+    const helper = await readProjectFile("scripts/package-smoke-windows.ps1");
+    const windowsStep = workflow.slice(
+      workflow.indexOf("      - name: Smoke test Windows package"),
+      workflow.indexOf("      - name: Verify macOS Universal DMG"),
+    );
+
+    expect(windowsStep).toContain("New-DhscCleanupFailureList");
+    expect(windowsStep).toContain("Add-DhscCaughtCleanupFailure");
+    expect(windowsStep).toContain("Add-DhscDirectCleanupFailure");
+    expect(windowsStep).toContain("Complete-DhscPackageStep");
+    expect(windowsStep).not.toContain("$cleanupFailure.Exception.Message");
+    expect(helper).toContain("[Collections.Generic.List[Exception]]");
+    expect(helper).toContain("$ErrorRecord.Exception");
+    expect(helper).toContain("$cleanupFailure.Message");
+    expect(helper).toContain("throw $PrimaryFailure");
   });
 
   test("scopes Linux smoke package metadata to each package step", async () => {

@@ -175,6 +175,76 @@ function Restore-DhscNodeCandidates {
   }
 }
 
+function New-DhscCleanupFailureList {
+  return ,([Collections.Generic.List[Exception]]::new())
+}
+
+function Add-DhscCaughtCleanupFailure {
+  param(
+    [Parameter(Mandatory = $true)][Collections.Generic.List[Exception]]$CleanupFailures,
+    [Parameter(Mandatory = $true)][System.Management.Automation.ErrorRecord]$ErrorRecord
+  )
+
+  $CleanupFailures.Add($ErrorRecord.Exception) | Out-Null
+}
+
+function Add-DhscDirectCleanupFailure {
+  param(
+    [Parameter(Mandatory = $true)][Collections.Generic.List[Exception]]$CleanupFailures,
+    [Parameter(Mandatory = $true)][string]$Message
+  )
+
+  $CleanupFailures.Add([Exception]::new($Message)) | Out-Null
+}
+
+function Complete-DhscPackageStep {
+  param(
+    [AllowNull()][Exception]$PrimaryFailure,
+    [Parameter(Mandatory = $true)][Collections.Generic.List[Exception]]$CleanupFailures,
+    [scriptblock]$ReportCleanup = {
+      param($Message)
+      Write-Host "::error::Cleanup failed: $Message"
+    }
+  )
+
+  foreach ($cleanupFailure in $CleanupFailures) {
+    & $ReportCleanup $cleanupFailure.Message
+  }
+  if ($null -ne $PrimaryFailure) { throw $PrimaryFailure }
+  if ($CleanupFailures.Count -gt 0) { throw $CleanupFailures[0] }
+}
+
+function Assert-DhscTreeHasNoReparsePoint {
+  param([Parameter(Mandatory = $true)][string]$Root)
+
+  if (-not (Test-Path -LiteralPath $Root)) { return }
+  $stack = [Collections.Generic.Stack[IO.DirectoryInfo]]::new()
+  $stack.Push([IO.DirectoryInfo]::new($Root))
+  while ($stack.Count -gt 0) {
+    $directory = $stack.Pop()
+    $directory.Refresh()
+    if (($directory.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0) {
+      throw "runner-owned custom root contained a reparse point"
+    }
+    try {
+      $entries = $directory.EnumerateFileSystemInfos("*", [IO.SearchOption]::TopDirectoryOnly)
+      foreach ($entry in $entries) {
+        if (($entry.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0) {
+          throw "runner-owned custom root contained a reparse point"
+        }
+        if (($entry.Attributes -band [IO.FileAttributes]::Directory) -ne 0) {
+          $stack.Push([IO.DirectoryInfo]$entry)
+        }
+      }
+    } catch {
+      if ($_.Exception.Message -eq "runner-owned custom root contained a reparse point") {
+        throw
+      }
+      throw "runner-owned custom root safety scan failed"
+    }
+  }
+}
+
 function Remove-DhscRunnerOwnedCustomRoot {
   param(
     [Parameter(Mandatory = $true)][string]$CustomRoot,
@@ -186,6 +256,7 @@ function Remove-DhscRunnerOwnedCustomRoot {
     throw "custom install root was outside runner temp"
   }
   if (Test-Path -LiteralPath $canonicalRoot) {
+    Assert-DhscTreeHasNoReparsePoint -Root $canonicalRoot
     Remove-Item -LiteralPath $canonicalRoot -Recurse -Force -ErrorAction Stop
   }
   if (Test-Path -LiteralPath $canonicalRoot) {

@@ -110,7 +110,7 @@ jobs:
           $artifact = Get-Item $env:ARTIFACT
           $install = Join-Path $env:RUNNER_TEMP "deepseek-harness-install"
           $primaryFailure = $null
-          $cleanupFailures = @()
+          $cleanupFailures = New-DhscCleanupFailureList
           $nodeMoves = New-DhscNodeMoveList
           $installedApplication = $null
 
@@ -131,39 +131,37 @@ jobs:
             pnpm smoke:package -- --scenario node-required --matrix-label $env:MATRIX_LABEL --package-kind $env:PACKAGE_KIND --expected-architecture $env:EXPECTED_ARCHITECTURE --runner-architecture $env:EXPECTED_ARCHITECTURE --artifact-filename $env:ARTIFACT_FILENAME --executable $executable.FullName --resources $resources --inventory $executable.DirectoryName --artifact $artifact.FullName --artifact-sha256 $hash --evidence-root $env:EVIDENCE_ROOT --evidence (Join-Path $env:EVIDENCE_ROOT "smoke-evidence-windows-node-required.json")
             if ($LASTEXITCODE -ne 0) { throw "package node-required smoke failed with exit code $LASTEXITCODE" }
           } catch {
-            $primaryFailure = $_
+            $primaryFailure = $_.Exception
           } finally {
             try {
               Restore-DhscNodeCandidates -Moves $nodeMoves
             } catch {
-              $cleanupFailures += [Exception]::new("node quarantine cleanup failed")
+              Add-DhscCaughtCleanupFailure -CleanupFailures $cleanupFailures -ErrorRecord $_
             }
             if ($null -ne $installedApplication) {
               try {
                 $uninstaller = Start-Process -PassThru -Wait -FilePath $installedApplication.Uninstaller -ArgumentList "/S"
-                if ($uninstaller.ExitCode -ne 0) { throw "uninstaller.ExitCode -eq 0 required, got $($uninstaller.ExitCode)" }
+                if ($uninstaller.ExitCode -ne 0) {
+                  Add-DhscDirectCleanupFailure -CleanupFailures $cleanupFailures -Message "installed application uninstaller exited nonzero"
+                }
               } catch {
-                $cleanupFailures += [Exception]::new("installed application uninstall failed")
+                Add-DhscCaughtCleanupFailure -CleanupFailures $cleanupFailures -ErrorRecord $_
               }
             }
             try {
               Remove-DhscRunnerOwnedCustomRoot -CustomRoot $install -RunnerTemp $env:RUNNER_TEMP
             } catch {
-              $cleanupFailures += [Exception]::new("runner-owned custom root cleanup failed")
+              Add-DhscCaughtCleanupFailure -CleanupFailures $cleanupFailures -ErrorRecord $_
             }
             if ($null -ne $installedApplication -and $installedApplication.Source -eq "registry") {
               try {
                 Assert-DhscInstalledApplicationRemoved -Application $installedApplication
               } catch {
-                $cleanupFailures += [Exception]::new("registered install root remained after uninstall")
+                Add-DhscCaughtCleanupFailure -CleanupFailures $cleanupFailures -ErrorRecord $_
               }
             }
           }
-          foreach ($cleanupFailure in $cleanupFailures) {
-            Write-Host "::error::Cleanup failed: $($cleanupFailure.Exception.Message)"
-          }
-          if ($null -ne $primaryFailure) { throw $primaryFailure }
-          if ($cleanupFailures.Count -gt 0) { throw $cleanupFailures[0] }
+          Complete-DhscPackageStep -PrimaryFailure $primaryFailure -CleanupFailures $cleanupFailures
       - name: Verify macOS Universal DMG
         if: matrix.label == 'macos-universal'
         shell: bash
