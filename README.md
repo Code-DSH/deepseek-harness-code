@@ -201,13 +201,13 @@ Full boundaries in [overview](./docs/architecture/overview.md) and [lifecycle](.
 
 ## Platform status
 
-| Platform | Target                             | Current status                        |
-| -------- | ---------------------------------- | ------------------------------------- |
-| macOS    | macOS 12+, Intel and Apple Silicon | Universal DMG verified, shipped BETA1 |
-| Windows  | Windows 10+, x64 and arm64         | NSIS built on Windows runners         |
-| Linux    | x64 and arm64                      | AppImage/deb passing on Linux runners |
+| Platform | Target                             | BETA2-2 release status                      |
+| -------- | ---------------------------------- | ------------------------------------------- |
+| macOS    | macOS 12+, Intel and Apple Silicon | Universal package validation pending tag CI |
+| Windows  | Windows 10+, x64 and arm64         | Native package validation pending tag CI    |
+| Linux    | x64 and arm64                      | Native package validation pending tag CI    |
 
-Cross-platform definitions are checked in; only native-runner-verified artifacts are considered released.
+Cross-platform definitions are checked in; BETA2-2 is pending validation and release. Only native-runner-verified artifacts from the corresponding tag CI are considered released.
 
 ## Install on macOS
 

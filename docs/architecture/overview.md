@@ -12,6 +12,7 @@ skip_when: [documentation-only wording fixes]
 priority: must
 freshness_class: project
 last_verified: 2026-08-20T00:00:00+08:00
+release_validation: beta2-2-pending-tag-ci
 owners: [project]
 source_of_truth: [../../apps, ../../packages]
 related:
