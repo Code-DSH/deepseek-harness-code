@@ -29,6 +29,15 @@
 | macOS | DMG/ZIP 拷贝到 Applications，首次启动执行 runtime + 插件安装 | 弹窗打开官方 `.pkg` | Universal `.zip` | 解压 `.app`，helper 等待退出后 swap，`xattr -cr` 后重新打开 |
 | Linux | AppImage/deb 安装，首次启动执行 runtime + 插件安装 | 弹窗打开 nodejs.org 下载页 | AppImage（deb 仅提示） | 替换 `process.execPath` 后重启 |
 
+### 2.1 六种场景速览
+
+1. **Windows 有 Node**：NSIS 安装后直接进入首次启动安装 runtime/插件；启动依赖系统 Node，二次启动走 marker 快速跳过重复对账。
+2. **Windows 无 Node**：启动时弹窗，只提供官方 MSI 链接 + 重试；没有自动安装 Node。
+3. **macOS 有 Node**：拷贝 `.app` 到 Applications 并解除 quarantine 后启动；首次启动安装 runtime/插件；更新通过 Universal ZIP 原地替换。
+4. **macOS 无 Node**：启动时弹窗打开官方 PKG + 重试；同样没有自动安装 Node。
+5. **Linux 有 Node**：AppImage/deb 安装后启动；首次启动安装 runtime/插件；应用内更新只支持 AppImage。
+6. **Linux 无 Node**：启动时弹窗打开 nodejs.org 下载页；没有自动安装 Node，且没有像 macOS/Windows 那样的直接安装包链接。
+
 ## 3. 发现的主要问题
 
 ### 3.1 高风险
