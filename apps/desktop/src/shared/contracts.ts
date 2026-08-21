@@ -21,10 +21,11 @@ export type DesktopPreferencesState = z.infer<
   typeof desktopPreferencesStateSchema
 >;
 export type DesktopPreferences = z.infer<typeof desktopPreferencesSchema>;
+export type DesktopPreferencesPatch = Partial<DesktopPreferencesState>;
 
 export function mergeDesktopPreferences(
   current: DesktopPreferencesState,
-  patch: DesktopPreferences,
+  patch: DesktopPreferencesPatch,
 ): DesktopPreferencesState {
   return { ...current, ...patch };
 }

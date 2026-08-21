@@ -64,6 +64,7 @@ import {
   LanAccessController,
   resolveLanIpv4Addresses,
 } from "./lifecycle/lan-access-controller.js";
+import { DesktopPreferencesStore } from "./lifecycle/desktop-preferences-store.js";
 import {
   ensureRuntimePackages,
   type NodeRuntimePaths,
@@ -98,7 +99,6 @@ import type {
 } from "./shared/contracts.js";
 import {
   DEFAULT_DESKTOP_PREFERENCES,
-  mergeDesktopPreferences,
   parsePersistedDesktopPreferences,
 } from "./shared/contracts.js";
 import {
@@ -114,13 +114,14 @@ let watchdogHost: WatchdogHost | undefined;
 let updaterHost: UpdaterHost | undefined;
 const lanProxyHost = new LanProxyHost();
 let tray: Tray | undefined;
-let preferences: DesktopPreferencesState = { ...DEFAULT_DESKTOP_PREFERENCES };
+const preferencesStore = new DesktopPreferencesStore(
+  DEFAULT_DESKTOP_PREFERENCES,
+  setPreferences,
+);
 const lanAccessController = new LanAccessController({
   proxy: lanProxyHost,
   persistEnabled: async (enabled) => {
-    const next = { ...preferences, lanAccessEnabled: enabled };
-    await setPreferences(next);
-    preferences = next;
+    await preferencesStore.update({ lanAccessEnabled: enabled });
   },
   resolveAddresses: () => resolveLanIpv4Addresses(networkInterfaces()),
   writeClipboard: (value) => clipboard.writeText(value),
@@ -289,14 +290,10 @@ function createWindow(showStartupPage = true): BrowserWindow {
 
 async function handleWindowClose(window: BrowserWindow): Promise<void> {
   const action = await resolveCloseAction(
-    preferences.closeBehavior,
+    preferencesStore.get().closeBehavior,
     chooseCloseBehavior,
     async (value) => {
-      const next = mergeDesktopPreferences(preferences, {
-        closeBehavior: value,
-      });
-      await setPreferences(next);
-      preferences = next;
+      await preferencesStore.update({ closeBehavior: value });
     },
   );
   if (action === "minimize") {
@@ -992,11 +989,9 @@ async function launch(): Promise<void> {
     openLogs: async () => {
       await shell.openPath(app.getPath("logs"));
     },
-    getPreferences: () => preferences,
+    getPreferences: () => preferencesStore.get(),
     setPreferences: async (value) => {
-      const next = mergeDesktopPreferences(preferences, value);
-      await setPreferences(next);
-      preferences = next;
+      await preferencesStore.update(value);
     },
     getLanAccess: () => lanAccessController.get(),
     setLanAccess: (value) => lanAccessController.set(value),
@@ -1010,8 +1005,10 @@ async function launch(): Promise<void> {
   buildMenu();
   createTray();
   if (process.platform === "darwin") app.dock?.show();
-  preferences = await getPreferences();
-  lanAccessController.loadPersistedEnabled(preferences.lanAccessEnabled);
+  preferencesStore.load(await getPreferences());
+  lanAccessController.loadPersistedEnabled(
+    preferencesStore.get().lanAccessEnabled,
+  );
   await controller.start();
   healthTimer = setInterval(
     () => void controller?.checkHealth().catch(reportRuntimeFailure),

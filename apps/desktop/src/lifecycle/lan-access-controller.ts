@@ -28,14 +28,18 @@ export function resolveLanIpv4Addresses(
 
 export class LanAccessController {
   private desiredEnabled = false;
+  private persistedEnabled = false;
   private loopbackOrigin: string | undefined;
+  private activeOrigin: string | undefined;
   private activeState: LanAccessState = { enabled: false, addresses: [] };
   private privateAccessUrl: string | undefined;
+  private operationQueue: Promise<void> = Promise.resolve();
 
   constructor(private readonly options: LanAccessControllerOptions) {}
 
   loadPersistedEnabled(enabled: boolean): void {
     this.desiredEnabled = enabled;
+    this.persistedEnabled = enabled;
   }
 
   get(): LanAccessState {
@@ -45,52 +49,77 @@ export class LanAccessController {
     };
   }
 
-  async set(command: LanAccessSet): Promise<LanAccessState> {
-    if (command.enabled) {
-      if (this.activeState.enabled) return this.get();
-      const origin = this.loopbackOrigin;
-      if (origin === undefined) {
-        throw new Error("LAN access is unavailable before Harness is ready");
-      }
-      await this.start(origin);
-      try {
-        await this.options.persistEnabled(true);
-      } catch (error) {
-        await this.options.proxy.stop();
-        this.clearActiveState();
-        throw error;
-      }
-      this.desiredEnabled = true;
-      return this.get();
-    }
-
-    if (this.activeState.enabled) {
-      await this.options.proxy.stop();
-      this.clearActiveState();
-    }
-    await this.options.persistEnabled(false);
-    this.desiredEnabled = false;
-    return this.get();
+  set(command: LanAccessSet): Promise<LanAccessState> {
+    this.desiredEnabled = command.enabled;
+    return this.enqueue(() => this.reconcile());
   }
 
-  async onHarnessReady(origin: string): Promise<void> {
+  onHarnessReady(origin: string): Promise<void> {
     this.loopbackOrigin = origin;
-    if (!this.desiredEnabled) return;
-    if (this.activeState.enabled) {
-      await this.options.proxy.stop();
-      this.clearActiveState();
-    }
-    await this.start(origin);
+    return this.enqueue(async () => {
+      await this.reconcile();
+    });
   }
 
   copyUrl(): void {
-    if (!this.activeState.enabled) {
+    if (!this.desiredEnabled || !this.activeState.enabled) {
       throw new Error("LAN access is disabled");
     }
     if (this.privateAccessUrl === undefined) {
       throw new Error("LAN access URL is unavailable");
     }
     this.options.writeClipboard(this.privateAccessUrl);
+  }
+
+  private async reconcile(): Promise<LanAccessState> {
+    while (true) {
+      if (!this.desiredEnabled) {
+        if (this.activeState.enabled) {
+          await this.options.proxy.stop();
+          this.clearActiveState();
+        }
+        if (this.desiredEnabled) continue;
+        if (this.persistedEnabled) {
+          await this.options.persistEnabled(false);
+          this.persistedEnabled = false;
+        }
+        if (this.desiredEnabled) continue;
+        return this.get();
+      }
+
+      const origin = this.loopbackOrigin;
+      if (origin === undefined) {
+        this.desiredEnabled = this.persistedEnabled;
+        throw new Error("LAN access is unavailable before Harness is ready");
+      }
+      if (this.activeState.enabled && this.activeOrigin !== origin) {
+        await this.options.proxy.stop();
+        this.clearActiveState();
+        continue;
+      }
+      if (!this.activeState.enabled) {
+        try {
+          await this.start(origin);
+        } catch (error) {
+          if (!this.persistedEnabled) this.desiredEnabled = false;
+          throw error;
+        }
+      }
+      if (!this.desiredEnabled) continue;
+      if (!this.persistedEnabled) {
+        try {
+          await this.options.persistEnabled(true);
+          this.persistedEnabled = true;
+        } catch (error) {
+          await this.options.proxy.stop();
+          this.clearActiveState();
+          this.desiredEnabled = false;
+          throw error;
+        }
+      }
+      if (!this.desiredEnabled) continue;
+      return this.get();
+    }
   }
 
   private async start(origin: string): Promise<void> {
@@ -103,6 +132,7 @@ export class LanAccessController {
     }
     const addresses = [...new Set(this.options.resolveAddresses())].sort();
     this.activeState = { enabled: true, port: result.port, addresses };
+    this.activeOrigin = origin;
     this.privateAccessUrl = this.accessUrlForAddress(
       result.accessUrl,
       addresses[0],
@@ -121,6 +151,16 @@ export class LanAccessController {
 
   private clearActiveState(): void {
     this.activeState = { enabled: false, addresses: [] };
+    this.activeOrigin = undefined;
     this.privateAccessUrl = undefined;
+  }
+
+  private enqueue<T>(operation: () => Promise<T>): Promise<T> {
+    const result = this.operationQueue.then(operation);
+    this.operationQueue = result.then(
+      () => undefined,
+      () => undefined,
+    );
+    return result;
   }
 }
