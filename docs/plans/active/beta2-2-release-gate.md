@@ -11,7 +11,7 @@ read_when: [恢复 Beta 2-2 发布或审计 Beta 1/Beta 2 差异]
 skip_when: [与发布无关的局部代码修改]
 priority: must
 freshness_class: project
-last_verified: 2026-08-21T18:30:00+08:00
+last_verified: 2026-08-21T20:25:00+08:00
 owners: [primary-agent]
 source_of_truth:
   - ../../../.github/workflows/
@@ -63,8 +63,8 @@ tags: [execplan, release, ci, beta2-2]
 ## Current Facts and Root-Cause Hypothesis
 
 - The failed Windows x64 job installed the NSIS package, detected Node.js `24.18.0`, and installed the pinned Harness runtime before exceeding the 600-second ready-evidence deadline.
-- First launch currently performs 16 serial synchronous official plugin CLI calls. The candidate patch combines the exact same validated install specs into one official CLI call.
-- Hypothesis: repeated pnpm resolution/linking in 16 serial CLI invocations dominates Windows cold-start time. The hypothesis is accepted only if the same Windows package smoke becomes green and emits bounded elapsed-time evidence.
+- The first failed tag source at `012527f` performed 16 serial synchronous official plugin CLI calls during cold start. The repaired candidate combines the exact same validated install specs into one official CLI call per attempt.
+- Hypothesis: repeated pnpm resolution/linking in the failed tag's 16 serial CLI invocations dominated Windows cold-start time. Local tests support the repair contract, but the hypothesis is accepted only if the same Windows package smoke becomes green and emits bounded elapsed-time evidence.
 
 ---
 
@@ -81,23 +81,23 @@ tags: [execplan, release, ci, beta2-2]
 - Produces one `runCommand(nodeExecutable, [dshEntry, "plugin", "--profile", "web", "add", ...installSpecs], options)` call per attempt.
 - Preserves the current one-time corrupted-`node_modules` retry and combined diagnostic capped at 2,000 characters.
 
-- [ ] **Step 1: Verify RED against `012527f`**
+- [x] **Step 1: Verify RED against `012527f`**
 
   Run the changed unit test against the tagged production implementation. Expected failure: the command runner is called once per plugin instead of once for the complete roster.
 
-- [ ] **Step 2: Verify the exact batched argv contract**
+- [x] **Step 2: Verify the exact batched argv contract**
 
   Assert the literal prefix `plugin --profile web add`, followed by the legacy spec first and every resolved integrated plugin root in input order. Assert `shell: false`, the managed `DSH_HOME`/pnpm environment, and that an empty install roster never invokes the CLI.
 
-- [ ] **Step 3: Implement the single official CLI invocation**
+- [x] **Step 3: Implement the single official CLI invocation**
 
   Keep input validation and `shell: false`; join package names only for the error message and do not concatenate shell text.
 
-- [ ] **Step 4: Verify GREEN**
+- [x] **Step 4: Verify GREEN**
 
   Run `pnpm exec vitest run tests/unit/desktop-plugin-link.test.ts`. Expected: all non-Windows fixtures pass and the Windows-only fixture remains the only designed skip on macOS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
   Commit only the two files with subject `fix(desktop): batch official plugin reconciliation`.
 
@@ -116,27 +116,27 @@ tags: [execplan, release, ci, beta2-2]
 - `inspectArchitecture(executable)` validates PE x64 `0x8664`, PE arm64 `0xaa64`, Linux x86-64/AArch64 ELF, and macOS Universal Mach-O (`x86_64` + `arm64`).
 - Package jobs run on `windows-2025`, `windows-11-arm`, `ubuntu-24.04`, `ubuntu-24.04-arm`, and a macOS build runner. macOS launch validation downloads the same Universal artifact on both `macos-15` and `macos-15-intel`.
 
-- [ ] **Step 1: Write failing architecture and workflow-contract tests**
+- [x] **Step 1: Write failing architecture and workflow-contract tests**
 
   Add literal fixtures for PE machine `34404` and `43620`, Linux `x86-64` and `ARM aarch64`, Universal Mach-O arch output, native runner labels, and smoke-step conditions for both architectures.
 
-- [ ] **Step 2: Run RED**
+- [x] **Step 2: Run RED**
 
   Run `pnpm exec vitest run --config tests/e2e/package-vitest.config.ts tests/e2e/package-smoke-runtime.test.mjs tests/e2e/package-contract.test.ts`. Expected: arm64 runner acceptance and native workflow assertions fail against the current implementation.
 
-- [ ] **Step 3: Implement architecture-aware inspection and native workflow jobs**
+- [x] **Step 3: Implement architecture-aware inspection and native workflow jobs**
 
   Replace x64-only guards with platform/architecture pairs. Preserve exact artifact filename/target checks. Run Windows install/smoke/uninstall on x64 and arm64; run Linux AppImage and deb smoke/purge on x64 and arm64; mount/download the Universal macOS artifact and run the installed-app smoke on Apple Silicon and Intel.
 
-- [ ] **Step 4: Record elapsed time**
+- [x] **Step 4: Record elapsed time**
 
   Add `runtime.readyDurationMs` to sanitized evidence and reject values above `SMOKE_TIMEOUT_MS=600000`.
 
-- [ ] **Step 5: Run GREEN**
+- [x] **Step 5: Run GREEN**
 
   Run the focused package suite, then `pnpm test:package`. Expected: zero failures.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
   Commit the four files with subject `ci: verify packages on native architectures`.
 
@@ -157,27 +157,27 @@ tags: [execplan, release, ci, beta2-2]
 - The `node-required` scenario runs the installed app with Node paths removed from the child environment, records the official architecture-specific installer URL and minimum version, confirms no Harness ready/listener evidence, exits zero after acknowledgement, and never opens an external browser in CI.
 - The parent smoke verifier validates this evidence separately from normal runtime ready/final evidence.
 
-- [ ] **Step 1: Write failing smoke-config and no-Node evidence tests**
+- [x] **Step 1: Write failing smoke-config and no-Node evidence tests**
 
   Cover invalid scenario rejection, packaged-only gating, official `https://nodejs.org/` installer URL, `22.13.0` minimum, no Harness PID/origin fields, and clean acknowledgement/exit.
 
-- [ ] **Step 2: Run RED**
+- [x] **Step 2: Run RED**
 
   Run `pnpm exec vitest run tests/unit/smoke-contract.test.ts --config tests/e2e/package-vitest.config.ts tests/e2e/package-smoke-runtime.test.mjs`. Expected: the scenario is absent and no-Node evidence cannot be produced.
 
-- [ ] **Step 3: Implement the packaged-only no-Node path**
+- [x] **Step 3: Implement the packaged-only no-Node path**
 
   Keep the normal dialog unchanged outside CI. In validated smoke mode, write the node-required evidence instead of showing a blocking dialog or opening the URL, await the nonce acknowledgement, then request a clean quit.
 
-- [ ] **Step 4: Add native no-Node workflow steps**
+- [x] **Step 4: Add native no-Node workflow steps**
 
   Reuse each installed/extracted artifact after the runtime smoke. Strip Node from the child lookup environment without removing OS utilities needed by Electron. Require the node-required evidence and clean exit on Windows x64/arm64, Linux x64/arm64, macOS Apple Silicon, and macOS Intel.
 
-- [ ] **Step 5: Run GREEN and security checks**
+- [x] **Step 5: Run GREEN and security checks**
 
   Run focused tests, `pnpm check`, and `node scripts/check-security-contract.mjs`. Expected: no automatic Node downloader/installer path becomes reachable.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
   Commit the six files with subject `test(package): verify no-node guidance`.
 
@@ -204,27 +204,27 @@ tags: [execplan, release, ci, beta2-2]
 - It states that no formal `BETA1-1` tag or Release exists; if the reported name meant BETA2-1, the retired-download reason and known installation/prerequisite failures are listed under BETA2-1 without rewriting history.
 - It corrects the BETA1 Node-model drift: PR #4 predates the BETA1 tag, so the tag code used system Node even though the old release prose claimed portable download.
 
-- [ ] **Step 1: Write the evidence-backed change summary**
+- [x] **Step 1: Write the evidence-backed change summary**
 
   Include BETA1 watchdog restart/lock/process-leak bugs, BETA2 single lifecycle and rc.8 fixes, BETA2 native packaging hardening, BETA2-1 persistent Bash/update fixes, and BETA2-2 installation/startup/native-matrix changes.
 
-- [ ] **Step 2: Add the exact validation matrix**
+- [x] **Step 2: Add the exact validation matrix**
 
   For every artifact identify build runner, install/extract method, Node-present result, no-Node result, ready duration, process/loopback result, and CI Run URL. Never label a cross-build as native execution.
 
-- [ ] **Step 2a: Record current runner-label knowledge**
+- [x] **Step 2a: Record current runner-label knowledge**
 
   Add a rapid-freshness knowledge record with retrieval date, official `actions/runner-images` source, exact x64/arm64 labels, applicability, confidence, and 24-hour revalidation boundary; link it from the knowledge index.
 
-- [ ] **Step 3: Update statuses only after evidence exists**
+- [x] **Step 3: Update statuses only after evidence exists**
 
   Before cloud success keep BETA2-2 `pending`; after success record exact run IDs, job conclusions, published assets, and verification date.
 
-- [ ] **Step 4: Validate docs**
+- [x] **Step 4: Validate docs**
 
   Run `node scripts/check-doc-links.mjs`, `pnpm format:check`, and search for stale `pending tag CI`, `BETA1-1`, portable-Node, and unsupported coverage claims.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
   Commit documentation with subject `docs: publish beta2 repair and validation notes`.
 
@@ -234,9 +234,11 @@ tags: [execplan, release, ci, beta2-2]
 
 - Update after cloud verification: `docs/releases/0.1.0-BETA2-2.md`, `docs/engineering/acceptance-report.md`, `docs/project/status.md`, `docs/index.md`, `AGENTS.md`, this plan.
 
-- [ ] **Step 1: Run local release gates on the exact candidate commit**
+- [x] **Step 1: Run local release gates on the exact candidate commit**
 
   Run `pnpm build`, `pnpm test`, `pnpm check`, and `pnpm preflight:runtime`; review `git diff --check` and the complete branch diff.
+
+  Fresh evidence on exact candidate `1b05f5c`: `pnpm build`, `pnpm test` (379 passed / 4 designed skips in the unit stage, 117 Anchored, 24 plugin, 58 package, and 3 Playwright), `pnpm check`, `pnpm preflight:runtime` (56 artifacts / 35 production dependencies / 8 critical versions / 10 plugins), `pnpm check:memory`, `pnpm dist:mac --universal`, and real-DMG `verify-macos-artifact --universal` all exited 0. The documentation gate checked 59 files. This local evidence does not satisfy the pending push/cloud/tag/release steps.
 
 - [ ] **Step 2: Push through the repository integration path**
 
@@ -285,5 +287,9 @@ tags: [execplan, release, ci, beta2-2]
 
 ## Progress
 
-- 2026-08-21 — Read-only audit complete: main CI `32468966137` green; tag package CI `32468983175` blocked on Windows x64 installed-app ready timeout; four other package jobs green but ARM/macOS runtime coverage incomplete.
-- 2026-08-21 — Root-cause hypothesis recorded and candidate two-file batching patch found uncommitted in the isolated worktree; focused current-tree unit suite passes 22 tests with one designed skip.
+- 2026-08-21 — Read-only audit complete: main CI `32468966137` green; first tag package CI `32468983175` failed at the Windows x64 installed-app ready deadline, so no BETA2-2 Release was created. Four other package jobs were green, but ARM/macOS runtime coverage was incomplete.
+- Task 1 complete — commits `deacad0`, `096fe7d`, and `bddb6f7`; two review-fix rounds addressed diagnostic redaction and the final 2,000-character bound; final task review was clean.
+- Task 2 complete — commits `bfca0f4` and `feb6355`; one review-fix round bound Darwin listener parsing and package architecture to native runners; final task review was clean. Cloud-native execution remains Task 5 evidence.
+- Task 3 complete — commits `737d023`, `af8524d`, and `0c5cf6a`; two review-fix rounds required the real Node resolver and immediate same-run mismatch propagation; final task review was clean. Cloud-native execution remains Task 5 evidence.
+- Task 4 complete — commits `60f0207`, `6456049`, `989131a`, and `1b05f5c`; two review-fix rounds corrected the Node timeline, DMG/ZIP execution scope, 600-second wording, and macOS no-Node claims; final task review was clean with cloud facts still pending.
+- Task 5 local gate complete on exact candidate `1b05f5c` — build, full tests, checks, runtime closure, memory gate, Universal macOS distribution, and real-DMG verification all exited 0. Push, merged-main CI, repaired cloud package run, tag replacement, publication, and BETA2-1 download retirement remain pending.
