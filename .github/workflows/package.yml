@@ -24,22 +24,22 @@ jobs:
           - label: windows-arm64
             package-kind: nsis
             expected-architecture: arm64
-            os: windows-2025
+            os: windows-11-arm
             command: pnpm exec electron-builder --win nsis --arm64 --publish never
           - label: macos-universal
             package-kind: dmg-zip
             expected-architecture: universal
-            os: macos-latest
+            os: macos-15
             command: pnpm exec electron-builder --mac dmg zip --universal --publish never
           - label: linux-x64
             package-kind: appimage-deb
             expected-architecture: x64
-            os: ubuntu-latest
+            os: ubuntu-24.04
             command: pnpm exec electron-builder --linux AppImage deb --x64 --publish never
           - label: linux-arm64
             package-kind: appimage-deb
             expected-architecture: arm64
-            os: ubuntu-latest
+            os: ubuntu-24.04-arm
             command: pnpm exec electron-builder --linux AppImage deb --arm64 --publish never
     runs-on: ${{ matrix.os }}
     timeout-minutes: 60
@@ -102,7 +102,7 @@ jobs:
             printf 'UPDATE_ARTIFACT=%s\n' "${zip_matches[0]}" >> "$GITHUB_ENV"
           fi
       - name: Smoke test Windows package
-        if: matrix.label == 'windows-x64'
+        if: matrix.label == 'windows-x64' || matrix.label == 'windows-arm64'
         shell: pwsh
         run: |
           $ErrorActionPreference = "Stop"
@@ -154,7 +154,7 @@ jobs:
         shell: bash
         run: node scripts/verify-macos-artifact.mjs "$ARTIFACT" --universal
       - name: Extract and smoke test Linux AppImage package
-        if: matrix.label == 'linux-x64'
+        if: matrix.label == 'linux-x64' || matrix.label == 'linux-arm64'
         shell: bash
         env:
           PACKAGE_KIND: appimage
@@ -189,7 +189,7 @@ jobs:
           [[ -x "$executable" ]]
           xvfb-run -a pnpm smoke:package -- --matrix-label "$MATRIX_LABEL" --package-kind "$PACKAGE_KIND" --expected-architecture "$EXPECTED_ARCHITECTURE" --artifact-filename "$(basename "$appimage")" --executable "$executable" --resources "$squashfs_root/resources" --inventory "$squashfs_root" --artifact "$appimage" --artifact-sha256 "$hash" --evidence-root "$EVIDENCE_ROOT" --evidence "$EVIDENCE_ROOT/smoke-evidence-linux-appimage.json"
       - name: Install and smoke test Linux deb package
-        if: matrix.label == 'linux-x64'
+        if: matrix.label == 'linux-x64' || matrix.label == 'linux-arm64'
         shell: bash
         env:
           PACKAGE_KIND: deb
@@ -280,9 +280,86 @@ jobs:
           path: release/evidence/${{ matrix.label }}/**/*.json
           if-no-files-found: warn
 
+  macos-smoke:
+    name: Smoke ${{ matrix.label }}
+    needs: package
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - label: macos-arm64
+            os: macos-15
+            runner-architecture: arm64
+          - label: macos-x64
+            os: macos-15-intel
+            runner-architecture: x64
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    env:
+      EVIDENCE_ROOT: ${{ github.workspace }}/release/evidence/${{ matrix.label }}
+      SMOKE_TIMEOUT_MS: 600000
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.19.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24.18.0
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - uses: actions/download-artifact@v4
+        with:
+          name: macos-universal
+          path: release
+      - name: Install and smoke test macOS Universal package
+        shell: bash
+        run: |
+          set -euo pipefail
+          mount_root=$(mktemp -d "$RUNNER_TEMP/deepseek-harness-dmg.XXXXXX")
+          applications_root=$(mktemp -d "$RUNNER_TEMP/Applications.XXXXXX")
+          mounted="false"
+          cleanup() {
+            original_exit=$?
+            cleanup_exit=0
+            set +e
+            if [[ "$mounted" == "true" ]]; then
+              hdiutil detach "$mount_root" || cleanup_exit=$?
+            fi
+            rm -rf "$mount_root" "$applications_root" || cleanup_exit=$?
+            if (( original_exit != 0 )); then
+              exit "$original_exit"
+            fi
+            exit "$cleanup_exit"
+          }
+          trap cleanup EXIT
+          mkdir -p "$EVIDENCE_ROOT"
+          dmg=$(find release -maxdepth 1 -type f -name "DeepSeek-Harness-Code-*-mac-universal.dmg" -print)
+          [[ "$(wc -l <<< "$dmg")" -eq 1 ]]
+          dmg=$(realpath "$dmg")
+          hdiutil attach "$dmg" -nobrowse -readonly -mountpoint "$mount_root"
+          mounted="true"
+          source_app="$mount_root/DeepSeek Harness Code.app"
+          installed_app="$applications_root/DeepSeek Harness Code.app"
+          [[ -d "$source_app" ]]
+          ditto "$source_app" "$installed_app"
+          xattr -dr com.apple.quarantine "$installed_app" 2>/dev/null || true
+          executable="$installed_app/Contents/MacOS/DeepSeek Harness Code"
+          resources="$installed_app/Contents/Resources"
+          [[ -x "$executable" && -d "$resources" ]]
+          hash=$(shasum -a 256 "$dmg" | cut -d' ' -f1)
+          pnpm smoke:package -- --matrix-label macos-universal --package-kind dmg --expected-architecture universal --artifact-filename "$(basename "$dmg")" --executable "$executable" --resources "$resources" --inventory "$installed_app" --artifact "$dmg" --artifact-sha256 "$hash" --evidence-root "$EVIDENCE_ROOT" --evidence "$EVIDENCE_ROOT/smoke-evidence-${{ matrix.runner-architecture }}.json"
+      - name: Upload sanitized smoke evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.label }}-evidence
+          path: release/evidence/${{ matrix.label }}/**/*.json
+          if-no-files-found: warn
+
   release:
     name: Publish GitHub release
-    needs: package
+    needs: [package, macos-smoke]
     if: startsWith(github.ref, 'refs/tags/')
     runs-on: ubuntu-latest
     timeout-minutes: 15

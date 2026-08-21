@@ -44,7 +44,12 @@ const evidenceRoot = resolve(
 const metadataRoot =
   argument("--metadata-root") ?? process.env.SMOKE_METADATA_ROOT;
 const appEvidencePath = `${evidencePath}.app.json`;
-const timeoutMs = Number(process.env.SMOKE_TIMEOUT_MS ?? 45_000);
+const SMOKE_TIMEOUT_MS = 600_000;
+const requestedTimeoutMs = Number(process.env.SMOKE_TIMEOUT_MS ?? 45_000);
+const timeoutMs =
+  Number.isFinite(requestedTimeoutMs) && requestedTimeoutMs > 0
+    ? Math.min(requestedTimeoutMs, SMOKE_TIMEOUT_MS)
+    : 45_000;
 const startedAt = new Date().toISOString();
 
 function argument(name) {
@@ -332,8 +337,13 @@ function verifySmokeEvidence(evidence, expected) {
   const requestedWindow = expected.maxDurationMs;
   const freshnessWindow =
     Number.isFinite(requestedWindow) && requestedWindow > 0
-      ? Math.min(requestedWindow, 15 * 60_000)
+      ? Math.min(requestedWindow, SMOKE_TIMEOUT_MS)
       : 5 * 60_000;
+  const readyDurationMs = readyAt - startedAt;
+  if (readyDurationMs > freshnessWindow)
+    throw new Error(
+      `smoke ready duration ${readyDurationMs} ms exceeds deadline ${freshnessWindow} ms`,
+    );
   if (finalAt - startedAt > freshnessWindow)
     throw new Error("smoke evidence exceeds the freshness window");
   return {
@@ -341,6 +351,7 @@ function verifySmokeEvidence(evidence, expected) {
     appPid: ready.appPid,
     harnessPid: ready.harnessPid,
     port: Number(new URL(ready.harnessOrigin).port),
+    readyDurationMs,
   };
 }
 
@@ -540,34 +551,56 @@ function assertKnownRunnerArchitecture(
   platform = process.platform,
   arch = process.arch,
 ) {
-  if (platform === "darwin") {
-    if (!["x64", "arm64"].includes(arch))
-      throw new Error(`unsupported macOS runner architecture ${arch}`);
-    return;
-  }
-  if ((platform === "linux" || platform === "win32") && arch !== "x64")
-    throw new Error(`unsupported ${platform} runner architecture ${arch}`);
   if (!["darwin", "linux", "win32"].includes(platform))
     throw new Error(`unsupported smoke platform ${platform}`);
+  if (!["x64", "arm64"].includes(arch))
+    throw new Error(`unsupported ${platform} runner architecture ${arch}`);
 }
 
-async function inspectArchitecture(executable) {
-  assertKnownRunnerArchitecture();
-  if (process.platform === "win32") {
-    const machine = String(parseWindowsPeMachine(await readFile(executable)));
-    if (machine !== "34404")
+async function inspectArchitecture(
+  executable,
+  {
+    platform = process.platform,
+    arch = process.arch,
+    readFile: readExecutable = readFile,
+    execFile: inspectExecutable = execFileAsync,
+  } = {},
+) {
+  assertKnownRunnerArchitecture(platform, arch);
+  if (platform === "win32") {
+    const machine = String(
+      parseWindowsPeMachine(await readExecutable(executable)),
+    );
+    const expectedMachine = { x64: "34404", arm64: "43620" }[arch];
+    if (machine !== expectedMachine)
       throw new Error(`unsupported Windows PE machine ${machine}`);
-    return { runner: process.arch, platform: process.platform, machine };
+    return { runner: arch, platform, machine };
   }
-  const file = await execFileAsync("file", [executable]).then(
+  if (platform === "darwin") {
+    const archs = await inspectExecutable("lipo", ["-archs", executable]).then(
+      ({ stdout }) => stdout.trim(),
+      () => undefined,
+    );
+    if (archs === undefined)
+      throw new Error("native architecture inspection failed");
+    const slices = new Set(archs.split(/\s+/u));
+    if (!slices.has("x86_64") || !slices.has("arm64"))
+      throw new Error(`macOS executable is not Universal: ${archs}`);
+    return { runner: arch, platform, archs };
+  }
+  const file = await inspectExecutable("file", ["-b", executable]).then(
     ({ stdout }) => stdout.trim(),
     () => undefined,
   );
   if (file === undefined)
     throw new Error("native architecture inspection failed");
-  if (!/x86-64|x86_64|amd64/i.test(file))
+  const matchesRunner =
+    arch === "x64"
+      ? /\b(?:x86-64|x86_64|amd64)\b/iu.test(file)
+      : /\b(?:ARM aarch64|aarch64|arm64)\b/iu.test(file);
+  if (!matchesRunner)
     throw new Error(`unsupported Linux architecture: ${file}`);
-  return { runner: process.arch, platform: process.platform, file };
+  return { runner: arch, platform, file };
 }
 
 function parseWindowsPeMachine(bytes) {
@@ -687,11 +720,31 @@ function verifySmokeReadyEvidence(evidence, expected) {
     throw new Error("smoke evidence PID is invalid");
   if (ready.harnessPid !== ready.listenerPid)
     throw new Error("smoke listener owner does not match reported Harness PID");
+  const evidenceStartedAt = Date.parse(evidence.startedAt ?? "");
+  const readyAt = Date.parse(ready.timestamps?.readyAt ?? "");
+  const maxDurationMs = Math.min(
+    Number.isFinite(expected.maxDurationMs) && expected.maxDurationMs > 0
+      ? expected.maxDurationMs
+      : SMOKE_TIMEOUT_MS,
+    SMOKE_TIMEOUT_MS,
+  );
+  const readyDurationMs = readyAt - evidenceStartedAt;
+  if (
+    !Number.isFinite(evidenceStartedAt) ||
+    !Number.isFinite(readyAt) ||
+    readyDurationMs < 0
+  )
+    throw new Error("smoke ready evidence timestamps are not ordered");
+  if (readyDurationMs > maxDurationMs)
+    throw new Error(
+      `smoke ready duration ${readyDurationMs} ms exceeds deadline ${maxDurationMs} ms`,
+    );
   return {
     origin: ready.harnessOrigin,
     appPid: ready.appPid,
     harnessPid: ready.harnessPid,
     port: Number(new URL(ready.harnessOrigin).port),
+    readyDurationMs,
   };
 }
 
@@ -878,6 +931,7 @@ async function main() {
       maxDurationMs: timeoutMs,
     };
     const identity = verifySmokeReadyEvidence(readyEvidence, expectedMetadata);
+    evidence.runtime.readyDurationMs = identity.readyDurationMs;
     await assertRuntimeProvenance(
       readyEvidence,
       userData,
@@ -931,6 +985,7 @@ async function main() {
 
 export {
   assertKnownRunnerArchitecture,
+  inspectArchitecture,
   parseLoopbackListeners,
   assertPathWithinRoot,
   assertPathNotSymlink,

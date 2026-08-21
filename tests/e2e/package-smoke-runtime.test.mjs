@@ -261,6 +261,7 @@ describe("packaged runtime listener selection", () => {
       appPid: 7000,
       harnessPid: 7002,
       port: 41002,
+      readyDurationMs: 1_000,
     });
   });
 
@@ -319,19 +320,88 @@ describe("packaged runtime listener selection", () => {
     ).toThrow(/listener owner/i);
   });
 
-  test("fails closed for unknown Linux and Windows runner architectures but preserves macOS variants", () => {
-    expect(() => assertKnownRunnerArchitecture("linux", "arm64")).toThrow(
-      /architecture/i,
-    );
+  test("accepts x64 and arm64 only on every packaged smoke platform", () => {
+    for (const platform of ["win32", "linux", "darwin"]) {
+      for (const arch of ["x64", "arm64"]) {
+        expect(() =>
+          assertKnownRunnerArchitecture(platform, arch),
+        ).not.toThrow();
+      }
+    }
     expect(() => assertKnownRunnerArchitecture("win32", "ia32")).toThrow(
       /architecture/i,
     );
     expect(() => assertKnownRunnerArchitecture("linux", "mips64")).toThrow(
       /architecture/i,
     );
-    expect(() =>
-      assertKnownRunnerArchitecture("darwin", "arm64"),
-    ).not.toThrow();
+    expect(() => assertKnownRunnerArchitecture("freebsd", "x64")).toThrow(
+      /platform/i,
+    );
+  });
+
+  test("inspects native PE x64 and arm64 machine fixtures", async () => {
+    for (const [arch, machine] of [
+      ["x64", 34404],
+      ["arm64", 43620],
+    ]) {
+      const pe = Buffer.alloc(128);
+      pe.writeUInt32LE(64, 60);
+      pe.writeUInt16LE(machine, 68);
+
+      await expect(
+        smokeRuntime.inspectArchitecture("C:\\DeepSeek Harness Code.exe", {
+          platform: "win32",
+          arch,
+          readFile: async () => pe,
+        }),
+      ).resolves.toEqual({
+        runner: arch,
+        platform: "win32",
+        machine: String(machine),
+      });
+    }
+  });
+
+  test("inspects native Linux x86-64 and AArch64 ELF fixtures", async () => {
+    for (const [arch, file] of [
+      ["x64", "ELF 64-bit LSB pie executable, x86-64, version 1 (SYSV)"],
+      ["arm64", "ELF 64-bit LSB pie executable, ARM aarch64, version 1 (SYSV)"],
+    ]) {
+      await expect(
+        smokeRuntime.inspectArchitecture("/opt/deepseek-harness-code", {
+          platform: "linux",
+          arch,
+          execFile: async () => ({ stdout: `${file}\n` }),
+        }),
+      ).resolves.toEqual({ runner: arch, platform: "linux", file });
+    }
+  });
+
+  test("requires both x86_64 and arm64 slices in the macOS executable", async () => {
+    const archs = "x86_64 arm64";
+
+    await expect(
+      smokeRuntime.inspectArchitecture(
+        "/tmp/Applications/DeepSeek Harness Code.app/Contents/MacOS/DeepSeek Harness Code",
+        {
+          platform: "darwin",
+          arch: "arm64",
+          execFile: async () => ({ stdout: `${archs}\n` }),
+        },
+      ),
+    ).resolves.toEqual({
+      runner: "arm64",
+      platform: "darwin",
+      archs,
+    });
+
+    await expect(
+      smokeRuntime.inspectArchitecture("/tmp/DeepSeek Harness Code", {
+        platform: "darwin",
+        arch: "x64",
+        execFile: async () => ({ stdout: "x86_64\n" }),
+      }),
+    ).rejects.toThrow(/universal|arm64/i);
   });
 
   test("validates matrix metadata and artifact filename architecture", () => {
@@ -528,6 +598,22 @@ describe("packaged runtime listener selection", () => {
     expect(() => verifySmokeEvidence(evidence, expectedMetadata)).toThrow(
       /timestamp|fresh/i,
     );
+  });
+
+  test("rejects readiness beyond the 600000 ms hard deadline", () => {
+    const evidence = validSmokeEvidence([
+      fixtureResourcePath(["dsh-lan-access", "package.json"]),
+    ]);
+    evidence.ready.timestamps.readyAt = "2026-08-19T00:10:00.001Z";
+    evidence.final.timestamps.readyAt = evidence.ready.timestamps.readyAt;
+    evidence.final.timestamps.finalAt = "2026-08-19T00:10:00.002Z";
+
+    expect(() =>
+      verifySmokeEvidence(evidence, {
+        ...expectedMetadata,
+        maxDurationMs: 600_000,
+      }),
+    ).toThrow(/ready|600000|deadline|duration/i);
   });
 
   test("times out when the ready acknowledgement is missing", async () => {
