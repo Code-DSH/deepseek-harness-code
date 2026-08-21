@@ -94,7 +94,7 @@ try {
   Assert-True ($cleanupFailures.Count -eq 2) "cleanup failure count was not preserved"
   Assert-True ($cleanupFailures[0].GetType() -eq [Exception]) "direct cleanup failure type was not distinguishable"
   Assert-True ($cleanupFailures[1].GetType() -eq [InvalidOperationException]) "caught cleanup failure type was not distinguishable"
-  Assert-True (($cleanupFailures | Where-Object { [string]::IsNullOrWhiteSpace($_.Message) }).Count -eq 0) "cleanup failure message was empty"
+  Assert-True (@($cleanupFailures | Where-Object { [string]::IsNullOrWhiteSpace($_.Message) }).Count -eq 0) "cleanup failure message was empty"
   $reportedCleanup = [Collections.Generic.List[string]]::new()
   $primaryFailure = [ApplicationException]::new("primary failure")
   $finalFailure = $null
@@ -109,7 +109,7 @@ try {
   Assert-True ($finalFailure.GetType() -eq [ApplicationException]) "primary failure type lost final priority"
   Assert-True ($finalFailure.Message -eq "primary failure") "primary failure message lost final priority"
   Assert-True ($reportedCleanup.Count -eq 2) "cleanup messages were not all reported"
-  Assert-True (($reportedCleanup | Where-Object { [string]::IsNullOrWhiteSpace($_) }).Count -eq 0) "reported cleanup message was empty"
+  Assert-True (@($reportedCleanup | Where-Object { [string]::IsNullOrWhiteSpace($_) }).Count -eq 0) "reported cleanup message was empty"
 
   $nodeRoot = Join-Path $fixtureRoot "nodes"
   New-Item -ItemType Directory -Force $nodeRoot | Out-Null
@@ -127,7 +127,7 @@ try {
     Move-Item -LiteralPath $From -Destination $To -ErrorAction Stop
   }
   Assert-True (($restoreOrder -join ",") -eq "three.exe,two.exe,one.exe") "Node candidates were not restored in reverse order"
-  Assert-True (($nodes | Where-Object { -not (Test-Path -LiteralPath $_) }).Count -eq 0) "Node candidates were not restored"
+  Assert-True (@($nodes | Where-Object { -not (Test-Path -LiteralPath $_) }).Count -eq 0) "Node candidates were not restored"
 
   $partialNodes = @("partial-one", "partial-two") | ForEach-Object {
     $path = Join-Path $nodeRoot "$_.exe"
@@ -146,7 +146,7 @@ try {
   } "partial Node move failure was not reported"
   Assert-True ($partialMoves.Count -eq 1) "successful partial move was not retained for finally"
   Restore-DhscNodeCandidates -Moves $partialMoves
-  Assert-True (($partialNodes | Where-Object { -not (Test-Path -LiteralPath $_) }).Count -eq 0) "partial move was not restored"
+  Assert-True (@($partialNodes | Where-Object { -not (Test-Path -LiteralPath $_) }).Count -eq 0) "partial move was not restored"
 
   $restoreFailureNode = Join-Path $nodeRoot "restore-failure.exe"
   New-Item -ItemType File -Force $restoreFailureNode | Out-Null
