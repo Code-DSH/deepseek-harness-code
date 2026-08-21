@@ -115,7 +115,7 @@ The next step is not a keyword to "turn on reasoning," but controlling the first
 | Memory pressure     | Inherits unbounded     | Bounds growth paths, rotates logs, retires failed processes       |
 | Diagnostics         | Browser console only   | Redacted Electron / Harness / Watchdog logs, in-app access        |
 | Desktop integration | Window chrome only     | Native tray/menu, close policy, system theme, shortcuts           |
-| Security boundary   | Broad preload access   | Loopback-only Harness + two validated preload groups              |
+| Security boundary   | Broad preload access   | Loopback-only Harness + five validated preload groups             |
 | Distribution        | Requires external env  | Self-contained app, auto-detected common install locations        |
 
 > Lightweight wrappers solve "open this site like an app"; DHC solves "operate Harness as a resilient desktop coding system."
