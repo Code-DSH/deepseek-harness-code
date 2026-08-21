@@ -201,13 +201,13 @@ Full boundaries in [overview](./docs/architecture/overview.md) and [lifecycle](.
 
 ## Platform status
 
-| Platform | Target                             | BETA2-2 release status                      |
-| -------- | ---------------------------------- | ------------------------------------------- |
-| macOS    | macOS 12+, Intel and Apple Silicon | Universal package validation pending tag CI |
-| Windows  | Windows 10+, x64 and arm64         | Native package validation pending tag CI    |
-| Linux    | x64 and arm64                      | Native package validation pending tag CI    |
+| Platform | Target                             | BETA2-2 release status                        |
+| -------- | ---------------------------------- | --------------------------------------------- |
+| macOS    | macOS 12+, Intel and Apple Silicon | Universal DMG native validation passed        |
+| Windows  | Windows 10+, x64 and arm64         | Native NSIS install/runtime validation passed |
+| Linux    | x64 and arm64                      | Native AppImage/deb validation passed         |
 
-Cross-platform definitions are checked in; BETA2-2 is pending validation and release. Only native-runner-verified artifacts from the corresponding tag CI are considered released.
+BETA2-2 is published as GitHub Latest after native Windows/Linux x64+arm64 and macOS Intel/Apple-Silicon package validation. Tag Run `32502448560` produced the Release; repaired Run `32505104693` adds explicit macOS no-Node evidence after a Bash 3.2 CI false green was corrected.
 
 ## Install on macOS
 

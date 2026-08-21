@@ -10,5 +10,5 @@
 - [Auto-updater](./../superpowers/specs/2026-08-18-auto-updater-design.md) — active spec for `dsh-updater-check` (updater fetch/verify/replace policy).
 - [BETA2 release](./../releases/0.1.0-BETA2.md) — previous integration release (8 plugins + routing suite + vision-router + better-sidebar).
 - [BETA2-1 release](./../releases/0.1.0-BETA2-1.md) — prompt-readiness patch and user-confirmed update channel.
-- [BETA2-2 release notes](./../releases/0.1.0-BETA2-2.md) — first package run failed at installed Windows x64 readiness; repaired native/no-Node cloud matrix remains pending.
+- [BETA2-2 release notes](./../releases/0.1.0-BETA2-2.md) — published Latest; native/no-Node matrix verified by tag Run `32502448560` plus macOS no-Node repair Run `32505104693`.
 - Historical plans: [BETA1 release](../releases/0.1.0-BETA1.md) · [DSH Routing Suite 0.3.0 release](../superpowers/plans/2026-08-16-routing-suite-release.md) · [Localize presets](../superpowers/plans/2026-08-16-localize-agent-presets.md) · [Session history recovery](../superpowers/plans/2026-08-18-session-history-recovery.md)

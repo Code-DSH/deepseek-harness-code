@@ -4,14 +4,14 @@ title: Beta 2-2 Release Gate Recovery
 summary: 修复 Beta 2-2 Windows 冷启动超时，补齐原生架构与无 Node 安装场景，更新版本差异文档，并在全部云端门禁通过后发布。
 kind: plan
 status: canonical
-content_stage: partial-implementation
+content_stage: final-verified
 scope: [release, ci, packaging, installation, documentation]
 triggers: [beta2-2, release, ci, package smoke, node prerequisite]
 read_when: [恢复 Beta 2-2 发布或审计 Beta 1/Beta 2 差异]
 skip_when: [与发布无关的局部代码修改]
 priority: must
 freshness_class: project
-last_verified: 2026-08-21T21:43:00+08:00
+last_verified: 2026-08-22T01:17:51+08:00
 owners: [primary-agent]
 source_of_truth:
   - ../../../.github/workflows/
@@ -238,21 +238,21 @@ tags: [execplan, release, ci, beta2-2]
 
   Run `pnpm build`, `pnpm test`, `pnpm check`, and `pnpm preflight:runtime`; review `git diff --check` and the complete branch diff.
 
-  Fresh evidence on exact candidate `f0414b7`: `pnpm build`, `pnpm test` (382 passed / 4 designed skips in the unit stage, 117 Anchored, 24 plugin, 58 package, and 3 Playwright), `pnpm check`, `pnpm preflight:runtime` (56 artifacts / 35 production dependencies / 8 critical versions / 10 plugins), and `pnpm check:memory` all exited 0. Universal macOS distribution plus real-DMG verification exited 0 on the immediately preceding code candidate `1b05f5c`; the only later production change was the focused Basic Auth diagnostic-redaction fix, which passed its direct tests and the exact-HEAD full build/test/check gates. The documentation gate checked 59 files. This local evidence does not satisfy the pending push/cloud/tag/release steps.
+  Fresh evidence on exact candidate `f0414b7`: `pnpm build`, `pnpm test` (382 passed / 4 designed skips in the unit stage, 117 Anchored, 24 plugin, 58 package, and 3 Playwright), `pnpm check`, `pnpm preflight:runtime` (56 artifacts / 35 production dependencies / 8 critical versions / 10 plugins), and `pnpm check:memory` all exited 0. Universal macOS distribution plus real-DMG verification exited 0 on the immediately preceding code candidate `1b05f5c`; the only later production change was the focused Basic Auth diagnostic-redaction fix, which passed its direct tests and the exact-HEAD full build/test/check gates. The documentation gate checked 59 files. At that milestone local evidence alone did not satisfy cloud release steps; the final cloud evidence is recorded under Progress.
 
 - [x] **Step 2: Push through the repository integration path**
 
   Push the feature branch, create/review/merge a PR to `main`, and confirm the resulting `main` CI has every job green.
 
-- [ ] **Step 3: Run package workflow before moving the tag**
+- [x] **Step 3: Run package workflow before moving the tag**
 
   Dispatch `Package DeepSeek Harness Code` on the merged `main` SHA. Require every build/install/runtime/no-Node/macOS dual-architecture job to pass and retain sanitized evidence artifacts.
 
-- [ ] **Step 4: Replace only the unpublished failed tag**
+- [x] **Step 4: Replace only the unpublished failed tag**
 
   Confirm `gh release view v0.1.0-BETA2-2` still returns not found, delete only the old remote tag pointing at `012527f`, create an annotated `v0.1.0-BETA2-2` tag at the verified merged SHA, and push it.
 
-- [ ] **Step 5: Verify tag publishing**
+- [x] **Step 5: Verify tag publishing**
 
   Wait for the tag workflow. Require all jobs green, `Publish GitHub release` green, the Release marked Latest/non-prerelease, all platform assets present, and `update-manifest.json` hashes matching downloaded artifacts.
 
@@ -260,7 +260,7 @@ tags: [execplan, release, ci, beta2-2]
 
   At the operator's emergency request, GitHub Release/assets `v0.1.0-BETA2-1` were deleted before Beta 2-2 publication on 2026-08-21. The source tag and archived documentation remain; `gh release view v0.1.0-BETA2-1` returns not found.
 
-- [ ] **Step 7: Write final evidence and commit documentation sync**
+- [x] **Step 7: Write final evidence and commit documentation sync**
 
   Record exact main/tag SHAs, CI Run IDs, job matrix, durations, Release URL/assets, Beta 2-1 retirement, and remaining limitations. Mark this plan `final-verified` only after those checks pass.
 
@@ -287,6 +287,7 @@ tags: [execplan, release, ci, beta2-2]
 
 ## Progress
 
+- 2026-08-22 — Final verified state: `main@6a08c98` passed CI Run `32500224845` and pre-release package Run `32500248923`; moved tag `v0.1.0-BETA2-2` published Release assets through tag Run `32502448560`. All five build jobs, Windows x64/arm64 install-runtime-node-required-uninstall, Linux x64/arm64 AppImage/deb runtime-node-required, and dual-native macOS runtime jobs were green. Release is Latest/non-prerelease with eight installers plus `update-manifest.json`; all five updater targets match GitHub asset filename, size, and SHA-256. BETA2-1 Release/assets are absent and its source tag remains. Post-publication evidence inspection found macOS Bash 3.2 skipped no-Node because `BASHPID` was unbound despite a green job; PR #28 fixed the workflow only, and Run `32505104693` then produced real Apple Silicon (844ms) and Intel (3230ms) node-required evidence with official architecture URLs, no Harness/listener, and clean exits. Release notes were corrected online and in-repo.
 - 2026-08-21 — PR #19 merged as `main@34776bc`; merged-main CI Run `32489172332` passed all 9 jobs. The operator then explicitly changed the retirement order because of active severe user reports: BETA2-1 GitHub Release/assets were deleted immediately and absence was verified while its source tag remained. Pre-tag package Run `32489425705` exposed two additional runner-specific gaps without publishing anything: Linux x64/arm64 production resolution still found `n`-managed Node under `/usr/local/n/versions/node`, and Windows arm64 did not place the app directly at the requested `/D` root or expose a visible uninstall registry entry. PR #20 / `main@5cfd45e` fixed the version-manager quarantine; Run `32491088389` proved both Linux architectures green but showed that electron-builder's assisted installer appends the exact product directory to the requested custom root. The current follow-up accepts only that exact runner-owned child layout, preserving the existing direct-layout and cleanup safety checks. Cloud rerun remains pending.
 - 2026-08-21 — PR #21 / `main@754227c` retained all green Linux results in Run `32492182024`, but Windows arm64 still required registry fallback after custom-root checks. Inspection of electron-builder 26.15.3's installer source identified the exact mismatch: its default uninstall `DisplayName` is `${productName} ${version}`, while the helper filtered only the product name. The current follow-up invokes the assisted silent installer with explicit `/currentuser` and derives the exact versioned display name from the candidate `package.json`; no wildcard registry match is permitted. Cloud rerun remains pending.
 - 2026-08-21 — PR #22 / `main@78906a7` made the Windows arm64 versioned uninstall entry resolvable in Run `32493347472`; the next fail-closed boundary rejected its registered install root because `/D` placed it under the runner-owned custom root rather than per-user Programs. The current follow-up accepts an exact registry root only when it equals or is a strict descendant of that run's custom root and still has the complete direct app layout. Registry roots outside that boundary continue to require a strict Programs descendant, and recursive cleanup still requires a no-reparse-point tree. Cloud rerun remains pending.
@@ -304,4 +305,4 @@ tags: [execplan, release, ci, beta2-2]
 - Task 2 complete — commits `bfca0f4` and `feb6355`; one review-fix round bound Darwin listener parsing and package architecture to native runners; final task review was clean. Cloud-native execution remains Task 5 evidence.
 - Task 3 complete — commits `737d023`, `af8524d`, and `0c5cf6a`; two review-fix rounds required the real Node resolver and immediate same-run mismatch propagation; final task review was clean. Cloud-native execution remains Task 5 evidence.
 - Task 4 complete — commits `60f0207`, `6456049`, `989131a`, and `1b05f5c`; two review-fix rounds corrected the Node timeline, DMG/ZIP execution scope, 600-second wording, and macOS no-Node claims; final task review was clean with cloud facts still pending.
-- Task 5 local gate refreshed on exact candidate `f0414b7` — build, 382-test unit stage, remaining full suites, checks, runtime closure, and memory gate all exited 0; Universal macOS distribution and real-DMG verification exited 0 on preceding code candidate `1b05f5c`. Push, merged-main CI, repaired cloud package run, tag replacement, publication, and BETA2-1 download retirement remain pending.
+- Task 5 complete — local build/test/check/runtime/memory gates passed; `main@6a08c98`, tag/pre-release cloud runs, publication, manifest verification, BETA2-1 retirement, and repaired macOS no-Node evidence are recorded above.

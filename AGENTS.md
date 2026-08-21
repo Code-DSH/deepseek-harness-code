@@ -1,6 +1,6 @@
 # AGENTS.md
 
-Electron 43 desktop host for DeepSeek Harness (`deepseek-harness-code@0.1.0-BETA2-2` candidate, `@deepseek-ai/dsh@0.1.0-rc.8`). BETA2-2 is pending a repaired native cloud package gate; no BETA2-2 GitHub Release/assets exist yet. At the operator's emergency request, the broken BETA2-1 GitHub Release/assets were removed on 2026-08-21 while its source tag was preserved. Community distribution — not official DeepSeek. Harness and desktop renderer stay loopback-only; disabled-by-default trusted-LAN access is an Electron-owned token-gated proxy. macOS distribution remains unsigned/ad-hoc.
+Electron 43 desktop host for DeepSeek Harness (`deepseek-harness-code@0.1.0-BETA2-2`, `@deepseek-ai/dsh@0.1.0-rc.8`). BETA2-2 is GitHub Latest from `6a08c985`; tag Run `32502448560` published all platform assets, and repaired main Run `32505104693` supplied the macOS no-Node evidence missed by a Bash 3.2 CI false green. The broken BETA2-1 GitHub Release/assets were removed while its source tag was preserved. Community distribution — not official DeepSeek. Harness and desktop renderer stay loopback-only; disabled-by-default trusted-LAN access is an Electron-owned token-gated proxy. macOS distribution remains unsigned/ad-hoc.
 
 ## Setup
 
@@ -16,7 +16,7 @@ pnpm build                              # clean + build:icon + node-runtime + ro
 pnpm test                               # runs unit -> anchored -> plugin -> package -> e2e sequentially (package.json:23)
 pnpm check                              # typecheck + lint + format:check + verify:docs + verify:security (package.json:32)
 pnpm check:memory                        # bounded heap + peak-RSS tripwire
-pnpm preflight:runtime                  # alias for node scripts/check-runtime-closure.mjs — 51 artifacts + pinned versions + bare-name patches
+pnpm preflight:runtime                  # alias for node scripts/check-runtime-closure.mjs — 56 artifacts + pinned versions + bare-name patches
 pnpm start                              # build + electron .
 pnpm dist:mac                           # build + build:icon + preflight + electron-builder --mac --universal (also dist:win / dist:linux)
 node scripts/verify-macos-artifact.mjs release/DeepSeek-Harness-Code-*.dmg --universal
@@ -64,4 +64,4 @@ pnpm typecheck && pnpm lint && pnpm format:check  # structure slices (CI runs th
 - Preserve official Harness question protocol (`@deepseek-ai/dsh-tool-ask-user` etc.) — do not create a parallel wire format.
 - Never log credentials, auth headers, cookies, prompt bodies, or response bodies.
 - Runtime behavior changes are test-first; verify before claiming completion.
-- Cross-build is never native execution. Do not mark BETA2-2 green/published or record assets/hashes until exact repaired cloud Run/job evidence exists. BETA2-1 downloads are already retired; retain its source tag and archive.
+- Cross-build is never native execution. BETA2-2 claims must remain bound to tag Run `32502448560`, macOS no-Node repair Run `32505104693`, and published asset/manifest evidence. BETA2-1 downloads are retired; retain its source tag and archive.
