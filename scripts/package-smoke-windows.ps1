@@ -80,6 +80,21 @@ function New-DhscInstalledApplication {
   }
 }
 
+function Get-DhscAppLayoutsInsideRunnerBoundary {
+  param(
+    [Parameter(Mandatory = $true)][string]$Root,
+    [Parameter(Mandatory = $true)][string]$Boundary
+  )
+
+  Assert-DhscTreeHasNoReparsePoint -Root $Boundary
+  $candidateRoots = @(
+    $Root
+    Get-ChildItem -LiteralPath $Root -Recurse -File -Force -Filter "DeepSeek Harness Code.exe" -ErrorAction Stop |
+      ForEach-Object { $_.DirectoryName }
+  ) | Sort-Object -Unique
+  return @($candidateRoots | Where-Object { Test-DhscDirectAppLayout $_ })
+}
+
 function Resolve-DhscInstalledApplication {
   param(
     [Parameter(Mandatory = $true)][string]$CustomRoot,
@@ -104,35 +119,45 @@ function Resolve-DhscInstalledApplication {
     throw "expected exactly one app uninstall entry, found $($matchingEntries.Count)"
   }
   $entry = $matchingEntries[0]
-  $candidateRoot = [string]$entry.InstallLocation
-  if ([string]::IsNullOrWhiteSpace($candidateRoot)) {
-    $candidateRoot = Get-DhscRootFromUninstallString ([string]$entry.UninstallString)
+  $registeredRoots = [Collections.Generic.List[string]]::new()
+  if (-not [string]::IsNullOrWhiteSpace([string]$entry.InstallLocation)) {
+    $registeredRoots.Add((Get-DhscCanonicalPath ([string]$entry.InstallLocation))) | Out-Null
   }
-  $canonicalRoot = Get-DhscCanonicalPath $candidateRoot
-  if (
-    $canonicalRoot.Equals($canonicalCustomRoot, [StringComparison]::OrdinalIgnoreCase) -or
-    (Test-DhscStrictDescendant -Root $canonicalRoot -Parent $canonicalCustomRoot)
-  ) {
-    Assert-DhscTreeHasNoReparsePoint -Root $canonicalCustomRoot
-    if (Test-DhscDirectAppLayout $canonicalRoot) {
-      return New-DhscInstalledApplication -Root $canonicalRoot -Source "custom"
-    }
-    $nestedLayouts = @(
-      Get-ChildItem -LiteralPath $canonicalRoot -Recurse -File -Force -Filter "DeepSeek Harness Code.exe" -ErrorAction Stop |
-        ForEach-Object { $_.DirectoryName } |
-        Sort-Object -Unique |
-        Where-Object { Test-DhscDirectAppLayout $_ }
-    )
-    if ($nestedLayouts.Count -ne 1) {
-      throw "registered custom install root did not contain exactly one app layout"
-    }
-    return New-DhscInstalledApplication -Root $nestedLayouts[0] -Source "custom"
+  if (-not [string]::IsNullOrWhiteSpace([string]$entry.UninstallString)) {
+    $registeredRoots.Add((Get-DhscRootFromUninstallString ([string]$entry.UninstallString))) | Out-Null
   }
+  $canonicalRegisteredRoots = @($registeredRoots | Sort-Object -Unique)
+  if ($canonicalRegisteredRoots.Count -eq 0) {
+    throw "registered install entry contained no usable roots"
+  }
+
   $programsRoot = Get-DhscCanonicalPath (Join-Path $LocalAppData "Programs")
-  if (-not (Test-DhscStrictDescendant -Root $canonicalRoot -Parent $programsRoot)) {
-    throw "registered install root was outside the app-specific Programs boundary"
+  $resolvedLayouts = [Collections.Generic.List[object]]::new()
+  $outOfBoundsRoots = 0
+  foreach ($canonicalRoot in $canonicalRegisteredRoots) {
+    if (
+      $canonicalRoot.Equals($canonicalCustomRoot, [StringComparison]::OrdinalIgnoreCase) -or
+      (Test-DhscStrictDescendant -Root $canonicalRoot -Parent $canonicalCustomRoot)
+    ) {
+      foreach ($layout in @(Get-DhscAppLayoutsInsideRunnerBoundary -Root $canonicalRoot -Boundary $canonicalCustomRoot)) {
+        $resolvedLayouts.Add([pscustomobject]@{ Root = $layout; Source = "custom" }) | Out-Null
+      }
+    } elseif (Test-DhscStrictDescendant -Root $canonicalRoot -Parent $programsRoot) {
+      if (Test-DhscDirectAppLayout $canonicalRoot) {
+        $resolvedLayouts.Add([pscustomobject]@{ Root = $canonicalRoot; Source = "registry" }) | Out-Null
+      }
+    } else {
+      $outOfBoundsRoots += 1
+    }
   }
-  return New-DhscInstalledApplication -Root $canonicalRoot -Source "registry"
+  if ($outOfBoundsRoots -ne 0) {
+    throw "registered install entry contained an out-of-bounds root"
+  }
+  $distinctLayouts = @($resolvedLayouts | Sort-Object -Property Root -Unique)
+  if ($distinctLayouts.Count -ne 1) {
+    throw "registered install entry resolved $($distinctLayouts.Count) complete app layouts from $($canonicalRegisteredRoots.Count) roots"
+  }
+  return New-DhscInstalledApplication -Root $distinctLayouts[0].Root -Source $distinctLayouts[0].Source
 }
 
 function New-DhscNodeMoveList {
