@@ -15,6 +15,30 @@ const agentPresetPatchName =
 const sidebarPatchName = "@deepseek-ai__dsh-client-ui-sidebar@0.1.0-rc.8.patch";
 
 describe("packaged runtime dependency closure", () => {
+  it("ships the LAN access settings plugin in the packaged runtime", async () => {
+    const lanPluginRoot = join(projectRoot, "packages", "dsh-lan-access");
+    const [manifest, rootEntry, hostEntry, clientEntry, patch, closure] =
+      await Promise.all([
+        readFile(join(lanPluginRoot, "package.json"), "utf8"),
+        readFile(join(lanPluginRoot, "index.js"), "utf8"),
+        readFile(join(lanPluginRoot, "lib", "index.js"), "utf8"),
+        readFile(join(lanPluginRoot, "lib", "client.js"), "utf8"),
+        readFile(join(lanPluginRoot, "cordis.patch.yml"), "utf8"),
+        readFile(
+          join(projectRoot, "scripts", "check-runtime-closure.mjs"),
+          "utf8",
+        ),
+      ]);
+
+    expect(JSON.parse(manifest).name).toBe("dsh-lan-access");
+    expect(rootEntry).toContain('name: "dsh-lan-access"');
+    expect(hostEntry).toContain('name: "dsh-lan-access"');
+    expect(clientEntry).toContain('id: "dsh-lan-access"');
+    expect(patch).toContain('name: "dsh-lan-access"');
+    expect(closure).toContain("packages/dsh-lan-access/package.json");
+    expect(closure).toContain("packages/dsh-lan-access/lib/client.js");
+  });
+
   it("excludes local Mimosa session state from the packaged runtime", async () => {
     const relativeStatePath = join(
       ".mimosa",

@@ -1,0 +1,5 @@
+# dsh-lan-access bundle layer: one bare package loader row for the Web client.
+- insert:
+    - id: dsh-lan-access
+      name: "dsh-lan-access"
+      config: {}

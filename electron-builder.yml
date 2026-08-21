@@ -65,6 +65,13 @@ extraResources:
       - index.js
       - lib/**/*
       - cordis.patch.yml
+  - from: packages/dsh-lan-access
+    to: dsh-lan-access
+    filter:
+      - package.json
+      - index.js
+      - lib/**/*
+      - cordis.patch.yml
   - from: packages/prompt-principles-plugin
     to: prompt-principles-plugin
     filter:

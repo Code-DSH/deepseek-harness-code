@@ -54,6 +54,11 @@ const runtimeArtifacts = [
   "packages/dsh-updater-check/lib/index.js",
   "packages/dsh-updater-check/lib/client.js",
   "packages/dsh-updater-check/cordis.patch.yml",
+  "packages/dsh-lan-access/package.json",
+  "packages/dsh-lan-access/index.js",
+  "packages/dsh-lan-access/lib/index.js",
+  "packages/dsh-lan-access/lib/client.js",
+  "packages/dsh-lan-access/cordis.patch.yml",
   "packages/dsh-superpowers/package.json",
   "packages/dsh-superpowers/lib/index.js",
   "packages/dsh-superpowers/lib/client.js",
@@ -235,6 +240,7 @@ for (const [directory, packageName, version] of [
   ["dsh-model-two-level-selector", "dsh-model2-selector", "1.1.0"],
   ["dsh-ui-polish", "dsh-ui-polish", "1.1.0"],
   ["dsh-updater-check", "dsh-updater-check", "1.0.0"],
+  ["dsh-lan-access", "dsh-lan-access", "1.0.0"],
   ["dsh-superpowers", "dsh-superpowers", "0.1.0"],
 ]) {
   const pluginRoot = join(projectRoot, "packages", directory);

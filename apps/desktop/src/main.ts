@@ -526,6 +526,9 @@ async function startHarness(): Promise<HarnessChild> {
   const updaterCheckPluginRoot = app.isPackaged
     ? join(process.resourcesPath, "dsh-updater-check")
     : join(app.getAppPath(), "packages", "dsh-updater-check");
+  const lanAccessPluginRoot = app.isPackaged
+    ? join(process.resourcesPath, "dsh-lan-access")
+    : join(app.getAppPath(), "packages", "dsh-lan-access");
   const promptPrinciplesRoot = app.isPackaged
     ? join(process.resourcesPath, "prompt-principles-plugin")
     : join(app.getAppPath(), "packages", "prompt-principles-plugin");
@@ -581,6 +584,10 @@ async function startHarness(): Promise<HarnessChild> {
       {
         packageName: "dsh-updater-check",
         packageRoot: updaterCheckPluginRoot,
+      },
+      {
+        packageName: "dsh-lan-access",
+        packageRoot: lanAccessPluginRoot,
       },
       {
         packageName: "dsh-superpowers",
