@@ -109,6 +109,12 @@ function Resolve-DhscInstalledApplication {
     $candidateRoot = Get-DhscRootFromUninstallString ([string]$entry.UninstallString)
   }
   $canonicalRoot = Get-DhscCanonicalPath $candidateRoot
+  if (
+    $canonicalRoot.Equals($canonicalCustomRoot, [StringComparison]::OrdinalIgnoreCase) -or
+    (Test-DhscStrictDescendant -Root $canonicalRoot -Parent $canonicalCustomRoot)
+  ) {
+    return New-DhscInstalledApplication -Root $canonicalRoot -Source "custom"
+  }
   $programsRoot = Get-DhscCanonicalPath (Join-Path $LocalAppData "Programs")
   if (-not (Test-DhscStrictDescendant -Root $canonicalRoot -Parent $programsRoot)) {
     throw "registered install root was outside the app-specific Programs boundary"
