@@ -20,6 +20,8 @@ const ANCHORED_PRESET_ID = "anchored-standard";
 const SUPERPOWERS_PACKAGE_NAME = "superpowers";
 const SUPERPOWERS_SKILLS_DIRECTORY = "skills";
 const MANAGED_PRESET_MARKER = ".deepseek-harness-code-managed.json";
+const OFFICIAL_PLUGIN_MARKER =
+  ".deepseek-harness-code-plugin-reconciliation.json";
 const MANAGED_PRESET_METADATA = [
   "LICENSE",
   "NOTICE",
@@ -73,7 +75,7 @@ export type OfficialHarnessInstallInput = {
 };
 
 export type OfficialHarnessInstallResult = {
-  status: "installed";
+  status: "installed" | "unchanged";
   packages: string[];
 };
 
@@ -247,6 +249,137 @@ async function reconcileForeignPnpmStore(input: {
   });
 }
 
+type OfficialPluginMarker = {
+  schemaVersion: 1;
+  owner: "deepseek-harness-code";
+  storeDir: string;
+  packages: Array<{ packageName: string; packageRoot: string }>;
+  digest: string;
+};
+
+function officialPluginMarkerPayload(
+  storeDir: string,
+  plugins: readonly IntegratedHarnessPlugin[],
+): string {
+  return JSON.stringify({
+    schemaVersion: 1,
+    owner: "deepseek-harness-code",
+    storeDir: resolve(storeDir),
+    packages: [...plugins]
+      .map(({ packageName, packageRoot }) => ({ packageName, packageRoot }))
+      .sort((left, right) => left.packageName.localeCompare(right.packageName)),
+  });
+}
+
+function officialPluginMarkerDigest(payload: string): string {
+  return createHash("sha256").update(payload).digest("hex");
+}
+
+async function readOfficialPluginMarker(
+  markerPath: string,
+): Promise<OfficialPluginMarker | undefined> {
+  try {
+    const parsed = JSON.parse(await readFile(markerPath, "utf8")) as unknown;
+    if (typeof parsed !== "object" || parsed === null) return undefined;
+    const marker = parsed as Partial<OfficialPluginMarker>;
+    if (
+      marker.schemaVersion !== 1 ||
+      marker.owner !== "deepseek-harness-code" ||
+      typeof marker.storeDir !== "string" ||
+      !Array.isArray(marker.packages) ||
+      typeof marker.digest !== "string" ||
+      !/^[a-f0-9]{64}$/u.test(marker.digest)
+    ) {
+      return undefined;
+    }
+    const packages = marker.packages;
+    if (
+      packages.some(
+        (plugin) =>
+          typeof plugin !== "object" ||
+          plugin === null ||
+          typeof plugin.packageName !== "string" ||
+          typeof plugin.packageRoot !== "string",
+      )
+    ) {
+      return undefined;
+    }
+    const payload = JSON.stringify({
+      schemaVersion: marker.schemaVersion,
+      owner: marker.owner,
+      storeDir: marker.storeDir,
+      packages,
+    });
+    if (officialPluginMarkerDigest(payload) !== marker.digest) return undefined;
+    return marker as OfficialPluginMarker;
+  } catch {
+    return undefined;
+  }
+}
+
+async function profileHasManagedStore(
+  profileRoot: string,
+  expectedStoreDir: string,
+): Promise<boolean> {
+  try {
+    const content = await readFile(
+      join(profileRoot, "node_modules", ".modules.yaml"),
+      "utf8",
+    );
+    let storeDir: string | undefined;
+    if (content.trimStart().startsWith("{")) {
+      const parsed = JSON.parse(content) as { storeDir?: unknown };
+      if (typeof parsed.storeDir === "string") storeDir = parsed.storeDir;
+    } else {
+      storeDir = content.match(/^storeDir:\s*(\S+)\s*$/m)?.[1];
+    }
+    if (storeDir === undefined) return false;
+    const normalize = (value: string): string => {
+      const resolved = resolve(value);
+      return /^v\d+$/u.test(basename(resolved)) ? dirname(resolved) : resolved;
+    };
+    return normalize(storeDir) === normalize(expectedStoreDir);
+  } catch {
+    return false;
+  }
+}
+
+async function officialPluginInstallIsUnchanged(input: {
+  dshHome: string;
+  pnpmStoreDir: string;
+  plugins: readonly IntegratedHarnessPlugin[];
+}): Promise<boolean> {
+  const marker = await readOfficialPluginMarker(
+    join(input.dshHome, OFFICIAL_PLUGIN_MARKER),
+  );
+  if (marker === undefined) return false;
+  const payload = officialPluginMarkerPayload(
+    input.pnpmStoreDir,
+    input.plugins,
+  );
+  if (
+    marker.storeDir !== resolve(input.pnpmStoreDir) ||
+    marker.digest !== officialPluginMarkerDigest(payload)
+  ) {
+    return false;
+  }
+  const dependencies = await readManifestDependencies(
+    join(input.dshHome, "profiles", "web", "package.json"),
+  );
+  if (
+    input.plugins.some(
+      (plugin) =>
+        dependencies[plugin.packageName] !== `link:${plugin.packageRoot}`,
+    )
+  ) {
+    return false;
+  }
+  return profileHasManagedStore(
+    join(input.dshHome, "profiles", "web"),
+    input.pnpmStoreDir,
+  );
+}
+
 /** Install integrated packages through the public dsh plugin command. */
 export async function ensureOfficialHarnessInstall(
   input: OfficialHarnessInstallInput,
@@ -291,6 +424,20 @@ export async function ensureOfficialHarnessInstall(
       installSpec: plugin.packageRoot,
     })),
   ];
+
+  if (
+    legacyPluginSpecs.length === 0 &&
+    (await officialPluginInstallIsUnchanged({
+      dshHome: input.dshHome,
+      pnpmStoreDir: input.pnpmStoreDir,
+      plugins,
+    }))
+  ) {
+    return {
+      status: "unchanged",
+      packages: installRequests.map((request) => request.packageName),
+    };
+  }
 
   await writePnpmLaunchers(
     input.runtimeBinRoot,
@@ -361,33 +508,26 @@ export async function ensureOfficialHarnessInstall(
     await installAll();
     void error;
   }
-  // RC8's dsh-base bundle includes some plugins (subagent providers)
-  // automatically. Plugins flagged linkOnly get their link created by
-  // `dsh plugin add` but are then removed from the bundles list to
-  // avoid duplicate loader entry IDs.
-  const linkOnlyNames = new Set(
-    plugins.filter((p) => p.linkOnly === true).map((p) => p.packageName),
+  const markerPayload = officialPluginMarkerPayload(
+    input.pnpmStoreDir,
+    plugins,
   );
-  if (linkOnlyNames.size > 0) {
-    const profilePkgPath = join(profileRoot, "package.json");
-    try {
-      const profilePkg = JSON.parse(await readFile(profilePkgPath, "utf8")) as {
-        dsh?: { profile?: { bundles?: string[] } };
-      };
-      if (Array.isArray(profilePkg?.dsh?.profile?.bundles)) {
-        profilePkg.dsh.profile.bundles = profilePkg.dsh.profile.bundles.filter(
-          (name) => !linkOnlyNames.has(name),
-        );
-        await writeFile(
-          profilePkgPath,
-          JSON.stringify(profilePkg, null, 2) + "\n",
-          "utf8",
-        );
-      }
-    } catch {
-      // Profile package.json read/write failure is non-fatal.
-    }
-  }
+  const marker: OfficialPluginMarker = {
+    schemaVersion: 1,
+    owner: "deepseek-harness-code",
+    storeDir: resolve(input.pnpmStoreDir),
+    packages: JSON.parse(markerPayload).packages as Array<{
+      packageName: string;
+      packageRoot: string;
+    }>,
+    digest: officialPluginMarkerDigest(markerPayload),
+  };
+  await mkdir(input.dshHome, { recursive: true });
+  await writeFile(
+    join(input.dshHome, OFFICIAL_PLUGIN_MARKER),
+    `${JSON.stringify(marker, null, 2)}\n`,
+    "utf8",
+  );
   return {
     status: "installed",
     packages: installRequests.map((request) => request.packageName),
