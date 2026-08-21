@@ -563,6 +563,7 @@ async function startHarness(): Promise<HarnessChild> {
     pnpmEntry: join(nodeRuntimeResourcePath(), "pnpm.mjs"),
     pnpmStoreDir: runtime.pnpmStoreDir,
     runtimeBinRoot: runtimeBinRoot,
+    releaseIdentity: app.getVersion(),
     serverEverythingRoot: runtime.serverEverythingRoot,
     integratedPlugins: [
       {

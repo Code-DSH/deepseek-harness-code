@@ -99,6 +99,233 @@ describe("official Harness plugin installation", () => {
     expect(runCommand).toHaveBeenCalledTimes(1);
   });
 
+  it.skipIf(process.platform !== "win32")(
+    "treats Windows link separators as equivalent on warm startup",
+    async () => {
+      const root = await mkdtemp(join(tmpdir(), "dsh-plugin-windows-link-"));
+      const dshHome = join(root, "home");
+      const runtimeBinRoot = join(root, "app-data", "runtime-bin");
+      const desktopPlugin = await createPlugin(
+        root,
+        "desktop-plugin",
+        "deepseek-harness-desktop-plugin",
+      );
+      const packageRoot = await realpath(desktopPlugin);
+      const profileRoot = join(dshHome, "profiles", "web");
+      await mkdir(join(profileRoot, "node_modules"), { recursive: true });
+      await writeFile(
+        join(profileRoot, "package.json"),
+        `${JSON.stringify({
+          dependencies: {
+            "deepseek-harness-desktop-plugin": `link:${packageRoot.replaceAll("\\", "/")}`,
+          },
+        })}\n`,
+      );
+      await writeFile(
+        join(profileRoot, "node_modules", ".modules.yaml"),
+        `${JSON.stringify({ storeDir: "C:/managed/pnpm-store" })}\n`,
+      );
+      const runCommand = vi.fn<OfficialCommandRunner>(() => ({
+        status: 0,
+        stdout: "",
+        stderr: "",
+      }));
+      const input = {
+        dshEntry: "C:/app/dsh.js",
+        dshHome,
+        nodeExecutable: "C:/Program Files/nodejs/node.exe",
+        pnpmEntry: "C:/app/pnpm.mjs",
+        pnpmStoreDir: "C:/managed/pnpm-store",
+        runtimeBinRoot,
+        releaseIdentity: "0.1.0-test",
+        integratedPlugins: [
+          {
+            packageName: "deepseek-harness-desktop-plugin",
+            packageRoot: desktopPlugin,
+          },
+        ],
+        legacyPluginSpecs: [],
+        runCommand,
+      };
+
+      await ensureOfficialHarnessInstall(input);
+      await expect(ensureOfficialHarnessInstall(input)).resolves.toMatchObject({
+        status: "unchanged",
+      });
+      expect(runCommand).toHaveBeenCalledTimes(1);
+    },
+  );
+
+  it("reconciles when the release or package manifest identity changes", async () => {
+    const root = await mkdtemp(join(tmpdir(), "dsh-plugin-release-identity-"));
+    const dshHome = join(root, "home");
+    const runtimeBinRoot = join(root, "app-data", "runtime-bin");
+    const desktopPlugin = await createPlugin(
+      root,
+      "desktop-plugin",
+      "deepseek-harness-desktop-plugin",
+    );
+    const packageRoot = await realpath(desktopPlugin);
+    const profileRoot = join(dshHome, "profiles", "web");
+    await mkdir(join(profileRoot, "node_modules"), { recursive: true });
+    await writeFile(
+      join(profileRoot, "package.json"),
+      `${JSON.stringify({
+        dependencies: {
+          "deepseek-harness-desktop-plugin": `link:${packageRoot}`,
+        },
+      })}\n`,
+    );
+    await writeFile(
+      join(profileRoot, "node_modules", ".modules.yaml"),
+      `${JSON.stringify({ storeDir: "/managed/pnpm-store" })}\n`,
+    );
+    const runCommand = vi.fn<OfficialCommandRunner>(() => ({
+      status: 0,
+      stdout: "",
+      stderr: "",
+    }));
+    const input = {
+      dshEntry: "/app/dsh.js",
+      dshHome,
+      nodeExecutable: "/usr/bin/node",
+      pnpmEntry: "/app/pnpm.mjs",
+      pnpmStoreDir: "/managed/pnpm-store",
+      runtimeBinRoot,
+      releaseIdentity: "0.1.0-test.1",
+      integratedPlugins: [
+        {
+          packageName: "deepseek-harness-desktop-plugin",
+          packageRoot: desktopPlugin,
+        },
+      ],
+      legacyPluginSpecs: [],
+      runCommand,
+    };
+
+    await ensureOfficialHarnessInstall(input);
+    const marker = JSON.parse(
+      await readFile(
+        join(dshHome, ".deepseek-harness-code-plugin-reconciliation.json"),
+        "utf8",
+      ),
+    ) as {
+      schemaVersion: number;
+      releaseIdentity: string;
+      packages: Array<{
+        packageName: string;
+        manifestVersion: string;
+        manifestDigest: string;
+        linkOnly: boolean;
+      }>;
+    };
+    expect(marker).toMatchObject({
+      schemaVersion: 2,
+      releaseIdentity: "0.1.0-test.1",
+      packages: [
+        {
+          packageName: "deepseek-harness-desktop-plugin",
+          manifestVersion: "1.0.0",
+          linkOnly: false,
+        },
+      ],
+    });
+    expect(marker.packages[0]?.manifestDigest).toMatch(/^[a-f0-9]{64}$/u);
+    await writeFile(
+      join(packageRoot, "package.json"),
+      `${JSON.stringify({
+        name: "deepseek-harness-desktop-plugin",
+        version: "1.0.1",
+        dsh: { bundle: { patch: "./cordis.patch.yml" } },
+      })}\n`,
+    );
+    await expect(ensureOfficialHarnessInstall(input)).resolves.toMatchObject({
+      status: "installed",
+    });
+    expect(runCommand).toHaveBeenCalledTimes(2);
+
+    const changedReleaseInput = { ...input, releaseIdentity: "0.1.0-test.2" };
+    await expect(
+      ensureOfficialHarnessInstall(changedReleaseInput),
+    ).resolves.toMatchObject({ status: "installed" });
+    expect(runCommand).toHaveBeenCalledTimes(3);
+  });
+
+  it("reconciles when linkOnly changes to false and keeps the normal bundle", async () => {
+    const root = await mkdtemp(join(tmpdir(), "dsh-plugin-link-only-toggle-"));
+    const dshHome = join(root, "home");
+    const runtimeBinRoot = join(root, "app-data", "runtime-bin");
+    const plugin = await createPlugin(
+      root,
+      "toggle-plugin",
+      "deepseek-harness-toggle-plugin",
+    );
+    const packageRoot = await realpath(plugin);
+    const profileRoot = join(dshHome, "profiles", "web");
+    const profilePath = join(profileRoot, "package.json");
+    await mkdir(join(profileRoot, "node_modules"), { recursive: true });
+    const writeProfile = async (bundles: string[]) => {
+      await writeFile(
+        profilePath,
+        `${JSON.stringify({
+          dependencies: {
+            "deepseek-harness-toggle-plugin": `link:${packageRoot}`,
+          },
+          dsh: { profile: { bundles } },
+        })}\n`,
+      );
+    };
+    await writeProfile(["deepseek-harness-toggle-plugin"]);
+    await writeFile(
+      join(profileRoot, "node_modules", ".modules.yaml"),
+      `${JSON.stringify({ storeDir: "/managed/pnpm-store" })}\n`,
+    );
+    const runCommand = vi.fn<OfficialCommandRunner>(() => ({
+      status: 0,
+      stdout: "",
+      stderr: "",
+    }));
+    const baseInput = {
+      dshEntry: "/app/dsh.js",
+      dshHome,
+      nodeExecutable: "/usr/bin/node",
+      pnpmEntry: "/app/pnpm.mjs",
+      pnpmStoreDir: "/managed/pnpm-store",
+      runtimeBinRoot,
+      releaseIdentity: "0.1.0-test",
+      legacyPluginSpecs: [],
+      runCommand,
+    };
+
+    await ensureOfficialHarnessInstall({
+      ...baseInput,
+      integratedPlugins: [
+        {
+          packageName: "deepseek-harness-toggle-plugin",
+          packageRoot: plugin,
+          linkOnly: true,
+        },
+      ],
+    });
+    await writeProfile(["deepseek-harness-toggle-plugin"]);
+    const result = await ensureOfficialHarnessInstall({
+      ...baseInput,
+      integratedPlugins: [
+        {
+          packageName: "deepseek-harness-toggle-plugin",
+          packageRoot: plugin,
+          linkOnly: false,
+        },
+      ],
+    });
+
+    expect(result.status).toBe("installed");
+    expect(runCommand).toHaveBeenCalledTimes(2);
+    expect(JSON.parse(await readFile(profilePath, "utf8"))).toMatchObject({
+      dsh: { profile: { bundles: ["deepseek-harness-toggle-plugin"] } },
+    });
+  });
+
   it("removes only link-only names from bundles after official reconciliation", async () => {
     const root = await mkdtemp(join(tmpdir(), "dsh-plugin-link-only-"));
     const dshHome = join(root, "home");

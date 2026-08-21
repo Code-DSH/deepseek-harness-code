@@ -14,7 +14,14 @@ import {
 import { createReadStream } from "node:fs";
 import { createHash, randomUUID } from "node:crypto";
 import { spawnSync } from "node:child_process";
-import { basename, delimiter, dirname, join, resolve } from "node:path";
+import {
+  basename,
+  delimiter,
+  dirname,
+  join,
+  resolve,
+  win32 as windowsPath,
+} from "node:path";
 
 const ANCHORED_PRESET_ID = "anchored-standard";
 const SUPERPOWERS_PACKAGE_NAME = "superpowers";
@@ -67,6 +74,7 @@ export type OfficialHarnessInstallInput = {
   pnpmEntry: string;
   pnpmStoreDir: string;
   runtimeBinRoot: string;
+  releaseIdentity?: string;
   serverEverythingRoot?: string;
   integratedPlugins: readonly IntegratedHarnessPlugin[];
   legacyPluginSpecs?: readonly LegacyPluginSpec[];
@@ -249,24 +257,55 @@ async function reconcileForeignPnpmStore(input: {
   });
 }
 
+type ResolvedIntegratedHarnessPlugin = {
+  packageName: string;
+  packageRoot: string;
+  manifestVersion: string;
+  manifestDigest: string;
+  linkOnly: boolean;
+};
+
 type OfficialPluginMarker = {
-  schemaVersion: 1;
+  schemaVersion: 2;
   owner: "deepseek-harness-code";
+  releaseIdentity: string;
   storeDir: string;
-  packages: Array<{ packageName: string; packageRoot: string }>;
+  packages: Array<{
+    packageName: string;
+    packageRoot: string;
+    manifestVersion: string;
+    manifestDigest: string;
+    linkOnly: boolean;
+  }>;
   digest: string;
 };
 
 function officialPluginMarkerPayload(
+  releaseIdentity: string,
   storeDir: string,
-  plugins: readonly IntegratedHarnessPlugin[],
+  plugins: readonly ResolvedIntegratedHarnessPlugin[],
 ): string {
   return JSON.stringify({
-    schemaVersion: 1,
+    schemaVersion: 2,
     owner: "deepseek-harness-code",
+    releaseIdentity,
     storeDir: resolve(storeDir),
     packages: [...plugins]
-      .map(({ packageName, packageRoot }) => ({ packageName, packageRoot }))
+      .map(
+        ({
+          packageName,
+          packageRoot,
+          manifestVersion,
+          manifestDigest,
+          linkOnly,
+        }) => ({
+          packageName,
+          packageRoot,
+          manifestVersion,
+          manifestDigest,
+          linkOnly,
+        }),
+      )
       .sort((left, right) => left.packageName.localeCompare(right.packageName)),
   });
 }
@@ -283,8 +322,9 @@ async function readOfficialPluginMarker(
     if (typeof parsed !== "object" || parsed === null) return undefined;
     const marker = parsed as Partial<OfficialPluginMarker>;
     if (
-      marker.schemaVersion !== 1 ||
+      marker.schemaVersion !== 2 ||
       marker.owner !== "deepseek-harness-code" ||
+      typeof marker.releaseIdentity !== "string" ||
       typeof marker.storeDir !== "string" ||
       !Array.isArray(marker.packages) ||
       typeof marker.digest !== "string" ||
@@ -299,7 +339,11 @@ async function readOfficialPluginMarker(
           typeof plugin !== "object" ||
           plugin === null ||
           typeof plugin.packageName !== "string" ||
-          typeof plugin.packageRoot !== "string",
+          typeof plugin.packageRoot !== "string" ||
+          typeof plugin.manifestVersion !== "string" ||
+          typeof plugin.manifestDigest !== "string" ||
+          !/^[a-f0-9]{64}$/u.test(plugin.manifestDigest) ||
+          typeof plugin.linkOnly !== "boolean",
       )
     ) {
       return undefined;
@@ -307,6 +351,7 @@ async function readOfficialPluginMarker(
     const payload = JSON.stringify({
       schemaVersion: marker.schemaVersion,
       owner: marker.owner,
+      releaseIdentity: marker.releaseIdentity,
       storeDir: marker.storeDir,
       packages,
     });
@@ -342,6 +387,42 @@ async function profileHasManagedStore(
   } catch {
     return false;
   }
+}
+
+function isWindowsAbsolutePath(value: string): boolean {
+  return /^[A-Za-z]:[\\/]/u.test(value) || /^\\\\/u.test(value);
+}
+
+function normalizeWindowsPath(value: string): string {
+  const normalized = windowsPath.normalize(value.replaceAll("/", "\\"));
+  if (/^[A-Za-z]:/u.test(normalized)) {
+    return `${normalized[0]?.toUpperCase() ?? ""}${normalized.slice(1).replaceAll("\\", "/")}`;
+  }
+  return normalized.replaceAll("\\", "/");
+}
+
+function equivalentPackageRoot(left: string, right: string): boolean {
+  const leftIsWindows = isWindowsAbsolutePath(left);
+  const rightIsWindows = isWindowsAbsolutePath(right);
+  if (leftIsWindows || rightIsWindows) {
+    return (
+      leftIsWindows &&
+      rightIsWindows &&
+      normalizeWindowsPath(left) === normalizeWindowsPath(right)
+    );
+  }
+  return resolve(left) === resolve(right);
+}
+
+function manifestDependencyMatchesPackageRoot(
+  dependency: string | undefined,
+  packageRoot: string,
+): boolean {
+  return (
+    dependency !== undefined &&
+    dependency.startsWith("link:") &&
+    equivalentPackageRoot(dependency.slice("link:".length), packageRoot)
+  );
 }
 
 async function profileHasNoLinkOnlyBundles(
@@ -398,17 +479,20 @@ async function removeLinkOnlyBundles(
 async function officialPluginInstallIsUnchanged(input: {
   dshHome: string;
   pnpmStoreDir: string;
-  plugins: readonly IntegratedHarnessPlugin[];
+  releaseIdentity: string;
+  plugins: readonly ResolvedIntegratedHarnessPlugin[];
 }): Promise<boolean> {
   const marker = await readOfficialPluginMarker(
     join(input.dshHome, OFFICIAL_PLUGIN_MARKER),
   );
   if (marker === undefined) return false;
   const payload = officialPluginMarkerPayload(
+    input.releaseIdentity,
     input.pnpmStoreDir,
     input.plugins,
   );
   if (
+    marker.releaseIdentity !== input.releaseIdentity ||
     marker.storeDir !== resolve(input.pnpmStoreDir) ||
     marker.digest !== officialPluginMarkerDigest(payload)
   ) {
@@ -425,7 +509,10 @@ async function officialPluginInstallIsUnchanged(input: {
   if (
     input.plugins.some(
       (plugin) =>
-        dependencies[plugin.packageName] !== `link:${plugin.packageRoot}`,
+        !manifestDependencyMatchesPackageRoot(
+          dependencies[plugin.packageName],
+          plugin.packageRoot,
+        ),
     )
   ) {
     return false;
@@ -453,21 +540,35 @@ async function officialPluginInstallIsUnchanged(input: {
 export async function ensureOfficialHarnessInstall(
   input: OfficialHarnessInstallInput,
 ): Promise<OfficialHarnessInstallResult> {
-  const plugins: IntegratedHarnessPlugin[] = [];
+  const plugins: ResolvedIntegratedHarnessPlugin[] = [];
   for (const plugin of input.integratedPlugins) {
     const packageRoot = await realpath(plugin.packageRoot);
-    const manifest = JSON.parse(
-      await readFile(join(packageRoot, "package.json"), "utf8"),
-    ) as { name?: unknown };
+    const manifestContent = await readFile(
+      join(packageRoot, "package.json"),
+      "utf8",
+    );
+    const manifest = JSON.parse(manifestContent) as {
+      name?: unknown;
+      version?: unknown;
+    };
     if (manifest.name !== plugin.packageName) {
       throw new Error(
         `Integrated package ${plugin.packageName} does not match ${String(manifest.name)}`,
       );
     }
+    if (typeof manifest.version !== "string" || manifest.version.length === 0) {
+      throw new Error(
+        `Integrated package ${plugin.packageName} has no version`,
+      );
+    }
     plugins.push({
       packageName: plugin.packageName,
       packageRoot,
-      ...(plugin.linkOnly !== undefined ? { linkOnly: plugin.linkOnly } : {}),
+      manifestVersion: manifest.version,
+      manifestDigest: createHash("sha256")
+        .update(manifestContent)
+        .digest("hex"),
+      linkOnly: plugin.linkOnly === true,
     });
   }
 
@@ -499,6 +600,7 @@ export async function ensureOfficialHarnessInstall(
     (await officialPluginInstallIsUnchanged({
       dshHome: input.dshHome,
       pnpmStoreDir: input.pnpmStoreDir,
+      releaseIdentity: input.releaseIdentity ?? "unknown",
       plugins,
     }))
   ) {
@@ -584,17 +686,17 @@ export async function ensureOfficialHarnessInstall(
   );
   await removeLinkOnlyBundles(profileRoot, linkOnlyNames);
   const markerPayload = officialPluginMarkerPayload(
+    input.releaseIdentity ?? "unknown",
     input.pnpmStoreDir,
     plugins,
   );
   const marker: OfficialPluginMarker = {
-    schemaVersion: 1,
+    schemaVersion: 2,
     owner: "deepseek-harness-code",
+    releaseIdentity: input.releaseIdentity ?? "unknown",
     storeDir: resolve(input.pnpmStoreDir),
-    packages: JSON.parse(markerPayload).packages as Array<{
-      packageName: string;
-      packageRoot: string;
-    }>,
+    packages: JSON.parse(markerPayload)
+      .packages as OfficialPluginMarker["packages"],
     digest: officialPluginMarkerDigest(markerPayload),
   };
   await mkdir(input.dshHome, { recursive: true });
