@@ -203,34 +203,35 @@
   <text class="tiny" x="894" y="804">无运行时下载器 · 不可变</text>
 
   <!-- Official plugin install bar -->
-  <rect class="host" x="60" y="852" width="1080" height="36" rx="8"/>
-  <text class="tiny" x="76" y="866">官方协调：</text><text class="small" x="140" y="866">dsh plugin --profile web add</text><text class="tiny" x="340" y="866"> 经系统 Node + 内置 pnpm · Harness 拥有 manifest/bundle/patch · 桌面永不手写 profile YAML · --expose-internals 保留 bare 名称</text>
-  <text class="tiny" x="76" y="880">Bundle：desktop-plugin · dsh-ui-motion · dsh-model2-selector · dsh-ui-polish · dsh-updater-check · prompt-principles · vision-router · better-sidebar · superpowers · composition（MCP + codex/claude）· injector · mode-boost · dsh-find-plugin</text>
+  <rect class="host" x="60" y="852" width="1080" height="64" rx="8"/>
+  <text class="tiny" x="76" y="870">官方协调：</text><text class="small" x="140" y="870">dsh plugin --profile web add</text><text class="tiny" x="340" y="870"> 经系统 Node + 内置 pnpm · --expose-internals</text>
+  <text class="tiny" x="76" y="886">Harness 拥有 manifest/bundle/patch · 桌面永不手写 profile YAML</text>
+  <text class="tiny" x="76" y="902">Bundle：desktop-plugin · dsh-ui-motion · dsh-model2-selector · dsh-ui-polish · dsh-updater-check · prompt-principles · vision-router · better-sidebar · superpowers · composition · injector · mode-boost · dsh-find-plugin</text>
 
   <!-- Row 5: Data + External -->
-  <rect class="data" x="44" y="902" width="680" height="160"/>
-  <text class="subheading" x="60" y="924">持久化 — 应用用户数据（.app 之外）</text>
-  <text class="label-sm" x="60" y="944">官方 Home</text><text class="small" x="130" y="944">解析：$DSH_HOME → ~/.dsh (@deepseek-ai/dsh-home-paths@0.1.0-rc.8)</text>
-  <text class="small" x="60" y="962">dsh-home：设置 / 凭据 / 会话 / 工作区 / .agent-presets / skills</text>
-  <text class="small" x="60" y="978">遗留迁移：仅复制 · 目标胜出 · 拒绝符号链接 · 0600/0700 · 幂等</text>
-  <text class="label-sm" x="60" y="997">诊断</text><text class="small" x="110" y="997">Electron / Harness / Watchdog 日志 · 脱敏 · 10MB ×5 轮转 · openLogs</text>
-  <text class="label-sm" x="60" y="1016">全局</text><text class="small" x="106" y="1016">npm install -g dsh@固定版本 · 失败开放 · 永不覆盖用户全局</text>
-  <text class="label-sm" x="60" y="1035">证明</text><text class="small" x="102" y="1035">preflight：51 产物 · 35 依赖 · 8 关键版本 · 10 Bundle · SHA-256 已验证</text>
+  <rect class="data" x="44" y="930" width="680" height="160"/>
+  <text class="subheading" x="60" y="952">持久化 — 应用用户数据（.app 之外）</text>
+  <text class="label-sm" x="60" y="972">官方 Home</text><text class="small" x="130" y="972">解析：$DSH_HOME → ~/.dsh (@deepseek-ai/dsh-home-paths@0.1.0-rc.8)</text>
+  <text class="small" x="60" y="990">dsh-home：设置 / 凭据 / 会话 / 工作区 / .agent-presets / skills</text>
+  <text class="small" x="60" y="1006">遗留迁移：仅复制 · 目标胜出 · 拒绝符号链接 · 0600/0700 · 幂等</text>
+  <text class="label-sm" x="60" y="1025">诊断</text><text class="small" x="110" y="1025">Electron / Harness / Watchdog 日志 · 脱敏 · 10MB ×5 轮转 · openLogs</text>
+  <text class="label-sm" x="60" y="1044">全局</text><text class="small" x="106" y="1044">npm install -g dsh@固定版本 · 失败开放 · 永不覆盖用户全局</text>
+  <text class="label-sm" x="60" y="1063">证明</text><text class="small" x="102" y="1063">preflight：51 产物 · 35 依赖 · 8 关键版本 · 10 Bundle · SHA-256 已验证</text>
 
-  <rect class="external" x="744" y="902" width="410" height="160"/>
-  <text class="subheading" x="760" y="924">Provider 与分发边界</text>
-  <text class="label" x="760" y="944">DeepSeek API</text>
-  <text class="small" x="760" y="962">流式 · 重试策略 · 不修改私有传输</text>
-  <text class="small" x="760" y="978">凭据：用户在 Harness 设置中输入</text>
-  <text class="small" x="760" y="994">桌面不采集/记录/转发</text>
-  <rect class="zone" x="760" y="1008" width="190" height="42" rx="8"/>
-  <text class="tiny" x="768" y="1024">打包（原生 Runner）</text>
-  <text class="tiny" x="768" y="1038">DMG Universal · NSIS x64/arm64</text>
-  <text class="tiny" x="768" y="1050">AppImage/deb x64/arm64</text>
-  <rect class="zone" x="960" y="1008" width="180" height="42" rx="8"/>
-  <text class="tiny" x="968" y="1024">安全：仅回环地址</text>
-  <text class="tiny" x="968" y="1038">allow / open-external</text>
-  <text class="tiny" x="968" y="1050">无局域网绑定</text>
+  <rect class="external" x="744" y="930" width="410" height="160"/>
+  <text class="subheading" x="760" y="952">Provider 与分发边界</text>
+  <text class="label" x="760" y="972">DeepSeek API</text>
+  <text class="small" x="760" y="990">流式 · 重试策略 · 不修改私有传输</text>
+  <text class="small" x="760" y="1006">凭据：用户在 Harness 设置中输入</text>
+  <text class="small" x="760" y="1022">桌面不采集/记录/转发</text>
+  <rect class="zone" x="760" y="1036" width="190" height="42" rx="8"/>
+  <text class="tiny" x="768" y="1052">打包（原生 Runner）</text>
+  <text class="tiny" x="768" y="1066">DMG Universal · NSIS x64/arm64</text>
+  <text class="tiny" x="768" y="1078">AppImage/deb x64/arm64</text>
+  <rect class="zone" x="960" y="1036" width="180" height="42" rx="8"/>
+  <text class="tiny" x="968" y="1052">安全：仅回环地址</text>
+  <text class="tiny" x="968" y="1066">allow / open-external</text>
+  <text class="tiny" x="968" y="1078">无局域网绑定</text>
 
   <!-- Flows -->
   <path class="flow" d="M215 310 L215 328"/>
@@ -241,15 +242,15 @@
   <text class="small" x="376" y="520">HTTP / SSE 回环 127.0.0.1:port</text>
   <path class="flow-orange" d="M854 580 L854 658"/>
   <text class="tiny" x="862" y="630">工具面</text>
-  <path class="flow-orange" d="M854 858 L854 902"/>
+  <path class="flow-orange" d="M854 880 L854 930"/>
   <path class="flow-purple" d="M830 160 L830 140 L24 140 L24 550 L44 550"/>
-  <text class="tiny" x="28" y="360" transform="rotate(-90 28 360)">Watchdog → 主进程重启（IPC 异常断开）</text>
+  <text class="tiny" x="32" y="360" transform="rotate(-90 32 360)">Watchdog → 主进程重启（IPC 异常断开）</text>
   <path class="flow-purple" d="M214 410 L180 360"/>
   <text class="tiny" x="98" y="376">无响应 30s → 窗口重建（Harness 存活）</text>
   <path class="flow-purple" d="M690 460 L690 430 L584 430"/>
   <text class="tiny" x="596" y="442">3 次探测失败 / 子进程退出 → 串行重启</text>
-  <path class="flow-red" d="M214 160 V110 L1200 110 L1200 160"/>
-  <text class="tiny" x="512" y="102">退出：取消恢复 · Watchdog 确认 · SIGTERM 8s → SIGKILL · 隔离渲染层错误</text>
+  <path class="flow-red" d="M214 160 V132 L1200 132 L1200 160"/>
+  <text class="tiny" x="420" y="128">退出：取消恢复 · Watchdog 确认 · SIGTERM 8s → SIGKILL · 隔离渲染层错误</text>
   <path class="flow" d="M380 852 L380 658"/>
   <text class="tiny" x="386" y="750" transform="rotate(-90 386 750)">Harness 启动前完成协调</text>
 

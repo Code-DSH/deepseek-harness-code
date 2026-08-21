@@ -204,34 +204,35 @@
   <text class="tiny" x="894" y="804">No runtime downloader · immutable</text>
 
   <!-- Official plugin install bar -->
-  <rect class="host" x="60" y="852" width="1080" height="36" rx="8"/>
-  <text class="tiny" x="76" y="866">Official reconciliation: </text><text class="small" x="200" y="866">dsh plugin --profile web add</text><text class="tiny" x="380" y="866"> via system Node + bundled pnpm · Harness owns manifest/bundle/patch · desktop never edits profile YAML · bare names via --expose-internals</text>
-  <text class="tiny" x="76" y="880">Bundles: desktop-plugin · dsh-ui-motion · dsh-model2-selector · dsh-ui-polish · dsh-updater-check · prompt-principles · vision-router · better-sidebar · superpowers · composition (MCP + codex/claude) · injector · mode-boost · dsh-find-plugin</text>
+  <rect class="host" x="60" y="852" width="1080" height="64" rx="8"/>
+  <text class="tiny" x="76" y="870">Official reconciliation:</text><text class="small" x="200" y="870">dsh plugin --profile web add</text><text class="tiny" x="380" y="870"> via system Node + bundled pnpm · --expose-internals</text>
+  <text class="tiny" x="76" y="886">Harness owns manifest/bundle/patch · desktop never edits profile YAML</text>
+  <text class="tiny" x="76" y="902">Bundles: desktop-plugin · dsh-ui-motion · dsh-model2-selector · dsh-ui-polish · dsh-updater-check · prompt-principles · vision-router · better-sidebar · superpowers · composition · injector · mode-boost · dsh-find-plugin</text>
 
   <!-- Row 5: Data + External -->
-  <rect class="data" x="44" y="902" width="680" height="160"/>
-  <text class="subheading" x="60" y="924">Persistence — Application User Data (outside .app)</text>
-  <text class="label-sm" x="60" y="944">Official Home</text><text class="small" x="160" y="944">resolve: $DSH_HOME → ~/.dsh (@deepseek-ai/dsh-home-paths@0.1.0-rc.8)</text>
-  <text class="small" x="60" y="962">dsh-home: settings / credentials / sessions / workspaces / .agent-presets / skills</text>
-  <text class="small" x="60" y="978">Legacy migration: copy-only · target-wins · symlink reject · 0600/0700 · idempotent</text>
-  <text class="label-sm" x="60" y="997">Diagnostics</text><text class="small" x="130" y="997">Electron / Harness / Watchdog logs · redacted · 10MB ×5 rotation · openLogs</text>
-  <text class="label-sm" x="60" y="1016">Global</text><text class="small" x="106" y="1016">npm install -g dsh@pinned · fail-open · never overwrite user global</text>
-  <text class="label-sm" x="60" y="1035">Proof</text><text class="small" x="102" y="1035">preflight: 51 artifacts · 35 deps · 8 critical · 10 bundles · SHA-256 verified</text>
+  <rect class="data" x="44" y="930" width="680" height="160"/>
+  <text class="subheading" x="60" y="952">Persistence — Application User Data (outside .app)</text>
+  <text class="label-sm" x="60" y="972">Official Home</text><text class="small" x="160" y="972">resolve: $DSH_HOME → ~/.dsh (@deepseek-ai/dsh-home-paths@0.1.0-rc.8)</text>
+  <text class="small" x="60" y="990">dsh-home: settings / credentials / sessions / workspaces / .agent-presets / skills</text>
+  <text class="small" x="60" y="1006">Legacy migration: copy-only · target-wins · symlink reject · 0600/0700 · idempotent</text>
+  <text class="label-sm" x="60" y="1025">Diagnostics</text><text class="small" x="130" y="1025">Electron / Harness / Watchdog logs · redacted · 10MB ×5 rotation · openLogs</text>
+  <text class="label-sm" x="60" y="1044">Global</text><text class="small" x="106" y="1044">npm install -g dsh@pinned · fail-open · never overwrite user global</text>
+  <text class="label-sm" x="60" y="1063">Proof</text><text class="small" x="102" y="1063">preflight: 51 artifacts · 35 deps · 8 critical · 10 bundles · SHA-256 verified</text>
 
-  <rect class="external" x="744" y="902" width="410" height="160"/>
-  <text class="subheading" x="760" y="924">Provider &amp; Distribution Boundary</text>
-  <text class="label" x="760" y="944">DeepSeek API</text>
-  <text class="small" x="760" y="962">Streaming · retry policy · no private wire patch</text>
-  <text class="small" x="760" y="978">Credentials: user-entered in Harness settings</text>
-  <text class="small" x="760" y="994">Desktop never collects/logs/forwards</text>
-  <rect class="zone" x="760" y="1008" width="190" height="42" rx="8"/>
-  <text class="tiny" x="768" y="1024">Packages (native runners)</text>
-  <text class="tiny" x="768" y="1038">DMG Universal · NSIS x64/arm64</text>
-  <text class="tiny" x="768" y="1050">AppImage/deb x64/arm64</text>
-  <rect class="zone" x="960" y="1008" width="180" height="42" rx="8"/>
-  <text class="tiny" x="968" y="1024">Security: loopback-only</text>
-  <text class="tiny" x="968" y="1038">allow / open-external</text>
-  <text class="tiny" x="968" y="1050">no LAN binding</text>
+  <rect class="external" x="744" y="930" width="410" height="160"/>
+  <text class="subheading" x="760" y="952">Provider &amp; Distribution Boundary</text>
+  <text class="label" x="760" y="972">DeepSeek API</text>
+  <text class="small" x="760" y="990">Streaming · retry policy · no private wire patch</text>
+  <text class="small" x="760" y="1006">Credentials: user-entered in Harness settings</text>
+  <text class="small" x="760" y="1022">Desktop never collects/logs/forwards</text>
+  <rect class="zone" x="760" y="1036" width="190" height="42" rx="8"/>
+  <text class="tiny" x="768" y="1052">Packages (native runners)</text>
+  <text class="tiny" x="768" y="1066">DMG Universal · NSIS x64/arm64</text>
+  <text class="tiny" x="768" y="1078">AppImage/deb x64/arm64</text>
+  <rect class="zone" x="960" y="1036" width="180" height="42" rx="8"/>
+  <text class="tiny" x="968" y="1052">Security: loopback-only</text>
+  <text class="tiny" x="968" y="1066">allow / open-external</text>
+  <text class="tiny" x="968" y="1078">no LAN binding</text>
 
   <!-- Flows -->
   <!-- Startup vertical -->
@@ -244,17 +245,17 @@
   <text class="small" x="365" y="520">HTTP / SSE loopback 127.0.0.1:port</text>
   <path class="flow-orange" d="M854 580 L854 658"/>
   <text class="tiny" x="862" y="630">tool surface</text>
-  <path class="flow-orange" d="M854 858 L854 902"/>
+  <path class="flow-orange" d="M854 880 L854 930"/>
   <!-- Recovery -->
   <path class="flow-purple" d="M830 160 L830 140 L24 140 L24 550 L44 550"/>
-  <text class="tiny" x="28" y="360" transform="rotate(-90 28 360)">Watchdog → Main relaunch (abnormal IPC disconnect)</text>
+  <text class="tiny" x="32" y="360" transform="rotate(-90 32 360)">Watchdog → Main relaunch (abnormal IPC disconnect)</text>
   <path class="flow-purple" d="M214 410 L180 360"/>
   <text class="tiny" x="90" y="376">unresponsive 30s → window rebuild (Harness alive)</text>
   <path class="flow-purple" d="M690 460 L690 430 L584 430"/>
   <text class="tiny" x="580" y="442">3 probes fail / child exit → serialized restart</text>
   <!-- Shutdown -->
-  <path class="flow-red" d="M214 160 V110 L1200 110 L1200 160"/>
-  <text class="tiny" x="540" y="102">quit: cancel recovery · watchdog ack · SIGTERM 8s → SIGKILL · isolated renderer errors</text>
+  <path class="flow-red" d="M214 160 V132 L1200 132 L1200 160"/>
+  <text class="tiny" x="420" y="128">quit: cancel recovery · watchdog ack · SIGTERM 8s → SIGKILL · isolated renderer errors</text>
   <!-- Plugin install -->
   <path class="flow" d="M380 852 L380 658"/>
   <text class="tiny" x="386" y="750" transform="rotate(-90 386 750)">reconciles before Harness start</text>

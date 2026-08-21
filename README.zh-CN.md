@@ -1,10 +1,10 @@
 <div align="center">
   <img src="./docs/assets/deepseek-harness-code.png" width="136" alt="DeepSeek Harness Code 图标" />
   <h1>DeepSeek Harness Code</h1>
-  <h3>可持续的 Code Agent 桌面 — 而非对话套壳。用户不需要自己组装一套脆弱的工具链；官方 Harness 给的是积木，DHC 给的是可安装、可恢复、可长期运行的 Code Agent 系统。</h3>
-  <p>DeepSeek Harness Code 把完整 Harness 运行时、官方插件、Skills、工具、Agent 工作流与强化桌面宿主及独立 Watchdog 整合成一个可安装、可恢复、可长期运行的 Code Agent。</p>
+  <h3>Coding Agent 组装——完整的 Coding Agent，专为 Coding 和长期工作而生的整合包分发版。</h3>
+  <p>DeepSeek Harness Code 将官方 Harness 运行时、插件、Skills、工具与 Agent 工作流，同强化桌面宿主及独立 Watchdog 整合成一个可安装的产品。</p>
   <p><a href="./README.md">English</a> · <a href="./README.zh-CN.md">简体中文</a></p>
-  <p><a href="#dhc-的集成理念">集成理念</a> · <a href="#愿景">愿景</a> · <a href="#code-agent-循环">Agent 循环</a> · <a href="#架构">架构</a> · <a href="#不只是网页套壳">为什么不同</a> · <a href="#为长期运行而设计">长期稳定性</a> · <a href="#从源码构建">构建</a></p>
+  <p><a href="#dhc-的集成理念">集成理念</a> · <a href="#愿景">愿景</a> · <a href="#架构">架构</a> · <a href="#不只是网页套壳">为什么不同</a> · <a href="#为长期运行而设计">长期稳定性</a> · <a href="#从源码构建">构建</a></p>
   <p>
     <img src="https://img.shields.io/badge/version-0.1.0_BETA2--1-2563eb?style=flat-square" alt="版本 0.1.0-BETA2-1" />
     <img src="https://img.shields.io/badge/license-MIT-16a34a?style=flat-square" alt="MIT 许可证" />
@@ -45,62 +45,9 @@ DHC 仍然是建立在官方 Harness 格式和运行时之上的社区项目。�
 
 ## 愿景
 
-> **可持续的 Code Agent，而非对话套壳。**
+**Coding Agent 组装——完整的 Coding Agent，专为 Coding 和长期工作而生的整合包分发版。**
 
-### 为什么“对话”远远不够
-
-浏览器标签页里的 DeepSeek 是一台卓越的对话引擎。但真实的工程不是一问一答完成的：它跨越数小时——阅读代码库、制定计划、触碰二十个文件、运行测试、看到失败、调整方案、交付一个重启后依然可验证的结果。
-
-对话套壳优化的是“下一条消息”。而 Code Agent 必须优化的是“整个任务”——以及那台需要持续存活足够久的机器、会话与进程，去完成这个任务。
-
-常见套壳把最困难的部分留给了用户：
-
-- 浏览器标签页自己管理自己的生命周期——渲染器一卡死，唯一恢复手段是“刷新并丢失上下文”；
-- 工具链是散的——Node 版本、pnpm、插件、Skills、提示词都需要手工拼装，每次换系统或升级就断裂；
-- Agent 没有持久记忆——会话会蒸发、上下文压缩是随机的、Skills 只是粘贴的提示词片段；
-- 失效是静默的——Harness 子进程死了、健康检查重叠了、日志无界增长了，而用户成了监控器。
-
-我们认为这个边界是错的。**桌面应该负责可持续性，Harness 应该负责协议，Agent 应该负责任务。** DHC 正是让这三者在同一个产品边界内相遇的集成点。
-
-### 一个 Code Agent 真正需要什么
-
-Code Agent 不是“模型 + 终端”。它是一个必须被**设计、保活、并可观测**的闭环。从真实的长期会话中，我们提炼出五条必要条件：
-
-**1. 能在行动前先思考的富工具循环。** Agent 需要 Goal → Plan → Todo → Tools → Jobs → Workflow → Compaction → Checkpoint，而不是扁平的工具调用列表。首轮请求尤其关键：若一开始就把 25 个工具全部砸给 V4 Pro，模型会塌缩为浅层的 `Let me...` 轨迹；若只先给 `bash` 与 `str_replace_editor`，则更容易恢复更深的 `We need...` 规划。DHC 的 `anchored-standard` 正是对此的建模——以 2 工具启动，在首次持久化调用后晋升到常驻发现工具，并要求显式的 `dev_tool_search` 才能解锁其余能力。全程不修改私有传输、不提取隐藏思维链。
-
-**2. 可恢复的持久会话。** Agent 的记忆就是它的会话历史、检查点与 Skills。如果承载它的进程可以无声死亡，它就无法被托付给长任务。DHC 每 5 秒非重叠地探测 Harness，连续 3 次失败或子进程退出则串行重启；渲染器持续无响应 30 秒则重建窗口*而不断*健康的 Harness；会话始终落在唯一官方 Home（`$DSH_HOME` → `~/.dsh`）。
-
-**3. 一个工作台，而非输入框。** 真实编码需要文件浏览器、编辑器标签、终端、Git、浏览器——与对话并排。`dsh-better-sidebar` 在 Harness Web 界面内提供类 VS Code 工作台，`dsh-vision-router` 带来 11 个像素工具与 OVH 回退，MCP 桥（everything + Context7）与 `codex`/`claude-code` 子代理则让 Agent 得以分派与验证。
-
-**4. 被安装的知识，而非粘贴的知识。** Skills 不是粘贴的提示词。它们是带版本、由文件系统发现的软件包（`Superpowers 6.2.0`），以所有权标记安装进 `<DSH_HOME>/skills`，加上`全局代理运行协议`（`<DSH_HOME>/AGENTS.md`）——用户没有时自动安装，仅在仍由应用管理且未被修改时才随版本升级。用户自有 Skills 永不被覆盖。
-
-**5. 作为一等协议的人机协同。** Code Agent 必须能提问、被审批、被跳过、被复审。DHC 完整保留官方提问协议（`@deepseek-ai/dsh-tool-ask-user`、`dsh-user-questions`），含稳定 ID、单/多选、自定义答案与方案审阅——绝不另造并行通道。
-
-### DHC 作为 Code Agent 操作系统
-
-合起来看，DHC 更像一个小型的 **Code Agent 操作系统**，而非普通应用：
-
-| 操作系统关切 | DHC 的答案 |
-|---|---|
-| **进程模型** | Electron 主进程掌管窗口/托盘/生命周期；Harness 以回环子进程运行（`dsh web --host 127.0.0.1 --port <port> --expose-internals`），运行于自动探测的系统 Node（≥22.13）；Watchdog 是独立的仅 IPC 进程，只能重启已验证的执行体。 |
-| **包管理** | 固定 `@deepseek-ai/dsh@0.1.0-rc.8` + 8+ 插件，经公开 `dsh plugin --profile web add` + 内置 pnpm 安装；`asar:false` 恢复 39 项客户端启动图；`check-runtime-closure` 在任何打包前校验 51 产物 + SHA-256 路由摘要。 |
-| **文件系统** | 唯一官方 Home 经 `@deepseek-ai/dsh-home-paths` 解析；从已退役 Electron 专属 Home 仅复制、目标胜出、拒绝符号链接的迁移；`10MB×5` 脱敏日志轮转；全局 `dsh` 经 `npm install -g`（失败开放，永不覆盖用户全局）。 |
-| **安全** | 沙箱渲染器（`contextIsolation`/`sandbox`/`nodeIntegration:false`），仅 `preferences`/`runtime` 两组 preload 能力（zod 校验），仅回环 Harness，`allow`/`open-external` 导航策略。 |
-| **界面** | Harness 拥有全部对话绘制；DHC 仅在原生 `role=status` 行内挂载 20px `ThinkingOrb` portal，侧边栏 `46px/58px` 交通灯内边距，路由转场永不强制布局。 |
-
-这正是 DHC 把 Chromium、Harness、插件、Skills 与 Watchdog *都打进 .app*，却运行于*系统* Node 的原因——应用自包含，运行时却是用户已有的官方工具链，即使在 PATH 极小的 GUI 启动场景下也能被自动发现。
-
-### 走向可验证的交付
-
-可持续的 Code Agent 是手段，不是目的。真正的地平线不是“更好的对话”，而是**可验证、可复现的交付**：
-
-- 用户陈述目标。Agent 以 Todo 粒度规划，在审批下使用工具，运行 Jobs 与 Workflow，无损意图地压缩上下文，并交付可重复运行、重复验证的产物。
-- Skills 提供可复用、可测试的过程知识，而非一次性提示词。
-- 长会话被浸泡测试、基准化、可恢复——不再令人恐惧。
-
-路线图正体现于此：可复现的内存/浸泡基准、原生 Linux GA（AppImage/deb 已在原生 Runner 上 CI 通过）、已锚定工具面的成对验证、非重放的故障注入，以及在固定 `rc.8` + SHA-256 路由不变量背后持续跟进快速演进的上游插件 API。
-
-**DHC 的任务，就是让这个地平线在今天就可安装——一个 Universal DMG、一个 NSIS、一个 AppImage——而不要求用户先成为集成工程师。**
+DeepSeek 不应被困于浏览器标签页。DHC 将官方 Harness 运行时、插件、Skills、Agent 工作流与强化桌面宿主及独立 Watchdog 整合成一个可安装的产品——让 Code Agent 得以规划、调用工具、接受审批并跨越长会话持续交付，无需手工拼装脆弱工具链。循环：`目标 → 计划 → 待办 → 工具 → 任务 / 工作流 → 压缩`（见[架构](#架构)）。
 
 ## 一整套 DeepSeek Harness 发行版
 
@@ -114,24 +61,6 @@ Code Agent 不是“模型 + 终端”。它是一个必须被**设计、保活�
 - **桌面可靠性**——原生生命周期、安全桥接、健康恢复、轮转诊断和独立 Watchdog。
 
 所有能力都以同一个产品边界固定版本、完成打包并接受验证，用户不必再手工拼装脆弱的工具链。
-
-## Code Agent 循环
-
-DHC 不替换 Harness 协议——而是让协议**足够可持续**，以承载真实工作。每个会话内运行的循环是：
-
-```
-目标 → 计划 → 待办 → 工具（bash · edit · search · web · subagent）
-        ↕            ↕
-     用户提问    任务 / 工作流 / 压缩 / 检查点
-        ↕            ↕
-       审批     会话持久化 + Skills 知识
-```
-
-- **启动：** `system-prompt/assemble` 只暴露 `bash` + `str_replace_editor`。`agent/pre-step` 仅在启动期过滤自动的 `agent-instructions`/`skill-catalog`。
-- **晋升：** 首次持久化工具调用或助手消息 → Minimal + `dev_tool_search`/`skill_search`/`skill_load`。其余工具仅在显式 `dev_tool_search` 解锁并被持久会话事件记录后出现。
-- **韧性：** 压缩开启一个受控工作集的新纪元；子代理常驻启动；缺失阶段所需工具会让该预设直接失败，而非静默回退到全量——因此 Standard 始终可用。
-
-这个循环正是桌面宿主存在的理由：那个规划了 45 分钟的会话，必须在一次渲染器重建或一次 Harness 重启后**依然在那里**。宿主保证这一点；Provider 保证智能。
 
 ## 让 BETA1 体验更加现代化
 
