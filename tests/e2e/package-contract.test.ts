@@ -436,7 +436,7 @@ describe("DeepSeek Harness Code distribution contract", () => {
       'Start-Process -PassThru -Wait -FilePath $uninstallers[0].FullName -ArgumentList "/S"',
     );
     const forcedRemoval = windowsFinally.indexOf(
-      "Remove-Item -Recurse -Force $install",
+      "Remove-Item -LiteralPath $root -Recurse -Force",
     );
 
     // Then
@@ -444,9 +444,7 @@ describe("DeepSeek Harness Code distribution contract", () => {
     expect(windowsStep).toContain(
       'if ($LASTEXITCODE -ne 0) { throw "package smoke failed with exit code $LASTEXITCODE" }',
     );
-    expect(windowsFinally).toContain(
-      "if (Test-Path $install -PathType Container)",
-    );
+    expect(windowsFinally).toContain("foreach ($root in $actualInstallRoots)");
     expect(windowsFinally).not.toContain("if ($installSucceeded)");
     expect(uninstallAttempt).toBeGreaterThan(-1);
     expect(windowsFinally).toContain("uninstaller.ExitCode -eq 0");
@@ -472,6 +470,92 @@ describe("DeepSeek Harness Code distribution contract", () => {
     );
     expect(linuxStep).toContain('rm -rf "$squashfs_root" "$temp_root"');
     expect(linuxStep).toContain('exit "$original_exit"');
+  });
+
+  test("quarantines production Node candidates only around node-required smoke and always restores", async () => {
+    const workflow = await readProjectFile(".github/workflows/package.yml");
+    const steps = [
+      workflow.slice(
+        workflow.indexOf("      - name: Smoke test Windows package"),
+        workflow.indexOf("      - name: Verify macOS Universal DMG"),
+      ),
+      workflow.slice(
+        workflow.indexOf(
+          "      - name: Extract and smoke test Linux AppImage package",
+        ),
+        workflow.indexOf(
+          "      - name: Install and smoke test Linux deb package",
+        ),
+      ),
+      workflow.slice(
+        workflow.indexOf(
+          "      - name: Install and smoke test Linux deb package",
+        ),
+        workflow.indexOf("      - name: Upload installer artifacts"),
+      ),
+      (() => {
+        const start = workflow.indexOf(
+          "      - name: Install and smoke test macOS Universal package",
+        );
+        return workflow.slice(
+          start,
+          workflow.indexOf(
+            "      - name: Upload sanitized smoke evidence",
+            start,
+          ),
+        );
+      })(),
+    ];
+
+    for (const step of steps) {
+      const runtime = step.indexOf("--scenario runtime");
+      const hide = Math.max(
+        step.indexOf("Hide-SystemNodeCandidates $nodePlan"),
+        step.indexOf('hide_system_node_candidates "${node_candidates[@]}"'),
+      );
+      const nodeRequired = step.indexOf("--scenario node-required");
+      expect(runtime).toBeGreaterThan(-1);
+      expect(hide).toBeGreaterThan(runtime);
+      expect(nodeRequired).toBeGreaterThan(hide);
+      expect(step).toContain("--print-node-quarantine-paths");
+      expect(step).toMatch(
+        /(?:finally \{|cleanup\(\) \{)[\s\S]*(?:Restore-SystemNodeCandidates|restore_system_node_candidates)/u,
+      );
+    }
+    expect(workflow).toContain("node quarantine cleanup failed");
+    expect(workflow).not.toContain("SMOKE_FORCE_NODE_MISSING");
+  });
+
+  test("resolves the exact Windows product install root without scanning LocalAppData", async () => {
+    const workflow = await readProjectFile(".github/workflows/package.yml");
+    const windowsStep = workflow.slice(
+      workflow.indexOf("      - name: Smoke test Windows package"),
+      workflow.indexOf("      - name: Verify macOS Universal DMG"),
+    );
+
+    expect(windowsStep).toContain(
+      "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\*",
+    );
+    expect(windowsStep).toContain(
+      "HKCU:\\Software\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\*",
+    );
+    expect(windowsStep).toContain('$_.DisplayName -eq "DeepSeek Harness Code"');
+    expect(windowsStep).toContain("$entry.InstallLocation");
+    expect(windowsStep).toContain("$entry.UninstallString");
+    expect(windowsStep).toContain("[IO.Path]::GetFullPath");
+    expect(windowsStep).toContain("$actualInstallRoots");
+    expect(windowsStep).toContain("expected exactly one installed executable");
+    expect(windowsStep).toContain("expected exactly one uninstaller");
+    expect(windowsStep).toContain(
+      "installed application resources were not found",
+    );
+    expect(windowsStep).toContain("foreach ($root in $actualInstallRoots)");
+    expect(windowsStep).toContain(
+      "resolved install roots remained after cleanup",
+    );
+    expect(windowsStep).not.toMatch(
+      /Get-ChildItem[^\n]*\$env:(?:LOCALAPPDATA|USERPROFILE)/iu,
+    );
   });
 
   test("scopes Linux smoke package metadata to each package step", async () => {

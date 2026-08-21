@@ -16,7 +16,7 @@ import {
   unlink,
   writeFile,
 } from "node:fs/promises";
-import { tmpdir } from "node:os";
+import { homedir, tmpdir } from "node:os";
 import {
   basename,
   dirname,
@@ -102,6 +102,151 @@ function buildPackagedSmokeEnvironment(platform, environment, scenario) {
     result[key] = value;
   }
   return result;
+}
+
+function systemNodeCandidateEntries(platform, environment, homeDirectory) {
+  const pathApi = platform === "win32" ? win32 : posix;
+  const { join: joinPath } = pathApi;
+  if (platform === "win32") {
+    const userProfile = environment.USERPROFILE ?? homeDirectory;
+    const localAppData =
+      environment.LOCALAPPDATA ?? joinPath(userProfile, "AppData", "Local");
+    return [
+      {
+        id: "program-files-node",
+        path: joinPath(
+          environment.ProgramFiles ?? "C:\\Program Files",
+          "nodejs",
+          "node.exe",
+        ),
+      },
+      {
+        id: "program-files-x86-node",
+        path: joinPath(
+          environment["ProgramFiles(x86)"] ?? "C:\\Program Files (x86)",
+          "nodejs",
+          "node.exe",
+        ),
+      },
+      {
+        id: "chocolatey-node",
+        path: joinPath(
+          environment.ProgramData ?? "C:\\ProgramData",
+          "chocolatey",
+          "bin",
+          "node.exe",
+        ),
+      },
+      {
+        id: "scoop-node",
+        path: joinPath(userProfile, "scoop", "shims", "node.exe"),
+      },
+      {
+        id: "user-volta-node",
+        path: joinPath(userProfile, ".volta", "bin", "node.exe"),
+      },
+      {
+        id: "local-volta-node",
+        path: joinPath(localAppData, ".volta", "bin", "node.exe"),
+      },
+    ];
+  }
+  if (platform !== "linux" && platform !== "darwin")
+    throw new Error(`unsupported Node quarantine platform ${platform}`);
+  const system =
+    platform === "darwin"
+      ? [
+          ["homebrew-node", "/opt/homebrew/bin/node"],
+          ["usr-local-node", "/usr/local/bin/node"],
+        ]
+      : [
+          ["usr-local-node", "/usr/local/bin/node"],
+          ["snap-node", "/snap/bin/node"],
+          ["usr-bin-node", "/usr/bin/node"],
+          ["usr-bin-nodejs", "/usr/bin/nodejs"],
+        ];
+  return [
+    ...system.map(([id, path]) => ({ id, path })),
+    {
+      id: "user-volta-node",
+      path: joinPath(homeDirectory, ".volta", "bin", "node"),
+    },
+    {
+      id: "user-asdf-node",
+      path: joinPath(homeDirectory, ".asdf", "shims", "node"),
+    },
+    {
+      id: "user-local-node",
+      path: joinPath(homeDirectory, ".local", "bin", "node"),
+    },
+    {
+      id: "user-bin-node",
+      path: joinPath(homeDirectory, "bin", "node"),
+    },
+  ];
+}
+
+function shouldQuarantineNodeCandidate({
+  candidatePath,
+  parentExecutablePath,
+  candidateIsSymlink,
+  candidateFileId,
+  parentFileId,
+  platform,
+}) {
+  if (candidateIsSymlink) return true;
+  const pathApi = platform === "win32" ? win32 : posix;
+  const normalize = (value) => {
+    const normalized = pathApi.normalize(value);
+    return platform === "win32" ? normalized.toLowerCase() : normalized;
+  };
+  if (normalize(candidatePath) === normalize(parentExecutablePath))
+    return false;
+  const hasReliableFileId = (value) => value !== "" && !value.endsWith(":0");
+  return (
+    !hasReliableFileId(candidateFileId) ||
+    !hasReliableFileId(parentFileId) ||
+    candidateFileId !== parentFileId
+  );
+}
+
+async function buildSystemNodeQuarantinePlan({
+  platform = process.platform,
+  environment = process.env,
+  homeDirectory = homedir(),
+  parentExecutablePath = process.execPath,
+}) {
+  const parentInfo = await stat(parentExecutablePath);
+  const parentFileId = `${parentInfo.dev}:${parentInfo.ino}`;
+  const plan = [];
+  for (const entry of systemNodeCandidateEntries(
+    platform,
+    environment,
+    homeDirectory,
+  )) {
+    let candidateInfo;
+    try {
+      candidateInfo = await lstat(entry.path);
+    } catch (error) {
+      if (error instanceof Error && error.code === "ENOENT") continue;
+      throw new Error(
+        `Node quarantine candidate inspection failed (${entry.id})`,
+      );
+    }
+    if (
+      shouldQuarantineNodeCandidate({
+        candidatePath: entry.path,
+        parentExecutablePath,
+        candidateIsSymlink: candidateInfo.isSymbolicLink(),
+        candidateFileId: `${candidateInfo.dev}:${candidateInfo.ino}`,
+        parentFileId,
+        platform,
+      })
+    ) {
+      plan.push(entry);
+    }
+  }
+  return plan;
 }
 
 async function checksum(path) {
@@ -1235,6 +1380,9 @@ export {
   parseWindowsPeMachine,
   buildPackagedSmokeLaunch,
   buildPackagedSmokeEnvironment,
+  systemNodeCandidateEntries,
+  shouldQuarantineNodeCandidate,
+  buildSystemNodeQuarantinePlan,
   waitForPackagedExit,
   waitForEvidenceWithExitGrace,
   removeSmokeUserData,
@@ -1245,25 +1393,35 @@ if (
   process.argv[1] &&
   resolve(process.argv[1]) === fileURLToPath(import.meta.url)
 ) {
-  main().catch((error) => {
-    const message =
-      error instanceof Error ? error.message : "packaged smoke failed";
-    void (async () => {
-      try {
-        await mkdir(evidenceRoot, { recursive: true });
-        await assertEvidenceRootAllowed(evidenceRoot, metadataRoot);
-        await assertPathWithinRoot(resolve(evidencePath), evidenceRoot);
-        await writeEvidenceAtomically({
-          evidencePath,
-          evidenceRoot,
-          content: `${JSON.stringify({ schema: 2, startedAt, finishedAt: new Date().toISOString(), failure: message }, null, 2)}\n`,
-          preserveExisting: true,
-        });
-      } catch (evidenceError) {
-        if (!(evidenceError instanceof Error)) throw evidenceError;
-      }
-      process.stderr.write(`${message}\n`);
-      process.exitCode = 1;
-    })();
-  });
+  if (process.argv.includes("--print-node-quarantine-paths")) {
+    buildSystemNodeQuarantinePlan({})
+      .then((plan) => {
+        for (const entry of plan) process.stdout.write(`${entry.path}\n`);
+      })
+      .catch(() => {
+        process.stderr.write("node quarantine planning failed\n");
+        process.exitCode = 1;
+      });
+  } else
+    main().catch((error) => {
+      const message =
+        error instanceof Error ? error.message : "packaged smoke failed";
+      void (async () => {
+        try {
+          await mkdir(evidenceRoot, { recursive: true });
+          await assertEvidenceRootAllowed(evidenceRoot, metadataRoot);
+          await assertPathWithinRoot(resolve(evidencePath), evidenceRoot);
+          await writeEvidenceAtomically({
+            evidencePath,
+            evidenceRoot,
+            content: `${JSON.stringify({ schema: 2, startedAt, finishedAt: new Date().toISOString(), failure: message }, null, 2)}\n`,
+            preserveExisting: true,
+          });
+        } catch (evidenceError) {
+          if (!(evidenceError instanceof Error)) throw evidenceError;
+        }
+        process.stderr.write(`${message}\n`);
+        process.exitCode = 1;
+      })();
+    });
 }
