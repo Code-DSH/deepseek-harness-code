@@ -27,6 +27,7 @@ $nestedCustomRoot = Join-Path $fixtureRoot "runner-owned-parent"
 $nestedAppRoot = Join-Path $nestedCustomRoot "DeepSeek Harness Code"
 $registryCustomParent = Join-Path $fixtureRoot "registry-custom-parent"
 $registryCustomRoot = Join-Path $registryCustomParent "installer-selected-location"
+$ambiguousCustomParent = Join-Path $fixtureRoot "ambiguous-custom-parent"
 $registeredRoot = Join-Path $programsRoot "DeepSeek Harness Code"
 $outsideRoot = Join-Path $fixtureRoot "outside-sentinel"
 $junctionPath = Join-Path $customRoot "outside-junction"
@@ -35,6 +36,8 @@ try {
   New-AppLayout $customRoot
   New-AppLayout $nestedAppRoot
   New-AppLayout $registryCustomRoot
+  New-AppLayout (Join-Path $ambiguousCustomParent "one")
+  New-AppLayout (Join-Path $ambiguousCustomParent "two")
   New-AppLayout $registeredRoot
 
   $custom = Resolve-DhscInstalledApplication -CustomRoot $customRoot -RegistryEntries @() -LocalAppData $localAppData
@@ -47,12 +50,21 @@ try {
 
   $customRegistryEntry = [pscustomobject]@{
     DisplayName = "DeepSeek Harness Code"
-    InstallLocation = $registryCustomRoot
+    InstallLocation = $registryCustomParent
     UninstallString = ""
   }
   $customFromRegistry = Resolve-DhscInstalledApplication -CustomRoot $registryCustomParent -RegistryEntries @($customRegistryEntry) -LocalAppData $localAppData
-  Assert-True ($customFromRegistry.Source -eq "custom") "registry root inside runner custom boundary was not accepted"
-  Assert-True ($customFromRegistry.Root -eq [IO.Path]::GetFullPath($registryCustomRoot)) "registry custom root was not canonical"
+  Assert-True ($customFromRegistry.Source -eq "custom") "registry parent inside runner custom boundary was not accepted"
+  Assert-True ($customFromRegistry.Root -eq [IO.Path]::GetFullPath($registryCustomRoot)) "single direct app child was not resolved"
+
+  $ambiguousRegistryEntry = [pscustomobject]@{
+    DisplayName = "DeepSeek Harness Code"
+    InstallLocation = $ambiguousCustomParent
+    UninstallString = ""
+  }
+  Assert-Throws {
+    Resolve-DhscInstalledApplication -CustomRoot $ambiguousCustomParent -RegistryEntries @($ambiguousRegistryEntry) -LocalAppData $localAppData
+  } "ambiguous direct app children were accepted"
 
   $wideEntry = [pscustomobject]@{
     DisplayName = "DeepSeek Harness Code"

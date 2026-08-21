@@ -113,7 +113,18 @@ function Resolve-DhscInstalledApplication {
     $canonicalRoot.Equals($canonicalCustomRoot, [StringComparison]::OrdinalIgnoreCase) -or
     (Test-DhscStrictDescendant -Root $canonicalRoot -Parent $canonicalCustomRoot)
   ) {
-    return New-DhscInstalledApplication -Root $canonicalRoot -Source "custom"
+    Assert-DhscTreeHasNoReparsePoint -Root $canonicalCustomRoot
+    if (Test-DhscDirectAppLayout $canonicalRoot) {
+      return New-DhscInstalledApplication -Root $canonicalRoot -Source "custom"
+    }
+    $directChildLayouts = @(
+      Get-ChildItem -LiteralPath $canonicalRoot -Directory -Force -ErrorAction Stop |
+        Where-Object { Test-DhscDirectAppLayout $_.FullName }
+    )
+    if ($directChildLayouts.Count -ne 1) {
+      throw "registered custom install root did not contain exactly one direct app layout"
+    }
+    return New-DhscInstalledApplication -Root $directChildLayouts[0].FullName -Source "custom"
   }
   $programsRoot = Get-DhscCanonicalPath (Join-Path $LocalAppData "Programs")
   if (-not (Test-DhscStrictDescendant -Root $canonicalRoot -Parent $programsRoot)) {
