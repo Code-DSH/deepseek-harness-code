@@ -1291,7 +1291,7 @@ describe("official Harness plugin installation", () => {
     const runCommand = vi.fn<OfficialCommandRunner>(() => ({
       status: 17,
       stderr:
-        "Authorization: Bearer authorization-secret cookie=session-secret api_key=api-key-secret password=password-secret secret=generic-secret token=token-secret",
+        "Authorization: Bearer authorization-secret cookie=session-secret api_key=api-key-secret password=password-secret secret=generic-secret token=token-secret https://user:synthetic-credential@host.example/plugin.git git+https://user:synthetic-credential@host.example/plugin.git",
     }));
 
     const errorMessage = await ensureOfficialHarnessInstall({
@@ -1320,6 +1320,9 @@ describe("official Harness plugin installation", () => {
       "password-secret",
       "generic-secret",
       "token-secret",
+      "user",
+      "synthetic-credential",
+      "host.example",
     ]) {
       expect(errorMessage).not.toContain(secret);
     }

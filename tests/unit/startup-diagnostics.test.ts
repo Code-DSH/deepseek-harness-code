@@ -41,6 +41,31 @@ describe("Harness startup diagnostics", () => {
     expect(result).not.toContain("six");
   });
 
+  it.each(["https", "git+https"])(
+    "redacts the complete %s Basic Auth URL from startup output",
+    (protocol) => {
+      const result = redactStartupDiagnostic(
+        `pnpm fetch ${protocol}://user:synthetic-credential@host.example/plugin.git`,
+      );
+
+      expect(result).toContain("pnpm fetch [REDACTED]");
+      expect(result).not.toContain("user");
+      expect(result).not.toContain("synthetic-credential");
+      expect(result).not.toContain("host.example");
+    },
+  );
+
+  it("redacts URL userinfo before applying the 2,000-character diagnostic bound", () => {
+    const result = redactStartupDiagnostic(
+      `${"x".repeat(1_970)} git+https://user:synthetic-credential@host.example/plugin.git`,
+    );
+
+    expect(result).toContain("[REDACTED]");
+    expect(result).not.toContain("user");
+    expect(result).not.toContain("synthetic");
+    expect(result.length).toBeLessThanOrEqual(2_000);
+  });
+
   it("marks a bind race retryable only when captured diagnostics explicitly say EADDRINUSE", () => {
     expect(
       startupFailureFromDiagnostics(
