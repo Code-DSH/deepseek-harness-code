@@ -321,6 +321,8 @@ describe("desktop plugin with the real pinned Harness", () => {
     ]);
   }, 30_000);
 
+  // macOS CI may cold-download Electron before the real Harness can start,
+  // so this integration test needs more than Vitest's 15-second default.
   it("is discovered with English fallback metadata by the pinned rc.8 roster", async () => {
     const root = await mkdtemp(join(tmpdir(), "dsh-anchored-preset-real-"));
     temporaryRoots.add(root);
@@ -454,7 +456,7 @@ describe("desktop plugin with the real pinned Harness", () => {
         ].toSorted(),
       );
     }
-  }, 15_000);
+  }, 45_000);
 
   it("appears in the boot graph and serves its official client bundle", async () => {
     const root = await mkdtemp(join(tmpdir(), "dsh-desktop-plugin-"));
