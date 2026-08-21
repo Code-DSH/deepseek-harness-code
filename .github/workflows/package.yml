@@ -106,51 +106,62 @@ jobs:
         shell: pwsh
         run: |
           $ErrorActionPreference = "Stop"
+          . (Join-Path $env:GITHUB_WORKSPACE "scripts/package-smoke-windows.ps1")
           $artifact = Get-Item $env:ARTIFACT
           $install = Join-Path $env:RUNNER_TEMP "deepseek-harness-install"
           $primaryFailure = $null
-          $cleanupFailures = @()
+          $cleanupFailures = New-DhscCleanupFailureList
+          $nodeMoves = New-DhscNodeMoveList
+          $installedApplication = $null
+
           New-Item -ItemType Directory -Force $install, $env:EVIDENCE_ROOT | Out-Null
           try {
             $installer = Start-Process -PassThru -Wait -FilePath $artifact.FullName -ArgumentList "/S", "/D=$install"
             if ($installer.ExitCode -ne 0) { throw "installer.ExitCode -eq 0 required, got $($installer.ExitCode)" }
-            $executables = @(Get-ChildItem -Path $install -Filter "DeepSeek Harness Code.exe" -File -Recurse)
-            if ($executables.Count -ne 1) { throw "expected exactly one installed executable, found $($executables.Count)" }
-            $executable = $executables[0]
-            $resources = Join-Path $executable.DirectoryName "resources"
-            if (-not (Test-Path $resources -PathType Container)) { throw "installed application resources were not found" }
+            $registryEntries = @(Get-DhscUninstallRegistryEntries)
+            $installedApplication = Resolve-DhscInstalledApplication -CustomRoot $install -RegistryEntries $registryEntries -LocalAppData $env:LOCALAPPDATA
+            $executable = Get-Item -LiteralPath $installedApplication.Executable
+            $resources = $installedApplication.Resources
             $hash = (Get-FileHash $artifact.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
             pnpm smoke:package -- --scenario runtime --matrix-label $env:MATRIX_LABEL --package-kind $env:PACKAGE_KIND --expected-architecture $env:EXPECTED_ARCHITECTURE --runner-architecture $env:EXPECTED_ARCHITECTURE --artifact-filename $env:ARTIFACT_FILENAME --executable $executable.FullName --resources $resources --inventory $executable.DirectoryName --artifact $artifact.FullName --artifact-sha256 $hash --evidence-root $env:EVIDENCE_ROOT --evidence (Join-Path $env:EVIDENCE_ROOT "smoke-evidence-windows.json")
             if ($LASTEXITCODE -ne 0) { throw "package smoke failed with exit code $LASTEXITCODE" }
+            $nodePlan = @(node scripts/smoke-packaged-runtime.mjs --print-node-quarantine-paths)
+            if ($LASTEXITCODE -ne 0) { throw "node quarantine planning failed" }
+            Hide-DhscNodeCandidates -Candidates $nodePlan -Moves $nodeMoves -RunToken "$env:GITHUB_RUN_ID-$PID"
             pnpm smoke:package -- --scenario node-required --matrix-label $env:MATRIX_LABEL --package-kind $env:PACKAGE_KIND --expected-architecture $env:EXPECTED_ARCHITECTURE --runner-architecture $env:EXPECTED_ARCHITECTURE --artifact-filename $env:ARTIFACT_FILENAME --executable $executable.FullName --resources $resources --inventory $executable.DirectoryName --artifact $artifact.FullName --artifact-sha256 $hash --evidence-root $env:EVIDENCE_ROOT --evidence (Join-Path $env:EVIDENCE_ROOT "smoke-evidence-windows-node-required.json")
             if ($LASTEXITCODE -ne 0) { throw "package node-required smoke failed with exit code $LASTEXITCODE" }
           } catch {
-            $primaryFailure = $_
+            $primaryFailure = $_.Exception
           } finally {
-            if (Test-Path $install -PathType Container) {
+            try {
+              Restore-DhscNodeCandidates -Moves $nodeMoves
+            } catch {
+              Add-DhscCaughtCleanupFailure -CleanupFailures $cleanupFailures -ErrorRecord $_
+            }
+            if ($null -ne $installedApplication) {
               try {
-                $uninstallers = @(Get-ChildItem -Path $install -Filter "Uninstall DeepSeek Harness Code.exe" -File -Recurse)
-                if ($uninstallers.Count -ne 1) { throw "expected exactly one uninstaller, found $($uninstallers.Count)" }
-                $uninstaller = Start-Process -PassThru -Wait -FilePath $uninstallers[0].FullName -ArgumentList "/S"
-                if ($uninstaller.ExitCode -ne 0) { throw "uninstaller.ExitCode -eq 0 required, got $($uninstaller.ExitCode)" }
+                $uninstaller = Start-Process -PassThru -Wait -FilePath $installedApplication.Uninstaller -ArgumentList "/S"
+                if ($uninstaller.ExitCode -ne 0) {
+                  Add-DhscDirectCleanupFailure -CleanupFailures $cleanupFailures -Message "installed application uninstaller exited nonzero"
+                }
               } catch {
-                $cleanupFailures += $_
+                Add-DhscCaughtCleanupFailure -CleanupFailures $cleanupFailures -ErrorRecord $_
               }
             }
             try {
-              if (Test-Path $install) { Remove-Item -Recurse -Force $install }
+              Remove-DhscRunnerOwnedCustomRoot -CustomRoot $install -RunnerTemp $env:RUNNER_TEMP
             } catch {
-              $cleanupFailures += $_
+              Add-DhscCaughtCleanupFailure -CleanupFailures $cleanupFailures -ErrorRecord $_
+            }
+            if ($null -ne $installedApplication -and $installedApplication.Source -eq "registry") {
+              try {
+                Assert-DhscInstalledApplicationRemoved -Application $installedApplication
+              } catch {
+                Add-DhscCaughtCleanupFailure -CleanupFailures $cleanupFailures -ErrorRecord $_
+              }
             }
           }
-          foreach ($cleanupFailure in $cleanupFailures) {
-            Write-Host "::error::Cleanup failed: $($cleanupFailure.Exception.Message)"
-          }
-          if ($null -ne $primaryFailure) { throw $primaryFailure }
-          if ($cleanupFailures.Count -gt 0) { throw $cleanupFailures[0] }
-          if (Test-Path $install) {
-            throw "installation directory remained after uninstall and forced cleanup"
-          }
+          Complete-DhscPackageStep -PrimaryFailure $primaryFailure -CleanupFailures $cleanupFailures
       - name: Verify macOS Universal DMG
         if: matrix.label == 'macos-universal'
         shell: bash
@@ -164,10 +175,46 @@ jobs:
           set -euo pipefail
           temp_root=$(mktemp -d "$RUNNER_TEMP/deepseek-harness-package.XXXXXX")
           squashfs_root="$temp_root/squashfs-root"
+          node_originals=()
+          node_hidden=()
+          restore_system_node_candidates() {
+            restore_failures=0
+            for ((index=${#node_originals[@]}-1; index>=0; index--)); do
+              if [[ (! -e "${node_hidden[index]}" && ! -L "${node_hidden[index]}") || -e "${node_originals[index]}" || -L "${node_originals[index]}" ]]; then
+                restore_failures=$((restore_failures + 1))
+              elif ! sudo mv -- "${node_hidden[index]}" "${node_originals[index]}" 2>/dev/null; then
+                restore_failures=$((restore_failures + 1))
+              fi
+            done
+            node_originals=()
+            node_hidden=()
+            if (( restore_failures != 0 )); then
+              printf 'node quarantine cleanup failed (%s candidates)\n' "$restore_failures" >&2
+              return 1
+            fi
+          }
+          hide_system_node_candidates() {
+            local index=0 candidate hidden
+            for candidate in "$@"; do
+              index=$((index + 1))
+              hidden="${candidate}.deepseek-smoke-${GITHUB_RUN_ID}-${BASHPID}-${index}"
+              if [[ -e "$hidden" || -L "$hidden" ]]; then
+                printf 'node quarantine destination already exists (candidate %s)\n' "$index" >&2
+                return 1
+              fi
+              if ! sudo mv -- "$candidate" "$hidden" 2>/dev/null; then
+                printf 'failed to quarantine Node candidate %s\n' "$index" >&2
+                return 1
+              fi
+              node_originals+=("$candidate")
+              node_hidden+=("$hidden")
+            done
+          }
           cleanup() {
             original_exit=$?
             cleanup_exit=0
             set +e
+            restore_system_node_candidates || cleanup_exit=$?
             rm -rf "$squashfs_root" "$temp_root" || cleanup_exit=$?
             if (( cleanup_exit != 0 )); then
               printf 'cleanup failed with exit code %s\n' "$cleanup_exit" >&2
@@ -190,6 +237,12 @@ jobs:
           executable="$squashfs_root/deepseek-harness-code"
           [[ -x "$executable" ]]
           xvfb-run -a pnpm smoke:package -- --scenario runtime --matrix-label "$MATRIX_LABEL" --package-kind "$PACKAGE_KIND" --expected-architecture "$EXPECTED_ARCHITECTURE" --runner-architecture "$EXPECTED_ARCHITECTURE" --artifact-filename "$(basename "$appimage")" --executable "$executable" --resources "$squashfs_root/resources" --inventory "$squashfs_root" --artifact "$appimage" --artifact-sha256 "$hash" --evidence-root "$EVIDENCE_ROOT" --evidence "$EVIDENCE_ROOT/smoke-evidence-linux-appimage.json"
+          node_candidate_output=$(node scripts/smoke-packaged-runtime.mjs --print-node-quarantine-paths) || { printf 'node quarantine planning failed\n' >&2; exit 1; }
+          node_candidates=()
+          if [[ -n "$node_candidate_output" ]]; then
+            while IFS= read -r candidate; do node_candidates+=("$candidate"); done <<< "$node_candidate_output"
+          fi
+          hide_system_node_candidates "${node_candidates[@]}"
           xvfb-run -a pnpm smoke:package -- --scenario node-required --matrix-label "$MATRIX_LABEL" --package-kind "$PACKAGE_KIND" --expected-architecture "$EXPECTED_ARCHITECTURE" --runner-architecture "$EXPECTED_ARCHITECTURE" --artifact-filename "$(basename "$appimage")" --executable "$executable" --resources "$squashfs_root/resources" --inventory "$squashfs_root" --artifact "$appimage" --artifact-sha256 "$hash" --evidence-root "$EVIDENCE_ROOT" --evidence "$EVIDENCE_ROOT/smoke-evidence-linux-appimage-node-required.json"
       - name: Install and smoke test Linux deb package
         if: matrix.label == 'linux-x64' || matrix.label == 'linux-arm64'
@@ -200,10 +253,46 @@ jobs:
           set -euo pipefail
           package_installed="false"
           temp_root=$(mktemp -d "$RUNNER_TEMP/deepseek-harness-deb.XXXXXX")
+          node_originals=()
+          node_hidden=()
+          restore_system_node_candidates() {
+            restore_failures=0
+            for ((index=${#node_originals[@]}-1; index>=0; index--)); do
+              if [[ (! -e "${node_hidden[index]}" && ! -L "${node_hidden[index]}") || -e "${node_originals[index]}" || -L "${node_originals[index]}" ]]; then
+                restore_failures=$((restore_failures + 1))
+              elif ! sudo mv -- "${node_hidden[index]}" "${node_originals[index]}" 2>/dev/null; then
+                restore_failures=$((restore_failures + 1))
+              fi
+            done
+            node_originals=()
+            node_hidden=()
+            if (( restore_failures != 0 )); then
+              printf 'node quarantine cleanup failed (%s candidates)\n' "$restore_failures" >&2
+              return 1
+            fi
+          }
+          hide_system_node_candidates() {
+            local index=0 candidate hidden
+            for candidate in "$@"; do
+              index=$((index + 1))
+              hidden="${candidate}.deepseek-smoke-${GITHUB_RUN_ID}-${BASHPID}-${index}"
+              if [[ -e "$hidden" || -L "$hidden" ]]; then
+                printf 'node quarantine destination already exists (candidate %s)\n' "$index" >&2
+                return 1
+              fi
+              if ! sudo mv -- "$candidate" "$hidden" 2>/dev/null; then
+                printf 'failed to quarantine Node candidate %s\n' "$index" >&2
+                return 1
+              fi
+              node_originals+=("$candidate")
+              node_hidden+=("$hidden")
+            done
+          }
           cleanup() {
             original_exit=$?
             cleanup_exit=0
             set +e
+            restore_system_node_candidates || cleanup_exit=$?
             if [[ "$package_installed" == "true" ]] || dpkg-query -W deepseek-harness-code >/dev/null 2>&1; then
               sudo dpkg --purge deepseek-harness-code || cleanup_exit=$?
             fi
@@ -246,6 +335,12 @@ jobs:
           [[ -d "$resources" ]]
           hash=$(sha256sum "$deb" | cut -d' ' -f1)
           xvfb-run -a pnpm smoke:package -- --scenario runtime --matrix-label "$MATRIX_LABEL" --package-kind "$PACKAGE_KIND" --expected-architecture "$EXPECTED_ARCHITECTURE" --runner-architecture "$EXPECTED_ARCHITECTURE" --artifact-filename "$(basename "$deb")" --executable "$executable" --resources "$resources" --inventory "$install_dir" --artifact "$deb" --artifact-sha256 "$hash" --evidence-root "$EVIDENCE_ROOT" --evidence "$EVIDENCE_ROOT/smoke-evidence-linux-deb.json"
+          node_candidate_output=$(node scripts/smoke-packaged-runtime.mjs --print-node-quarantine-paths) || { printf 'node quarantine planning failed\n' >&2; exit 1; }
+          node_candidates=()
+          if [[ -n "$node_candidate_output" ]]; then
+            while IFS= read -r candidate; do node_candidates+=("$candidate"); done <<< "$node_candidate_output"
+          fi
+          hide_system_node_candidates "${node_candidates[@]}"
           xvfb-run -a pnpm smoke:package -- --scenario node-required --matrix-label "$MATRIX_LABEL" --package-kind "$PACKAGE_KIND" --expected-architecture "$EXPECTED_ARCHITECTURE" --runner-architecture "$EXPECTED_ARCHITECTURE" --artifact-filename "$(basename "$deb")" --executable "$executable" --resources "$resources" --inventory "$install_dir" --artifact "$deb" --artifact-sha256 "$hash" --evidence-root "$EVIDENCE_ROOT" --evidence "$EVIDENCE_ROOT/smoke-evidence-linux-deb-node-required.json"
       - name: Upload installer artifacts
         if: always() && (matrix.label == 'windows-x64' || matrix.label == 'windows-arm64')
@@ -323,10 +418,46 @@ jobs:
           mount_root=$(mktemp -d "$RUNNER_TEMP/deepseek-harness-dmg.XXXXXX")
           applications_root=$(mktemp -d "$RUNNER_TEMP/Applications.XXXXXX")
           mounted="false"
+          node_originals=()
+          node_hidden=()
+          restore_system_node_candidates() {
+            restore_failures=0
+            for ((index=${#node_originals[@]}-1; index>=0; index--)); do
+              if [[ (! -e "${node_hidden[index]}" && ! -L "${node_hidden[index]}") || -e "${node_originals[index]}" || -L "${node_originals[index]}" ]]; then
+                restore_failures=$((restore_failures + 1))
+              elif ! sudo mv -- "${node_hidden[index]}" "${node_originals[index]}" 2>/dev/null; then
+                restore_failures=$((restore_failures + 1))
+              fi
+            done
+            node_originals=()
+            node_hidden=()
+            if (( restore_failures != 0 )); then
+              printf 'node quarantine cleanup failed (%s candidates)\n' "$restore_failures" >&2
+              return 1
+            fi
+          }
+          hide_system_node_candidates() {
+            local index=0 candidate hidden
+            for candidate in "$@"; do
+              index=$((index + 1))
+              hidden="${candidate}.deepseek-smoke-${GITHUB_RUN_ID}-${BASHPID}-${index}"
+              if [[ -e "$hidden" || -L "$hidden" ]]; then
+                printf 'node quarantine destination already exists (candidate %s)\n' "$index" >&2
+                return 1
+              fi
+              if ! sudo mv -- "$candidate" "$hidden" 2>/dev/null; then
+                printf 'failed to quarantine Node candidate %s\n' "$index" >&2
+                return 1
+              fi
+              node_originals+=("$candidate")
+              node_hidden+=("$hidden")
+            done
+          }
           cleanup() {
             original_exit=$?
             cleanup_exit=0
             set +e
+            restore_system_node_candidates || cleanup_exit=$?
             if [[ "$mounted" == "true" ]]; then
               hdiutil detach "$mount_root" || cleanup_exit=$?
             fi
@@ -353,6 +484,12 @@ jobs:
           [[ -x "$executable" && -d "$resources" ]]
           hash=$(shasum -a 256 "$dmg" | cut -d' ' -f1)
           pnpm smoke:package -- --scenario runtime --matrix-label macos-universal --package-kind dmg --expected-architecture universal --runner-architecture ${{ matrix.runner-architecture }} --artifact-filename "$(basename "$dmg")" --executable "$executable" --resources "$resources" --inventory "$installed_app" --artifact "$dmg" --artifact-sha256 "$hash" --evidence-root "$EVIDENCE_ROOT" --evidence "$EVIDENCE_ROOT/smoke-evidence-${{ matrix.runner-architecture }}.json"
+          node_candidate_output=$(node scripts/smoke-packaged-runtime.mjs --print-node-quarantine-paths) || { printf 'node quarantine planning failed\n' >&2; exit 1; }
+          node_candidates=()
+          if [[ -n "$node_candidate_output" ]]; then
+            while IFS= read -r candidate; do node_candidates+=("$candidate"); done <<< "$node_candidate_output"
+          fi
+          hide_system_node_candidates "${node_candidates[@]}"
           pnpm smoke:package -- --scenario node-required --matrix-label macos-universal --package-kind dmg --expected-architecture universal --runner-architecture ${{ matrix.runner-architecture }} --artifact-filename "$(basename "$dmg")" --executable "$executable" --resources "$resources" --inventory "$installed_app" --artifact "$dmg" --artifact-sha256 "$hash" --evidence-root "$EVIDENCE_ROOT" --evidence "$EVIDENCE_ROOT/smoke-evidence-${{ matrix.runner-architecture }}-node-required.json"
       - name: Upload sanitized smoke evidence
         if: always()

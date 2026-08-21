@@ -212,6 +212,107 @@ describe("packaged runtime listener selection", () => {
     });
   });
 
+  test("covers every fixed production Node candidate on Linux, macOS, and Windows", () => {
+    const systemNodeCandidateEntries = requiredRuntimeExport(
+      "systemNodeCandidateEntries",
+    );
+    const unixEnv = {};
+    expect(
+      systemNodeCandidateEntries("linux", unixEnv, "/home/runner").map(
+        ({ path }) => path,
+      ),
+    ).toEqual([
+      "/usr/local/bin/node",
+      "/snap/bin/node",
+      "/usr/bin/node",
+      "/usr/bin/nodejs",
+      "/home/runner/.volta/bin/node",
+      "/home/runner/.asdf/shims/node",
+      "/home/runner/.local/bin/node",
+      "/home/runner/bin/node",
+    ]);
+    expect(
+      systemNodeCandidateEntries("darwin", unixEnv, "/Users/runner").map(
+        ({ path }) => path,
+      ),
+    ).toEqual([
+      "/opt/homebrew/bin/node",
+      "/usr/local/bin/node",
+      "/Users/runner/.volta/bin/node",
+      "/Users/runner/.asdf/shims/node",
+      "/Users/runner/.local/bin/node",
+      "/Users/runner/bin/node",
+    ]);
+    expect(
+      systemNodeCandidateEntries(
+        "win32",
+        {
+          ProgramFiles: "C:\\Program Files",
+          "ProgramFiles(x86)": "C:\\Program Files (x86)",
+          ProgramData: "C:\\ProgramData",
+          USERPROFILE: "C:\\Users\\runneradmin",
+          LOCALAPPDATA: "C:\\Users\\runneradmin\\AppData\\Local",
+        },
+        "C:\\Users\\runneradmin",
+      ).map(({ path }) => path),
+    ).toEqual([
+      "C:\\Program Files\\nodejs\\node.exe",
+      "C:\\Program Files (x86)\\nodejs\\node.exe",
+      "C:\\ProgramData\\chocolatey\\bin\\node.exe",
+      "C:\\Users\\runneradmin\\scoop\\shims\\node.exe",
+      "C:\\Users\\runneradmin\\.volta\\bin\\node.exe",
+      "C:\\Users\\runneradmin\\AppData\\Local\\.volta\\bin\\node.exe",
+    ]);
+  });
+
+  test("never moves the parent Node real file but may move a candidate symlink", () => {
+    const shouldQuarantineNodeCandidate = requiredRuntimeExport(
+      "shouldQuarantineNodeCandidate",
+    );
+
+    expect(
+      shouldQuarantineNodeCandidate({
+        candidatePath: "/usr/local/bin/node",
+        parentExecutablePath: "/opt/hostedtoolcache/node/bin/node",
+        candidateIsSymlink: false,
+        candidateFileId: "1:42",
+        parentFileId: "1:42",
+        platform: "linux",
+      }),
+    ).toBe(false);
+    expect(
+      shouldQuarantineNodeCandidate({
+        candidatePath: "/usr/local/bin/node",
+        parentExecutablePath: "/opt/hostedtoolcache/node/bin/node",
+        candidateIsSymlink: true,
+        candidateFileId: "1:42",
+        parentFileId: "1:42",
+        platform: "linux",
+      }),
+    ).toBe(true);
+    expect(
+      shouldQuarantineNodeCandidate({
+        candidatePath: "C:\\Program Files\\nodejs\\node.exe",
+        parentExecutablePath: "c:\\Program Files\\nodejs\\node.exe",
+        candidateIsSymlink: false,
+        candidateFileId: "",
+        parentFileId: "",
+        platform: "win32",
+      }),
+    ).toBe(false);
+    expect(
+      shouldQuarantineNodeCandidate({
+        candidatePath: "C:\\Program Files\\nodejs\\node.exe",
+        parentExecutablePath:
+          "C:\\hostedtoolcache\\windows\\node\\24.18.0\\arm64\\node.exe",
+        candidateIsSymlink: false,
+        candidateFileId: "0:0",
+        parentFileId: "0:0",
+        platform: "win32",
+      }),
+    ).toBe(true);
+  });
+
   test("runs runtime and node-required against every installed package form", async () => {
     const workflow = await readFile(
       new URL("../../.github/workflows/package.yml", import.meta.url),
