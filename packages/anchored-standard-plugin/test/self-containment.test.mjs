@@ -47,6 +47,6 @@ test('bootstrap editors consume the host sandboxed filesystem provider', () => {
 })
 
 test('bootstrap editor row matcher accepts CRLF checkouts', () => {
-  const yml = "- id: bootstrap-filesystem\r\n  name: '@deepseek-ai/dsh-tool-str-replace-editor'"
+  const yml = "- id: bootstrap-filesystem\r\n  name: '@deepseek-ai/dsh-tool-str-replace-editor'\r\n"
   assert.match(yml, SANDBOXED_EDITOR_ROW)
 })
