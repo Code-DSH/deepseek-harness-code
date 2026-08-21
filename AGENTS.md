@@ -1,6 +1,6 @@
 # AGENTS.md
 
-Electron 43 desktop host for DeepSeek Harness (`deepseek-harness-code@0.1.0-BETA2-2`, `@deepseek-ai/dsh@0.1.0-rc.8`). Community distribution — not official DeepSeek. Harness and desktop renderer stay loopback-only; disabled-by-default trusted-LAN access is an Electron-owned token-gated proxy. macOS distribution remains unsigned/ad-hoc.
+Electron 43 desktop host for DeepSeek Harness (`deepseek-harness-code@0.1.0-BETA2-2` candidate, `@deepseek-ai/dsh@0.1.0-rc.8`). BETA2-2 is pending a repaired native cloud package gate after Run 32468983175 failed at installed Windows x64 readiness; no BETA2-2 GitHub Release/assets exist yet. BETA2-1 remains the green current Latest. Community distribution — not official DeepSeek. Harness and desktop renderer stay loopback-only; disabled-by-default trusted-LAN access is an Electron-owned token-gated proxy. macOS distribution remains unsigned/ad-hoc.
 
 ## Setup
 
@@ -56,7 +56,7 @@ pnpm typecheck && pnpm lint && pnpm format:check  # structure slices (CI runs th
 
 ## Docs (read when changing those areas)
 
-- `docs/index.md` — router. `docs/architecture/overview.md` + `lifecycle.md` for IPC/process/security. `docs/engineering/testing.md` for test layers + fault injection. `docs/knowledge/upstream-baseline.md` for pinned versions (trust `package.json`/`pnpm-workspace.yaml`/`electron-builder.yml` over prose when they conflict). `docs/operations/install-unsigned.md` for macOS quarantine.
+- `docs/index.md` — router. `docs/architecture/overview.md` + `lifecycle.md` for IPC/process/security. `docs/engineering/testing.md` and `acceptance-report.md` for test layers and the candidate-versus-executed native matrix. `docs/knowledge/topics/github-actions-runner-matrix.md` for rapid-freshness runner labels. `docs/knowledge/upstream-baseline.md` for pinned versions (trust `package.json`/`pnpm-workspace.yaml`/`electron-builder.yml` over prose when they conflict). `docs/operations/install-unsigned.md` for macOS quarantine.
 
 ## Rules
 
@@ -64,3 +64,4 @@ pnpm typecheck && pnpm lint && pnpm format:check  # structure slices (CI runs th
 - Preserve official Harness question protocol (`@deepseek-ai/dsh-tool-ask-user` etc.) — do not create a parallel wire format.
 - Never log credentials, auth headers, cookies, prompt bodies, or response bodies.
 - Runtime behavior changes are test-first; verify before claiming completion.
+- Cross-build is never native execution. Do not mark BETA2-2 green/published or record assets/hashes until exact repaired cloud Run/job evidence exists; delete BETA2-1 Release/assets only after BETA2-2 is Latest and independently verified, while retaining its source tag and archive.

@@ -44,7 +44,12 @@ const evidenceRoot = resolve(
 const metadataRoot =
   argument("--metadata-root") ?? process.env.SMOKE_METADATA_ROOT;
 const appEvidencePath = `${evidencePath}.app.json`;
-const timeoutMs = Number(process.env.SMOKE_TIMEOUT_MS ?? 45_000);
+const SMOKE_TIMEOUT_MS = 600_000;
+const requestedTimeoutMs = Number(process.env.SMOKE_TIMEOUT_MS ?? 45_000);
+const timeoutMs =
+  Number.isFinite(requestedTimeoutMs) && requestedTimeoutMs > 0
+    ? Math.min(requestedTimeoutMs, SMOKE_TIMEOUT_MS)
+    : 45_000;
 const startedAt = new Date().toISOString();
 
 function argument(name) {
@@ -73,6 +78,30 @@ function buildPackagedSmokeLaunch(platform, userDataPath) {
     args,
     env: { DSH_HOME: pathApi.join(userDataPath, "dsh-home") },
   };
+}
+
+function buildPackagedSmokeEnvironment(platform, environment, scenario) {
+  if (scenario === "runtime") return { ...environment };
+  if (scenario !== "node-required")
+    throw new Error(`unsupported packaged smoke scenario ${scenario}`);
+  const pathApi = platform === "win32" ? win32 : posix;
+  const result = {};
+  const nodeManagerKey =
+    /^(?:NODE(?:_.+)?|NVM_.+|VOLTA_HOME|FNM_.+|MISE_.+|PNPM_HOME|COREPACK_HOME|DHC_NODE_EXECUTABLE|npm_node_execpath|npm_execpath)$/iu;
+  const nodePathEntry =
+    /(?:^|[\\/])(?:node|nodejs|nvm|fnm|volta|mise)(?:[\\/]|$)/iu;
+  for (const [key, value] of Object.entries(environment)) {
+    if (nodeManagerKey.test(key)) continue;
+    if (/^path$/iu.test(key) && typeof value === "string") {
+      result[key] = value
+        .split(pathApi.delimiter)
+        .filter((entry) => entry !== "" && !nodePathEntry.test(entry))
+        .join(pathApi.delimiter);
+      continue;
+    }
+    result[key] = value;
+  }
+  return result;
 }
 
 async function checksum(path) {
@@ -221,6 +250,14 @@ function createInterruptHandler(cleanup, exit) {
 function parseLoopbackListeners(output, platform = process.platform) {
   const listeners = [];
   for (const line of output.split("\n")) {
+    if (platform === "darwin") {
+      const match = line.match(
+        /^\S+\s+(\d+)\s+.*\sTCP\s+127\.0\.0\.1:(\d+)\s+\(LISTEN\)\s*$/u,
+      );
+      if (match)
+        listeners.push({ port: Number(match[2]), pid: Number(match[1]) });
+      continue;
+    }
     if (!line.includes("127.0.0.1") || !/LISTEN/i.test(line)) continue;
     const portMatch = line.match(/127\.0\.0\.1:(\d+)/);
     if (!portMatch) continue;
@@ -236,16 +273,27 @@ function parseLoopbackListeners(output, platform = process.platform) {
   return listeners;
 }
 
+function listenerCommand(platform = process.platform) {
+  if (platform === "win32")
+    return { command: "netstat", args: ["-ano", "-p", "tcp"] };
+  if (platform === "linux") return { command: "ss", args: ["-ltnp"] };
+  if (platform === "darwin")
+    return {
+      command: "lsof",
+      args: ["-nP", "-iTCP", "-sTCP:LISTEN"],
+    };
+  throw new Error(`unsupported smoke platform ${platform}`);
+}
+
 async function listLoopbackListeners() {
-  const command = process.platform === "win32" ? "netstat" : "ss";
-  const args = process.platform === "win32" ? ["-ano", "-p", "tcp"] : ["-ltnp"];
+  const { command, args } = listenerCommand();
   const output = await execFileAsync(command, args, {
     windowsHide: true,
   }).then(
     ({ stdout }) => stdout,
     () => "",
   );
-  return parseLoopbackListeners(output);
+  return parseLoopbackListeners(output, process.platform);
 }
 
 function assertEvidenceMetadata(value, expected) {
@@ -332,8 +380,13 @@ function verifySmokeEvidence(evidence, expected) {
   const requestedWindow = expected.maxDurationMs;
   const freshnessWindow =
     Number.isFinite(requestedWindow) && requestedWindow > 0
-      ? Math.min(requestedWindow, 15 * 60_000)
+      ? Math.min(requestedWindow, SMOKE_TIMEOUT_MS)
       : 5 * 60_000;
+  const readyDurationMs = readyAt - startedAt;
+  if (readyDurationMs > freshnessWindow)
+    throw new Error(
+      `smoke ready duration ${readyDurationMs} ms exceeds deadline ${freshnessWindow} ms`,
+    );
   if (finalAt - startedAt > freshnessWindow)
     throw new Error("smoke evidence exceeds the freshness window");
   return {
@@ -341,7 +394,108 @@ function verifySmokeEvidence(evidence, expected) {
     appPid: ready.appPid,
     harnessPid: ready.harnessPid,
     port: Number(new URL(ready.harnessOrigin).port),
+    readyDurationMs,
   };
+}
+
+function expectedNodeUrls(platform, architecture) {
+  if (!["x64", "arm64"].includes(architecture))
+    throw new Error(`unsupported Node installer architecture ${architecture}`);
+  if (platform === "win32") {
+    return {
+      installerUrl: `https://nodejs.org/dist/v22.13.0/node-v22.13.0-${architecture}.msi`,
+      archiveUrl: `https://nodejs.org/dist/v22.13.0/node-v22.13.0-win-${architecture}.zip`,
+    };
+  }
+  if (platform === "darwin")
+    return {
+      installerUrl: "https://nodejs.org/dist/v22.13.0/node-v22.13.0.pkg",
+      archiveUrl: `https://nodejs.org/dist/v22.13.0/node-v22.13.0-darwin-${architecture}.tar.gz`,
+    };
+  if (platform === "linux")
+    return {
+      installerUrl: "https://nodejs.org/en/download",
+      archiveUrl: `https://nodejs.org/dist/v22.13.0/node-v22.13.0-linux-${architecture}.tar.xz`,
+    };
+  throw new Error(`unsupported Node installer platform ${platform}`);
+}
+
+function verifyNodeRequiredEvidence(evidence, expected) {
+  const nodeRequired = evidence?.nodeRequired;
+  if (
+    evidence?.schema !== 2 ||
+    evidence?.runId !== expected.runId ||
+    nodeRequired?.runId !== expected.runId
+  )
+    throw new Error(
+      "node-required evidence run nonce does not match current run",
+    );
+  if (
+    nodeRequired?.phase !== "node-required" ||
+    nodeRequired?.scenario !== "node-required" ||
+    evidence.ready !== undefined ||
+    evidence.final !== undefined
+  )
+    throw new Error("node-required evidence phase is invalid");
+  assertEvidenceMetadata(nodeRequired, expected);
+  if (evidence.startedAt !== expected.startedAt)
+    throw new Error("node-required evidence metadata does not match startedAt");
+  if (
+    nodeRequired.platform !== expected.platform ||
+    nodeRequired.architecture !== expected.runnerArchitecture
+  )
+    throw new Error(
+      "node-required evidence platform or architecture is invalid",
+    );
+  const expectedUrls = expectedNodeUrls(
+    expected.platform,
+    expected.runnerArchitecture,
+  );
+  if (
+    nodeRequired.minimumNodeVersion !== "22.13.0" ||
+    nodeRequired.installerUrl !== expectedUrls.installerUrl ||
+    nodeRequired.archiveUrl !== expectedUrls.archiveUrl
+  )
+    throw new Error(
+      "node-required evidence does not use the official Node installer",
+    );
+  if (
+    !Number.isInteger(nodeRequired.appPid) ||
+    nodeRequired.appPid <= 0 ||
+    nodeRequired.packaged !== true
+  )
+    throw new Error("node-required evidence application identity is invalid");
+  if (
+    nodeRequired.harnessStarted !== false ||
+    nodeRequired.listenerObserved !== false ||
+    "harnessOrigin" in nodeRequired ||
+    "harnessPid" in nodeRequired ||
+    "listenerPid" in nodeRequired
+  )
+    throw new Error(
+      "node-required evidence must not report Harness origin, PID, or listener",
+    );
+  const evidenceStartedAt = Date.parse(evidence.startedAt ?? "");
+  const nodeRequiredAt = Date.parse(
+    nodeRequired.timestamps?.nodeRequiredAt ?? "",
+  );
+  const maxDurationMs = Math.min(
+    Number.isFinite(expected.maxDurationMs) && expected.maxDurationMs > 0
+      ? expected.maxDurationMs
+      : SMOKE_TIMEOUT_MS,
+    SMOKE_TIMEOUT_MS,
+  );
+  const nodeRequiredDurationMs = nodeRequiredAt - evidenceStartedAt;
+  if (
+    !Number.isFinite(evidenceStartedAt) ||
+    !Number.isFinite(nodeRequiredAt) ||
+    nodeRequiredDurationMs < 0 ||
+    nodeRequiredDurationMs > maxDurationMs
+  )
+    throw new Error(
+      "node-required evidence timestamp is outside the smoke deadline",
+    );
+  return { appPid: nodeRequired.appPid, nodeRequiredDurationMs };
 }
 
 function validateArtifactContract({
@@ -540,34 +694,76 @@ function assertKnownRunnerArchitecture(
   platform = process.platform,
   arch = process.arch,
 ) {
-  if (platform === "darwin") {
-    if (!["x64", "arm64"].includes(arch))
-      throw new Error(`unsupported macOS runner architecture ${arch}`);
-    return;
-  }
-  if ((platform === "linux" || platform === "win32") && arch !== "x64")
-    throw new Error(`unsupported ${platform} runner architecture ${arch}`);
   if (!["darwin", "linux", "win32"].includes(platform))
     throw new Error(`unsupported smoke platform ${platform}`);
+  if (!["x64", "arm64"].includes(arch))
+    throw new Error(`unsupported ${platform} runner architecture ${arch}`);
 }
 
-async function inspectArchitecture(executable) {
-  assertKnownRunnerArchitecture();
-  if (process.platform === "win32") {
-    const machine = String(parseWindowsPeMachine(await readFile(executable)));
-    if (machine !== "34404")
-      throw new Error(`unsupported Windows PE machine ${machine}`);
-    return { runner: process.arch, platform: process.platform, machine };
+async function inspectArchitecture(
+  executable,
+  {
+    platform = process.platform,
+    arch = process.arch,
+    expectedArchitecture,
+    runnerArchitecture,
+    readFile: readExecutable = readFile,
+    execFile: inspectExecutable = execFileAsync,
+  } = {},
+) {
+  assertKnownRunnerArchitecture(platform, arch);
+  assertKnownRunnerArchitecture(platform, runnerArchitecture);
+  if (arch !== runnerArchitecture)
+    throw new Error(
+      `native host architecture ${arch} does not match runner architecture ${runnerArchitecture}`,
+    );
+  if (platform === "darwin") {
+    if (expectedArchitecture !== "universal")
+      throw new Error(
+        `macOS expected architecture must be universal, got ${expectedArchitecture}`,
+      );
+  } else if (expectedArchitecture !== runnerArchitecture) {
+    throw new Error(
+      `package target architecture ${expectedArchitecture} does not match runner architecture ${runnerArchitecture}`,
+    );
   }
-  const file = await execFileAsync("file", [executable]).then(
+  if (platform === "win32") {
+    const machine = String(
+      parseWindowsPeMachine(await readExecutable(executable)),
+    );
+    const expectedMachine = {
+      x64: "34404",
+      arm64: "43620",
+    }[expectedArchitecture];
+    if (machine !== expectedMachine)
+      throw new Error(`unsupported Windows PE machine ${machine}`);
+    return { runner: arch, platform, machine };
+  }
+  if (platform === "darwin") {
+    const archs = await inspectExecutable("lipo", ["-archs", executable]).then(
+      ({ stdout }) => stdout.trim(),
+      () => undefined,
+    );
+    if (archs === undefined)
+      throw new Error("native architecture inspection failed");
+    const slices = new Set(archs.split(/\s+/u));
+    if (!slices.has("x86_64") || !slices.has("arm64"))
+      throw new Error(`macOS executable is not Universal: ${archs}`);
+    return { runner: arch, platform, archs };
+  }
+  const file = await inspectExecutable("file", ["-b", executable]).then(
     ({ stdout }) => stdout.trim(),
     () => undefined,
   );
   if (file === undefined)
     throw new Error("native architecture inspection failed");
-  if (!/x86-64|x86_64|amd64/i.test(file))
+  const matchesRunner =
+    arch === "x64"
+      ? /\b(?:x86-64|x86_64|amd64)\b/iu.test(file)
+      : /\b(?:ARM aarch64|aarch64|arm64)\b/iu.test(file);
+  if (!matchesRunner)
     throw new Error(`unsupported Linux architecture: ${file}`);
-  return { runner: process.arch, platform: process.platform, file };
+  return { runner: arch, platform, file };
 }
 
 function parseWindowsPeMachine(bytes) {
@@ -579,21 +775,33 @@ function parseWindowsPeMachine(bytes) {
 }
 
 async function waitForEvidence(path, deadline, runId, phase) {
+  const evidenceKey = phase === "node-required" ? "nodeRequired" : phase;
   while (Date.now() < deadline) {
     try {
       const evidence = JSON.parse(await readFile(path, "utf8"));
       if (
+        phase === "node-required" &&
         evidence?.schema === 2 &&
         evidence?.runId === runId &&
-        evidence?.[phase]?.phase === phase
+        evidence?.ready?.phase === "ready"
+      ) {
+        throw new Error(
+          "system Node remained resolvable during node-required smoke",
+        );
+      }
+      if (
+        evidence?.schema === 2 &&
+        evidence?.runId === runId &&
+        evidence?.[evidenceKey]?.phase === phase
       )
         return evidence;
     } catch (error) {
-      if (
-        !(error instanceof Error) ||
-        !["ENOENT", "EACCES", undefined].includes(error.code)
-      )
-        throw error;
+      const isTransientEvidenceRead =
+        error instanceof SyntaxError ||
+        (error instanceof Error &&
+          "code" in error &&
+          ["ENOENT", "EACCES"].includes(error.code));
+      if (!isTransientEvidenceRead) throw error;
     }
     await new Promise((resolveDelay) => setTimeout(resolveDelay, 250));
   }
@@ -687,11 +895,31 @@ function verifySmokeReadyEvidence(evidence, expected) {
     throw new Error("smoke evidence PID is invalid");
   if (ready.harnessPid !== ready.listenerPid)
     throw new Error("smoke listener owner does not match reported Harness PID");
+  const evidenceStartedAt = Date.parse(evidence.startedAt ?? "");
+  const readyAt = Date.parse(ready.timestamps?.readyAt ?? "");
+  const maxDurationMs = Math.min(
+    Number.isFinite(expected.maxDurationMs) && expected.maxDurationMs > 0
+      ? expected.maxDurationMs
+      : SMOKE_TIMEOUT_MS,
+    SMOKE_TIMEOUT_MS,
+  );
+  const readyDurationMs = readyAt - evidenceStartedAt;
+  if (
+    !Number.isFinite(evidenceStartedAt) ||
+    !Number.isFinite(readyAt) ||
+    readyDurationMs < 0
+  )
+    throw new Error("smoke ready evidence timestamps are not ordered");
+  if (readyDurationMs > maxDurationMs)
+    throw new Error(
+      `smoke ready duration ${readyDurationMs} ms exceeds deadline ${maxDurationMs} ms`,
+    );
   return {
     origin: ready.harnessOrigin,
     appPid: ready.appPid,
     harnessPid: ready.harnessPid,
     port: Number(new URL(ready.harnessOrigin).port),
+    readyDurationMs,
   };
 }
 
@@ -721,9 +949,13 @@ async function assertPortOwned(port, pid) {
 
 async function main() {
   const runId = randomUUID();
+  const scenario = argument("--scenario") ?? "runtime";
+  if (scenario !== "runtime" && scenario !== "node-required")
+    throw new Error(`unsupported packaged smoke scenario ${scenario}`);
   const executable = findExecutable();
   const packageKind = requiredArgument("--package-kind");
   const expectedArchitecture = requiredArgument("--expected-architecture");
+  const runnerArchitecture = requiredArgument("--runner-architecture");
   const artifactFilename = requiredArgument("--artifact-filename");
   const matrixLabel =
     argument("--matrix-label") ??
@@ -746,6 +978,7 @@ async function main() {
     platform: process.platform,
     runnerArchitecture: process.arch,
     startedAt,
+    scenario,
     artifact: {
       packageKind,
       expectedArchitecture,
@@ -753,7 +986,10 @@ async function main() {
       path: resolve(artifactPath),
       sha256: artifactSha256,
       inventory: await inventory(inventoryPath),
-      architecture: await inspectArchitecture(executable),
+      architecture: await inspectArchitecture(executable, {
+        expectedArchitecture,
+        runnerArchitecture,
+      }),
     },
     runtime: { executable: resolve(executable), resources: [] },
   };
@@ -804,10 +1040,15 @@ async function main() {
   process.on("SIGINT", onInterrupt);
   process.on("SIGTERM", onInterrupt);
   const packagedLaunch = buildPackagedSmokeLaunch(process.platform, userData);
+  const packagedEnvironment = buildPackagedSmokeEnvironment(
+    process.platform,
+    process.env,
+    scenario,
+  );
   child = spawn(executable, packagedLaunch.args, {
     cwd: root,
     env: {
-      ...process.env,
+      ...packagedEnvironment,
       APPDATA: join(userData, "appdata"),
       XDG_CONFIG_HOME: join(userData, "config"),
       XDG_DATA_HOME: join(userData, "data"),
@@ -815,6 +1056,7 @@ async function main() {
       XDG_CACHE_HOME: join(userData, "cache"),
       ...packagedLaunch.env,
       SMOKE_MODE: "ci",
+      SMOKE_SCENARIO: scenario,
       SMOKE_EVIDENCE_PATH: resolve(appEvidencePath),
       SMOKE_ACK_PATH: resolve(`${appEvidencePath}.ack`),
       SMOKE_EVIDENCE_ROOT: evidenceRoot,
@@ -855,18 +1097,6 @@ async function main() {
         );
     });
     evidence.runtime.resources = await assertResources(executable);
-    const readyEvidence = await Promise.race([
-      waitForEvidence(resolve(appEvidencePath), deadline, runId, "ready"),
-      new Promise((_, reject) => {
-        child.once("exit", (code, signal) =>
-          reject(
-            new Error(
-              `packaged application exited before evidence (code=${code ?? "null"}, signal=${signal ?? "null"})`,
-            ),
-          ),
-        );
-      }),
-    ]);
     const expectedMetadata = {
       runId,
       matrixLabel,
@@ -875,45 +1105,101 @@ async function main() {
       artifactFilename,
       artifactSha256,
       startedAt,
+      platform: process.platform,
+      runnerArchitecture,
       maxDurationMs: timeoutMs,
     };
-    const identity = verifySmokeReadyEvidence(readyEvidence, expectedMetadata);
-    await assertRuntimeProvenance(
-      readyEvidence,
-      userData,
-      resolve(argument("--resources") ?? join(executable, "..", "resources")),
-    );
-    evidence.runtime.loopback = {
-      host: "127.0.0.1",
-      port: identity.port,
-      status: 200,
-    };
-    await assertPortOwned(identity.port, identity.harnessPid);
-    await writeFile(
-      resolve(`${appEvidencePath}.ack`),
-      `${JSON.stringify({ runId, appPid: identity.appPid })}\n`,
-      { encoding: "utf8", mode: 0o600 },
-    );
-    const smokeEvidence = await waitForEvidenceWithExitGrace({
-      path: resolve(appEvidencePath),
-      deadline,
-      runId,
-      phase: "final",
-      child,
-    });
-    verifySmokeEvidence(smokeEvidence, expectedMetadata);
-    const exitedNaturally = await waitForPackagedExit(child);
-    if (!exitedNaturally) await stopProcess(child);
-    exitedCleanly = child.exitCode === 0;
-    evidence.runtime.exitCode = child.exitCode;
-    evidence.runtime.exitedCleanly = exitedCleanly;
-    if (!exitedCleanly || child.exitCode !== 0)
-      throw new Error(`packaged application exited with ${child.exitCode}`);
-    assertPidDead(identity.harnessPid);
-    assertPidDead(identity.appPid);
-    await assertPortClosed(identity.port);
-    await new Promise((resolveDelay) => setTimeout(resolveDelay, 2_500));
-    await assertPortClosed(identity.port);
+    if (scenario === "node-required") {
+      const nodeRequiredEvidence = await Promise.race([
+        waitForEvidence(
+          resolve(appEvidencePath),
+          deadline,
+          runId,
+          "node-required",
+        ),
+        new Promise((_, reject) => {
+          child.once("exit", (code, signal) =>
+            reject(
+              new Error(
+                `packaged application exited before evidence (code=${code ?? "null"}, signal=${signal ?? "null"})`,
+              ),
+            ),
+          );
+        }),
+      ]);
+      const identity = verifyNodeRequiredEvidence(
+        nodeRequiredEvidence,
+        expectedMetadata,
+      );
+      evidence.runtime.nodeRequiredDurationMs = identity.nodeRequiredDurationMs;
+      await writeFile(
+        resolve(`${appEvidencePath}.ack`),
+        `${JSON.stringify({ runId, appPid: identity.appPid })}\n`,
+        { encoding: "utf8", mode: 0o600 },
+      );
+      const exitedNaturally = await waitForPackagedExit(child);
+      if (!exitedNaturally) await stopProcess(child);
+      exitedCleanly = child.exitCode === 0;
+      evidence.runtime.exitCode = child.exitCode;
+      evidence.runtime.exitedCleanly = exitedCleanly;
+      if (!exitedCleanly || child.exitCode !== 0)
+        throw new Error(`packaged application exited with ${child.exitCode}`);
+      assertPidDead(identity.appPid);
+    } else {
+      const readyEvidence = await Promise.race([
+        waitForEvidence(resolve(appEvidencePath), deadline, runId, "ready"),
+        new Promise((_, reject) => {
+          child.once("exit", (code, signal) =>
+            reject(
+              new Error(
+                `packaged application exited before evidence (code=${code ?? "null"}, signal=${signal ?? "null"})`,
+              ),
+            ),
+          );
+        }),
+      ]);
+      const identity = verifySmokeReadyEvidence(
+        readyEvidence,
+        expectedMetadata,
+      );
+      evidence.runtime.readyDurationMs = identity.readyDurationMs;
+      await assertRuntimeProvenance(
+        readyEvidence,
+        userData,
+        resolve(argument("--resources") ?? join(executable, "..", "resources")),
+      );
+      evidence.runtime.loopback = {
+        host: "127.0.0.1",
+        port: identity.port,
+        status: 200,
+      };
+      await assertPortOwned(identity.port, identity.harnessPid);
+      await writeFile(
+        resolve(`${appEvidencePath}.ack`),
+        `${JSON.stringify({ runId, appPid: identity.appPid })}\n`,
+        { encoding: "utf8", mode: 0o600 },
+      );
+      const smokeEvidence = await waitForEvidenceWithExitGrace({
+        path: resolve(appEvidencePath),
+        deadline,
+        runId,
+        phase: "final",
+        child,
+      });
+      verifySmokeEvidence(smokeEvidence, expectedMetadata);
+      const exitedNaturally = await waitForPackagedExit(child);
+      if (!exitedNaturally) await stopProcess(child);
+      exitedCleanly = child.exitCode === 0;
+      evidence.runtime.exitCode = child.exitCode;
+      evidence.runtime.exitedCleanly = exitedCleanly;
+      if (!exitedCleanly || child.exitCode !== 0)
+        throw new Error(`packaged application exited with ${child.exitCode}`);
+      assertPidDead(identity.harnessPid);
+      assertPidDead(identity.appPid);
+      await assertPortClosed(identity.port);
+      await new Promise((resolveDelay) => setTimeout(resolveDelay, 2_500));
+      await assertPortClosed(identity.port);
+    }
   } catch (error) {
     if (childDiagnostics.trim() !== "") {
       evidence.runtime.diagnostics = childDiagnostics;
@@ -931,6 +1217,8 @@ async function main() {
 
 export {
   assertKnownRunnerArchitecture,
+  inspectArchitecture,
+  listenerCommand,
   parseLoopbackListeners,
   assertPathWithinRoot,
   assertPathNotSymlink,
@@ -939,12 +1227,14 @@ export {
   createInterruptHandler,
   writeEvidenceAtomically,
   verifySmokeEvidence,
+  verifyNodeRequiredEvidence,
   verifySmokeReadyEvidence,
   waitForEvidence,
   waitForSmokeAcknowledgement,
   validateArtifactContract,
   parseWindowsPeMachine,
   buildPackagedSmokeLaunch,
+  buildPackagedSmokeEnvironment,
   waitForPackagedExit,
   waitForEvidenceWithExitGrace,
   removeSmokeUserData,

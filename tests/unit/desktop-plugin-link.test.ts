@@ -128,6 +128,31 @@ describe("official Harness plugin installation", () => {
     expect(runCommand).not.toHaveBeenCalled();
   });
 
+  it("does not invoke the official plugin CLI for an empty reconciliation roster", async () => {
+    const root = await mkdtemp(join(tmpdir(), "dsh-plugin-empty-roster-"));
+    const runCommand = vi.fn<OfficialCommandRunner>(() => ({
+      status: 0,
+      stdout: "",
+      stderr: "",
+    }));
+
+    await expect(
+      ensureOfficialHarnessInstall({
+        dshEntry: "/packages/node_modules/@deepseek-ai/dsh/lib/bin.js",
+        dshHome: join(root, "home"),
+        nodeExecutable: "/usr/bin/node",
+        pnpmEntry: "/resources/node-runtime/pnpm.mjs",
+        pnpmStoreDir: "/app-data/node-runtime/pnpm-store",
+        runtimeBinRoot: join(root, "app-data", "runtime-bin"),
+        integratedPlugins: [],
+        legacyPluginSpecs: [],
+        runCommand,
+      }),
+    ).resolves.toEqual({ status: "unchanged", packages: [] });
+
+    expect(runCommand).not.toHaveBeenCalled();
+  });
+
   it("adopts a complete legacy profile without rerunning the plugin CLI", async () => {
     const root = await mkdtemp(join(tmpdir(), "dsh-plugin-legacy-warm-"));
     const dshHome = join(root, "home");
@@ -540,7 +565,7 @@ describe("official Harness plugin installation", () => {
     });
 
     expect(result.status).toBe("installed");
-    expect(runCommand).toHaveBeenCalledTimes(2);
+    expect(runCommand).toHaveBeenCalledTimes(1);
     expect(
       JSON.parse(await readFile(join(profileRoot, "package.json"), "utf8")),
     ).toEqual({
@@ -974,6 +999,11 @@ describe("official Harness plugin installation", () => {
       "desktop-plugin",
       "deepseek-harness-desktop-plugin",
     );
+    const modeBoost = await createPlugin(
+      root,
+      "mode-boost",
+      "@dsh-external/dsh-mode-boost",
+    );
     const profileModules = join(dshHome, "profiles", "web", "node_modules");
     await mkdir(profileModules, { recursive: true });
     await writeFile(
@@ -1007,16 +1037,51 @@ describe("official Harness plugin installation", () => {
           packageName: "deepseek-harness-desktop-plugin",
           packageRoot: desktopPlugin,
         },
+        {
+          packageName: "@dsh-external/dsh-mode-boost",
+          packageRoot: modeBoost,
+        },
       ],
-      legacyPluginSpecs: [],
+      legacyPluginSpecs: [
+        {
+          packageName: "legacy-user-plugin",
+          installSpec: "legacy-user-plugin@1.2.3",
+        },
+      ],
       runCommand,
     });
 
     expect(result).toEqual({
       status: "installed",
-      packages: ["deepseek-harness-desktop-plugin"],
+      packages: [
+        "legacy-user-plugin",
+        "deepseek-harness-desktop-plugin",
+        "@dsh-external/dsh-mode-boost",
+      ],
     });
     expect(runCommand).toHaveBeenCalledTimes(2);
+    expect(runCommand.mock.calls.map(([, args]) => args)).toEqual([
+      [
+        "/packages/node_modules/@deepseek-ai/dsh/lib/bin.js",
+        "plugin",
+        "--profile",
+        "web",
+        "add",
+        "legacy-user-plugin@1.2.3",
+        await realpath(desktopPlugin),
+        await realpath(modeBoost),
+      ],
+      [
+        "/packages/node_modules/@deepseek-ai/dsh/lib/bin.js",
+        "plugin",
+        "--profile",
+        "web",
+        "add",
+        "legacy-user-plugin@1.2.3",
+        await realpath(desktopPlugin),
+        await realpath(modeBoost),
+      ],
+    ]);
     await expect(stat(profileModules)).rejects.toThrow();
   });
 
@@ -1076,7 +1141,7 @@ describe("official Harness plugin installation", () => {
         "@dsh-external/dsh-mode-boost",
       ],
     });
-    expect(runCommand).toHaveBeenCalledTimes(3);
+    expect(runCommand).toHaveBeenCalledTimes(1);
     expect(runCommand.mock.calls[0]?.[1]).toEqual([
       "/user-data/node-runtime/packages/node_modules/@deepseek-ai/dsh/lib/bin.js",
       "plugin",
@@ -1084,8 +1149,10 @@ describe("official Harness plugin installation", () => {
       "web",
       "add",
       "legacy-user-plugin@1.2.3",
+      await realpath(desktopPlugin),
+      await realpath(modeBoost),
     ]);
-    expect(runCommand.mock.calls[1]?.slice(0, 2)).toEqual([
+    expect(runCommand.mock.calls[0]?.slice(0, 2)).toEqual([
       "/usr/bin/node",
       [
         "/user-data/node-runtime/packages/node_modules/@deepseek-ai/dsh/lib/bin.js",
@@ -1093,10 +1160,12 @@ describe("official Harness plugin installation", () => {
         "--profile",
         "web",
         "add",
+        "legacy-user-plugin@1.2.3",
         await realpath(desktopPlugin),
+        await realpath(modeBoost),
       ],
     ]);
-    const options = runCommand.mock.calls[1]?.[2];
+    const options = runCommand.mock.calls[0]?.[2];
     expect(options).toMatchObject({
       shell: false,
       env: {
@@ -1169,6 +1238,130 @@ describe("official Harness plugin installation", () => {
     ).rejects.toThrow(
       "official plugin installation failed for expected-package (exit 17)",
     );
+  });
+
+  it("retries a failed batch once and reports every package with a capped diagnostic", async () => {
+    const root = await mkdtemp(join(tmpdir(), "dsh-plugin-batch-error-"));
+    const firstPlugin = await createPlugin(
+      root,
+      "first-plugin",
+      "first-plugin",
+    );
+    const secondPlugin = await createPlugin(
+      root,
+      "second-plugin",
+      "second-plugin",
+    );
+    const stderr = "x".repeat(2_100);
+    const runCommand = vi.fn<OfficialCommandRunner>(() => ({
+      status: 17,
+      stdout: "",
+      stderr,
+    }));
+
+    const errorMessage = await ensureOfficialHarnessInstall({
+      dshEntry: "/app/dsh.js",
+      dshHome: join(root, "home"),
+      nodeExecutable: "/usr/bin/node",
+      pnpmEntry: "/app/pnpm.mjs",
+      pnpmStoreDir: join(root, "pnpm-store"),
+      runtimeBinRoot: join(root, "runtime-bin"),
+      integratedPlugins: [
+        { packageName: "first-plugin", packageRoot: firstPlugin },
+        { packageName: "second-plugin", packageRoot: secondPlugin },
+      ],
+      legacyPluginSpecs: [],
+      runCommand,
+    }).then(
+      () => "unexpected success",
+      (error: unknown) =>
+        error instanceof Error ? error.message : String(error),
+    );
+    expect(errorMessage).toContain(
+      "official plugin installation failed for first-plugin, second-plugin (exit 17)",
+    );
+    expect(runCommand).toHaveBeenCalledTimes(2);
+    expect(errorMessage.endsWith("x".repeat(2_000))).toBe(true);
+    expect(errorMessage).not.toContain("x".repeat(2_001));
+  });
+
+  it("redacts sensitive stderr before including it in an official plugin failure", async () => {
+    const root = await mkdtemp(join(tmpdir(), "dsh-plugin-redacted-stderr-"));
+    const plugin = await createPlugin(root, "plugin", "redacted-plugin");
+    const runCommand = vi.fn<OfficialCommandRunner>(() => ({
+      status: 17,
+      stderr:
+        "Authorization: Bearer authorization-secret cookie=session-secret api_key=api-key-secret password=password-secret secret=generic-secret token=token-secret https://user:synthetic-credential@host.example/plugin.git git+https://user:synthetic-credential@host.example/plugin.git",
+    }));
+
+    const errorMessage = await ensureOfficialHarnessInstall({
+      dshEntry: "/app/dsh.js",
+      dshHome: join(root, "home"),
+      nodeExecutable: "/usr/bin/node",
+      pnpmEntry: "/app/pnpm.mjs",
+      pnpmStoreDir: join(root, "pnpm-store"),
+      runtimeBinRoot: join(root, "runtime-bin"),
+      integratedPlugins: [
+        { packageName: "redacted-plugin", packageRoot: plugin },
+      ],
+      legacyPluginSpecs: [],
+      runCommand,
+    }).then(
+      () => "unexpected success",
+      (error: unknown) =>
+        error instanceof Error ? error.message : String(error),
+    );
+
+    expect(errorMessage).toContain("[REDACTED]");
+    for (const secret of [
+      "authorization-secret",
+      "session-secret",
+      "api-key-secret",
+      "password-secret",
+      "generic-secret",
+      "token-secret",
+      "user",
+      "synthetic-credential",
+      "host.example",
+    ]) {
+      expect(errorMessage).not.toContain(secret);
+    }
+    expect(runCommand).toHaveBeenCalledTimes(2);
+  });
+
+  it("redacts and bounds a failed official plugin spawn error message", async () => {
+    const root = await mkdtemp(join(tmpdir(), "dsh-plugin-redacted-error-"));
+    const plugin = await createPlugin(root, "plugin", "redacted-plugin");
+    const rawMessage = `${"x".repeat(1_990)}token=tail`;
+    expect(rawMessage).toHaveLength(2_000);
+    const runCommand = vi.fn<OfficialCommandRunner>(() => ({
+      status: null,
+      error: new Error(rawMessage),
+    }));
+
+    const errorMessage = await ensureOfficialHarnessInstall({
+      dshEntry: "/app/dsh.js",
+      dshHome: join(root, "home"),
+      nodeExecutable: "/usr/bin/node",
+      pnpmEntry: "/app/pnpm.mjs",
+      pnpmStoreDir: join(root, "pnpm-store"),
+      runtimeBinRoot: join(root, "runtime-bin"),
+      integratedPlugins: [
+        { packageName: "redacted-plugin", packageRoot: plugin },
+      ],
+      legacyPluginSpecs: [],
+      runCommand,
+    }).then(
+      () => "unexpected success",
+      (error: unknown) =>
+        error instanceof Error ? error.message : String(error),
+    );
+
+    const diagnostic = errorMessage.slice(errorMessage.indexOf(": ") + 2);
+    expect(diagnostic).toContain("token=[");
+    expect(errorMessage).not.toContain("token=tail");
+    expect(diagnostic.length).toBeLessThanOrEqual(2_000);
+    expect(runCommand).toHaveBeenCalledTimes(2);
   });
 });
 

@@ -267,6 +267,23 @@ describe("DeepSeek Harness Code distribution contract", () => {
     expect(workflow).toContain("Validate tag version");
     expect(workflow).toContain('if [[ "$GITHUB_REF" == refs/tags/* ]]');
     expect(workflow).toContain("SMOKE_TIMEOUT_MS: 600000");
+    for (const [label, runner] of [
+      ["windows-x64", "windows-2025"],
+      ["windows-arm64", "windows-11-arm"],
+      ["linux-x64", "ubuntu-24.04"],
+      ["linux-arm64", "ubuntu-24.04-arm"],
+      ["macos-universal", "macos-15"],
+    ]) {
+      const matrixEntry = workflow.slice(
+        workflow.indexOf(`          - label: ${label}`),
+        workflow.indexOf(
+          "            command:",
+          workflow.indexOf(`          - label: ${label}`),
+        ),
+      );
+      expect(matrixEntry).toContain(`os: ${runner}`);
+    }
+    expect(smokeScript).toContain("runtime.readyDurationMs");
     expect(workflow).toContain(
       'executable="$squashfs_root/deepseek-harness-code"',
     );
@@ -277,6 +294,7 @@ describe("DeepSeek Harness Code distribution contract", () => {
     expect(workflow).toContain("${{ matrix.package-kind }}");
     expect(workflow).toContain("${{ matrix.expected-architecture }}");
     expect(workflow).toContain("--artifact-filename");
+    expect(workflow).toContain("--runner-architecture");
     expect(workflow).toContain("--evidence-root");
     expect(workflow).toContain("--evidence");
     expect(workflow).toContain("pnpm smoke:package");
@@ -316,6 +334,55 @@ describe("DeepSeek Harness Code distribution contract", () => {
     expect(smokeScript).toContain('child.stdout?.on("data"');
     expect(smokeScript).toContain('child.stderr?.on("data"');
     expect(smokeScript).toContain("redactPackagedDiagnostic");
+  });
+
+  test("launches every package on its native runner before release", async () => {
+    const workflow = await readProjectFile(".github/workflows/package.yml");
+    const windowsStep = workflow.slice(
+      workflow.indexOf("      - name: Smoke test Windows package"),
+      workflow.indexOf("      - name: Verify macOS Universal DMG"),
+    );
+    const appImageStep = workflow.slice(
+      workflow.indexOf(
+        "      - name: Extract and smoke test Linux AppImage package",
+      ),
+      workflow.indexOf(
+        "      - name: Install and smoke test Linux deb package",
+      ),
+    );
+    const debStep = workflow.slice(
+      workflow.indexOf(
+        "      - name: Install and smoke test Linux deb package",
+      ),
+      workflow.indexOf("      - name: Upload installer artifacts"),
+    );
+    const macosSmokeJob = workflow.slice(
+      workflow.indexOf("  macos-smoke:"),
+      workflow.indexOf("  release:"),
+    );
+    const releaseJob = workflow.slice(workflow.indexOf("  release:"));
+
+    expect(windowsStep).toContain(
+      "if: matrix.label == 'windows-x64' || matrix.label == 'windows-arm64'",
+    );
+    expect(appImageStep).toContain(
+      "if: matrix.label == 'linux-x64' || matrix.label == 'linux-arm64'",
+    );
+    expect(debStep).toContain(
+      "if: matrix.label == 'linux-x64' || matrix.label == 'linux-arm64'",
+    );
+    expect(macosSmokeJob).toContain("runs-on: ${{ matrix.os }}");
+    expect(macosSmokeJob).toContain("os: macos-15");
+    expect(macosSmokeJob).toContain("os: macos-15-intel");
+    expect(macosSmokeJob).toContain("name: macos-universal");
+    expect(macosSmokeJob).toContain("hdiutil attach");
+    expect(macosSmokeJob).toContain("ditto");
+    expect(macosSmokeJob).toContain("pnpm smoke:package");
+    expect(macosSmokeJob).toContain("--expected-architecture universal");
+    expect(macosSmokeJob).toContain(
+      "--runner-architecture ${{ matrix.runner-architecture }}",
+    );
+    expect(releaseJob).toContain("needs: [package, macos-smoke]");
   });
 
   test("parses the package workflow as YAML", async () => {
