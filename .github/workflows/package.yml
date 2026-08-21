@@ -106,137 +106,57 @@ jobs:
         shell: pwsh
         run: |
           $ErrorActionPreference = "Stop"
+          . (Join-Path $env:GITHUB_WORKSPACE "scripts/package-smoke-windows.ps1")
           $artifact = Get-Item $env:ARTIFACT
           $install = Join-Path $env:RUNNER_TEMP "deepseek-harness-install"
           $primaryFailure = $null
           $cleanupFailures = @()
-          $nodeMoves = @()
-          $actualInstallRoots = [Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
-          [void]$actualInstallRoots.Add([IO.Path]::GetFullPath($install))
-
-          function Hide-SystemNodeCandidates($candidates) {
-            $index = 0
-            foreach ($candidate in $candidates) {
-              $index += 1
-              $hidden = "$candidate.deepseek-smoke-$env:GITHUB_RUN_ID-$PID-$index"
-              if (Test-Path -LiteralPath $hidden) { throw "node quarantine destination already exists (candidate $index)" }
-              try {
-                Move-Item -LiteralPath $candidate -Destination $hidden -ErrorAction Stop
-                $script:nodeMoves += [pscustomobject]@{ Original = $candidate; Hidden = $hidden; Index = $index }
-              } catch {
-                throw "failed to quarantine Node candidate $index"
-              }
-            }
-          }
-
-          function Restore-SystemNodeCandidates {
-            $restoreFailures = 0
-            for ($index = $script:nodeMoves.Count - 1; $index -ge 0; $index -= 1) {
-              $move = $script:nodeMoves[$index]
-              try {
-                if (-not (Test-Path -LiteralPath $move.Hidden)) { throw "hidden candidate missing" }
-                if (Test-Path -LiteralPath $move.Original) { throw "original candidate already exists" }
-                Move-Item -LiteralPath $move.Hidden -Destination $move.Original -ErrorAction Stop
-              } catch {
-                $restoreFailures += 1
-              }
-            }
-            $script:nodeMoves = @()
-            if ($restoreFailures -ne 0) { throw "node quarantine cleanup failed ($restoreFailures candidates)" }
-          }
-
-          function Get-RegisteredInstallRoots {
-            $roots = [Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
-            $registryPaths = @(
-              "HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\*",
-              "HKCU:\Software\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\*"
-            )
-            $entries = @(Get-ItemProperty -Path $registryPaths -ErrorAction SilentlyContinue | Where-Object { $_.DisplayName -eq "DeepSeek Harness Code" })
-            foreach ($entry in $entries) {
-              $candidate = [string]$entry.InstallLocation
-              if ([string]::IsNullOrWhiteSpace($candidate)) {
-                $command = [string]$entry.UninstallString
-                $uninstallerPath = $null
-                if ($command -match '^\s*"([^"]+\.exe)"') {
-                  $uninstallerPath = $Matches[1]
-                } elseif ($command -match '^\s*(.+?\.exe)(?:\s|$)') {
-                  $uninstallerPath = $Matches[1].Trim('"')
-                }
-                if (-not [string]::IsNullOrWhiteSpace($uninstallerPath)) {
-                  $candidate = Split-Path -Parent $uninstallerPath
-                }
-              }
-              if (-not [string]::IsNullOrWhiteSpace($candidate)) {
-                try {
-                  $fullRoot = [IO.Path]::GetFullPath($candidate)
-                  if (Test-Path -LiteralPath $fullRoot -PathType Container) { [void]$roots.Add($fullRoot) }
-                } catch {
-                  throw "registered install root was invalid"
-                }
-              }
-            }
-            return @($roots)
-          }
+          $nodeMoves = New-DhscNodeMoveList
+          $installedApplication = $null
 
           New-Item -ItemType Directory -Force $install, $env:EVIDENCE_ROOT | Out-Null
           try {
             $installer = Start-Process -PassThru -Wait -FilePath $artifact.FullName -ArgumentList "/S", "/D=$install"
             if ($installer.ExitCode -ne 0) { throw "installer.ExitCode -eq 0 required, got $($installer.ExitCode)" }
-            $customExecutables = @(Get-ChildItem -LiteralPath $install -Filter "DeepSeek Harness Code.exe" -File -Recurse)
-            if ($customExecutables.Count -eq 0) {
-              foreach ($root in @(Get-RegisteredInstallRoots)) { [void]$actualInstallRoots.Add($root) }
-            }
-            $executables = @(
-              foreach ($root in $actualInstallRoots) {
-                if (Test-Path -LiteralPath $root -PathType Container) {
-                  Get-ChildItem -LiteralPath $root -Filter "DeepSeek Harness Code.exe" -File -Recurse
-                }
-              }
-            ) | Sort-Object FullName -Unique
-            if ($executables.Count -ne 1) { throw "expected exactly one installed executable, found $($executables.Count) across $($actualInstallRoots.Count) resolved roots" }
-            $executable = $executables[0]
-            $resources = Join-Path $executable.DirectoryName "resources"
-            if (-not (Test-Path $resources -PathType Container)) { throw "installed application resources were not found" }
+            $registryEntries = @(Get-DhscUninstallRegistryEntries)
+            $installedApplication = Resolve-DhscInstalledApplication -CustomRoot $install -RegistryEntries $registryEntries -LocalAppData $env:LOCALAPPDATA
+            $executable = Get-Item -LiteralPath $installedApplication.Executable
+            $resources = $installedApplication.Resources
             $hash = (Get-FileHash $artifact.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
             pnpm smoke:package -- --scenario runtime --matrix-label $env:MATRIX_LABEL --package-kind $env:PACKAGE_KIND --expected-architecture $env:EXPECTED_ARCHITECTURE --runner-architecture $env:EXPECTED_ARCHITECTURE --artifact-filename $env:ARTIFACT_FILENAME --executable $executable.FullName --resources $resources --inventory $executable.DirectoryName --artifact $artifact.FullName --artifact-sha256 $hash --evidence-root $env:EVIDENCE_ROOT --evidence (Join-Path $env:EVIDENCE_ROOT "smoke-evidence-windows.json")
             if ($LASTEXITCODE -ne 0) { throw "package smoke failed with exit code $LASTEXITCODE" }
             $nodePlan = @(node scripts/smoke-packaged-runtime.mjs --print-node-quarantine-paths)
             if ($LASTEXITCODE -ne 0) { throw "node quarantine planning failed" }
-            Hide-SystemNodeCandidates $nodePlan
+            Hide-DhscNodeCandidates -Candidates $nodePlan -Moves $nodeMoves -RunToken "$env:GITHUB_RUN_ID-$PID"
             pnpm smoke:package -- --scenario node-required --matrix-label $env:MATRIX_LABEL --package-kind $env:PACKAGE_KIND --expected-architecture $env:EXPECTED_ARCHITECTURE --runner-architecture $env:EXPECTED_ARCHITECTURE --artifact-filename $env:ARTIFACT_FILENAME --executable $executable.FullName --resources $resources --inventory $executable.DirectoryName --artifact $artifact.FullName --artifact-sha256 $hash --evidence-root $env:EVIDENCE_ROOT --evidence (Join-Path $env:EVIDENCE_ROOT "smoke-evidence-windows-node-required.json")
             if ($LASTEXITCODE -ne 0) { throw "package node-required smoke failed with exit code $LASTEXITCODE" }
           } catch {
             $primaryFailure = $_
           } finally {
             try {
-              Restore-SystemNodeCandidates
+              Restore-DhscNodeCandidates -Moves $nodeMoves
             } catch {
               $cleanupFailures += [Exception]::new("node quarantine cleanup failed")
             }
-            try {
-              $uninstallers = @(
-                foreach ($root in $actualInstallRoots) {
-                  if (Test-Path -LiteralPath $root -PathType Container) {
-                    Get-ChildItem -LiteralPath $root -Filter "Uninstall DeepSeek Harness Code.exe" -File -Recurse
-                  }
-                }
-              ) | Sort-Object FullName -Unique
-              if ($uninstallers.Count -ne 1) { throw "expected exactly one uninstaller, found $($uninstallers.Count) across $($actualInstallRoots.Count) resolved roots" }
-              $uninstaller = Start-Process -PassThru -Wait -FilePath $uninstallers[0].FullName -ArgumentList "/S"
-              if ($uninstaller.ExitCode -ne 0) { throw "uninstaller.ExitCode -eq 0 required, got $($uninstaller.ExitCode)" }
-            } catch {
-              $cleanupFailures += [Exception]::new("installed application uninstall failed")
-            }
-            foreach ($root in $actualInstallRoots) {
+            if ($null -ne $installedApplication) {
               try {
-                if (Test-Path -LiteralPath $root) { Remove-Item -LiteralPath $root -Recurse -Force }
+                $uninstaller = Start-Process -PassThru -Wait -FilePath $installedApplication.Uninstaller -ArgumentList "/S"
+                if ($uninstaller.ExitCode -ne 0) { throw "uninstaller.ExitCode -eq 0 required, got $($uninstaller.ExitCode)" }
               } catch {
-                $cleanupFailures += [Exception]::new("resolved install root cleanup failed")
+                $cleanupFailures += [Exception]::new("installed application uninstall failed")
               }
             }
-            $remainingRoots = @($actualInstallRoots | Where-Object { Test-Path -LiteralPath $_ })
-            if ($remainingRoots.Count -ne 0) {
-              $cleanupFailures += [Exception]::new("resolved install roots remained after cleanup ($($remainingRoots.Count))")
+            try {
+              Remove-DhscRunnerOwnedCustomRoot -CustomRoot $install -RunnerTemp $env:RUNNER_TEMP
+            } catch {
+              $cleanupFailures += [Exception]::new("runner-owned custom root cleanup failed")
+            }
+            if ($null -ne $installedApplication -and $installedApplication.Source -eq "registry") {
+              try {
+                Assert-DhscInstalledApplicationRemoved -Application $installedApplication
+              } catch {
+                $cleanupFailures += [Exception]::new("registered install root remained after uninstall")
+              }
             }
           }
           foreach ($cleanupFailure in $cleanupFailures) {

@@ -433,10 +433,10 @@ describe("DeepSeek Harness Code distribution contract", () => {
     // When
     const windowsFinally = windowsStep.slice(windowsStep.indexOf("finally {"));
     const uninstallAttempt = windowsFinally.indexOf(
-      'Start-Process -PassThru -Wait -FilePath $uninstallers[0].FullName -ArgumentList "/S"',
+      'Start-Process -PassThru -Wait -FilePath $installedApplication.Uninstaller -ArgumentList "/S"',
     );
     const forcedRemoval = windowsFinally.indexOf(
-      "Remove-Item -LiteralPath $root -Recurse -Force",
+      "Remove-DhscRunnerOwnedCustomRoot",
     );
 
     // Then
@@ -444,7 +444,7 @@ describe("DeepSeek Harness Code distribution contract", () => {
     expect(windowsStep).toContain(
       'if ($LASTEXITCODE -ne 0) { throw "package smoke failed with exit code $LASTEXITCODE" }',
     );
-    expect(windowsFinally).toContain("foreach ($root in $actualInstallRoots)");
+    expect(windowsFinally).toContain("Assert-DhscInstalledApplicationRemoved");
     expect(windowsFinally).not.toContain("if ($installSucceeded)");
     expect(uninstallAttempt).toBeGreaterThan(-1);
     expect(windowsFinally).toContain("uninstaller.ExitCode -eq 0");
@@ -510,7 +510,7 @@ describe("DeepSeek Harness Code distribution contract", () => {
     for (const step of steps) {
       const runtime = step.indexOf("--scenario runtime");
       const hide = Math.max(
-        step.indexOf("Hide-SystemNodeCandidates $nodePlan"),
+        step.indexOf("Hide-DhscNodeCandidates -Candidates $nodePlan"),
         step.indexOf('hide_system_node_candidates "${node_candidates[@]}"'),
       );
       const nodeRequired = step.indexOf("--scenario node-required");
@@ -519,11 +519,16 @@ describe("DeepSeek Harness Code distribution contract", () => {
       expect(nodeRequired).toBeGreaterThan(hide);
       expect(step).toContain("--print-node-quarantine-paths");
       expect(step).toMatch(
-        /(?:finally \{|cleanup\(\) \{)[\s\S]*(?:Restore-SystemNodeCandidates|restore_system_node_candidates)/u,
+        /(?:finally \{|cleanup\(\) \{)[\s\S]*(?:Restore-DhscNodeCandidates|restore_system_node_candidates)/u,
       );
     }
     expect(workflow).toContain("node quarantine cleanup failed");
     expect(workflow).not.toContain("SMOKE_FORCE_NODE_MISSING");
+    const windowsStep = steps[0] ?? "";
+    expect(windowsStep).toContain("scripts/package-smoke-windows.ps1");
+    expect(windowsStep).toContain("New-DhscNodeMoveList");
+    expect(windowsStep).not.toContain("function Hide-SystemNodeCandidates");
+    expect(windowsStep).not.toContain("function Restore-SystemNodeCandidates");
   });
 
   test("resolves the exact Windows product install root without scanning LocalAppData", async () => {
@@ -533,25 +538,14 @@ describe("DeepSeek Harness Code distribution contract", () => {
       workflow.indexOf("      - name: Verify macOS Universal DMG"),
     );
 
-    expect(windowsStep).toContain(
-      "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\*",
-    );
-    expect(windowsStep).toContain(
-      "HKCU:\\Software\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\*",
-    );
-    expect(windowsStep).toContain('$_.DisplayName -eq "DeepSeek Harness Code"');
-    expect(windowsStep).toContain("$entry.InstallLocation");
-    expect(windowsStep).toContain("$entry.UninstallString");
-    expect(windowsStep).toContain("[IO.Path]::GetFullPath");
-    expect(windowsStep).toContain("$actualInstallRoots");
-    expect(windowsStep).toContain("expected exactly one installed executable");
-    expect(windowsStep).toContain("expected exactly one uninstaller");
-    expect(windowsStep).toContain(
-      "installed application resources were not found",
-    );
-    expect(windowsStep).toContain("foreach ($root in $actualInstallRoots)");
-    expect(windowsStep).toContain(
-      "resolved install roots remained after cleanup",
+    expect(windowsStep).toContain("scripts/package-smoke-windows.ps1");
+    expect(windowsStep).toContain("Get-DhscUninstallRegistryEntries");
+    expect(windowsStep).toContain("Resolve-DhscInstalledApplication");
+    expect(windowsStep).toContain("Assert-DhscInstalledApplicationRemoved");
+    expect(windowsStep).toContain("Remove-DhscRunnerOwnedCustomRoot");
+    expect(windowsStep).not.toContain("function Get-RegisteredInstallRoots");
+    expect(windowsStep).not.toContain(
+      "Remove-Item -LiteralPath $actualInstallRoot -Recurse",
     );
     expect(windowsStep).not.toMatch(
       /Get-ChildItem[^\n]*\$env:(?:LOCALAPPDATA|USERPROFILE)/iu,
