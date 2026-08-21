@@ -97,6 +97,156 @@ describe("official Harness plugin installation", () => {
     expect(runCommand).toHaveBeenCalledTimes(1);
   });
 
+  it("removes only link-only names from bundles after official reconciliation", async () => {
+    const root = await mkdtemp(join(tmpdir(), "dsh-plugin-link-only-"));
+    const dshHome = join(root, "home");
+    const runtimeBinRoot = join(root, "app-data", "runtime-bin");
+    const linkOnlyPlugin = await createPlugin(
+      root,
+      "subagent-codex",
+      "@deepseek-ai/dsh-subagent-codex",
+    );
+    const regularPlugin = await createPlugin(
+      root,
+      "regular-plugin",
+      "deepseek-harness-desktop-plugin",
+    );
+    const profileRoot = join(dshHome, "profiles", "web");
+    await mkdir(join(profileRoot, "node_modules"), { recursive: true });
+    const profile = {
+      dependencies: {
+        "@deepseek-ai/dsh-subagent-codex": `link:${await realpath(linkOnlyPlugin)}`,
+        "deepseek-harness-desktop-plugin": `link:${await realpath(regularPlugin)}`,
+        "user-plugin": "user-plugin@1.0.0",
+      },
+      dsh: {
+        profile: {
+          bundles: [
+            "user-bundle",
+            "@deepseek-ai/dsh-subagent-codex",
+            "deepseek-harness-desktop-plugin",
+          ],
+        },
+      },
+      userField: { preserved: true },
+    };
+    await writeFile(
+      join(profileRoot, "package.json"),
+      `${JSON.stringify(profile)}\n`,
+    );
+    await writeFile(
+      join(profileRoot, "node_modules", ".modules.yaml"),
+      `${JSON.stringify({ storeDir: "/managed/pnpm-store" })}\n`,
+    );
+    const runCommand = vi.fn<OfficialCommandRunner>(() => ({
+      status: 0,
+      stdout: "",
+      stderr: "",
+    }));
+
+    const result = await ensureOfficialHarnessInstall({
+      dshEntry: "/app/dsh.js",
+      dshHome,
+      nodeExecutable: "/usr/bin/node",
+      pnpmEntry: "/app/pnpm.mjs",
+      pnpmStoreDir: "/managed/pnpm-store",
+      runtimeBinRoot,
+      integratedPlugins: [
+        {
+          packageName: "@deepseek-ai/dsh-subagent-codex",
+          packageRoot: linkOnlyPlugin,
+          linkOnly: true,
+        },
+        {
+          packageName: "deepseek-harness-desktop-plugin",
+          packageRoot: regularPlugin,
+        },
+      ],
+      legacyPluginSpecs: [],
+      runCommand,
+    });
+
+    expect(result.status).toBe("installed");
+    expect(runCommand).toHaveBeenCalledTimes(2);
+    expect(
+      JSON.parse(await readFile(join(profileRoot, "package.json"), "utf8")),
+    ).toEqual({
+      ...profile,
+      dsh: {
+        profile: {
+          bundles: ["user-bundle", "deepseek-harness-desktop-plugin"],
+        },
+      },
+    });
+  });
+
+  it("invalidates a warm marker when a link-only bundle is reintroduced", async () => {
+    const root = await mkdtemp(join(tmpdir(), "dsh-plugin-link-only-marker-"));
+    const dshHome = join(root, "home");
+    const runtimeBinRoot = join(root, "app-data", "runtime-bin");
+    const linkOnlyPlugin = await createPlugin(
+      root,
+      "subagent-codex",
+      "@deepseek-ai/dsh-subagent-codex",
+    );
+    const profileRoot = join(dshHome, "profiles", "web");
+    await mkdir(join(profileRoot, "node_modules"), { recursive: true });
+    const packageRoot = await realpath(linkOnlyPlugin);
+    const writeProfile = async (bundles: string[]) => {
+      await writeFile(
+        join(profileRoot, "package.json"),
+        `${JSON.stringify({
+          dependencies: {
+            "@deepseek-ai/dsh-subagent-codex": `link:${packageRoot}`,
+          },
+          dsh: { profile: { bundles } },
+        })}\n`,
+      );
+    };
+    await writeProfile(["user-bundle"]);
+    await writeFile(
+      join(profileRoot, "node_modules", ".modules.yaml"),
+      `${JSON.stringify({ storeDir: "/managed/pnpm-store" })}\n`,
+    );
+    const runCommand = vi.fn<OfficialCommandRunner>(() => ({
+      status: 0,
+      stdout: "",
+      stderr: "",
+    }));
+    const input = {
+      dshEntry: "/app/dsh.js",
+      dshHome,
+      nodeExecutable: "/usr/bin/node",
+      pnpmEntry: "/app/pnpm.mjs",
+      pnpmStoreDir: "/managed/pnpm-store",
+      runtimeBinRoot,
+      integratedPlugins: [
+        {
+          packageName: "@deepseek-ai/dsh-subagent-codex",
+          packageRoot: linkOnlyPlugin,
+          linkOnly: true,
+        },
+      ],
+      legacyPluginSpecs: [],
+      runCommand,
+    } satisfies Parameters<typeof ensureOfficialHarnessInstall>[0];
+
+    await ensureOfficialHarnessInstall(input);
+    await writeProfile(["user-bundle", "@deepseek-ai/dsh-subagent-codex"]);
+    const result = await ensureOfficialHarnessInstall(input);
+
+    expect(result.status).toBe("installed");
+    expect(runCommand).toHaveBeenCalledTimes(2);
+    expect(
+      JSON.parse(await readFile(join(profileRoot, "package.json"), "utf8")),
+    ).toEqual({
+      dependencies: {
+        "@deepseek-ai/dsh-subagent-codex": `link:${packageRoot}`,
+      },
+      dsh: { profile: { bundles: ["user-bundle"] } },
+    });
+  });
+
   it("reconciles again when a managed package identity changes", async () => {
     const root = await mkdtemp(join(tmpdir(), "dsh-plugin-identity-"));
     const dshHome = join(root, "home");

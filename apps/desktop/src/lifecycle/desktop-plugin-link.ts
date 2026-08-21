@@ -344,6 +344,57 @@ async function profileHasManagedStore(
   }
 }
 
+async function profileHasNoLinkOnlyBundles(
+  profileRoot: string,
+  linkOnlyNames: ReadonlySet<string>,
+): Promise<boolean> {
+  if (linkOnlyNames.size === 0) return true;
+  try {
+    const profile = JSON.parse(
+      await readFile(join(profileRoot, "package.json"), "utf8"),
+    ) as {
+      dsh?: { profile?: { bundles?: unknown } };
+    };
+    const bundles = profile.dsh?.profile?.bundles;
+    return (
+      !Array.isArray(bundles) ||
+      !bundles.some(
+        (name): name is string =>
+          typeof name === "string" && linkOnlyNames.has(name),
+      )
+    );
+  } catch {
+    return false;
+  }
+}
+
+async function removeLinkOnlyBundles(
+  profileRoot: string,
+  linkOnlyNames: ReadonlySet<string>,
+): Promise<void> {
+  if (linkOnlyNames.size === 0) return;
+  try {
+    const profilePath = join(profileRoot, "package.json");
+    const profile = JSON.parse(await readFile(profilePath, "utf8")) as {
+      dsh?: { profile?: { bundles?: unknown } };
+    };
+    const bundles = profile.dsh?.profile?.bundles;
+    if (!Array.isArray(bundles)) return;
+    const filtered = bundles.filter(
+      (name) => typeof name !== "string" || !linkOnlyNames.has(name),
+    );
+    if (filtered.length === bundles.length) return;
+    profile.dsh!.profile!.bundles = filtered;
+    await writeFile(
+      profilePath,
+      `${JSON.stringify(profile, null, 2)}\n`,
+      "utf8",
+    );
+  } catch {
+    // Profile package.json read/write failure is non-fatal.
+  }
+}
+
 async function officialPluginInstallIsUnchanged(input: {
   dshHome: string;
   pnpmStoreDir: string;
@@ -363,14 +414,32 @@ async function officialPluginInstallIsUnchanged(input: {
   ) {
     return false;
   }
-  const dependencies = await readManifestDependencies(
-    join(input.dshHome, "profiles", "web", "package.json"),
-  );
+  let dependencies: Record<string, string>;
+  try {
+    dependencies = await readManifestDependencies(
+      join(input.dshHome, "profiles", "web", "package.json"),
+    );
+  } catch {
+    return false;
+  }
   if (
     input.plugins.some(
       (plugin) =>
         dependencies[plugin.packageName] !== `link:${plugin.packageRoot}`,
     )
+  ) {
+    return false;
+  }
+  const linkOnlyNames = new Set(
+    input.plugins
+      .filter((plugin) => plugin.linkOnly === true)
+      .map((plugin) => plugin.packageName),
+  );
+  if (
+    !(await profileHasNoLinkOnlyBundles(
+      join(input.dshHome, "profiles", "web"),
+      linkOnlyNames,
+    ))
   ) {
     return false;
   }
@@ -508,6 +577,12 @@ export async function ensureOfficialHarnessInstall(
     await installAll();
     void error;
   }
+  const linkOnlyNames = new Set(
+    plugins
+      .filter((plugin) => plugin.linkOnly === true)
+      .map((plugin) => plugin.packageName),
+  );
+  await removeLinkOnlyBundles(profileRoot, linkOnlyNames);
   const markerPayload = officialPluginMarkerPayload(
     input.pnpmStoreDir,
     plugins,
