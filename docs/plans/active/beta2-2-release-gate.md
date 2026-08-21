@@ -11,7 +11,7 @@ read_when: [恢复 Beta 2-2 发布或审计 Beta 1/Beta 2 差异]
 skip_when: [与发布无关的局部代码修改]
 priority: must
 freshness_class: project
-last_verified: 2026-08-21T20:25:00+08:00
+last_verified: 2026-08-21T21:01:00+08:00
 owners: [primary-agent]
 source_of_truth:
   - ../../../.github/workflows/
@@ -287,6 +287,7 @@ tags: [execplan, release, ci, beta2-2]
 
 ## Progress
 
+- 2026-08-21 — Cloud package Run `32482981873` on `main@bb622a1` failed and remains non-acceptance evidence: Linux x64/arm64 runtime smoke passed (arm64 ready in 48,569ms) but both no-Node phases correctly exposed `/usr/local/bin/node`; Windows x64 runtime passed in 302,660ms but its no-Node phase exposed `C:\Program Files\nodejs\node.exe`; Windows arm64 NSIS exited 0 but the requested custom install root contained no app executable; macOS smoke was skipped after the package matrix failed. Root causes are hosted-runner standard Node candidates not being quarantined and the Windows workflow treating NSIS `/D` as authoritative instead of resolving the exact product uninstall registration. Cloud release validation, tag replacement, publication, and retirement remain pending.
 - 2026-08-21 — Read-only audit complete: main CI `32468966137` green; first tag package CI `32468983175` failed at the Windows x64 installed-app ready deadline, so no BETA2-2 Release was created. Four other package jobs were green, but ARM/macOS runtime coverage was incomplete.
 - Task 1 complete — commits `deacad0`, `096fe7d`, and `bddb6f7`; two review-fix rounds addressed diagnostic redaction and the final 2,000-character bound; final task review was clean.
 - Task 2 complete — commits `bfca0f4` and `feb6355`; one review-fix round bound Darwin listener parsing and package architecture to native runners; final task review was clean. Cloud-native execution remains Task 5 evidence.
