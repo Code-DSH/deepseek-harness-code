@@ -31,13 +31,15 @@ function Test-DhscStrictDescendant {
 }
 
 function Get-DhscUninstallRegistryEntries {
+  param([Parameter(Mandatory = $true)][string]$ExpectedDisplayName)
+
   $registryPaths = @(
     "HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\*",
     "HKCU:\Software\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\*"
   )
   return @(
     Get-ItemProperty -Path $registryPaths -ErrorAction SilentlyContinue |
-      Where-Object { $_.DisplayName -eq "DeepSeek Harness Code" }
+      Where-Object { $_.DisplayName -eq $ExpectedDisplayName }
   )
 }
 
@@ -82,7 +84,8 @@ function Resolve-DhscInstalledApplication {
   param(
     [Parameter(Mandatory = $true)][string]$CustomRoot,
     [Parameter(Mandatory = $true)][AllowEmptyCollection()][object[]]$RegistryEntries,
-    [Parameter(Mandatory = $true)][string]$LocalAppData
+    [Parameter(Mandatory = $true)][string]$LocalAppData,
+    [string]$ExpectedDisplayName = "DeepSeek Harness Code"
   )
 
   $canonicalCustomRoot = Get-DhscCanonicalPath $CustomRoot
@@ -95,7 +98,7 @@ function Resolve-DhscInstalledApplication {
   }
 
   $matchingEntries = @(
-    $RegistryEntries | Where-Object { $_.DisplayName -eq "DeepSeek Harness Code" }
+    $RegistryEntries | Where-Object { $_.DisplayName -eq $ExpectedDisplayName }
   )
   if ($matchingEntries.Count -ne 1) {
     throw "expected exactly one app uninstall entry, found $($matchingEntries.Count)"

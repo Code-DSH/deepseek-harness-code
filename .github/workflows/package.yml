@@ -113,13 +113,15 @@ jobs:
           $cleanupFailures = New-DhscCleanupFailureList
           $nodeMoves = New-DhscNodeMoveList
           $installedApplication = $null
+          $packageVersion = (Get-Content -LiteralPath (Join-Path $env:GITHUB_WORKSPACE "package.json") -Raw | ConvertFrom-Json).version
+          $expectedDisplayName = "DeepSeek Harness Code $packageVersion"
 
           New-Item -ItemType Directory -Force $install, $env:EVIDENCE_ROOT | Out-Null
           try {
-            $installer = Start-Process -PassThru -Wait -FilePath $artifact.FullName -ArgumentList "/S", "/D=$install"
+            $installer = Start-Process -PassThru -Wait -FilePath $artifact.FullName -ArgumentList "/S", "/currentuser", "/D=$install"
             if ($installer.ExitCode -ne 0) { throw "installer.ExitCode -eq 0 required, got $($installer.ExitCode)" }
-            $registryEntries = @(Get-DhscUninstallRegistryEntries)
-            $installedApplication = Resolve-DhscInstalledApplication -CustomRoot $install -RegistryEntries $registryEntries -LocalAppData $env:LOCALAPPDATA
+            $registryEntries = @(Get-DhscUninstallRegistryEntries -ExpectedDisplayName $expectedDisplayName)
+            $installedApplication = Resolve-DhscInstalledApplication -CustomRoot $install -RegistryEntries $registryEntries -LocalAppData $env:LOCALAPPDATA -ExpectedDisplayName $expectedDisplayName
             $executable = Get-Item -LiteralPath $installedApplication.Executable
             $resources = $installedApplication.Resources
             $hash = (Get-FileHash $artifact.FullName -Algorithm SHA256).Hash.ToLowerInvariant()

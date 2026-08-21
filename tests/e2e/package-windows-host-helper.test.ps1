@@ -59,6 +59,18 @@ try {
   $registered = Resolve-DhscInstalledApplication -CustomRoot (Join-Path $fixtureRoot "missing-custom") -RegistryEntries @($safeEntry) -LocalAppData $localAppData
   Assert-True ($registered.Source -eq "registry") "safe registered direct root was not accepted"
 
+  $versionedEntry = [pscustomobject]@{
+    DisplayName = "DeepSeek Harness Code 0.1.0-BETA2-2"
+    InstallLocation = $registeredRoot
+    UninstallString = ""
+  }
+  $versioned = Resolve-DhscInstalledApplication -CustomRoot (Join-Path $fixtureRoot "missing-versioned-custom") -RegistryEntries @($versionedEntry) -LocalAppData $localAppData -ExpectedDisplayName "DeepSeek Harness Code 0.1.0-BETA2-2"
+  Assert-True ($versioned.Source -eq "registry") "exact versioned uninstall display name was not accepted"
+
+  Assert-Throws {
+    Resolve-DhscInstalledApplication -CustomRoot (Join-Path $fixtureRoot "missing-wrong-version-custom") -RegistryEntries @($versionedEntry) -LocalAppData $localAppData -ExpectedDisplayName "DeepSeek Harness Code 0.1.0-BETA3"
+  } "wrong version uninstall display name was accepted"
+
   Assert-Throws {
     Resolve-DhscInstalledApplication -CustomRoot (Join-Path $fixtureRoot "missing-custom") -RegistryEntries @($safeEntry, $safeEntry) -LocalAppData $localAppData
   } "duplicate registry entries were accepted"
