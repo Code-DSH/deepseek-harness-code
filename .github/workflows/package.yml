@@ -153,7 +153,7 @@ jobs:
             } catch {
               Add-DhscCaughtCleanupFailure -CleanupFailures $cleanupFailures -ErrorRecord $_
             }
-            if ($null -ne $installedApplication -and $installedApplication.Source -ne "custom") {
+            if ($null -ne $installedApplication -and $installedApplication.Source -eq "registry") {
               try {
                 Assert-DhscInstalledApplicationRemoved -Application $installedApplication
               } catch {

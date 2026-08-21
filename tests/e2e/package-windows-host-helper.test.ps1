@@ -23,21 +23,24 @@ $fixtureRoot = Join-Path ([IO.Path]::GetTempPath()) "dhc-windows-host-helper-$PI
 $localAppData = Join-Path $fixtureRoot "LocalAppData"
 $programsRoot = Join-Path $localAppData "Programs"
 $customRoot = Join-Path $fixtureRoot "runner-owned-custom"
+$nestedCustomRoot = Join-Path $fixtureRoot "runner-owned-parent"
+$nestedAppRoot = Join-Path $nestedCustomRoot "DeepSeek Harness Code"
 $registeredRoot = Join-Path $programsRoot "DeepSeek Harness Code"
 $outsideRoot = Join-Path $fixtureRoot "outside-sentinel"
 $junctionPath = Join-Path $customRoot "outside-junction"
 
 try {
   New-AppLayout $customRoot
+  New-AppLayout $nestedAppRoot
   New-AppLayout $registeredRoot
 
   $custom = Resolve-DhscInstalledApplication -CustomRoot $customRoot -RegistryEntries @() -LocalAppData $localAppData
   Assert-True ($custom.Source -eq "custom") "safe custom direct root was not accepted"
   Assert-True ($custom.Root -eq [IO.Path]::GetFullPath($customRoot)) "custom root was not canonical"
 
-  $programsFallback = Resolve-DhscInstalledApplication -CustomRoot (Join-Path $fixtureRoot "missing-custom") -RegistryEntries @() -LocalAppData $localAppData
-  Assert-True ($programsFallback.Source -eq "programs") "exact Programs fallback was not accepted"
-  Assert-True ($programsFallback.Root -eq [IO.Path]::GetFullPath($registeredRoot)) "Programs fallback root was not canonical"
+  $nestedCustom = Resolve-DhscInstalledApplication -CustomRoot $nestedCustomRoot -RegistryEntries @() -LocalAppData $localAppData
+  Assert-True ($nestedCustom.Source -eq "custom") "installer-appended custom root was not accepted"
+  Assert-True ($nestedCustom.Root -eq [IO.Path]::GetFullPath($nestedAppRoot)) "installer-appended custom root was not canonical"
 
   $wideEntry = [pscustomobject]@{
     DisplayName = "DeepSeek Harness Code"
