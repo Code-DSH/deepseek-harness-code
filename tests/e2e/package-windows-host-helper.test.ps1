@@ -51,11 +51,11 @@ try {
   $customRegistryEntry = [pscustomobject]@{
     DisplayName = "DeepSeek Harness Code"
     InstallLocation = $registryCustomParent
-    UninstallString = ""
+    UninstallString = "`"$(Join-Path $registryCustomRoot 'Uninstall DeepSeek Harness Code.exe')`" /S"
   }
   $customFromRegistry = Resolve-DhscInstalledApplication -CustomRoot $registryCustomParent -RegistryEntries @($customRegistryEntry) -LocalAppData $localAppData
   Assert-True ($customFromRegistry.Source -eq "custom") "registry parent inside runner custom boundary was not accepted"
-  Assert-True ($customFromRegistry.Root -eq [IO.Path]::GetFullPath($registryCustomRoot)) "single nested app layout was not resolved"
+  Assert-True ($customFromRegistry.Root -eq [IO.Path]::GetFullPath($registryCustomRoot)) "InstallLocation and UninstallString did not converge on one layout"
 
   $ambiguousRegistryEntry = [pscustomobject]@{
     DisplayName = "DeepSeek Harness Code"
