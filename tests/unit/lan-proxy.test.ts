@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { createServer, request, type IncomingHttpHeaders } from "node:http";
-import { connect, type AddressInfo } from "node:net";
+import { connect, type AddressInfo, type Socket } from "node:net";
 import { networkInterfaces } from "node:os";
 import type { Duplex } from "node:stream";
 
@@ -183,6 +183,82 @@ function websocketUpgrade(
   });
 }
 
+function openWebsocketTunnel(
+  host: string,
+  port: number,
+  cookie: string,
+): Promise<{ response: string; socket: Socket }> {
+  return new Promise((resolve, reject) => {
+    const socket = connect({ host, port });
+    let response = "";
+    let settled = false;
+    const timer = setTimeout(() => {
+      if (settled) return;
+      settled = true;
+      socket.destroy();
+      reject(new Error("live websocket upgrade timed out"));
+    }, 2_000);
+    socket.setEncoding("utf8");
+    socket.on("error", (error) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      reject(error);
+    });
+    socket.once("close", () => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      reject(new Error("live websocket closed before becoming ready"));
+    });
+    socket.on("data", (chunk: string) => {
+      response += chunk;
+      if (settled || !response.includes("upstream-ready")) return;
+      settled = true;
+      clearTimeout(timer);
+      resolve({ response, socket });
+    });
+    socket.once("connect", () => {
+      socket.write(
+        [
+          "GET /live-socket HTTP/1.1",
+          `Host: ${host}:${port}`,
+          "Connection: Upgrade",
+          "Upgrade: websocket",
+          "Sec-WebSocket-Version: 13",
+          "Sec-WebSocket-Key: bGl2ZS10dW5uZWwta2V5",
+          `Cookie: ${cookie}`,
+          "",
+          "",
+        ].join("\r\n"),
+      );
+    });
+  });
+}
+
+function openHttpStream(
+  url: string | URL,
+  cookie: string,
+): Promise<{ firstChunk: string; socket: Socket }> {
+  return new Promise((resolve, reject) => {
+    let settled = false;
+    const outbound = request(url, { headers: { cookie } }, (response) => {
+      response.once("data", (chunk: Buffer) => {
+        const socket = response.socket;
+        if (settled || socket === null) return;
+        settled = true;
+        resolve({ firstChunk: chunk.toString("utf8"), socket });
+      });
+    });
+    outbound.once("error", (error) => {
+      if (settled) return;
+      settled = true;
+      reject(error);
+    });
+    outbound.end();
+  });
+}
+
 function waitForSocketClose(socket: Duplex): Promise<boolean> {
   if (socket.destroyed) return Promise.resolve(true);
   return new Promise((resolve) => {
@@ -199,7 +275,9 @@ function waitForSocketClose(socket: Duplex): Promise<boolean> {
 
 describe("LAN proxy", () => {
   const upstreamRequests: UpstreamRequest[] = [];
+  const upstreamSockets = new Set<Socket>();
   const upstreamUpgradeSockets = new Set<Duplex>();
+  let activeStreamSocket: Socket | undefined;
   const upstream = createServer((incoming, response) => {
     const chunks: Buffer[] = [];
     incoming.on("data", (chunk: Buffer) => chunks.push(chunk));
@@ -211,6 +289,12 @@ describe("LAN proxy", () => {
         body: Buffer.concat(chunks).toString("utf8"),
       };
       upstreamRequests.push(observed);
+      if (incoming.url === "/stream") {
+        activeStreamSocket = incoming.socket;
+        response.writeHead(200, { "content-type": "text/plain" });
+        response.write("stream-open");
+        return;
+      }
       response.setHeader("content-type", "application/json");
       response.end(JSON.stringify(observed));
     });
@@ -245,6 +329,11 @@ describe("LAN proxy", () => {
     );
   });
 
+  upstream.on("connection", (socket) => {
+    upstreamSockets.add(socket);
+    socket.once("close", () => upstreamSockets.delete(socket));
+  });
+
   beforeAll(async () => {
     const port = await listen(upstream, "127.0.0.1");
     upstreamOrigin = `http://127.0.0.1:${port}`;
@@ -252,6 +341,7 @@ describe("LAN proxy", () => {
 
   beforeEach(async () => {
     upstreamRequests.length = 0;
+    activeStreamSocket = undefined;
     const LanProxyHost = await loadLanProxyHost();
     proxy = new LanProxyHost();
   });
@@ -264,6 +354,8 @@ describe("LAN proxy", () => {
     const closedByProxy = await Promise.all(downstreamClosed);
     for (const socket of upstreamUpgradeSockets) socket.destroy();
     upstreamUpgradeSockets.clear();
+    for (const socket of upstreamSockets) socket.destroy();
+    upstreamSockets.clear();
     expect(closedByProxy.every(Boolean)).toBe(true);
   });
 
@@ -370,6 +462,44 @@ describe("LAN proxy", () => {
     expect(observed?.url).toBe("/socket?visible=yes");
     expect(observed?.headers.host).toBe(new URL(upstreamOrigin).host);
     expect(observed?.headers.cookie).toBeUndefined();
+  });
+
+  it("closes both ends of a live WebSocket tunnel when stopped", async () => {
+    const started = await proxy!.start(upstreamOrigin);
+    const exchanged = await exchangeToken(started.accessUrl);
+    const tunnel = await openWebsocketTunnel(
+      "127.0.0.1",
+      started.port,
+      exchanged.cookie,
+    );
+    const upstreamSocket = [...upstreamUpgradeSockets].at(-1);
+    expect(upstreamSocket).toBeDefined();
+    expect(tunnel.response).toContain("upstream-ready");
+    const clientClosed = waitForSocketClose(tunnel.socket);
+    const upstreamClosed = waitForSocketClose(upstreamSocket!);
+
+    await proxy!.stop();
+
+    expect(await clientClosed).toBe(true);
+    expect(await upstreamClosed).toBe(true);
+  });
+
+  it("terminates an active streaming HTTP response when stopped", async () => {
+    const started = await proxy!.start(upstreamOrigin);
+    const exchanged = await exchangeToken(started.accessUrl);
+    const target = viaLoopback(started.accessUrl);
+    target.pathname = "/stream";
+    target.search = "";
+    const stream = await openHttpStream(target, exchanged.cookie);
+    expect(stream.firstChunk).toBe("stream-open");
+    expect(activeStreamSocket).toBeDefined();
+    const clientClosed = waitForSocketClose(stream.socket);
+    const upstreamClosed = waitForSocketClose(activeStreamSocket!);
+
+    await proxy!.stop();
+
+    expect(await clientClosed).toBe(true);
+    expect(await upstreamClosed).toBe(true);
   });
 
   it("refuses connections after stop and invalidates the old cookie", async () => {

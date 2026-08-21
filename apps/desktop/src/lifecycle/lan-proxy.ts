@@ -2,6 +2,7 @@ import { randomBytes, timingSafeEqual } from "node:crypto";
 import {
   createServer,
   request as requestHttp,
+  type ClientRequest,
   type IncomingHttpHeaders,
   type IncomingMessage,
   type OutgoingHttpHeaders,
@@ -111,6 +112,11 @@ function writeSocketResponse(
   socket.end([`HTTP/1.1 ${status} ${reason}`, ...headers, "", ""].join("\r\n"));
 }
 
+function waitForSocketClose(socket: Duplex): Promise<void> {
+  if (socket.destroyed) return Promise.resolve();
+  return new Promise((resolve) => socket.once("close", resolve));
+}
+
 function isLoopbackOrigin(value: string): URL {
   const origin = new URL(value);
   const loopback =
@@ -127,6 +133,8 @@ export class LanProxyHost {
   private server: Server | undefined;
   private tokenBytes: Buffer | undefined;
   private readonly sockets = new Set<Duplex>();
+  private readonly outboundRequests = new Set<ClientRequest>();
+  private readonly outboundResponses = new Set<IncomingMessage>();
 
   async start(loopbackOrigin: string): Promise<LanProxyStartResult> {
     if (this.server !== undefined) throw new Error("LAN proxy already started");
@@ -138,10 +146,7 @@ export class LanProxyHost {
       this.handleHttp(incoming, response, upstream),
     );
     this.server = server;
-    server.on("connection", (socket) => {
-      this.sockets.add(socket);
-      socket.once("close", () => this.sockets.delete(socket));
-    });
+    server.on("connection", (socket) => this.trackSocket(socket));
     server.on("upgrade", (incoming, socket, head) =>
       this.handleUpgrade(incoming, socket, head, upstream),
     );
@@ -172,17 +177,56 @@ export class LanProxyHost {
     this.invalidateToken();
     const server = this.server;
     this.server = undefined;
+    const socketClosures = [...this.sockets].map(waitForSocketClose);
+    for (const response of this.outboundResponses) response.destroy();
+    for (const request of this.outboundRequests) request.destroy();
     for (const socket of this.sockets) socket.destroy();
+    const serverClosed =
+      server === undefined
+        ? Promise.resolve()
+        : new Promise<void>((resolve, reject) => {
+            server.close((error) => {
+              if (error === undefined) resolve();
+              else reject(error);
+            });
+            server.closeAllConnections();
+          });
+    await Promise.all([serverClosed, ...socketClosures]);
     this.sockets.clear();
-    if (server === undefined) return;
+    this.outboundRequests.clear();
+    this.outboundResponses.clear();
+  }
 
-    await new Promise<void>((resolve, reject) => {
-      server.close((error) => {
-        if (error === undefined) resolve();
-        else reject(error);
-      });
-      server.closeAllConnections();
-    });
+  private trackSocket(socket: Duplex): void {
+    if (this.server === undefined || this.tokenBytes === undefined) {
+      socket.destroy();
+      return;
+    }
+    this.sockets.add(socket);
+    socket.once("close", () => this.sockets.delete(socket));
+  }
+
+  private trackOutboundRequest(outbound: ClientRequest): void {
+    if (this.server === undefined || this.tokenBytes === undefined) {
+      outbound.destroy();
+      return;
+    }
+    this.outboundRequests.add(outbound);
+    outbound.once("close", () => this.outboundRequests.delete(outbound));
+    outbound.once("socket", (socket) => this.trackSocket(socket));
+  }
+
+  private trackOutboundResponse(upstreamResponse: IncomingMessage): void {
+    if (this.server === undefined || this.tokenBytes === undefined) {
+      upstreamResponse.destroy();
+      return;
+    }
+    this.outboundResponses.add(upstreamResponse);
+    const retire = (): void => {
+      this.outboundResponses.delete(upstreamResponse);
+    };
+    upstreamResponse.once("end", retire);
+    upstreamResponse.once("close", retire);
   }
 
   private invalidateToken(): void {
@@ -264,14 +308,21 @@ export class LanProxyHost {
         agent: false,
       },
       (upstreamResponse) => {
+        this.trackOutboundResponse(upstreamResponse);
+        if (upstreamResponse.destroyed) {
+          if (!response.destroyed) response.destroy();
+          return;
+        }
         response.writeHead(
           upstreamResponse.statusCode ?? 502,
           upstreamResponse.statusMessage,
           responseHeaders(upstreamResponse.headers),
         );
+        response.once("close", () => upstreamResponse.destroy());
         upstreamResponse.pipe(response);
       },
     );
+    this.trackOutboundRequest(outbound);
     outbound.once("error", () => {
       if (response.headersSent) response.destroy();
       else {
@@ -320,6 +371,7 @@ export class LanProxyHost {
       headers,
       agent: false,
     });
+    this.trackOutboundRequest(outbound);
     outbound.once(
       "upgrade",
       (upstreamResponse, upstreamSocket, upstreamHead) => {
@@ -328,8 +380,7 @@ export class LanProxyHost {
           socket.destroy();
           return;
         }
-        this.sockets.add(upstreamSocket);
-        upstreamSocket.once("close", () => this.sockets.delete(upstreamSocket));
+        this.trackSocket(upstreamSocket);
         socket.once("end", () => upstreamSocket.destroy());
         socket.once("close", () => upstreamSocket.destroy());
         socket.once("error", () => upstreamSocket.destroy());
