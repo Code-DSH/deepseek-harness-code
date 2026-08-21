@@ -57,6 +57,7 @@ import {
   type SmokeReadyEvidence,
 } from "./lifecycle/smoke-contract.js";
 import { UpdaterHost } from "./lifecycle/updater-host.js";
+import { LanProxyHost } from "./lifecycle/lan-proxy.js";
 import {
   ensureRuntimePackages,
   type NodeRuntimePaths,
@@ -105,6 +106,7 @@ let harnessOrigin = "";
 let healthTimer: ReturnType<typeof setInterval> | undefined;
 let watchdogHost: WatchdogHost | undefined;
 let updaterHost: UpdaterHost | undefined;
+const lanProxyHost = new LanProxyHost();
 let tray: Tray | undefined;
 let preferences: DesktopPreferencesState = { ...DEFAULT_DESKTOP_PREFERENCES };
 let anchoredPresetNotice: RuntimeNotice | undefined;
@@ -1049,6 +1051,11 @@ const lifecycle = hasSingleInstanceLock
 async function shutdownNormally(): Promise<void> {
   let watchdogAcked = false;
   let harnessRetired = false;
+  try {
+    await lanProxyHost.stop();
+  } catch (error) {
+    reportRuntimeFailure(error);
+  }
   try {
     watchdogAcked = (await watchdogHost?.shutdown())?.status === "acknowledged";
   } catch (error) {
