@@ -796,11 +796,12 @@ async function waitForEvidence(path, deadline, runId, phase) {
       )
         return evidence;
     } catch (error) {
-      if (
-        !(error instanceof Error) ||
-        !["ENOENT", "EACCES", undefined].includes(error.code)
-      )
-        throw error;
+      const isTransientEvidenceRead =
+        error instanceof SyntaxError ||
+        (error instanceof Error &&
+          "code" in error &&
+          ["ENOENT", "EACCES"].includes(error.code));
+      if (!isTransientEvidenceRead) throw error;
     }
     await new Promise((resolveDelay) => setTimeout(resolveDelay, 250));
   }

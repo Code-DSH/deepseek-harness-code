@@ -316,6 +316,38 @@ describe("packaged runtime listener selection", () => {
     });
   });
 
+  test("immediately rejects node-required when the same run publishes runtime ready evidence", async () => {
+    const root = await mkdtemp(join(tmpdir(), "dsh-node-remained-"));
+    const path = join(root, "app.json");
+    await writeFile(
+      path,
+      JSON.stringify({
+        schema: 2,
+        runId: "run-node-remained",
+        ready: { phase: "ready" },
+      }),
+    );
+    const started = Date.now();
+    let rejection;
+
+    try {
+      await smokeRuntime.waitForEvidence(
+        path,
+        Date.now() + 1_500,
+        "run-node-remained",
+        "node-required",
+      );
+    } catch (error) {
+      rejection = error;
+    }
+
+    expect(rejection).toBeInstanceOf(Error);
+    expect(rejection.message).toBe(
+      "system Node remained resolvable during node-required smoke",
+    );
+    expect(Date.now() - started).toBeLessThan(300);
+  });
+
   test("retries removal of the isolated smoke user-data directory", async () => {
     let received;
     await removeSmokeUserData("/tmp/isolated-smoke", async (...args) => {
