@@ -16,10 +16,12 @@ from a bundled Harness settings plugin.
   access is disabled until the user turns it on.
 - LAN mode starts a separate Electron-owned reverse proxy on `0.0.0.0` while
   keeping the Harness origin and the Electron renderer on loopback. The proxy
-  creates a cryptographically random session token, accepts it once through a
-  LAN URL, converts it into a strict HttpOnly cookie, then forwards HTTP and
-  WebSocket traffic to loopback only. Disabling LAN mode closes the listener
-  and invalidates the token.
+  keeps a separate cryptographically random session secret and signs a fresh
+  one-time exchange token only when Electron main handles a native Copy
+  action; a newer unused token invalidates the prior one. Redeeming the token
+  produces a strict HttpOnly cookie, then forwards HTTP and WebSocket traffic
+  to loopback only. Disabling LAN mode closes the listener and invalidates all
+  secrets.
 - `dsh-lan-access` is an official-format bundled Web plugin. Its General
   settings row uses a deliberately narrow preload bridge to show LAN status,
   enable/disable access, and request a native copy action. The full
@@ -65,9 +67,10 @@ boundary explicit and never stores the bearer token on disk.
   behavior.
 - Run the full project suite, structural checks, runtime closure checks, and
   platform package CI after the version/tag release.
-- Launch the built macOS app with isolated Harness/App data, use Computer Use
-  to verify the installed LAN plugin row, enable it, authenticate through the
-  reported LAN URL, disable it, and confirm the listener is gone.
+- Launch the built macOS app with isolated Harness/App data and use Computer
+  Use to verify the installed LAN plugin row is present and default-off. The
+  user separately confirmed installation and LAN-plugin testing, so no agent
+  activates the listener through their live UI.
 
 ## Non-goals
 

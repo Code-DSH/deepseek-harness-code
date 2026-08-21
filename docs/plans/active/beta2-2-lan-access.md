@@ -4,7 +4,7 @@
 
 **Goal:** Release `0.1.0-BETA2-2` with opt-in authenticated LAN access, fast warm startup, and no app-created Windows workspace-sandbox bypass.
 
-**Architecture:** Keep Harness loopback-only. A new Electron-owned proxy binds `0.0.0.0` only after the bundled `dsh-lan-access` settings plugin calls a fixed preload IPC capability; every remote request must first exchange a random one-time URL token for a cookie before forwarding to the local Harness. Managed plugin reconciliation gains a release-input marker so unchanged launches skip all serial official CLI invocations.
+**Architecture:** Keep Harness loopback-only. A new Electron-owned proxy binds `0.0.0.0` only after the bundled `dsh-lan-access` settings plugin calls a fixed preload IPC capability; each native Copy action signs a fresh one-time URL token, invalidates any earlier unredeemed token, and a redeemed token yields a cookie before forwarding to the local Harness. Managed plugin reconciliation gains a release-input marker so unchanged launches skip all serial official CLI invocations.
 
 **Tech Stack:** Electron 43, TypeScript, Node HTTP/net/crypto, Vitest, official DSH plugin format.
 
@@ -15,7 +15,7 @@
 - LAN access is disabled by default and must never directly bind Harness to a non-loopback address.
 - Proxy authorization uses `crypto.randomBytes`, timing-safe comparison, an HttpOnly/SameSite cookie, and no token persistence or logging.
 - Electron renderer navigation stays bound to the exact loopback Harness origin.
-- Existing user profile manifests and user-owned plugins are never hand-edited.
+- Existing user profile manifests and user-owned plugins are never hand-edited, except for the narrow post-CLI rc.8 removal of explicitly `linkOnly` duplicate bundle names.
 - Managed package reconciliation remains through `dsh plugin --profile web add` whenever the marker is absent or invalid.
 - The Windows custom Bash tool must use the per-session DSH sandbox policy and reject an out-of-workspace `workdir`.
 
@@ -36,7 +36,7 @@
 - [x] Write regression tests for unchanged warm startup, managed identity/store/profile invalidation, and rc.8 link-only bundle de-duplication.
 - [x] Observe RED before each implementation increment, including the isolated runtime reproduction of duplicate `subagent-codex` loader registration.
 - [x] Add marker digest/read/validate/write helpers plus the narrow link-only bundle compatibility cleanup required by rc.8.
-- [x] Run the focused suite green (18 tests) and receive independent task/re-regression reviews.
+- [x] Run the focused suite green (20 passing, 1 Windows-only fixture skipped locally) and receive independent task/re-regression reviews.
 
 ### Task 2: Add a token-gated `0.0.0.0` LAN proxy
 
@@ -48,12 +48,12 @@
 
 **Interfaces:**
 
-- Produces `LanProxyHost.start(loopbackOrigin)` → `{ port, accessUrl }` and `stop()`.
-- Accepts only the one-time `lanToken` query or a matching HttpOnly cookie before forwarding HTTP/WebSocket traffic to the loopback origin.
+- Produces `LanProxyHost.start(loopbackOrigin)` → `{ port }`, main-process-only `issueAccessUrl()`, and `stop()`.
+- `issueAccessUrl()` signs a fresh one-time `lanToken` query and invalidates any prior unredeemed exchange; the matching HttpOnly cookie then forwards HTTP/WebSocket traffic to the loopback origin.
 
 - [x] Write real local integration tests for rejection, token exchange, header redaction, HTTP/WebSocket forwarding, all-interface binding, listener closure, and active-stream teardown.
 - [x] Observe RED before implementation, then implement the dependency-free proxy and lifecycle tracking.
-- [x] Run the focused proxy suite green (8 tests) and receive independent task/re-review approval.
+- [x] Run the focused proxy suite green with HTTP/WebSocket exchange, rotation, teardown, and replay coverage, then receive independent task/re-review approval.
 
 ### Task 3: Expose only LAN state through the desktop bridge
 
@@ -69,13 +69,13 @@
 
 **Interfaces:**
 
-- Adds `window.deepseekDesktop.lanAccess.get()`, `set({ enabled: boolean })`, and `copyUrl()`.
-- `set()` persists the boolean, starts/stops the proxy, and returns only redacted listener state. `copyUrl()` runs in Electron main and writes the token-bearing URL to the native clipboard without returning it to the renderer.
+- Adds `window.deepseekDesktop.lanAccess.get()`, `set({ enabled: boolean })`, and `copyUrl({ address? })`.
+- `set()` persists the boolean, starts/stops the proxy, and returns only redacted listener state. `copyUrl()` accepts only a current redacted IPv4 address, signs a fresh token-bearing URL in Electron main, and writes it to the native clipboard without returning it to the renderer.
 
 - [x] Write strict schema/IPC/preload/controller tests, including token-redaction and async interleaving cases.
 - [x] Observe RED before implementation.
 - [x] Implement typed bridge actions, main-process-only copy, serialized preferences, and last-command-wins proxy lifecycle integration.
-- [x] Run focused tests green (24 tests) and receive independent task/re-review approval.
+- [x] Run focused tests green with address allowlist, lifecycle serialization, token-redaction, and async-interleaving coverage, then receive independent task/re-review approval.
 
 ### Task 4: Ship the LAN settings plugin
 
@@ -90,7 +90,7 @@
 **Interfaces:**
 
 - `dsh-lan-access` is installed by the official plugin CLI and adds one General settings row.
-- The row is local-only, displays the trusted-LAN warning and active URL, and calls only the typed `lanAccess` bridge.
+- The row is local-only, displays the trusted-LAN warning and selectable redacted addresses (never an active URL), and calls only the typed `lanAccess` bridge.
 
 - [x] Write a failing runtime-closure contract for the official plugin package.
 - [x] Observe RED before the package exists.
