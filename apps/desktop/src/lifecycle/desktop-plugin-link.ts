@@ -314,12 +314,27 @@ function officialPluginMarkerDigest(payload: string): string {
   return createHash("sha256").update(payload).digest("hex");
 }
 
+type OfficialPluginMarkerRead =
+  | { status: "missing" }
+  | { status: "invalid" }
+  | { status: "valid"; marker: OfficialPluginMarker };
+
 async function readOfficialPluginMarker(
   markerPath: string,
-): Promise<OfficialPluginMarker | undefined> {
+): Promise<OfficialPluginMarkerRead> {
+  let content: string;
   try {
-    const parsed = JSON.parse(await readFile(markerPath, "utf8")) as unknown;
-    if (typeof parsed !== "object" || parsed === null) return undefined;
+    content = await readFile(markerPath, "utf8");
+  } catch (error) {
+    return (error as NodeJS.ErrnoException).code === "ENOENT"
+      ? { status: "missing" }
+      : { status: "invalid" };
+  }
+  try {
+    const parsed = JSON.parse(content) as unknown;
+    if (typeof parsed !== "object" || parsed === null) {
+      return { status: "invalid" };
+    }
     const marker = parsed as Partial<OfficialPluginMarker>;
     if (
       marker.schemaVersion !== 2 ||
@@ -330,7 +345,7 @@ async function readOfficialPluginMarker(
       typeof marker.digest !== "string" ||
       !/^[a-f0-9]{64}$/u.test(marker.digest)
     ) {
-      return undefined;
+      return { status: "invalid" };
     }
     const packages = marker.packages;
     if (
@@ -346,7 +361,7 @@ async function readOfficialPluginMarker(
           typeof plugin.linkOnly !== "boolean",
       )
     ) {
-      return undefined;
+      return { status: "invalid" };
     }
     const payload = JSON.stringify({
       schemaVersion: marker.schemaVersion,
@@ -355,10 +370,12 @@ async function readOfficialPluginMarker(
       storeDir: marker.storeDir,
       packages,
     });
-    if (officialPluginMarkerDigest(payload) !== marker.digest) return undefined;
-    return marker as OfficialPluginMarker;
+    if (officialPluginMarkerDigest(payload) !== marker.digest) {
+      return { status: "invalid" };
+    }
+    return { status: "valid", marker: marker as OfficialPluginMarker };
   } catch {
-    return undefined;
+    return { status: "invalid" };
   }
 }
 
@@ -476,27 +493,32 @@ async function removeLinkOnlyBundles(
   }
 }
 
-async function officialPluginInstallIsUnchanged(input: {
+type OfficialPluginInstallState = "unchanged" | "legacy-unchanged";
+
+async function inspectOfficialPluginInstall(input: {
   dshHome: string;
   pnpmStoreDir: string;
   releaseIdentity: string;
   plugins: readonly ResolvedIntegratedHarnessPlugin[];
-}): Promise<boolean> {
-  const marker = await readOfficialPluginMarker(
+}): Promise<OfficialPluginInstallState | undefined> {
+  const markerRead = await readOfficialPluginMarker(
     join(input.dshHome, OFFICIAL_PLUGIN_MARKER),
   );
-  if (marker === undefined) return false;
-  const payload = officialPluginMarkerPayload(
-    input.releaseIdentity,
-    input.pnpmStoreDir,
-    input.plugins,
-  );
-  if (
-    marker.releaseIdentity !== input.releaseIdentity ||
-    marker.storeDir !== resolve(input.pnpmStoreDir) ||
-    marker.digest !== officialPluginMarkerDigest(payload)
-  ) {
-    return false;
+  if (markerRead.status === "invalid") return undefined;
+  const marker = markerRead.status === "valid" ? markerRead.marker : undefined;
+  if (marker !== undefined) {
+    const payload = officialPluginMarkerPayload(
+      input.releaseIdentity,
+      input.pnpmStoreDir,
+      input.plugins,
+    );
+    if (
+      marker.releaseIdentity !== input.releaseIdentity ||
+      marker.storeDir !== resolve(input.pnpmStoreDir) ||
+      marker.digest !== officialPluginMarkerDigest(payload)
+    ) {
+      return undefined;
+    }
   }
   let dependencies: Record<string, string>;
   try {
@@ -504,7 +526,7 @@ async function officialPluginInstallIsUnchanged(input: {
       join(input.dshHome, "profiles", "web", "package.json"),
     );
   } catch {
-    return false;
+    return undefined;
   }
   if (
     input.plugins.some(
@@ -515,7 +537,7 @@ async function officialPluginInstallIsUnchanged(input: {
         ),
     )
   ) {
-    return false;
+    return undefined;
   }
   const linkOnlyNames = new Set(
     input.plugins
@@ -528,11 +550,44 @@ async function officialPluginInstallIsUnchanged(input: {
       linkOnlyNames,
     ))
   ) {
-    return false;
+    return undefined;
   }
-  return profileHasManagedStore(
-    join(input.dshHome, "profiles", "web"),
+  if (
+    !(await profileHasManagedStore(
+      join(input.dshHome, "profiles", "web"),
+      input.pnpmStoreDir,
+    ))
+  ) {
+    return undefined;
+  }
+  return markerRead.status === "missing" ? "legacy-unchanged" : "unchanged";
+}
+
+async function writeOfficialPluginMarker(input: {
+  dshHome: string;
+  pnpmStoreDir: string;
+  releaseIdentity: string;
+  plugins: readonly ResolvedIntegratedHarnessPlugin[];
+}): Promise<void> {
+  const markerPayload = officialPluginMarkerPayload(
+    input.releaseIdentity,
     input.pnpmStoreDir,
+    input.plugins,
+  );
+  const marker: OfficialPluginMarker = {
+    schemaVersion: 2,
+    owner: "deepseek-harness-code",
+    releaseIdentity: input.releaseIdentity,
+    storeDir: resolve(input.pnpmStoreDir),
+    packages: JSON.parse(markerPayload)
+      .packages as OfficialPluginMarker["packages"],
+    digest: officialPluginMarkerDigest(markerPayload),
+  };
+  await mkdir(input.dshHome, { recursive: true });
+  await writeFile(
+    join(input.dshHome, OFFICIAL_PLUGIN_MARKER),
+    `${JSON.stringify(marker, null, 2)}\n`,
+    "utf8",
   );
 }
 
@@ -595,15 +650,24 @@ export async function ensureOfficialHarnessInstall(
     })),
   ];
 
-  if (
-    legacyPluginSpecs.length === 0 &&
-    (await officialPluginInstallIsUnchanged({
-      dshHome: input.dshHome,
-      pnpmStoreDir: input.pnpmStoreDir,
-      releaseIdentity: input.releaseIdentity ?? "unknown",
-      plugins,
-    }))
-  ) {
+  const installState =
+    legacyPluginSpecs.length === 0
+      ? await inspectOfficialPluginInstall({
+          dshHome: input.dshHome,
+          pnpmStoreDir: input.pnpmStoreDir,
+          releaseIdentity: input.releaseIdentity ?? "unknown",
+          plugins,
+        })
+      : undefined;
+  if (installState !== undefined) {
+    if (installState === "legacy-unchanged") {
+      await writeOfficialPluginMarker({
+        dshHome: input.dshHome,
+        pnpmStoreDir: input.pnpmStoreDir,
+        releaseIdentity: input.releaseIdentity ?? "unknown",
+        plugins,
+      });
+    }
     return {
       status: "unchanged",
       packages: installRequests.map((request) => request.packageName),
@@ -685,26 +749,12 @@ export async function ensureOfficialHarnessInstall(
       .map((plugin) => plugin.packageName),
   );
   await removeLinkOnlyBundles(profileRoot, linkOnlyNames);
-  const markerPayload = officialPluginMarkerPayload(
-    input.releaseIdentity ?? "unknown",
-    input.pnpmStoreDir,
-    plugins,
-  );
-  const marker: OfficialPluginMarker = {
-    schemaVersion: 2,
-    owner: "deepseek-harness-code",
+  await writeOfficialPluginMarker({
+    dshHome: input.dshHome,
+    pnpmStoreDir: input.pnpmStoreDir,
     releaseIdentity: input.releaseIdentity ?? "unknown",
-    storeDir: resolve(input.pnpmStoreDir),
-    packages: JSON.parse(markerPayload)
-      .packages as OfficialPluginMarker["packages"],
-    digest: officialPluginMarkerDigest(markerPayload),
-  };
-  await mkdir(input.dshHome, { recursive: true });
-  await writeFile(
-    join(input.dshHome, OFFICIAL_PLUGIN_MARKER),
-    `${JSON.stringify(marker, null, 2)}\n`,
-    "utf8",
-  );
+    plugins,
+  });
   return {
     status: "installed",
     packages: installRequests.map((request) => request.packageName),

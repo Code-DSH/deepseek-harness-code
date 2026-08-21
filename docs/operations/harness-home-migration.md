@@ -33,7 +33,7 @@ On every launch, the sequence is:
 
 1. Resolve the official Home and the retired source at `<Electron userData>/dsh-home`.
 2. Copy only target-absent supported data from the retired source.
-3. Reconcile missing legacy profile dependencies and all integrated plugins through `dsh plugin --profile web add`.
+3. Validate the integrated-plugin profile links, managed pnpm store, and link-only bundle state. A complete profile created by an older release is adopted and receives the current reconciliation marker; only missing or incompatible state reconciles missing legacy profile dependencies and integrated plugins through `dsh plugin --profile web add`.
 4. Synchronize app-owned Superpowers Skills and Agent Presets, plus the Global Agent Prompt.
 5. Start `dsh web` with the same official Home and `--expose-internals`.
 
