@@ -12,6 +12,7 @@ import { join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
 
 import { writeEvidenceAtomically } from "../../apps/desktop/src/lifecycle/atomic-evidence.js";
+import * as smokeContract from "../../apps/desktop/src/lifecycle/smoke-contract.js";
 
 import {
   buildSmokeFinalEvidence,
@@ -38,6 +39,7 @@ const smokeConfig = {
   root: "/tmp",
   userDataPath: "/tmp/smoke-user-data",
   runId: "run-1234",
+  scenario: "runtime" as const,
   ...smokeMetadata,
 };
 
@@ -50,6 +52,30 @@ const smokeEnv = {
   ARTIFACT_SHA256: smokeMetadata.artifactSha256,
   SMOKE_STARTED_AT: smokeMetadata.startedAt,
 };
+
+type NodeRequiredContract = {
+  buildSmokeNodeRequiredEvidence: (
+    config: Omit<typeof smokeConfig, "scenario"> & {
+      scenario: "node-required";
+    },
+    runtime: {
+      platform: NodeJS.Platform;
+      architecture: string;
+      appPid: number;
+    },
+  ) => Record<string, unknown>;
+  resolveSystemNodeForSmokeScenario: <T>(
+    config: typeof smokeConfig | undefined,
+    resolver: () => T,
+  ) => T | undefined;
+};
+
+function nodeRequiredContract(): NodeRequiredContract {
+  const contract = smokeContract as unknown as Partial<NodeRequiredContract>;
+  expect(contract.buildSmokeNodeRequiredEvidence).toBeTypeOf("function");
+  expect(contract.resolveSystemNodeForSmokeScenario).toBeTypeOf("function");
+  return contract as NodeRequiredContract;
+}
 
 describe("application-owned smoke contract", () => {
   it("is disabled unless CI mode and an allowed runtime are both explicit", () => {
@@ -88,9 +114,106 @@ describe("application-owned smoke contract", () => {
       userDataPath: "/tmp/smoke-user-data",
       acknowledgementPath: "/tmp/smoke.json.ack",
       runId: "run-1234",
+      scenario: "runtime",
       ...smokeMetadata,
     });
   });
+
+  it("accepts node-required only for a fully validated packaged smoke", () => {
+    const env = {
+      SMOKE_MODE: "ci",
+      SMOKE_SCENARIO: "node-required",
+      SMOKE_ALLOW_UNPACKAGED: "1",
+      SMOKE_EVIDENCE_ROOT: "/tmp/evidence",
+      SMOKE_EVIDENCE_PATH: "/tmp/evidence/run.json",
+      SMOKE_RUN_ID: "run-node-required",
+      ...smokeEnv,
+      SMOKE_USER_DATA_PATH: "/tmp/evidence/user-data",
+    };
+
+    expect(parseSmokeConfig(env)).toBeUndefined();
+    expect(parseSmokeConfig(env, { isPackaged: true })).toMatchObject({
+      scenario: "node-required",
+      runId: "run-node-required",
+      matrixLabel: "windows-x64",
+      packageKind: "nsis",
+      expectedArchitecture: "x64",
+    });
+    expect(
+      parseSmokeConfig(
+        { ...env, SMOKE_SCENARIO: "download-node" },
+        { isPackaged: true },
+      ),
+    ).toBeUndefined();
+  });
+
+  it("forces Node missing only after node-required passed packaged validation", () => {
+    const contract = nodeRequiredContract();
+    const resolver = vi.fn(() => ({ executable: "/usr/bin/node" }));
+    const nodeRequiredConfig = parseSmokeConfig(
+      {
+        SMOKE_MODE: "ci",
+        SMOKE_SCENARIO: "node-required",
+        SMOKE_EVIDENCE_ROOT: "/tmp/evidence",
+        SMOKE_EVIDENCE_PATH: "/tmp/evidence/run.json",
+        SMOKE_RUN_ID: "run-node-required",
+        ...smokeEnv,
+        SMOKE_USER_DATA_PATH: "/tmp/evidence/user-data",
+      },
+      { isPackaged: true },
+    );
+
+    expect(nodeRequiredConfig).toBeDefined();
+    expect(
+      contract.resolveSystemNodeForSmokeScenario(
+        nodeRequiredConfig as typeof smokeConfig,
+        resolver,
+      ),
+    ).toBeUndefined();
+    expect(resolver).not.toHaveBeenCalled();
+    expect(
+      contract.resolveSystemNodeForSmokeScenario(smokeConfig, resolver),
+    ).toEqual({ executable: "/usr/bin/node" });
+    expect(resolver).toHaveBeenCalledTimes(1);
+  });
+
+  it.each([
+    ["win32", "x64", "https://nodejs.org/dist/v22.13.0/node-v22.13.0-x64.msi"],
+    [
+      "win32",
+      "arm64",
+      "https://nodejs.org/dist/v22.13.0/node-v22.13.0-arm64.msi",
+    ],
+    ["darwin", "arm64", "https://nodejs.org/dist/v22.13.0/node-v22.13.0.pkg"],
+    ["darwin", "x64", "https://nodejs.org/dist/v22.13.0/node-v22.13.0.pkg"],
+    ["linux", "x64", "https://nodejs.org/en/download"],
+    ["linux", "arm64", "https://nodejs.org/en/download"],
+  ] as const)(
+    "builds explicit no-Harness prerequisite evidence for %s %s",
+    (platform, architecture, installerUrl) => {
+      const contract = nodeRequiredContract();
+      const evidence = contract.buildSmokeNodeRequiredEvidence(
+        { ...smokeConfig, scenario: "node-required" },
+        { platform, architecture, appPid: 3001 },
+      );
+
+      expect(evidence).toMatchObject({
+        phase: "node-required",
+        scenario: "node-required",
+        minimumNodeVersion: "22.13.0",
+        installerUrl,
+        platform,
+        architecture,
+        appPid: 3001,
+        packaged: true,
+        harnessStarted: false,
+        listenerObserved: false,
+      });
+      expect(evidence).not.toHaveProperty("harnessOrigin");
+      expect(evidence).not.toHaveProperty("harnessPid");
+      expect(evidence).not.toHaveProperty("listenerPid");
+    },
+  );
 
   it("uses only a validated smoke user-data root", () => {
     expect(
@@ -207,6 +330,7 @@ describe("application-owned smoke contract", () => {
       userDataPath: "/tmp/evidence/user-data",
       acknowledgementPath: "/tmp/evidence/run.json.ack",
       runId: "run-1234",
+      scenario: "runtime",
       ...smokeMetadata,
     });
     expect(
@@ -389,6 +513,7 @@ describe("application-owned smoke contract", () => {
         userDataPath: join(root, "user-data"),
         acknowledgementPath,
         runId: "run-1234",
+        scenario: "runtime",
         ...smokeMetadata,
       },
       {

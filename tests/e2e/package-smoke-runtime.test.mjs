@@ -89,7 +89,120 @@ function validSmokeEvidence(resources) {
   };
 }
 
+function requiredRuntimeExport(name) {
+  const value = smokeRuntime[name];
+  expect(value, `missing packaged smoke export ${name}`).toBeTypeOf("function");
+  return value;
+}
+
+function validNodeRequiredEvidence() {
+  return {
+    schema: 2,
+    runId: "run-1",
+    startedAt: expectedMetadata.startedAt,
+    nodeRequired: {
+      phase: "node-required",
+      scenario: "node-required",
+      minimumNodeVersion: "22.13.0",
+      installerUrl: "https://nodejs.org/dist/v22.13.0/node-v22.13.0-x64.msi",
+      platform: "win32",
+      architecture: "x64",
+      appPid: 7000,
+      packaged: true,
+      harnessStarted: false,
+      listenerObserved: false,
+      ...expectedMetadata,
+      timestamps: { nodeRequiredAt: "2026-08-19T00:00:01.000Z" },
+    },
+  };
+}
+
 describe("packaged runtime listener selection", () => {
+  test("validates node-required evidence separately from Harness runtime evidence", () => {
+    const verifyNodeRequiredEvidence = requiredRuntimeExport(
+      "verifyNodeRequiredEvidence",
+    );
+
+    expect(
+      verifyNodeRequiredEvidence(validNodeRequiredEvidence(), {
+        ...expectedMetadata,
+        platform: "win32",
+        runnerArchitecture: "x64",
+        maxDurationMs: 10 * 60_000,
+      }),
+    ).toEqual({ appPid: 7000, nodeRequiredDurationMs: 1_000 });
+
+    for (const forbidden of ["harnessOrigin", "harnessPid", "listenerPid"]) {
+      const evidence = validNodeRequiredEvidence();
+      evidence.nodeRequired[forbidden] = forbidden.endsWith("Pid")
+        ? 7002
+        : "http://127.0.0.1:41002";
+      expect(() =>
+        verifyNodeRequiredEvidence(evidence, {
+          ...expectedMetadata,
+          platform: "win32",
+          runnerArchitecture: "x64",
+        }),
+      ).toThrow(/Harness|listener|origin|PID/i);
+    }
+
+    for (const mutation of [
+      { minimumNodeVersion: "22.12.0" },
+      { installerUrl: "https://example.com/node.msi" },
+    ]) {
+      const evidence = validNodeRequiredEvidence();
+      Object.assign(evidence.nodeRequired, mutation);
+      expect(() =>
+        verifyNodeRequiredEvidence(evidence, {
+          ...expectedMetadata,
+          platform: "win32",
+          runnerArchitecture: "x64",
+        }),
+      ).toThrow(/official Node installer/i);
+    }
+  });
+
+  test("removes Node lookup managers and hosted Node paths only for node-required", () => {
+    const buildPackagedSmokeEnvironment = requiredRuntimeExport(
+      "buildPackagedSmokeEnvironment",
+    );
+    const env = {
+      PATH: "/opt/hostedtoolcache/node/24.18.0/x64/bin:/usr/local/bin:/usr/bin:/bin",
+      NVM_DIR: "/home/runner/.nvm",
+      VOLTA_HOME: "/home/runner/.volta",
+      FNM_DIR: "/home/runner/.fnm",
+      NODE_OPTIONS: "--require=/tmp/bootstrap.cjs",
+      PNPM_HOME: "/home/runner/.local/share/pnpm",
+      KEEP_ME: "yes",
+    };
+
+    expect(buildPackagedSmokeEnvironment("linux", env, "runtime")).toEqual(env);
+    expect(
+      buildPackagedSmokeEnvironment("linux", env, "node-required"),
+    ).toEqual({
+      PATH: "/usr/local/bin:/usr/bin:/bin",
+      KEEP_ME: "yes",
+    });
+  });
+
+  test("runs runtime and node-required against every installed package form", async () => {
+    const workflow = await readFile(
+      new URL("../../.github/workflows/package.yml", import.meta.url),
+      "utf8",
+    );
+
+    for (const evidenceName of [
+      "smoke-evidence-windows-node-required.json",
+      "smoke-evidence-linux-appimage-node-required.json",
+      "smoke-evidence-linux-deb-node-required.json",
+      "smoke-evidence-${{ matrix.runner-architecture }}-node-required.json",
+    ]) {
+      expect(workflow).toContain(evidenceName);
+    }
+    expect(workflow.match(/--scenario runtime/gu)).toHaveLength(4);
+    expect(workflow.match(/--scenario node-required/gu)).toHaveLength(4);
+  });
+
   test("builds positive resource fixtures with platform path semantics", () => {
     expect(
       fixtureResourcePath(["dsh-lan-access", "package.json"], win32.join),

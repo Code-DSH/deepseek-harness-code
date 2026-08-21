@@ -50,11 +50,13 @@ import { WatchdogHost } from "./lifecycle/watchdog-host.js";
 import { writeEvidenceAtomically } from "./lifecycle/atomic-evidence.js";
 import {
   buildSmokeFinalEvidence,
+  buildSmokeNodeRequiredEvidence,
   buildSmokeReadyEvidence,
   awaitSmokeAcknowledgement,
   completeSmokeShutdown,
   parseSmokeConfig,
   resolveApplicationUserDataPath,
+  resolveSystemNodeForSmokeScenario,
   validateSmokeRuntimeProvenance,
   type SmokeReadyEvidence,
 } from "./lifecycle/smoke-contract.js";
@@ -885,6 +887,42 @@ function createTray(): void {
 }
 
 async function launch(): Promise<void> {
+  if (smokeConfig?.scenario === "node-required") {
+    const systemNode = resolveSystemNodeForSmokeScenario(
+      smokeConfig,
+      resolveSystemNode,
+    );
+    if (systemNode !== undefined) {
+      throw new Error("node-required smoke resolver was not forced to missing");
+    }
+    const nodeRequired = buildSmokeNodeRequiredEvidence(smokeConfig, {
+      platform: process.platform,
+      architecture: process.arch,
+      appPid: process.pid,
+    });
+    await writeSmokeEvidence({
+      schema: 2,
+      runId: smokeConfig.runId,
+      startedAt: smokeStartedAt,
+      nodeRequired,
+    });
+    await awaitSmokeAcknowledgement(
+      {
+        acknowledgementPath: smokeConfig.acknowledgementPath ?? "",
+        runId: smokeConfig.runId,
+        appPid: process.pid,
+        timeoutMs: 30_000,
+        pollIntervalMs: 100,
+      },
+      {
+        now: performance.now.bind(performance),
+        delay: (milliseconds) =>
+          new Promise<void>((resolve) => setTimeout(resolve, milliseconds)),
+        requestQuit: () => queueMicrotask(() => app.quit()),
+      },
+    );
+    return;
+  }
   watchdogHost = new WatchdogHost({
     appPath: app.getAppPath(),
     resourcesPath: process.resourcesPath,
@@ -1036,6 +1074,10 @@ function reportRuntimeFailure(error: unknown): void {
 
 function reportLaunchFailure(error: unknown): void {
   reportRuntimeFailure(error);
+  if (smokeConfig?.scenario === "node-required") {
+    void writeSmokeFailure(error).finally(() => app.exit(1));
+    return;
+  }
   void writeSmokeFailure(error).catch(reportRuntimeFailure);
   const message =
     error instanceof Error
