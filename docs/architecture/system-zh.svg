@@ -1,0 +1,311 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1280" viewBox="0 0 1600 1280" role="img" aria-labelledby="title desc">
+  <title id="title">DeepSeek Harness Code — Code Agent 桌面系统架构</title>
+  <desc id="desc">DeepSeek Harness Code 是 Code Agent 桌面系统。Electron 主进程负责窗口与回环 Harness 子进程生命周期，安全 preload 桥仅暴露 preferences/runtime 两组能力，BrowserWindow 承载 Harness Web 界面并通过官方 Cordis 插件扩展，Harness 以回环子进程运行于系统 Node，提供官方 Home 与会话持久化，Anchored Standard、Prompt Principles、Superpowers、Vision Router 与路由套件塑造 Code Agent 循环，独立 Watchdog 提供有界恢复，Provider 边界保持在 DeepSeek API。</desc>
+  <defs>
+    <style>
+      :root { color-scheme: light dark; }
+      .bg { fill: #f6f8fb; }
+      .frame { fill: none; stroke: #b9c4d6; stroke-width: 1.5; stroke-dasharray: 6 6; rx: 20; }
+      .zone { fill: #ffffff; stroke: #9aa8be; stroke-width: 1.6; rx: 16; }
+      .host { fill: #e8efff; stroke: #2f5aaa; stroke-width: 1.7; rx: 14; }
+      .bridge { fill: #fff7e6; stroke: #b47a00; stroke-width: 1.6; rx: 12; }
+      .web { fill: #e9f8f2; stroke: #1e7a5a; stroke-width: 1.6; rx: 14; }
+      .runtime { fill: #fff2db; stroke: #a46711; stroke-width: 1.6; rx: 14; }
+      .intelligence { fill: #f3ecff; stroke: #6b3fb8; stroke-width: 1.6; rx: 14; }
+      .plugin { fill: #eef2ff; stroke: #4a5ab8; stroke-width: 1.4; rx: 10; }
+      .skill { fill: #fef3e8; stroke: #b45a1a; stroke-width: 1.4; rx: 10; }
+      .guard { fill: #f5eaff; stroke: #7148a6; stroke-width: 1.6; rx: 14; }
+      .data { fill: #edf1f7; stroke: #66768f; stroke-width: 1.5; rx: 14; }
+      .external { fill: #ffecef; stroke: #a9465a; stroke-width: 1.6; rx: 14; }
+      .heading { fill: #0f1e36; font: 700 21px ui-sans-serif, system-ui, -apple-system, sans-serif; letter-spacing: -0.2px; }
+      .subheading { fill: #1e3356; font: 700 14px ui-sans-serif, system-ui, sans-serif; letter-spacing: 0.3px; }
+      .label { fill: #16233d; font: 650 14.5px ui-sans-serif, system-ui, -apple-system, sans-serif; }
+      .label-sm { fill: #16233d; font: 600 12.5px ui-sans-serif, system-ui, sans-serif; }
+      .small { fill: #3d4d66; font: 12px ui-sans-serif, system-ui, sans-serif; }
+      .tiny { fill: #5a6b87; font: 11px ui-sans-serif, system-ui, sans-serif; }
+      .flow { fill: none; stroke: #2f5aaa; stroke-width: 2.2; marker-end: url(#arrow-blue); }
+      .flow-green { fill: none; stroke: #1e7a5a; stroke-width: 2.2; marker-end: url(#arrow-green); }
+      .flow-orange { fill: none; stroke: #a46711; stroke-width: 2.1; marker-end: url(#arrow-orange); }
+      .flow-purple { fill: none; stroke: #7148a6; stroke-width: 2.1; stroke-dasharray: 8 6; marker-end: url(#arrow-purple); }
+      .flow-red { fill: none; stroke: #a9465a; stroke-width: 2; stroke-dasharray: 5 5; marker-end: url(#arrow-red); }
+      .callout { fill: #ffffff; stroke: #2f5aaa; stroke-width: 1.4; rx: 10; }
+      .vision { fill: #0f1e36; font: 700 13.5px ui-sans-serif, system-ui, sans-serif; }
+      .vision-small { fill: #344663; font: 11.5px ui-sans-serif, system-ui, sans-serif; }
+      @media (prefers-color-scheme: dark) {
+        .bg { fill: #0f172a; }
+        .frame { stroke: #3a4a66; }
+        .zone { fill: #172033; stroke: #5a6d8a; }
+        .host { fill: #1c345e; stroke: #8bb0f0; }
+        .bridge { fill: #3a2e12; stroke: #e0a82e; }
+        .web { fill: #163a30; stroke: #5fd0a8; }
+        .runtime { fill: #3f2f10; stroke: #f0bb62; }
+        .intelligence { fill: #2e2250; stroke: #b99af0; }
+        .plugin { fill: #212c5a; stroke: #9aa6f0; }
+        .skill { fill: #3a2312; stroke: #eea86a; }
+        .guard { fill: #2f1f45; stroke: #c49af0; }
+        .data { fill: #223049; stroke: #9aa8be; }
+        .external { fill: #40202a; stroke: #f0a0b0; }
+        .heading, .label, .label-sm, .vision { fill: #eef4ff; }
+        .subheading { fill: #c8d6f0; }
+        .small, .tiny, .vision-small { fill: #c2cfe6; }
+        .callout { fill: #1a2742; stroke: #8bb0f0; }
+      }
+    </style>
+    <marker id="arrow-blue" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto"><path d="M0 0 L10 5 L0 10 Z" fill="#2f5aaa"/></marker>
+    <marker id="arrow-green" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto"><path d="M0 0 L10 5 L0 10 Z" fill="#1e7a5a"/></marker>
+    <marker id="arrow-orange" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto"><path d="M0 0 L10 5 L0 10 Z" fill="#a46711"/></marker>
+    <marker id="arrow-purple" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto"><path d="M0 0 L10 5 L0 10 Z" fill="#7148a6"/></marker>
+    <marker id="arrow-red" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto"><path d="M0 0 L10 5 L0 10 Z" fill="#a9465a"/></marker>
+  </defs>
+
+  <rect class="bg" width="1600" height="1280" rx="0"/>
+
+  <!-- Header -->
+  <rect class="zone" x="24" y="16" width="1552" height="56" rx="16"/>
+  <text class="heading" x="44" y="38">DeepSeek Harness Code — Code Agent 桌面系统</text>
+  <text class="small" x="44" y="58">Electron 43 · @deepseek-ai/dsh@0.1.0-rc.8 · 系统 Node ≥22.13 · 仅回环地址 · pnpm 11.19.0 · asar:false</text>
+  <text class="tiny" x="1240" y="38">社区发行版 — 非 DeepSeek 官方</text>
+  <text class="tiny" x="1240" y="54">固定版本 · 打包验证 · 所有权安全</text>
+
+  <!-- Vision callout -->
+  <rect class="callout" x="24" y="82" width="1552" height="46" rx="12"/>
+  <text class="vision" x="44" y="102">愿景：一个可持续的 Code Agent，而不是对话套壳 — 规划 → 调用工具 → 验证 → 交付，跨越长会话、具备记忆、恢复与桌面级控制。</text>
+  <text class="vision-small" x="44" y="118">Code Agent = 持久会话 + 富工具循环 + Skills 知识 + 人机协同审批 + 可恢复运行时。DHC 让它开箱即用。</text>
+
+  <!-- Main frame -->
+  <rect class="frame" x="24" y="140" width="1150" height="1060" rx="20"/>
+
+  <!-- Row 1: System + Desktop Host -->
+  <rect class="host" x="44" y="160" width="340" height="150"/>
+  <text class="subheading" x="60" y="182">桌面宿主</text>
+  <text class="label" x="60" y="202">Electron 主进程</text>
+  <text class="small" x="60" y="222">窗口 / 托盘 / 菜单 / 关闭策略</text>
+  <text class="small" x="60" y="238">生命周期控制器 · 单例启动</text>
+  <text class="small" x="60" y="254">健康探测 5s · 3 次失败 → 重启</text>
+  <text class="small" x="60" y="270">端口重试 3× EADDRINUSE · 30s 就绪</text>
+  <text class="small" x="60" y="286">退出：SIGTERM → 8s → SIGKILL</text>
+
+  <rect class="host" x="405" y="160" width="290" height="150"/>
+  <text class="subheading" x="421" y="182">系统运行时</text>
+  <text class="label" x="421" y="202">系统 Node 解析</text>
+  <text class="small" x="421" y="222">PATH + Homebrew / nvm / Volta / fnm</text>
+  <text class="small" x="421" y="238">mise / Scoop / NVM_DIR / VOLTA_HOME</text>
+  <text class="small" x="421" y="254">≥22.13 自动探测 · GUI PATH 兼容</text>
+  <text class="small" x="421" y="270">内置 pnpm 运行时 → userData</text>
+  <text class="tiny" x="421" y="290">build/node-runtime/pnpm.mjs</text>
+
+  <rect class="guard" x="715" y="160" width="240" height="150"/>
+  <text class="subheading" x="731" y="182">看护进程</text>
+  <text class="label" x="731" y="202">独立 IPC Watchdog</text>
+  <text class="small" x="731" y="222">无网络 · 仅 OS IPC 管道</text>
+  <text class="small" x="731" y="238">1s → 2s 退避 → 5分/3次 熔断</text>
+  <text class="small" x="731" y="254">握手：shutdown → ack</text>
+  <text class="small" x="731" y="270">仅重启已验证的执行体</text>
+
+  <rect class="data" x="975" y="160" width="180" height="150"/>
+  <text class="subheading" x="991" y="182">更新</text>
+  <text class="label" x="991" y="202">更新宿主</text>
+  <text class="small" x="991" y="222">Manifest · SHA-256 校验</text>
+  <text class="small" x="991" y="238">用户确认后替换</text>
+  <text class="small" x="991" y="254">darwin / win32 / linux</text>
+  <text class="tiny" x="991" y="272">分片拉取 · 永不静默自动更新</text>
+
+  <!-- Row 2: Preload Bridge -->
+  <rect class="bridge" x="44" y="328" width="1110" height="72"/>
+  <text class="subheading" x="60" y="350">隔离边界 — 安全 Preload 桥</text>
+  <text class="small" x="60" y="370">contextIsolation: true · sandbox: true · nodeIntegration: false · createSecureWebPreferences</text>
+  <text class="label-sm" x="60" y="386">preferences</text><text class="small" x="150" y="386">读写 closeBehavior（zod 校验）</text>
+  <text class="label-sm" x="360" y="386">runtime</text><text class="small" x="420" y="386">get / subscribe / restartHarness / openLogs</text>
+  <text class="tiny" x="660" y="386">无 shell · 无任意 IPC · 不记录凭据/提示词 · 导航策略</text>
+
+  <!-- Row 3: Renderer + Harness Core -->
+  <rect class="web" x="44" y="418" width="520" height="220"/>
+  <text class="subheading" x="60" y="440">体验层 — BrowserWindow</text>
+  <text class="label" x="60" y="460">Chromium 渲染 — Harness Web 界面</text>
+  <text class="small" x="60" y="480">startup.html → 回环 Web 根（2xx 就绪）</text>
+  <text class="small" x="60" y="496">侧边栏 46/58px 内边距 · 遮罩隔离</text>
+  <text class="small" x="60" y="512">ChatView · Think 行 · QuestionComposer</text>
+  <text class="small" x="60" y="528">ThinkingOrb 20px 挂载 · 状态行 portal</text>
+  <text class="small" x="60" y="544">转场：ViewTransitions / CSS 回退</text>
+  <text class="tiny" x="60" y="562">Harness 拥有正文/渲染/计时 — 插件仅提供挂载点</text>
+  <rect class="plugin" x="60" y="572" width="150" height="52" rx="8"/>
+  <text class="tiny" x="68" y="588">better-sidebar</text>
+  <text class="tiny" x="68" y="602">资源 / 编辑 /</text>
+  <text class="tiny" x="68" y="614">终端 / Git / 浏览器</text>
+  <rect class="plugin" x="220" y="572" width="138" height="52"/>
+  <text class="tiny" x="228" y="588">ui-motion · ui-polish</text>
+  <text class="tiny" x="228" y="602">model2-selector</text>
+  <text class="tiny" x="228" y="614">updater-check · code-brand</text>
+  <rect class="plugin" x="368" y="572" width="136" height="52"/>
+  <text class="tiny" x="376" y="588">desktop-plugin</text>
+  <text class="tiny" x="376" y="602">生命周期 · 设置 ·</text>
+  <text class="tiny" x="376" y="614">转场 · 诊断</text>
+
+  <rect class="runtime" x="584" y="418" width="570" height="220"/>
+  <text class="subheading" x="600" y="440">Agent 运行时 — Harness 子进程</text>
+  <text class="label" x="600" y="460">dsh web --host 127.0.0.1 --port &lt;port&gt; --expose-internals</text>
+  <text class="small" x="600" y="480">系统 Node 子进程 · 官方 Home $DSH_HOME / ~/.dsh</text>
+  <text class="small" x="600" y="496">回环 HTTP + SSE · 5s 超时 · 会话持久化</text>
+  <text class="label-sm" x="600" y="516">Code Agent 循环</text><text class="small" x="700" y="516">目标 → 计划 → 待办 → 工具 → 任务 → 工作流 → 压缩</text>
+  <text class="small" x="600" y="532">工具：bash / str_replace_editor / fs / 搜索 / web / subagent / workflow / ralph</text>
+  <text class="small" x="600" y="548">检查点 · 会话历史 · 审批 / 提问协议完整保留</text>
+  <text class="tiny" x="600" y="566">钩子：agent/pre-step · system-prompt/assemble · session/event · 不修改私有传输</text>
+  <rect class="skill" x="600" y="576" width="170" height="48"/>
+  <text class="tiny" x="608" y="592">Superpowers Skills 6.2.0</text>
+  <text class="tiny" x="608" y="604">&lt;DSH_HOME&gt;/skills</text>
+  <text class="tiny" x="608" y="616">所有权标记 + 摘要</text>
+  <rect class="skill" x="780" y="576" width="170" height="48"/>
+  <text class="tiny" x="788" y="592">全局代理协议</text>
+  <text class="tiny" x="788" y="604">&lt;DSH_HOME&gt;/AGENTS.md</text>
+  <text class="tiny" x="788" y="616">备份安全切换</text>
+  <rect class="skill" x="960" y="576" width="174" height="48"/>
+  <text class="tiny" x="968" y="592">会话 / 工作区</text>
+  <text class="tiny" x="968" y="604">profile web · 持久化</text>
+  <text class="tiny" x="968" y="616">仅复制迁移</text>
+
+  <!-- Row 4: Intelligence & Plugin Ecosystem -->
+  <rect class="intelligence" x="44" y="658" width="1110" height="200"/>
+  <text class="subheading" x="60" y="680">智能层 — 模型 + 工具面 + 知识注入</text>
+
+  <rect class="zone" x="60" y="690" width="260" height="150" rx="10"/>
+  <text class="label-sm" x="72" y="710">V4 模型（官方适配）</text>
+  <text class="small" x="72" y="730">deepseek-v4-pro / v4-flash</text>
+  <text class="small" x="72" y="746">1M 上下文 · off / high / max</text>
+  <text class="small" x="72" y="762">Provider：仅 Harness 设置</text>
+  <text class="tiny" x="72" y="778">不打包权重 · 不暴露隐藏思维链</text>
+  <text class="tiny" x="72" y="792">适配器掌管 reasoning_effort</text>
+
+  <rect class="zone" x="334" y="690" width="260" height="150" rx="10"/>
+  <text class="label-sm" x="346" y="710">Anchored Standard 预设</text>
+  <text class="small" x="346" y="730">2 工具启动：bash +</text>
+  <text class="small" x="346" y="744">  str_replace_editor</text>
+  <text class="small" x="346" y="760">→ 晋升：dev_tool_search</text>
+  <text class="small" x="346" y="774">   + skill_search/load</text>
+  <text class="tiny" x="346" y="790">持久化解锁 · 子代理常驻</text>
+  <text class="tiny" x="346" y="804">rc.8 下失败回退 Standard</text>
+
+  <rect class="zone" x="608" y="690" width="260" height="150" rx="10"/>
+  <text class="label-sm" x="620" y="710">提示词原则与超能力</text>
+  <text class="small" x="620" y="730">dsh-prompt-principles</text>
+  <text class="small" x="620" y="744">  分层注入（Standard-like）</text>
+  <text class="small" x="620" y="760">dsh-superpowers（编程模式）</text>
+  <text class="small" x="620" y="774">  auto/on/off · 启发式门控</text>
+  <text class="tiny" x="620" y="790">门控：subagent / workflow / ralph</text>
+  <text class="tiny" x="620" y="804">system-prompt/assemble 之后注入</text>
+
+  <rect class="zone" x="882" y="690" width="256" height="150" rx="10"/>
+  <text class="label-sm" x="894" y="710">视觉与路由套件</text>
+  <text class="small" x="894" y="730">dsh-vision-router 1.7.1</text>
+  <text class="small" x="894" y="744">  11 像素工具 · OVH 回退</text>
+  <text class="small" x="894" y="760">路由：injector 0.3.3 ·</text>
+  <text class="small" x="894" y="774">  mode-boost 0.1.0 · router</text>
+  <text class="tiny" x="894" y="790">0.2.0 eff787e · SHA-256 固定</text>
+  <text class="tiny" x="894" y="804">无运行时下载器 · 不可变</text>
+
+  <!-- Official plugin install bar -->
+  <rect class="host" x="60" y="852" width="1080" height="64" rx="8"/>
+  <text class="tiny" x="76" y="870">官方协调：</text><text class="small" x="140" y="870">dsh plugin --profile web add</text><text class="tiny" x="340" y="870"> 经系统 Node + 内置 pnpm · --expose-internals</text>
+  <text class="tiny" x="76" y="886">Harness 拥有 manifest/bundle/patch · 桌面永不手写 profile YAML</text>
+  <text class="tiny" x="76" y="902">Bundle：desktop-plugin · dsh-ui-motion · dsh-model2-selector · dsh-ui-polish · dsh-updater-check · prompt-principles · vision-router · better-sidebar · superpowers · composition · injector · mode-boost · dsh-find-plugin</text>
+
+  <!-- Row 5: Data + External -->
+  <rect class="data" x="44" y="930" width="680" height="160"/>
+  <text class="subheading" x="60" y="952">持久化 — 应用用户数据（.app 之外）</text>
+  <text class="label-sm" x="60" y="972">官方 Home</text><text class="small" x="130" y="972">解析：$DSH_HOME → ~/.dsh (@deepseek-ai/dsh-home-paths@0.1.0-rc.8)</text>
+  <text class="small" x="60" y="990">dsh-home：设置 / 凭据 / 会话 / 工作区 / .agent-presets / skills</text>
+  <text class="small" x="60" y="1006">遗留迁移：仅复制 · 目标胜出 · 拒绝符号链接 · 0600/0700 · 幂等</text>
+  <text class="label-sm" x="60" y="1025">诊断</text><text class="small" x="110" y="1025">Electron / Harness / Watchdog 日志 · 脱敏 · 10MB ×5 轮转 · openLogs</text>
+  <text class="label-sm" x="60" y="1044">全局</text><text class="small" x="106" y="1044">npm install -g dsh@固定版本 · 失败开放 · 永不覆盖用户全局</text>
+  <text class="label-sm" x="60" y="1063">证明</text><text class="small" x="102" y="1063">preflight：51 产物 · 35 依赖 · 8 关键版本 · 10 Bundle · SHA-256 已验证</text>
+
+  <rect class="external" x="744" y="930" width="410" height="160"/>
+  <text class="subheading" x="760" y="952">Provider 与分发边界</text>
+  <text class="label" x="760" y="972">DeepSeek API</text>
+  <text class="small" x="760" y="990">流式 · 重试策略 · 不修改私有传输</text>
+  <text class="small" x="760" y="1006">凭据：用户在 Harness 设置中输入</text>
+  <text class="small" x="760" y="1022">桌面不采集/记录/转发</text>
+  <rect class="zone" x="760" y="1036" width="190" height="42" rx="8"/>
+  <text class="tiny" x="768" y="1052">打包（原生 Runner）</text>
+  <text class="tiny" x="768" y="1066">DMG Universal · NSIS x64/arm64</text>
+  <text class="tiny" x="768" y="1078">AppImage/deb x64/arm64</text>
+  <rect class="zone" x="960" y="1036" width="180" height="42" rx="8"/>
+  <text class="tiny" x="968" y="1052">安全：仅回环地址</text>
+  <text class="tiny" x="968" y="1066">allow / open-external</text>
+  <text class="tiny" x="968" y="1078">无局域网绑定</text>
+
+  <!-- Flows -->
+  <path class="flow" d="M215 310 L215 328"/>
+  <path class="flow" d="M460 310 L460 328"/>
+  <path class="flow-green" d="M300 400 L300 418"/>
+  <text class="tiny" x="308" y="412">loadURL(origin)</text>
+  <path class="flow-green" d="M300 525 L584 525"/>
+  <text class="small" x="376" y="520">HTTP / SSE 回环 127.0.0.1:port</text>
+  <path class="flow-orange" d="M854 580 L854 658"/>
+  <text class="tiny" x="862" y="630">工具面</text>
+  <path class="flow-orange" d="M854 880 L854 930"/>
+  <path class="flow-purple" d="M830 160 L830 140 L24 140 L24 550 L44 550"/>
+  <text class="tiny" x="32" y="360" transform="rotate(-90 32 360)">Watchdog → 主进程重启（IPC 异常断开）</text>
+  <path class="flow-purple" d="M214 410 L180 360"/>
+  <text class="tiny" x="98" y="376">无响应 30s → 窗口重建（Harness 存活）</text>
+  <path class="flow-purple" d="M690 460 L690 430 L584 430"/>
+  <text class="tiny" x="596" y="442">3 次探测失败 / 子进程退出 → 串行重启</text>
+  <path class="flow-red" d="M214 160 V132 L1200 132 L1200 160"/>
+  <text class="tiny" x="420" y="128">退出：取消恢复 · Watchdog 确认 · SIGTERM 8s → SIGKILL · 隔离渲染层错误</text>
+  <path class="flow" d="M380 852 L380 658"/>
+  <text class="tiny" x="386" y="750" transform="rotate(-90 386 750)">Harness 启动前完成协调</text>
+
+  <!-- Right side: User & OS -->
+  <rect class="zone" x="1190" y="140" width="386" height="960" rx="20"/>
+  <text class="subheading" x="1210" y="166">用户与操作系统环境</text>
+  <text class="label" x="1210" y="188">开发者工作站</text>
+  <text class="small" x="1210" y="208">macOS 12+ · Windows 10+ · Linux</text>
+  <text class="small" x="1210" y="224">Dock / 托盘 / 菜单 · 单实例锁</text>
+  <text class="small" x="1210" y="240">关闭：托盘常驻或退出（已持久化）</text>
+  <text class="small" x="1210" y="256">原生主题 · 快捷键 · 转场</text>
+
+  <rect class="web" x="1210" y="272" width="346" height="110" rx="10"/>
+  <text class="label-sm" x="1226" y="292">人机协同</text>
+  <text class="small" x="1226" y="312">提问 · 审批 · 反馈</text>
+  <text class="small" x="1226" y="328">@deepseek-ai/dsh-tool-ask-user 完整保留</text>
+  <text class="small" x="1226" y="344">自定义答案 · 跳过 · 方案审阅</text>
+  <text class="tiny" x="1226" y="362">不另造并行通道 — 仅官方协议</text>
+
+  <rect class="runtime" x="1210" y="398" width="346" height="130" rx="10"/>
+  <text class="label-sm" x="1226" y="418">Code Agent 工作区</text>
+  <text class="small" x="1226" y="438">工作区文件 · 工作台（better-sidebar）</text>
+  <text class="small" x="1226" y="454">编辑器 / 终端 / 浏览器 / Git 面板</text>
+  <text class="small" x="1226" y="470">Subagents：codex / claude-code（composition）</text>
+  <text class="small" x="1226" y="486">MCP：everything + Context7 文档</text>
+  <text class="tiny" x="1226" y="504">ctx.betterSidebar.registerTab / registerFileViewer</text>
+
+  <rect class="intelligence" x="1210" y="544" width="346" height="110" rx="10"/>
+  <text class="label-sm" x="1226" y="564">长会话韧性</text>
+  <text class="small" x="1226" y="584">非重叠探测 · 有界日志</text>
+  <text class="small" x="1226" y="600">替换前回收旧子进程</text>
+  <text class="small" x="1226" y="616">不重放请求 · 不并发恢复</text>
+  <text class="tiny" x="1226" y="634">Watchdog 独立于 Harness 健康</text>
+
+  <rect class="data" x="1210" y="670" width="346" height="110" rx="10"/>
+  <text class="label-sm" x="1226" y="690">DHC 不是什么</text>
+  <text class="small" x="1226" y="710">不是网页套壳 · 不是模型启动器</text>
+  <text class="small" x="1226" y="726">不是 Harness 协议的分叉</text>
+  <text class="small" x="1226" y="742">不是私有请求篡改</text>
+  <text class="small" x="1226" y="758">尊重官方 Home + CLI + 会话模型</text>
+
+  <rect class="external" x="1210" y="796" width="346" height="110" rx="10"/>
+  <text class="label-sm" x="1226" y="816">Code Agent 成熟度路径</text>
+  <text class="small" x="1226" y="836">可持续长任务 → 可复现</text>
+  <text class="small" x="1226" y="852">工作流 → Skills 驱动知识</text>
+  <text class="small" x="1226" y="868">→ 可验证交付（方案/里程碑）</text>
+  <text class="tiny" x="1226" y="886">路线图：基准 · Linux GA · 故障注入</text>
+
+  <!-- Legend -->
+  <rect class="zone" x="24" y="1216" width="1552" height="48" rx="14"/>
+  <line class="flow" x1="44" y1="1240" x2="110" y2="1240"/><text class="small" x="118" y="1244">启动 / 请求</text>
+  <line class="flow-green" x1="240" y1="1240" x2="306" y2="1240"/><text class="small" x="314" y="1244">UI ↔ 回环</text>
+  <line class="flow-orange" x1="410" y1="1240" x2="476" y2="1240"/><text class="small" x="484" y="1244">智能 / 工具面</text>
+  <line class="flow-purple" x1="650" y1="1240" x2="716" y2="1240"/><text class="small" x="724" y="1244">恢复</text>
+  <line class="flow-red" x1="820" y1="1240" x2="886" y2="1240"/><text class="small" x="894" y="1244">退出</text>
+  <text class="tiny" x="1030" y="1244">Electron 主进程掌管窗口/子进程/桥接 · Harness 掌管会话/协议 · Watchdog 掌管重启 · Preload 掌管校验</text>
+  <text class="tiny" x="44" y="1262">打包：asar:false（rc.8 在 ASAR 内客户端图为空）· extraResources 不可变 · 构建在 tar 前校验 SHA-256 · 无运行时路由下载</text>
+</svg>
