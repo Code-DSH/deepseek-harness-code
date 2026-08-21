@@ -18,20 +18,58 @@
  *  - `bash` resolved through `ctx.subprocess.resolveExecutable` (PATH lookup).
  *
  * Semantics mirror the official bash tool: `bash -c <command>` in a fresh
- * process, bounded output, non-zero exit reported not thrown. No sandbox
- * confinement on Windows (the sandbox backend is linux-only); the tool
- * description says so. The bootstrap catalog pairs this with
- * `str_replace_editor` (Minimal's two tools).
+ * process, bounded output, non-zero exit reported not thrown. Every call
+ * resolves the session's current DSH sandbox policy. Confined modes wrap the
+ * exact argv through `ctx.sandbox`; danger-full-access keeps the original
+ * argv. The bootstrap catalog pairs this with `str_replace_editor` (Minimal's
+ * two tools).
  */
+
+import { realpath } from 'node:fs/promises'
+import { isAbsolute, relative, resolve, sep } from 'node:path'
 
 /** Cordis plugin name used by loader diagnostics. */
 export const name = 'custom-bash'
 
-/** The subprocess and tools services must exist before this tool can register. */
-export const inject = ['subprocess', 'tools']
+/** Every execution seam must exist before this tool can register. */
+export const inject = ['subprocess', 'tools', 'sandbox', 'sandboxPolicy']
 
 const DEFAULT_TIMEOUT_MS = 120000
 const DEFAULT_MAX_OUTPUT_BYTES = 64000
+const WORKDIR_ERROR = 'bash workdir must resolve inside the session workspace'
+
+function isContained(target, root) {
+  const offset = relative(root, target)
+  return offset === '' || (offset !== '..' && !offset.startsWith(`..${sep}`) && !isAbsolute(offset))
+}
+
+async function resolveWorkdir(modelWorkdir, exec, policy) {
+  const sessionCwd = exec?.agent?.session?.header?.cwd
+  const workspaceRoot = policy?.workspaceRoot
+  if (
+    typeof sessionCwd !== 'string' || sessionCwd.length === 0
+    || typeof workspaceRoot !== 'string' || workspaceRoot.length === 0
+  ) {
+    throw new Error(WORKDIR_ERROR)
+  }
+
+  const requested = typeof modelWorkdir === 'string' && modelWorkdir.length > 0
+    ? modelWorkdir
+    : sessionCwd
+  const requestedAbsolute = isAbsolute(requested) ? requested : resolve(workspaceRoot, requested)
+  let canonicalRoot
+  let canonicalWorkdir
+  try {
+    ;[canonicalRoot, canonicalWorkdir] = await Promise.all([
+      realpath(workspaceRoot),
+      realpath(requestedAbsolute),
+    ])
+  } catch {
+    throw new Error(WORKDIR_ERROR)
+  }
+  if (!isContained(canonicalWorkdir, canonicalRoot)) throw new Error(WORKDIR_ERROR)
+  return canonicalWorkdir
+}
 
 /** Tool parameter schema for the model-facing command. */
 const commandSchema = {
@@ -66,7 +104,7 @@ export function apply(ctx, config) {
       '* State does NOT persist across command calls: each call runs in a fresh shell.',
       "* To inspect a particular line range of a file, e.g. lines 10-25, try 'sed -n 10,25p /path/to/the/file'.",
       '* Please avoid commands that may produce a very large amount of output.',
-      '* NOTE: runs without OS sandbox confinement on Windows (no landlock); treat output as untrusted.',
+      '* Commands are bound to the current per-session DSH file sandbox policy.',
     ].join('\n'),
     parameters: commandSchema,
     output: {
@@ -81,14 +119,18 @@ export function apply(ctx, config) {
       render: (_args, value) => [{ type: 'text', text: value.text }],
     },
     async execute(args, exec) {
+      const session = exec?.agent?.session
+      const policy = ctx.sandboxPolicy.resolve({ session })
+      const workdir = await resolveWorkdir(args.workdir, exec, policy)
       const shell = await ctx.subprocess.resolveExecutable(bashPath, undefined, exec?.signal)
-      const workdir = typeof args.workdir === 'string' && args.workdir.length > 0
-        ? args.workdir
-        : exec?.agent?.session?.header?.cwd
+      const shellArgv = [shell, '-c', args.command]
+      const argv = policy.mode === 'danger-full-access'
+        ? shellArgv
+        : ctx.sandbox.confine(shellArgv, policy).argv
       const signal = exec?.signal
       const handle = ctx.subprocess.spawn({
-        argv: [shell, '-c', args.command],
-        ...workdir !== undefined ? { cwd: workdir } : {},
+        argv,
+        cwd: workdir,
         stdio: {
           stdin: 'ignore',
           stdout: { maxBytes: maxOutputBytes },

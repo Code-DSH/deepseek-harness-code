@@ -163,9 +163,9 @@
 # tool name as the persistent shell with a Minimal-compatible description, but
 # executes through the ordinary cross-platform subprocess seam (`bash -c`)
 # instead of a PTY. `bashPath` defaults to `bash` on PATH; point it at Git
-# Bash explicitly when the WSL shim would otherwise be picked up. No OS
-# sandbox confinement on Windows (landlock is linux-only); the tool
-# description says so.
+# Bash explicitly when the WSL shim would otherwise be picked up. Every call
+# resolves the session's host sandbox policy; confined modes wrap the exact
+# shell argv before spawning, including on Windows.
 - id: custom-bash
   name: ./custom-bash.mjs
   disabled: !!js process.platform !== 'win32'
@@ -184,27 +184,13 @@
   config:
     sampleOverCapGlobResults: false
 
-# The Minimal preset's second tool: `str_replace_editor` over a bare local
-# filesystem, byte-identical in configuration to the official `minimal`
-# preset's `filesystem` group. The editor's own realm shadows the host's
-# sandboxed `fs` provider only inside this group, so the standard `read`/
-# `write`/`edit` tools keep the sandboxed fs while the bootstrap editor uses
-# the local one.
+# The Minimal preset's second tool: `str_replace_editor`, registered directly
+# over the host sandboxed `fs` provider so its mutations resolve the same
+# per-session policy as the standard filesystem tools.
 - id: bootstrap-filesystem
-  name: cordis:group
-  group: true
-  isolate:
-    fs: true
+  name: '@deepseek-ai/dsh-tool-str-replace-editor'
   config:
-    - id: fs-local
-      name: '@deepseek-ai/dsh-fs-local'
-      config:
-        cwd: !!js process.env.DSH_CWD ?? process.cwd()
-
-    - id: str-replace-editor
-      name: '@deepseek-ai/dsh-tool-str-replace-editor'
-      config:
-        maxOutputChars: 16000
+    maxOutputChars: 16000
 
 # ── background jobs ────────────────────────────────────────────────────────
 

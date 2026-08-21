@@ -32,3 +32,15 @@ test('materialized copies match shared/ sources (run: npm run sync)', () => {
     `sync --check failed:\n${result.stdout}${result.stderr}`,
   )
 })
+
+test('bootstrap editors consume the host sandboxed filesystem provider', () => {
+  for (const dir of MODE_DIRS) {
+    const yml = readFileSync(join(root, dir, 'agent.cordis.yml'), 'utf8')
+    assert.doesNotMatch(yml, /@deepseek-ai\/dsh-fs-local/, `${dir} must not shadow the host fs service`)
+    assert.match(
+      yml,
+      /^\- id: bootstrap-filesystem\n  name: '@deepseek-ai\/dsh-tool-str-replace-editor'$/m,
+      `${dir} must keep str_replace_editor directly bound to the host fs service`,
+    )
+  }
+})
