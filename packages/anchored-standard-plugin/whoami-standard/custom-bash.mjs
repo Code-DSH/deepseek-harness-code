@@ -18,11 +18,11 @@
  *  - `bash` resolved through `ctx.subprocess.resolveExecutable` (PATH lookup).
  *
  * Semantics mirror the official bash tool: `bash -c <command>` in a fresh
- * process, bounded output, non-zero exit reported not thrown. Every call
- * resolves the session's current DSH sandbox policy. Confined modes wrap the
- * exact argv through `ctx.sandbox`; danger-full-access keeps the original
- * argv. The bootstrap catalog pairs this with `str_replace_editor` (Minimal's
- * two tools).
+ * process with bounded output. A non-zero exit throws a tool error containing
+ * the captured output. Every call resolves the session's current DSH sandbox
+ * policy. Confined modes wrap the exact argv through `ctx.sandbox`;
+ * danger-full-access keeps the original argv. The bootstrap catalog pairs
+ * this with `str_replace_editor` (Minimal's two tools).
  */
 
 import { realpath } from 'node:fs/promises'
@@ -67,6 +67,9 @@ async function resolveWorkdir(modelWorkdir, exec, policy) {
   } catch {
     throw new Error(WORKDIR_ERROR)
   }
+  // This closes lexical and pre-existing symlink escapes before spawn. It is
+  // not a race-free filesystem identity guarantee; confined executions rely
+  // on the DSH OS sandbox backend for enforcement after this check.
   if (!isContained(canonicalWorkdir, canonicalRoot)) throw new Error(WORKDIR_ERROR)
   return canonicalWorkdir
 }
@@ -158,8 +161,8 @@ export function apply(ctx, config) {
       const text = [stdout, stderr].filter((part) => part.length > 0).join('\n')
       const tail = text.length > 0 ? text : `exit code: ${outcome.exitCode} (no output)`
       if (outcome.exitCode !== 0) {
-        // Non-zero exit is a reported failure, not a throw: the model sees the
-        // command output plus the exit code.
+        // Surface the captured output as the tool error instead of returning a
+        // successful result for a failed command.
         throw new Error(tail)
       }
       return { text: tail }

@@ -91,10 +91,11 @@ Anchored Standard 把"首次轨迹选择"和"后续完整工具能力"拆开：
    `assistant-message`）；
 5. 从持久 session event 推导阶段，resume 和 reload 不会丢失状态。
 
-所有平台的 bootstrap 目录相同：Minimal 工具对（`bash`/`str_replace_editor`）。preset
-的 shell 是持久 PTY bash（Standard 的沙箱 `bash` 行被禁用——两者在同一个层里注册
-同名 `bash`，工具注册表拒绝重复；Windows 本来就没有沙箱 bash）。Windows 上晋升后的
-目录仍包含 `pwsh`。
+所有平台的 bootstrap 目录相同：Minimal 工具对（`bash`/`str_replace_editor`）。非 Windows
+平台使用持久 PTY bash。Standard 的沙箱 `bash` 行保持禁用，因为两行会在同一层注册
+同名工具，而工具注册表拒绝重复。Windows 上用同 schema 的自定义 Bash 替代 PTY
+实现；每次调用都解析当前会话的 DSH 沙箱策略，受限模式会在启动子进程前包装
+完整 Git Bash argv。Windows 上晋升后的目录仍包含 `pwsh`。
 
 ## 实测结果
 
@@ -250,9 +251,14 @@ npm test
   即可锚定，`bootstrapMaxTokens` 是 opt-in。设置后首请求被封顶，晋升后显式去掉
   封顶（下一次请求的 seed proposal 会继承上一份 header 的 maxTokens）；
 - 晋升目录是 **resident 集**——bootstrap 对 + 发现工具 + 模型经 `dev_tool_search`
-  解锁的一切——而非完整 Standard 倒出。Standard 的沙箱 `bash` 行保持禁用，改用
-  持久 shell（同名、同层，见"为什么这样做"）。`read`/`write`/`edit` 解锁后继续使用
-  沙箱文件系统，`str_replace_editor` 使用 preset 自己的本地 fs；
+  解锁的一切——而非完整 Standard 倒出。Standard 的沙箱 `bash` 行保持禁用，以避免
+  同名工具重复注册：非 Windows 使用持久 shell，Windows 使用策略约束的自定义 Bash
+  （见"为什么这样做"）。`read`/`write`/`edit` 解锁后继续使用 host 的沙箱感知文件
+  系统，`str_replace_editor` 也直接共用该 provider。上游 rc.8
+  使用每会话策略约束写入，但这不代表所有文件读取都已隔离；
+- Windows 自定义 Bash 在启动前把默认或显式 workdir 规范化为会话工作区内的
+  canonical path。这会拒绝相邻目录和已存在的软链接逃逸，但启动前检查不是无竞态的
+  文件系统隔离；受限模式在执行期还依赖 DSH OS 沙箱后端；
 - bootstrap 工具缺失时降级为完整目录并一次性告警，不再让请求失败，组合漂移不会锁死
   会话；非法的 `promoteOn` 值会在 preset 挂载时报错；
 - 晋升判定按会话在进程内记忆化，持久事件扫描每会话每进程只执行一次。

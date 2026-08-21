@@ -111,11 +111,13 @@ Anchored Standard separates initial trajectory selection from later tool use:
 5. Derive the phase from durable session events so resume and reload preserve it.
 
 The bootstrap catalog is the same on every platform: the Minimal pair
-(`bash`/`str_replace_editor`). The preset's shell is the persistent PTY bash
-(the sandboxed Standard `bash` row is disabled — both register the `bash` name
-into the same layer, and the tools registry rejects duplicates; Windows never
-had the sandboxed bash anyway). `pwsh` remains available in the promoted
-catalog on Windows.
+(`bash`/`str_replace_editor`). On non-Windows platforms the preset uses the
+persistent PTY bash. The sandboxed Standard `bash` row stays disabled because
+both rows register the same name into one layer and the tools registry rejects
+duplicates. On Windows, the PTY implementation is replaced by the same-schema
+custom Bash; each call resolves the session's DSH sandbox policy and confined
+modes wrap the exact Git Bash argv before subprocess spawn. `pwsh` remains
+available in the promoted catalog on Windows.
 
 ## Results
 
@@ -301,9 +303,16 @@ npm test
 - The promoted catalog is the RESIDENT set — the bootstrap pair plus the
   discovery tools plus everything the model unlocked via `dev_tool_search` —
   not the full Standard dump. The Standard sandboxed `bash` row stays disabled
-  in favor of the persistent shell (same tool name, same layer; see Why). When
-  unlocked, the `read`/`write`/`edit` tools keep the sandboxed filesystem while
-  `str_replace_editor` uses the preset's local fs.
+  to avoid a duplicate tool name: non-Windows uses the persistent shell and
+  Windows uses the policy-bound custom Bash (see Why). When unlocked, the
+  filesystem tools and `str_replace_editor` share the host sandbox-aware
+  filesystem provider: upstream rc.8 applies the per-session policy to writes,
+  but this does not claim universal filesystem read isolation.
+- Windows custom Bash resolves default and explicit workdirs to canonical
+  paths under the session workspace before spawning. That rejects sibling and
+  existing symlink escapes, but the pre-spawn check is not race-free
+  filesystem isolation; confined modes additionally rely on the DSH OS
+  sandbox backend for execution-time enforcement.
 - A missing bootstrap tool degrades to the full catalog with a one-time
   warning instead of failing requests, so a composition drift cannot brick a
   session; invalid `promoteOn` values fail at preset mount instead.
