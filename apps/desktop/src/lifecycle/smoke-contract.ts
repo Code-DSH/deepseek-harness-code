@@ -42,6 +42,7 @@ export type SmokeNodeRequiredEvidence = {
   readonly scenario: "node-required";
   readonly minimumNodeVersion: string;
   readonly installerUrl: string;
+  readonly archiveUrl: string;
   readonly platform: NodeJS.Platform;
   readonly architecture: string;
   readonly appPid: number;
@@ -190,11 +191,25 @@ export function parseSmokeConfig(
   };
 }
 
-export function resolveSystemNodeForSmokeScenario<T>(
+export function resolveStartupSystemNode<T>(
   config: Pick<SmokeConfig, "scenario"> | undefined,
   resolver: () => T,
-): T | undefined {
-  return config?.scenario === "node-required" ? undefined : resolver();
+):
+  | { readonly mode: "runtime"; readonly node: T }
+  | {
+      readonly mode: "node-required";
+    } {
+  const node = resolver();
+  return node === undefined && config?.scenario === "node-required"
+    ? { mode: "node-required" }
+    : { mode: "runtime", node };
+}
+
+export function shouldCreateWindowOnActivate(
+  nodeRequiredSmokeActive: boolean,
+  windowCount: number,
+): boolean {
+  return !nodeRequiredSmokeActive && windowCount === 0;
 }
 
 export function buildSmokeNodeRequiredEvidence(
@@ -211,23 +226,26 @@ export function buildSmokeNodeRequiredEvidence(
   if (!Number.isInteger(runtime.appPid) || runtime.appPid <= 0) {
     throw new Error("node-required evidence requires a valid application PID");
   }
-  const installerUrl = getNodeDownloadUrls(
+  const { installerUrl, archiveUrl } = getNodeDownloadUrls(
     runtime.platform,
     runtime.architecture,
     MINIMUM_NODE_VERSION,
-  ).installerUrl;
-  const parsedInstallerUrl = new URL(installerUrl);
-  if (
-    parsedInstallerUrl.protocol !== "https:" ||
-    parsedInstallerUrl.hostname !== "nodejs.org"
-  ) {
-    throw new Error("node-required installer URL must use official nodejs.org");
+  );
+  for (const url of [installerUrl, archiveUrl]) {
+    const parsedUrl = new URL(url);
+    if (
+      parsedUrl.protocol !== "https:" ||
+      parsedUrl.hostname !== "nodejs.org"
+    ) {
+      throw new Error("node-required Node URL must use official nodejs.org");
+    }
   }
   return {
     phase: "node-required",
     scenario: "node-required",
     minimumNodeVersion: MINIMUM_NODE_VERSION,
     installerUrl,
+    archiveUrl,
     platform: runtime.platform,
     architecture: runtime.architecture,
     appPid: runtime.appPid,

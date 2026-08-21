@@ -105,6 +105,7 @@ function validNodeRequiredEvidence() {
       scenario: "node-required",
       minimumNodeVersion: "22.13.0",
       installerUrl: "https://nodejs.org/dist/v22.13.0/node-v22.13.0-x64.msi",
+      archiveUrl: "https://nodejs.org/dist/v22.13.0/node-v22.13.0-win-x64.zip",
       platform: "win32",
       architecture: "x64",
       appPid: 7000,
@@ -149,6 +150,7 @@ describe("packaged runtime listener selection", () => {
     for (const mutation of [
       { minimumNodeVersion: "22.12.0" },
       { installerUrl: "https://example.com/node.msi" },
+      { archiveUrl: "https://example.com/node.zip" },
     ]) {
       const evidence = validNodeRequiredEvidence();
       Object.assign(evidence.nodeRequired, mutation);
@@ -185,22 +187,74 @@ describe("packaged runtime listener selection", () => {
     });
   });
 
+  test("uses Windows PATH semantics while preserving required system utilities", () => {
+    const buildPackagedSmokeEnvironment = requiredRuntimeExport(
+      "buildPackagedSmokeEnvironment",
+    );
+    const env = {
+      Path: [
+        "C:\\hostedtoolcache\\windows\\node\\24.18.0\\x64",
+        "C:\\Program Files\\nodejs",
+        "C:\\Windows\\System32",
+        "C:\\Windows",
+      ].join(";"),
+      SystemRoot: "C:\\Windows",
+      ComSpec: "C:\\Windows\\System32\\cmd.exe",
+      NVM_HOME: "C:\\nvm",
+    };
+
+    expect(
+      buildPackagedSmokeEnvironment("win32", env, "node-required"),
+    ).toEqual({
+      Path: "C:\\Windows\\System32;C:\\Windows",
+      SystemRoot: "C:\\Windows",
+      ComSpec: "C:\\Windows\\System32\\cmd.exe",
+    });
+  });
+
   test("runs runtime and node-required against every installed package form", async () => {
     const workflow = await readFile(
       new URL("../../.github/workflows/package.yml", import.meta.url),
       "utf8",
     );
 
-    for (const evidenceName of [
-      "smoke-evidence-windows-node-required.json",
-      "smoke-evidence-linux-appimage-node-required.json",
-      "smoke-evidence-linux-deb-node-required.json",
-      "smoke-evidence-${{ matrix.runner-architecture }}-node-required.json",
+    for (const [label, packageKind, architecture] of [
+      ["windows-x64", "nsis", "x64"],
+      ["windows-arm64", "nsis", "arm64"],
+      ["linux-x64", "appimage", "x64"],
+      ["linux-x64", "deb", "x64"],
+      ["linux-arm64", "appimage", "arm64"],
+      ["linux-arm64", "deb", "arm64"],
+      ["macos-arm64", "dmg", "arm64"],
+      ["macos-x64", "dmg", "x64"],
     ]) {
-      expect(workflow).toContain(evidenceName);
+      expect(workflow, `${label} matrix row`).toMatch(
+        new RegExp(
+          `- label: ${label}[\\s\\S]*?(?:expected-architecture|runner-architecture): ${architecture}`,
+          "u",
+        ),
+      );
+      const packageToken =
+        packageKind === "appimage"
+          ? "linux-appimage"
+          : packageKind === "deb"
+            ? "linux-deb"
+            : label.startsWith("windows")
+              ? "windows"
+              : "\\$\\{\\{ matrix\\.runner-architecture \\}\\}";
+      expect(workflow, `${label} ${packageKind} runtime`).toMatch(
+        new RegExp(
+          `--scenario runtime[^\\n]*smoke-evidence-${packageToken}\\.json`,
+          "u",
+        ),
+      );
+      expect(workflow, `${label} ${packageKind} node-required`).toMatch(
+        new RegExp(
+          `--scenario node-required[^\\n]*smoke-evidence-${packageToken}-node-required\\.json`,
+          "u",
+        ),
+      );
     }
-    expect(workflow.match(/--scenario runtime/gu)).toHaveLength(4);
-    expect(workflow.match(/--scenario node-required/gu)).toHaveLength(4);
   });
 
   test("builds positive resource fixtures with platform path semantics", () => {

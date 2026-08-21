@@ -64,16 +64,21 @@ type NodeRequiredContract = {
       appPid: number;
     },
   ) => Record<string, unknown>;
-  resolveSystemNodeForSmokeScenario: <T>(
-    config: typeof smokeConfig | undefined,
+  resolveStartupSystemNode: <T>(
+    config: { scenario: "runtime" | "node-required" } | undefined,
     resolver: () => T,
-  ) => T | undefined;
+  ) => { mode: "runtime"; node: T } | { mode: "node-required" };
+  shouldCreateWindowOnActivate: (
+    nodeRequiredSmokeActive: boolean,
+    windowCount: number,
+  ) => boolean;
 };
 
 function nodeRequiredContract(): NodeRequiredContract {
   const contract = smokeContract as unknown as Partial<NodeRequiredContract>;
   expect(contract.buildSmokeNodeRequiredEvidence).toBeTypeOf("function");
-  expect(contract.resolveSystemNodeForSmokeScenario).toBeTypeOf("function");
+  expect(contract.resolveStartupSystemNode).toBeTypeOf("function");
+  expect(contract.shouldCreateWindowOnActivate).toBeTypeOf("function");
   return contract as NodeRequiredContract;
 }
 
@@ -147,9 +152,9 @@ describe("application-owned smoke contract", () => {
     ).toBeUndefined();
   });
 
-  it("forces Node missing only after node-required passed packaged validation", () => {
+  it("calls the real resolver and activates node-required only when it is missing", () => {
     const contract = nodeRequiredContract();
-    const resolver = vi.fn(() => ({ executable: "/usr/bin/node" }));
+    const missingResolver = vi.fn(() => undefined);
     const nodeRequiredConfig = parseSmokeConfig(
       {
         SMOKE_MODE: "ci",
@@ -165,32 +170,73 @@ describe("application-owned smoke contract", () => {
 
     expect(nodeRequiredConfig).toBeDefined();
     expect(
-      contract.resolveSystemNodeForSmokeScenario(
-        nodeRequiredConfig as typeof smokeConfig,
+      contract.resolveStartupSystemNode(nodeRequiredConfig, missingResolver),
+    ).toEqual({ mode: "node-required" });
+    expect(missingResolver).toHaveBeenCalledTimes(1);
+  });
+
+  it("uses a discovered production Node despite a complete node-required environment", () => {
+    const contract = nodeRequiredContract();
+    const node = { executable: "/usr/bin/node", version: "24.1.0" };
+    const resolver = vi.fn(() => node);
+
+    expect(
+      contract.resolveStartupSystemNode(
+        { ...smokeConfig, scenario: "node-required" },
         resolver,
       ),
-    ).toBeUndefined();
-    expect(resolver).not.toHaveBeenCalled();
-    expect(
-      contract.resolveSystemNodeForSmokeScenario(smokeConfig, resolver),
-    ).toEqual({ executable: "/usr/bin/node" });
+    ).toEqual({ mode: "runtime", node });
     expect(resolver).toHaveBeenCalledTimes(1);
   });
 
+  it("never recreates a window from macOS activate during node-required smoke", () => {
+    const contract = nodeRequiredContract();
+
+    expect(contract.shouldCreateWindowOnActivate(true, 0)).toBe(false);
+    expect(contract.shouldCreateWindowOnActivate(false, 0)).toBe(true);
+    expect(contract.shouldCreateWindowOnActivate(false, 1)).toBe(false);
+  });
+
   it.each([
-    ["win32", "x64", "https://nodejs.org/dist/v22.13.0/node-v22.13.0-x64.msi"],
+    [
+      "win32",
+      "x64",
+      "https://nodejs.org/dist/v22.13.0/node-v22.13.0-x64.msi",
+      "https://nodejs.org/dist/v22.13.0/node-v22.13.0-win-x64.zip",
+    ],
     [
       "win32",
       "arm64",
       "https://nodejs.org/dist/v22.13.0/node-v22.13.0-arm64.msi",
+      "https://nodejs.org/dist/v22.13.0/node-v22.13.0-win-arm64.zip",
     ],
-    ["darwin", "arm64", "https://nodejs.org/dist/v22.13.0/node-v22.13.0.pkg"],
-    ["darwin", "x64", "https://nodejs.org/dist/v22.13.0/node-v22.13.0.pkg"],
-    ["linux", "x64", "https://nodejs.org/en/download"],
-    ["linux", "arm64", "https://nodejs.org/en/download"],
+    [
+      "darwin",
+      "arm64",
+      "https://nodejs.org/dist/v22.13.0/node-v22.13.0.pkg",
+      "https://nodejs.org/dist/v22.13.0/node-v22.13.0-darwin-arm64.tar.gz",
+    ],
+    [
+      "darwin",
+      "x64",
+      "https://nodejs.org/dist/v22.13.0/node-v22.13.0.pkg",
+      "https://nodejs.org/dist/v22.13.0/node-v22.13.0-darwin-x64.tar.gz",
+    ],
+    [
+      "linux",
+      "x64",
+      "https://nodejs.org/en/download",
+      "https://nodejs.org/dist/v22.13.0/node-v22.13.0-linux-x64.tar.xz",
+    ],
+    [
+      "linux",
+      "arm64",
+      "https://nodejs.org/en/download",
+      "https://nodejs.org/dist/v22.13.0/node-v22.13.0-linux-arm64.tar.xz",
+    ],
   ] as const)(
     "builds explicit no-Harness prerequisite evidence for %s %s",
-    (platform, architecture, installerUrl) => {
+    (platform, architecture, installerUrl, archiveUrl) => {
       const contract = nodeRequiredContract();
       const evidence = contract.buildSmokeNodeRequiredEvidence(
         { ...smokeConfig, scenario: "node-required" },
@@ -202,6 +248,7 @@ describe("application-owned smoke contract", () => {
         scenario: "node-required",
         minimumNodeVersion: "22.13.0",
         installerUrl,
+        archiveUrl,
         platform,
         architecture,
         appPid: 3001,

@@ -398,14 +398,25 @@ function verifySmokeEvidence(evidence, expected) {
   };
 }
 
-function expectedNodeInstallerUrl(platform, architecture) {
+function expectedNodeUrls(platform, architecture) {
   if (!["x64", "arm64"].includes(architecture))
     throw new Error(`unsupported Node installer architecture ${architecture}`);
-  if (platform === "win32")
-    return `https://nodejs.org/dist/v22.13.0/node-v22.13.0-${architecture}.msi`;
+  if (platform === "win32") {
+    return {
+      installerUrl: `https://nodejs.org/dist/v22.13.0/node-v22.13.0-${architecture}.msi`,
+      archiveUrl: `https://nodejs.org/dist/v22.13.0/node-v22.13.0-win-${architecture}.zip`,
+    };
+  }
   if (platform === "darwin")
-    return "https://nodejs.org/dist/v22.13.0/node-v22.13.0.pkg";
-  if (platform === "linux") return "https://nodejs.org/en/download";
+    return {
+      installerUrl: "https://nodejs.org/dist/v22.13.0/node-v22.13.0.pkg",
+      archiveUrl: `https://nodejs.org/dist/v22.13.0/node-v22.13.0-darwin-${architecture}.tar.gz`,
+    };
+  if (platform === "linux")
+    return {
+      installerUrl: "https://nodejs.org/en/download",
+      archiveUrl: `https://nodejs.org/dist/v22.13.0/node-v22.13.0-linux-${architecture}.tar.xz`,
+    };
   throw new Error(`unsupported Node installer platform ${platform}`);
 }
 
@@ -436,10 +447,14 @@ function verifyNodeRequiredEvidence(evidence, expected) {
     throw new Error(
       "node-required evidence platform or architecture is invalid",
     );
+  const expectedUrls = expectedNodeUrls(
+    expected.platform,
+    expected.runnerArchitecture,
+  );
   if (
     nodeRequired.minimumNodeVersion !== "22.13.0" ||
-    nodeRequired.installerUrl !==
-      expectedNodeInstallerUrl(expected.platform, expected.runnerArchitecture)
+    nodeRequired.installerUrl !== expectedUrls.installerUrl ||
+    nodeRequired.archiveUrl !== expectedUrls.archiveUrl
   )
     throw new Error(
       "node-required evidence does not use the official Node installer",
@@ -764,6 +779,16 @@ async function waitForEvidence(path, deadline, runId, phase) {
   while (Date.now() < deadline) {
     try {
       const evidence = JSON.parse(await readFile(path, "utf8"));
+      if (
+        phase === "node-required" &&
+        evidence?.schema === 2 &&
+        evidence?.runId === runId &&
+        evidence?.ready?.phase === "ready"
+      ) {
+        throw new Error(
+          "system Node remained resolvable during node-required smoke",
+        );
+      }
       if (
         evidence?.schema === 2 &&
         evidence?.runId === runId &&
