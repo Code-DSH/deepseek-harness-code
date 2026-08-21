@@ -265,6 +265,35 @@ describe("packaged runtime listener selection", () => {
     ]);
   });
 
+  test("discovers production version-manager Node candidates for quarantine", async () => {
+    const discoverSystemNodeVersionCandidates = requiredRuntimeExport(
+      "discoverSystemNodeVersionCandidates",
+    );
+    const directoryEntries = new Map([
+      ["/home/runner/.nvm/versions/node", ["v22.13.0", "invalid"]],
+      ["/home/runner/.fnm/node-versions", ["v24.18.0"]],
+      ["/home/runner/.local/share/mise/installs/node", ["23.4.0"]],
+      ["/home/runner/.volta/tools/image/node", ["22.14.0"]],
+      ["/usr/local/n/versions/node", ["24.1.0", "22.23.2"]],
+    ]);
+
+    const candidates = await discoverSystemNodeVersionCandidates(
+      "linux",
+      {},
+      "/home/runner",
+      async (directory) => directoryEntries.get(directory) ?? [],
+    );
+
+    expect(candidates.map(({ path }) => path)).toEqual([
+      "/home/runner/.nvm/versions/node/v22.13.0/bin/node",
+      "/home/runner/.fnm/node-versions/v24.18.0/installation/bin/node",
+      "/home/runner/.local/share/mise/installs/node/23.4.0/bin/node",
+      "/home/runner/.volta/tools/image/node/22.14.0/bin/node",
+      "/usr/local/n/versions/node/22.23.2/bin/node",
+      "/usr/local/n/versions/node/24.1.0/bin/node",
+    ]);
+  });
+
   test("never moves the parent Node real file but may move a candidate symlink", () => {
     const shouldQuarantineNodeCandidate = requiredRuntimeExport(
       "shouldQuarantineNodeCandidate",
