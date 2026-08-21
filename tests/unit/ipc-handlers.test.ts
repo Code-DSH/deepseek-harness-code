@@ -93,9 +93,29 @@ describe("desktop IPC handlers", () => {
     });
     expect(setLanAccess).toHaveBeenCalledWith({ enabled: true });
     await expect(
+      handlers.get("lan-access:copy-url")!(undefined, {
+        address: "192.168.1.12",
+      }),
+    ).resolves.toBeUndefined();
+    expect(copyLanAccessUrl).toHaveBeenCalledWith({
+      address: "192.168.1.12",
+    });
+    await expect(
       handlers.get("lan-access:copy-url")!(undefined),
     ).resolves.toBeUndefined();
-    expect(copyLanAccessUrl).toHaveBeenCalledOnce();
+    expect(copyLanAccessUrl).toHaveBeenCalledWith({});
+    expect(() =>
+      handlers.get("lan-access:copy-url")!(undefined, {
+        address: "attacker.example",
+      }),
+    ).toThrow();
+    expect(() =>
+      handlers.get("lan-access:copy-url")!(undefined, {
+        address: "192.168.1.12",
+        accessUrl: "http://attacker.example/?lanToken=secret",
+      }),
+    ).toThrow();
+    expect(copyLanAccessUrl).toHaveBeenCalledTimes(2);
     const sender = { paste: vi.fn() };
     listeners.get("clipboard:paste")!({ sender });
     expect(paste).toHaveBeenCalledWith(sender);

@@ -4,6 +4,7 @@ import {
   closeBehaviorSchema,
   DEFAULT_DESKTOP_PREFERENCES,
   desktopPreferencesSchema,
+  lanAccessCopySchema,
   lanAccessSetSchema,
   lanAccessStateSchema,
   mergeDesktopPreferences,
@@ -47,6 +48,22 @@ describe("desktop bridge contracts", () => {
     });
     expect(() =>
       lanAccessSetSchema.parse({ enabled: true, port: 8080 }),
+    ).toThrow();
+  });
+
+  it("accepts only an optional IPv4 LAN copy selection", () => {
+    expect(lanAccessCopySchema.parse({})).toEqual({});
+    expect(lanAccessCopySchema.parse({ address: "192.168.1.12" })).toEqual({
+      address: "192.168.1.12",
+    });
+    expect(() =>
+      lanAccessCopySchema.parse({ address: "attacker.example" }),
+    ).toThrow();
+    expect(() =>
+      lanAccessCopySchema.parse({
+        address: "192.168.1.12",
+        accessUrl: "http://attacker.example/?lanToken=secret",
+      }),
     ).toThrow();
   });
 

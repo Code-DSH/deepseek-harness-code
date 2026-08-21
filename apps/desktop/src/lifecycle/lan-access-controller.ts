@@ -1,6 +1,11 @@
 import type { NetworkInterfaceInfo } from "node:os";
+import { isIP } from "node:net";
 
-import type { LanAccessSet, LanAccessState } from "../shared/contracts.js";
+import type {
+  LanAccessCopy,
+  LanAccessSet,
+  LanAccessState,
+} from "../shared/contracts.js";
 import type { LanProxyHost, LanProxyStartResult } from "./lan-proxy.js";
 
 type LanProxy = Pick<LanProxyHost, "start" | "stop">;
@@ -61,14 +66,23 @@ export class LanAccessController {
     });
   }
 
-  copyUrl(): void {
+  copyUrl(selection: LanAccessCopy = {}): void {
     if (!this.desiredEnabled || !this.activeState.enabled) {
       throw new Error("LAN access is disabled");
     }
     if (this.privateAccessUrl === undefined) {
       throw new Error("LAN access URL is unavailable");
     }
-    this.options.writeClipboard(this.privateAccessUrl);
+    const address = selection.address ?? this.activeState.addresses[0];
+    if (address === undefined) {
+      throw new Error("LAN access URL is unavailable");
+    }
+    if (!this.activeState.addresses.includes(address)) {
+      throw new Error("Selected LAN address is not active");
+    }
+    this.options.writeClipboard(
+      this.accessUrlForAddress(this.privateAccessUrl, address),
+    );
   }
 
   private async reconcile(): Promise<LanAccessState> {
@@ -130,21 +144,32 @@ export class LanAccessController {
       this.clearActiveState();
       throw error;
     }
-    const addresses = [...new Set(this.options.resolveAddresses())].sort();
-    this.activeState = { enabled: true, port: result.port, addresses };
-    this.activeOrigin = origin;
-    this.privateAccessUrl = this.accessUrlForAddress(
-      result.accessUrl,
-      addresses[0],
-    );
+    try {
+      const addresses = [...new Set(this.options.resolveAddresses())]
+        .filter((address) => isIP(address) === 4)
+        .sort();
+      if (addresses.length === 0) {
+        throw new Error("No LAN IPv4 address is available");
+      }
+      this.accessUrlForAddress(result.accessUrl, addresses[0]!);
+      this.activeState = { enabled: true, port: result.port, addresses };
+      this.activeOrigin = origin;
+      this.privateAccessUrl = result.accessUrl;
+    } catch (error) {
+      try {
+        await this.options.proxy.stop();
+      } finally {
+        this.clearActiveState();
+      }
+      throw error;
+    }
   }
 
-  private accessUrlForAddress(
-    accessUrl: string,
-    address: string | undefined,
-  ): string | undefined {
-    if (address === undefined) return undefined;
+  private accessUrlForAddress(accessUrl: string, address: string): string {
     const url = new URL(accessUrl);
+    if (url.protocol !== "http:" || url.hostname !== "0.0.0.0") {
+      throw new Error("LAN access URL is invalid");
+    }
     url.hostname = address;
     return url.href;
   }

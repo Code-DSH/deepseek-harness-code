@@ -1,8 +1,8 @@
 // dsh-lan-access — client-only LAN settings row.
 //
 // The bridge returns only redacted state. This module never derives, renders,
-// stores, or logs an access address; clipboard handling stays in the desktop
-// host behind the fixed copyUrl action.
+// stores, renders, or logs an access URL/token; clipboard handling stays in
+// the desktop host behind the fixed copyUrl action.
 window.__ModuleLoader__.load({
   id: "dsh-lan-access",
   factory: (require) => {
@@ -64,7 +64,23 @@ window.__ModuleLoader__.load({
         const [enabled, setEnabled] = React.useState(false);
         const [loaded, setLoaded] = React.useState(false);
         const [busy, setBusy] = React.useState(false);
+        const [addresses, setAddresses] = React.useState([]);
+        const [selectedAddress, setSelectedAddress] = React.useState("");
         const [message, setMessage] = React.useState("已关闭（正在读取设置…）");
+
+        const applyState = (state) => {
+          const nextAddresses = Array.isArray(state.addresses)
+            ? state.addresses.filter((address) => typeof address === "string")
+            : [];
+          setEnabled(state.enabled === true);
+          setAddresses(nextAddresses);
+          setSelectedAddress((current) =>
+            nextAddresses.includes(current)
+              ? current
+              : (nextAddresses[0] ?? ""),
+          );
+          setMessage(state.enabled ? "已开启" : "已关闭");
+        };
 
         React.useEffect(() => {
           let active = true;
@@ -80,8 +96,7 @@ window.__ModuleLoader__.load({
             .get()
             .then((state) => {
               if (!active) return;
-              setEnabled(state.enabled === true);
-              setMessage(state.enabled ? "已开启" : "已关闭");
+              applyState(state);
             })
             .catch(() => {
               if (active) setMessage("无法读取局域网访问状态");
@@ -106,8 +121,7 @@ window.__ModuleLoader__.load({
           setMessage(nextEnabled ? "正在开启…" : "正在关闭…");
           try {
             const state = await bridge.set({ enabled: nextEnabled });
-            setEnabled(state.enabled === true);
-            setMessage(state.enabled ? "已开启" : "已关闭");
+            applyState(state);
           } catch {
             setMessage(nextEnabled ? "开启失败" : "关闭失败");
           } finally {
@@ -116,7 +130,7 @@ window.__ModuleLoader__.load({
         };
 
         const copyAccessLink = async () => {
-          if (busy || !enabled) return;
+          if (busy || !enabled || !selectedAddress) return;
           const bridge = getBridge();
           if (!bridge) {
             setMessage("局域网访问不可用");
@@ -124,7 +138,7 @@ window.__ModuleLoader__.load({
           }
           setBusy(true);
           try {
-            await bridge.copyUrl();
+            await bridge.copyUrl({ address: selectedAddress });
             setMessage("访问链接已复制到剪贴板");
           } catch {
             setMessage("复制访问链接失败");
@@ -147,12 +161,49 @@ window.__ModuleLoader__.load({
             },
             enabled ? "关闭" : "开启",
           ),
+          enabled && addresses.length > 0
+            ? React.createElement(
+                "select",
+                {
+                  "aria-label": "局域网地址",
+                  value: selectedAddress,
+                  onChange: (event) => setSelectedAddress(event.target.value),
+                  disabled: busy,
+                  style: BUTTON_STYLE,
+                },
+                ...addresses.map((address) =>
+                  React.createElement(
+                    "option",
+                    { key: address, value: address },
+                    address,
+                  ),
+                ),
+              )
+            : null,
+          enabled && addresses.length > 0
+            ? React.createElement(
+                "span",
+                { style: MESSAGE_STYLE },
+                "可用地址：",
+                ...addresses.map((address) =>
+                  React.createElement(
+                    "code",
+                    {
+                      key: address,
+                      "data-lan-address": address,
+                      style: { marginRight: 12 },
+                    },
+                    address,
+                  ),
+                ),
+              )
+            : null,
           React.createElement(
             "button",
             {
               type: "button",
               onClick: copyAccessLink,
-              disabled: !loaded || busy || !enabled,
+              disabled: !loaded || busy || !enabled || !selectedAddress,
               style: BUTTON_STYLE,
             },
             "复制访问链接",
@@ -162,7 +213,7 @@ window.__ModuleLoader__.load({
             ? React.createElement(
                 "p",
                 { style: WARNING_STYLE },
-                "仅在可信局域网中开启。获得访问链接的任何人都可访问此会话；离开可信网络后请立即关闭。",
+                "连接使用未加密 HTTP。仅在可信局域网中开启；获得访问链接的任何人都可访问此会话，离开后请立即关闭。",
               )
             : null,
         );

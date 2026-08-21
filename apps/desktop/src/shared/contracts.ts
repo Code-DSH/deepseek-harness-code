@@ -61,6 +61,12 @@ export const lanAccessSetSchema = z
   })
   .strict();
 
+export const lanAccessCopySchema = z
+  .object({
+    address: z.ipv4().optional(),
+  })
+  .strict();
+
 export const lanAccessStateSchema = z
   .object({
     enabled: z.boolean(),
@@ -70,6 +76,7 @@ export const lanAccessStateSchema = z
   .strict();
 
 export type LanAccessSet = z.infer<typeof lanAccessSetSchema>;
+export type LanAccessCopy = z.infer<typeof lanAccessCopySchema>;
 export type LanAccessState = z.infer<typeof lanAccessStateSchema>;
 
 export const runtimePhaseSchema = z.enum([
@@ -120,7 +127,7 @@ export interface DeepSeekDesktopBridge {
   lanAccess: {
     get(): Promise<LanAccessState>;
     set(value: LanAccessSet): Promise<LanAccessState>;
-    copyUrl(): Promise<void>;
+    copyUrl(value?: LanAccessCopy): Promise<void>;
   };
   runtime: {
     getState(): Promise<RuntimeState>;

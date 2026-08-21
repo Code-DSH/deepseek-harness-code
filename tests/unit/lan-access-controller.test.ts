@@ -204,13 +204,13 @@ describe("LAN access controller", () => {
       "start:http://127.0.0.1:41002",
     ]);
     expect(harness.persistEnabled).not.toHaveBeenCalled();
-    harness.controller.copyUrl();
+    harness.controller.copyUrl({ address: "192.168.1.12" });
     expect(harness.writeClipboard).toHaveBeenCalledWith(
-      "http://10.0.0.4:43211/?lanToken=second-secret",
+      "http://192.168.1.12:43211/?lanToken=second-secret",
     );
   });
 
-  it("keeps an enabled listener with no invented route when no address exists", async () => {
+  it("stops and clears a started listener when no address exists", async () => {
     const harness = createHarness();
     const controller = new LanAccessController({
       proxy: harness.proxy,
@@ -220,13 +220,68 @@ describe("LAN access controller", () => {
     });
     await controller.onHarnessReady("http://127.0.0.1:41001");
 
-    await expect(controller.set({ enabled: true })).resolves.toEqual({
-      enabled: true,
-      port: 43210,
+    await expect(controller.set({ enabled: true })).rejects.toThrow(
+      "No LAN IPv4 address is available",
+    );
+    expect(controller.get()).toEqual({
+      enabled: false,
       addresses: [],
     });
-    expect(() => controller.copyUrl()).toThrow("unavailable");
+    expect(harness.proxy.stop).toHaveBeenCalledOnce();
+    expect(harness.persistEnabled).not.toHaveBeenCalled();
     expect(harness.writeClipboard).not.toHaveBeenCalled();
+  });
+
+  it("copies only an address from the current active allowlist", async () => {
+    const harness = createHarness();
+    await harness.controller.onHarnessReady("http://127.0.0.1:41001");
+    await harness.controller.set({ enabled: true });
+
+    harness.controller.copyUrl({ address: "192.168.1.12" });
+    expect(harness.writeClipboard).toHaveBeenLastCalledWith(
+      "http://192.168.1.12:43210/?lanToken=first-secret",
+    );
+    expect(() =>
+      harness.controller.copyUrl({ address: "172.16.0.99" }),
+    ).toThrow("not active");
+    expect(() =>
+      harness.controller.copyUrl({ address: "attacker.example" }),
+    ).toThrow("not active");
+    expect(harness.writeClipboard).toHaveBeenCalledTimes(1);
+  });
+
+  it("stops and clears the listener when address resolution fails after start", async () => {
+    const harness = createHarness();
+    const controller = new LanAccessController({
+      proxy: harness.proxy,
+      persistEnabled: harness.persistEnabled,
+      resolveAddresses: () => {
+        throw new Error("address resolution failed");
+      },
+      writeClipboard: harness.writeClipboard,
+    });
+    await controller.onHarnessReady("http://127.0.0.1:41001");
+
+    await expect(controller.set({ enabled: true })).rejects.toThrow(
+      "address resolution failed",
+    );
+    expect(harness.proxy.stop).toHaveBeenCalledOnce();
+    expect(controller.get()).toEqual({ enabled: false, addresses: [] });
+    expect(harness.persistEnabled).not.toHaveBeenCalled();
+  });
+
+  it("stops and clears the listener when its private URL is malformed", async () => {
+    const harness = createHarness();
+    await harness.controller.onHarnessReady("http://127.0.0.1:41001");
+    harness.setNextUrl("not a URL");
+
+    await expect(harness.controller.set({ enabled: true })).rejects.toThrow();
+    expect(harness.proxy.stop).toHaveBeenCalledOnce();
+    expect(harness.controller.get()).toEqual({
+      enabled: false,
+      addresses: [],
+    });
+    expect(harness.persistEnabled).not.toHaveBeenCalled();
   });
 
   it("rejects copy while disabled", () => {

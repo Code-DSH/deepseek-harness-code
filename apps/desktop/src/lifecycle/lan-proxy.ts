@@ -131,7 +131,8 @@ function isLoopbackOrigin(value: string): URL {
 
 export class LanProxyHost {
   private server: Server | undefined;
-  private tokenBytes: Buffer | undefined;
+  private exchangeTokenBytes: Buffer | undefined;
+  private sessionTokenBytes: Buffer | undefined;
   private readonly sockets = new Set<Duplex>();
   private readonly outboundRequests = new Set<ClientRequest>();
   private readonly outboundResponses = new Set<IncomingMessage>();
@@ -139,8 +140,14 @@ export class LanProxyHost {
   async start(loopbackOrigin: string): Promise<LanProxyStartResult> {
     if (this.server !== undefined) throw new Error("LAN proxy already started");
     const upstream = isLoopbackOrigin(loopbackOrigin);
-    const tokenBytes = Buffer.from(randomBytes(32).toString("base64url"));
-    this.tokenBytes = tokenBytes;
+    const exchangeTokenBytes = Buffer.from(
+      randomBytes(32).toString("base64url"),
+    );
+    const sessionTokenBytes = Buffer.from(
+      randomBytes(32).toString("base64url"),
+    );
+    this.exchangeTokenBytes = exchangeTokenBytes;
+    this.sessionTokenBytes = sessionTokenBytes;
 
     const server = createServer((incoming, response) =>
       this.handleHttp(incoming, response, upstream),
@@ -162,19 +169,19 @@ export class LanProxyHost {
       });
     } catch (error) {
       this.server = undefined;
-      this.invalidateToken();
+      this.invalidateSecrets();
       throw error;
     }
 
     const port = (server.address() as AddressInfo).port;
     return {
       port,
-      accessUrl: `http://${LISTEN_HOST}:${port}/?${TOKEN_QUERY}=${tokenBytes.toString("utf8")}`,
+      accessUrl: `http://${LISTEN_HOST}:${port}/?${TOKEN_QUERY}=${exchangeTokenBytes.toString("utf8")}`,
     };
   }
 
   async stop(): Promise<void> {
-    this.invalidateToken();
+    this.invalidateSecrets();
     const server = this.server;
     this.server = undefined;
     const socketClosures = [...this.sockets].map(waitForSocketClose);
@@ -198,7 +205,7 @@ export class LanProxyHost {
   }
 
   private trackSocket(socket: Duplex): void {
-    if (this.server === undefined || this.tokenBytes === undefined) {
+    if (this.server === undefined || this.sessionTokenBytes === undefined) {
       socket.destroy();
       return;
     }
@@ -207,7 +214,7 @@ export class LanProxyHost {
   }
 
   private trackOutboundRequest(outbound: ClientRequest): void {
-    if (this.server === undefined || this.tokenBytes === undefined) {
+    if (this.server === undefined || this.sessionTokenBytes === undefined) {
       outbound.destroy();
       return;
     }
@@ -217,7 +224,7 @@ export class LanProxyHost {
   }
 
   private trackOutboundResponse(upstreamResponse: IncomingMessage): void {
-    if (this.server === undefined || this.tokenBytes === undefined) {
+    if (this.server === undefined || this.sessionTokenBytes === undefined) {
       upstreamResponse.destroy();
       return;
     }
@@ -229,20 +236,28 @@ export class LanProxyHost {
     upstreamResponse.once("close", retire);
   }
 
-  private invalidateToken(): void {
-    this.tokenBytes?.fill(0);
-    this.tokenBytes = undefined;
+  private invalidateSecrets(): void {
+    this.exchangeTokenBytes?.fill(0);
+    this.sessionTokenBytes?.fill(0);
+    this.exchangeTokenBytes = undefined;
+    this.sessionTokenBytes = undefined;
   }
 
-  private tokenMatches(candidate: string): boolean {
-    const expected = this.tokenBytes;
+  private secretMatches(
+    expected: Buffer | undefined,
+    candidate: string,
+  ): boolean {
     if (expected === undefined || candidate.length !== expected.length) {
       return false;
     }
     const actual = Buffer.from(candidate, "utf8");
-    return (
-      actual.length === expected.length && timingSafeEqual(actual, expected)
-    );
+    try {
+      return (
+        actual.length === expected.length && timingSafeEqual(actual, expected)
+      );
+    } finally {
+      actual.fill(0);
+    }
   }
 
   private authenticate(incoming: IncomingMessage): AuthenticationResult {
@@ -250,11 +265,18 @@ export class LanProxyHost {
     const queryToken = url.searchParams.get(TOKEN_QUERY);
     if (queryToken !== null) {
       url.searchParams.delete(TOKEN_QUERY);
-      if (!this.tokenMatches(queryToken)) return { status: "rejected" };
+      const exchangeTokenBytes = this.exchangeTokenBytes;
+      const sessionTokenBytes = this.sessionTokenBytes;
+      if (!this.secretMatches(exchangeTokenBytes, queryToken)) {
+        return { status: "rejected" };
+      }
+      this.exchangeTokenBytes = undefined;
+      exchangeTokenBytes?.fill(0);
+      if (sessionTokenBytes === undefined) return { status: "rejected" };
       return {
         status: "exchange",
         location: `${url.pathname}${url.search}`,
-        cookie: `${SESSION_COOKIE}=${queryToken}; HttpOnly; SameSite=Strict; Path=/`,
+        cookie: `${SESSION_COOKIE}=${sessionTokenBytes.toString("utf8")}; HttpOnly; SameSite=Strict; Path=/`,
       };
     }
 
@@ -264,7 +286,10 @@ export class LanProxyHost {
       if (separator === -1) continue;
       const name = cookie.slice(0, separator).trim();
       const value = cookie.slice(separator + 1).trim();
-      if (name === SESSION_COOKIE && this.tokenMatches(value)) {
+      if (
+        name === SESSION_COOKIE &&
+        this.secretMatches(this.sessionTokenBytes, value)
+      ) {
         return {
           status: "authenticated",
           path: `${url.pathname}${url.search}`,
@@ -375,7 +400,7 @@ export class LanProxyHost {
     outbound.once(
       "upgrade",
       (upstreamResponse, upstreamSocket, upstreamHead) => {
-        if (this.server === undefined || this.tokenBytes === undefined) {
+        if (this.server === undefined || this.sessionTokenBytes === undefined) {
           upstreamSocket.destroy();
           socket.destroy();
           return;

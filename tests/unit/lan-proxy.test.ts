@@ -375,13 +375,16 @@ describe("LAN proxy", () => {
     expect(upstreamRequests).toHaveLength(0);
   });
 
-  it("exchanges the query token for a scoped cookie and redirects to a redacted URL", async () => {
+  it("exchanges the query token once for a distinct session cookie", async () => {
     const started = await proxy!.start(upstreamOrigin);
     const accessUrl = viaLoopback(started.accessUrl);
+    const queryToken = accessUrl.searchParams.get("lanToken");
+    expect(queryToken).not.toBeNull();
     accessUrl.pathname = "/workspace";
     accessUrl.searchParams.set("visible", "yes");
 
     const response = await httpRequest(accessUrl);
+    const cookie = sessionCookie(response);
 
     expect(response.status).toBe(302);
     expect(response.headers.location).toBe("/workspace?visible=yes");
@@ -390,8 +393,23 @@ describe("LAN proxy", () => {
     expect(response.headers["set-cookie"]?.[0]).toMatch(
       /^dsh_lan_session=[A-Za-z0-9_-]+; HttpOnly; SameSite=Strict; Path=\/$/u,
     );
+    expect(cookie.split("=", 2)[1]).not.toBe(queryToken);
     expect(response.headers.location).not.toContain("lanToken");
     expect(upstreamRequests).toHaveLength(0);
+
+    const replay = await httpRequest(accessUrl);
+    expect(replay.status).toBe(401);
+    expect(upstreamRequests).toHaveLength(0);
+
+    const redirected = new URL(
+      response.headers.location!,
+      viaLoopback(started.accessUrl),
+    );
+    const authenticated = await httpRequest(redirected, {
+      headers: { cookie },
+    });
+    expect(authenticated.status).toBe(200);
+    expect(upstreamRequests).toHaveLength(1);
   });
 
   it("forwards authenticated HTTP while removing proxy credentials and hop-by-hop headers", async () => {

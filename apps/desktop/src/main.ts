@@ -1003,7 +1003,7 @@ async function launch(): Promise<void> {
     },
     getLanAccess: () => lanAccessController.get(),
     setLanAccess: (value) => lanAccessController.set(value),
-    copyLanAccessUrl: async () => lanAccessController.copyUrl(),
+    copyLanAccessUrl: async (value) => lanAccessController.copyUrl(value),
     paste: (target) => target.paste(),
     checkForUpdates: () =>
       updaterHost?.check({ silent: false }) ??

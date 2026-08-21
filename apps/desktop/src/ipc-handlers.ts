@@ -1,6 +1,7 @@
 import {
   desktopPreferencesSchema,
   desktopPreferencesStateSchema,
+  lanAccessCopySchema,
   lanAccessSetSchema,
   lanAccessStateSchema,
   runtimeStateSchema,
@@ -8,6 +9,7 @@ import {
   type DesktopPreferences,
   type DesktopPreferencesState,
   type LanAccessSet,
+  type LanAccessCopy,
   type LanAccessState,
   type RuntimeState,
   type UpdaterCheckOutcome,
@@ -36,7 +38,7 @@ export interface DesktopIpcActions {
   setPreferences(value: DesktopPreferences): Promise<void>;
   getLanAccess(): LanAccessState;
   setLanAccess(value: LanAccessSet): Promise<LanAccessState>;
-  copyLanAccessUrl(): Promise<void>;
+  copyLanAccessUrl(value: LanAccessCopy): Promise<void>;
   paste(target: PasteTarget): void;
   checkForUpdates(): Promise<UpdaterCheckOutcome>;
   listBundledPlugins(): BundledPluginEntry[];
@@ -76,7 +78,11 @@ export function registerDesktopIpc(
       await actions.setLanAccess(lanAccessSetSchema.parse(payload)),
     ),
   );
-  ipc.handle("lan-access:copy-url", () => actions.copyLanAccessUrl());
+  ipc.handle("lan-access:copy-url", (_event, payload) =>
+    actions.copyLanAccessUrl(
+      lanAccessCopySchema.parse(payload === undefined ? {} : payload),
+    ),
+  );
   ipc.on("clipboard:paste", (event) => {
     const sender =
       typeof event === "object" && event !== null && "sender" in event

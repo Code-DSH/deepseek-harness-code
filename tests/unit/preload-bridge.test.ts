@@ -51,6 +51,9 @@ describe("preload bridge", () => {
       addresses: ["192.168.1.12"],
     });
     await bridge.lanAccess.set({ enabled: false });
+    await expect(
+      bridge.lanAccess.copyUrl({ address: "192.168.1.12" }),
+    ).resolves.toBeUndefined();
     await expect(bridge.lanAccess.copyUrl()).resolves.toBeUndefined();
     await bridge.preferences.set({
       closeBehavior: "minimize",
@@ -60,10 +63,33 @@ describe("preload bridge", () => {
     expect(invoke).toHaveBeenCalledWith("lan-access:set", {
       enabled: false,
     });
-    expect(invoke).toHaveBeenCalledWith("lan-access:copy-url");
+    expect(invoke).toHaveBeenCalledWith("lan-access:copy-url", {
+      address: "192.168.1.12",
+    });
+    expect(invoke).toHaveBeenCalledWith("lan-access:copy-url", {});
     expect(invoke).toHaveBeenCalledWith("preferences:set", {
       closeBehavior: "minimize",
     });
+  });
+
+  it("rejects invalid LAN copy selections before invoking IPC", async () => {
+    const invoke = vi.fn(async () => undefined);
+    const bridge = createDesktopBridge({
+      invoke,
+      on: vi.fn(),
+      removeListener: vi.fn(),
+    });
+
+    await expect(
+      bridge.lanAccess.copyUrl({ address: "attacker.example" }),
+    ).rejects.toThrow();
+    await expect(
+      bridge.lanAccess.copyUrl({
+        address: "192.168.1.12",
+        accessUrl: "http://attacker.example/?lanToken=secret",
+      } as never),
+    ).rejects.toThrow();
+    expect(invoke).not.toHaveBeenCalled();
   });
 
   it("rejects secret-bearing LAN state returned by main", async () => {

@@ -1,6 +1,7 @@
 import {
   desktopPreferencesSchema,
   desktopPreferencesStateSchema,
+  lanAccessCopySchema,
   lanAccessSetSchema,
   lanAccessStateSchema,
   runtimeStateSchema,
@@ -89,8 +90,11 @@ export function createDesktopBridge(ipc: RendererIpc): DeepSeekDesktopBridge {
           await ipc.invoke("lan-access:set", lanAccessSetSchema.parse(value)),
         );
       },
-      async copyUrl() {
-        await ipc.invoke("lan-access:copy-url");
+      async copyUrl(value = {}) {
+        await ipc.invoke(
+          "lan-access:copy-url",
+          lanAccessCopySchema.parse(value),
+        );
       },
     },
     runtime: {
