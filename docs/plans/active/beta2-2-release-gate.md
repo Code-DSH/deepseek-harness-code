@@ -11,7 +11,7 @@ read_when: [恢复 Beta 2-2 发布或审计 Beta 1/Beta 2 差异]
 skip_when: [与发布无关的局部代码修改]
 priority: must
 freshness_class: project
-last_verified: 2026-08-21T21:33:00+08:00
+last_verified: 2026-08-21T21:43:00+08:00
 owners: [primary-agent]
 source_of_truth:
   - ../../../.github/workflows/
@@ -287,6 +287,7 @@ tags: [execplan, release, ci, beta2-2]
 
 ## Progress
 
+- 2026-08-21 — PR #19 Windows CI Run `32487900919` provided an exact RED for the PowerShell helper: the first `Add-DhscDirectCleanupFailure -CleanupFailures` call rejected an initially empty `List<Exception>` because a mandatory collection parameter lacked `AllowEmptyCollection`. The same binding rule applied to empty Node move lists and the final cleanup list. The local fix adds `AllowEmptyCollection` to the two strongly typed `List<object>` move parameters and three strongly typed `List<Exception>` cleanup parameters only; null remains forbidden. Local focused/package/check gates are not a substitute for the pending PR #19 Windows rerun or full cloud acceptance.
 - 2026-08-21 — Cloud fix 1 review round 2 added a fail-closed custom-root cleanup scan and a uniform Windows cleanup exception contract: a manual .NET stack inspects each top-level child before descending and rejects every reparse point/junction before recursive deletion; cleanup collections contain Exceptions only, report `.Message`, and preserve the primary failure over cleanup failures. The Windows-only executable fixture now includes an outside-sentinel junction case plus typed direct/caught cleanup and final-priority cases. Local non-Windows package gates retain the designed Windows skip; Windows CI and cloud acceptance remain pending.
 - 2026-08-21 — Cloud fix 1 review round 1 tightened the Windows host boundary locally: uninstall-registry fallback now accepts one exact product entry only when exe/resources/exact uninstaller are direct siblings under a strict per-user Programs descendant; registry roots are never force-deleted, while only the runner-owned custom root may be removed recursively. Windows Node move/restore and install-root resolution now share a dot-source helper with an executable Windows-only fixture (non-Windows designed skip). Focused/package/check gates are local evidence only; a Windows CI execution and the full native cloud matrix remain pending.
 - 2026-08-21 — Cloud package Run `32482981873` on `main@bb622a1` failed and remains non-acceptance evidence: Linux x64/arm64 runtime smoke passed (arm64 ready in 48,569ms) but both no-Node phases correctly exposed `/usr/local/bin/node`; Windows x64 runtime passed in 302,660ms but its no-Node phase exposed `C:\Program Files\nodejs\node.exe`; Windows arm64 NSIS exited 0 but the requested custom install root contained no app executable; macOS smoke was skipped after the package matrix failed. Root causes are hosted-runner standard Node candidates not being quarantined and the Windows workflow treating NSIS `/D` as authoritative instead of resolving the exact product uninstall registration. Cloud release validation, tag replacement, publication, and retirement remain pending.
