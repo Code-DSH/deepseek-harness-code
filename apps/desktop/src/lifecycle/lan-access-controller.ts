@@ -8,7 +8,7 @@ import type {
 } from "../shared/contracts.js";
 import type { LanProxyHost, LanProxyStartResult } from "./lan-proxy.js";
 
-type LanProxy = Pick<LanProxyHost, "start" | "stop">;
+type LanProxy = Pick<LanProxyHost, "issueAccessUrl" | "start" | "stop">;
 
 export interface LanAccessControllerOptions {
   proxy: LanProxy;
@@ -37,7 +37,6 @@ export class LanAccessController {
   private loopbackOrigin: string | undefined;
   private activeOrigin: string | undefined;
   private activeState: LanAccessState = { enabled: false, addresses: [] };
-  private privateAccessUrl: string | undefined;
   private operationQueue: Promise<void> = Promise.resolve();
 
   constructor(private readonly options: LanAccessControllerOptions) {}
@@ -70,9 +69,6 @@ export class LanAccessController {
     if (!this.desiredEnabled || !this.activeState.enabled) {
       throw new Error("LAN access is disabled");
     }
-    if (this.privateAccessUrl === undefined) {
-      throw new Error("LAN access URL is unavailable");
-    }
     const address = selection.address ?? this.activeState.addresses[0];
     if (address === undefined) {
       throw new Error("LAN access URL is unavailable");
@@ -80,8 +76,9 @@ export class LanAccessController {
     if (!this.activeState.addresses.includes(address)) {
       throw new Error("Selected LAN address is not active");
     }
+    const privateAccessUrl = this.options.proxy.issueAccessUrl();
     this.options.writeClipboard(
-      this.accessUrlForAddress(this.privateAccessUrl, address),
+      this.accessUrlForAddress(privateAccessUrl, address),
     );
   }
 
@@ -89,8 +86,7 @@ export class LanAccessController {
     while (true) {
       if (!this.desiredEnabled) {
         if (this.activeState.enabled) {
-          await this.options.proxy.stop();
-          this.clearActiveState();
+          await this.stopAndClear();
         }
         if (this.desiredEnabled) continue;
         if (this.persistedEnabled) {
@@ -107,8 +103,7 @@ export class LanAccessController {
         throw new Error("LAN access is unavailable before Harness is ready");
       }
       if (this.activeState.enabled && this.activeOrigin !== origin) {
-        await this.options.proxy.stop();
-        this.clearActiveState();
+        await this.stopAndClear();
         continue;
       }
       if (!this.activeState.enabled) {
@@ -125,9 +120,11 @@ export class LanAccessController {
           await this.options.persistEnabled(true);
           this.persistedEnabled = true;
         } catch (error) {
-          await this.options.proxy.stop();
-          this.clearActiveState();
-          this.desiredEnabled = false;
+          try {
+            await this.stopAndClear();
+          } finally {
+            this.desiredEnabled = false;
+          }
           throw error;
         }
       }
@@ -151,16 +148,14 @@ export class LanAccessController {
       if (addresses.length === 0) {
         throw new Error("No LAN IPv4 address is available");
       }
-      this.accessUrlForAddress(result.accessUrl, addresses[0]!);
+      this.accessUrlForAddress(
+        this.options.proxy.issueAccessUrl(),
+        addresses[0]!,
+      );
       this.activeState = { enabled: true, port: result.port, addresses };
       this.activeOrigin = origin;
-      this.privateAccessUrl = result.accessUrl;
     } catch (error) {
-      try {
-        await this.options.proxy.stop();
-      } finally {
-        this.clearActiveState();
-      }
+      await this.stopAndClear();
       throw error;
     }
   }
@@ -177,7 +172,14 @@ export class LanAccessController {
   private clearActiveState(): void {
     this.activeState = { enabled: false, addresses: [] };
     this.activeOrigin = undefined;
-    this.privateAccessUrl = undefined;
+  }
+
+  private async stopAndClear(): Promise<void> {
+    try {
+      await this.options.proxy.stop();
+    } finally {
+      this.clearActiveState();
+    }
   }
 
   private enqueue<T>(operation: () => Promise<T>): Promise<T> {

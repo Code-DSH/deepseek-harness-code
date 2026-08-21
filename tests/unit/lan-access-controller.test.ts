@@ -12,11 +12,12 @@ function createHarness() {
   const proxy = {
     start: vi.fn(async (origin: string) => {
       steps.push(`start:${origin}`);
-      return { port: 43210, accessUrl: nextUrl };
+      return { port: 43210 };
     }),
     stop: vi.fn(async () => {
       steps.push("stop");
     }),
+    issueAccessUrl: vi.fn(() => nextUrl),
   };
   const persistEnabled = vi.fn(async (enabled: boolean) => {
     steps.push(`persist:${enabled}`);
@@ -135,11 +136,23 @@ describe("LAN access controller", () => {
     expect(harness.steps).toEqual(["stop", "persist:false"]);
   });
 
+  it("clears active state when stop fails during disable", async () => {
+    const harness = createHarness();
+    await harness.controller.onHarnessReady("http://127.0.0.1:41001");
+    await harness.controller.set({ enabled: true });
+    harness.proxy.stop.mockRejectedValueOnce(new Error("stop failed"));
+
+    await expect(harness.controller.set({ enabled: false })).rejects.toThrow(
+      "stop failed",
+    );
+    expect(harness.controller.get()).toEqual({ enabled: false, addresses: [] });
+  });
+
   it("serializes a disable requested while enablement is starting", async () => {
     const harness = createHarness();
     await harness.controller.onHarnessReady("http://127.0.0.1:41001");
     const startEntered = deferred<void>();
-    const releaseStart = deferred<{ port: number; accessUrl: string }>();
+    const releaseStart = deferred<{ port: number }>();
     harness.proxy.start.mockImplementationOnce(async (origin: string) => {
       harness.steps.push(`start:${origin}`);
       startEntered.resolve();
@@ -149,10 +162,7 @@ describe("LAN access controller", () => {
     const enable = harness.controller.set({ enabled: true });
     await startEntered.promise;
     const disable = harness.controller.set({ enabled: false });
-    releaseStart.resolve({
-      port: 43210,
-      accessUrl: "http://0.0.0.0:43210/?lanToken=interleaved-secret",
-    });
+    releaseStart.resolve({ port: 43210 });
 
     await expect(enable).resolves.toEqual({ enabled: false, addresses: [] });
     await expect(disable).resolves.toEqual({ enabled: false, addresses: [] });
@@ -210,6 +220,18 @@ describe("LAN access controller", () => {
     );
   });
 
+  it("clears active state when stop fails during origin replacement", async () => {
+    const harness = createHarness();
+    harness.controller.loadPersistedEnabled(true);
+    await harness.controller.onHarnessReady("http://127.0.0.1:41001");
+    harness.proxy.stop.mockRejectedValueOnce(new Error("stop failed"));
+
+    await expect(
+      harness.controller.onHarnessReady("http://127.0.0.1:41002"),
+    ).rejects.toThrow("stop failed");
+    expect(harness.controller.get()).toEqual({ enabled: false, addresses: [] });
+  });
+
   it("stops and clears a started listener when no address exists", async () => {
     const harness = createHarness();
     const controller = new LanAccessController({
@@ -250,6 +272,26 @@ describe("LAN access controller", () => {
     expect(harness.writeClipboard).toHaveBeenCalledTimes(1);
   });
 
+  it("issues a fresh private exchange URL for every copy", async () => {
+    const harness = createHarness();
+    await harness.controller.onHarnessReady("http://127.0.0.1:41001");
+    await harness.controller.set({ enabled: true });
+    const issuesBeforeCopy = harness.proxy.issueAccessUrl.mock.calls.length;
+
+    harness.setNextUrl("http://0.0.0.0:43210/?lanToken=copy-one");
+    harness.controller.copyUrl({ address: "192.168.1.12" });
+    harness.setNextUrl("http://0.0.0.0:43210/?lanToken=copy-two");
+    harness.controller.copyUrl({ address: "192.168.1.12" });
+
+    expect(harness.writeClipboard.mock.calls).toEqual([
+      ["http://192.168.1.12:43210/?lanToken=copy-one"],
+      ["http://192.168.1.12:43210/?lanToken=copy-two"],
+    ]);
+    expect(harness.proxy.issueAccessUrl).toHaveBeenCalledTimes(
+      issuesBeforeCopy + 2,
+    );
+  });
+
   it("stops and clears the listener when address resolution fails after start", async () => {
     const harness = createHarness();
     const controller = new LanAccessController({
@@ -282,6 +324,16 @@ describe("LAN access controller", () => {
       addresses: [],
     });
     expect(harness.persistEnabled).not.toHaveBeenCalled();
+  });
+
+  it("clears active state when persistence and rollback stop both fail", async () => {
+    const harness = createHarness();
+    await harness.controller.onHarnessReady("http://127.0.0.1:41001");
+    harness.persistEnabled.mockRejectedValueOnce(new Error("persist failed"));
+    harness.proxy.stop.mockRejectedValueOnce(new Error("rollback stop failed"));
+
+    await expect(harness.controller.set({ enabled: true })).rejects.toThrow();
+    expect(harness.controller.get()).toEqual({ enabled: false, addresses: [] });
   });
 
   it("rejects copy while disabled", () => {

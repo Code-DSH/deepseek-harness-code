@@ -69,17 +69,18 @@ window.__ModuleLoader__.load({
         const [message, setMessage] = React.useState("已关闭（正在读取设置…）");
 
         const applyState = (state) => {
+          const nextEnabled = state.enabled === true;
           const nextAddresses = Array.isArray(state.addresses)
             ? state.addresses.filter((address) => typeof address === "string")
             : [];
-          setEnabled(state.enabled === true);
+          setEnabled(nextEnabled);
           setAddresses(nextAddresses);
           setSelectedAddress((current) =>
             nextAddresses.includes(current)
               ? current
               : (nextAddresses[0] ?? ""),
           );
-          setMessage(state.enabled ? "已开启" : "已关闭");
+          setMessage(nextEnabled ? "已开启" : "已关闭");
         };
 
         React.useEffect(() => {

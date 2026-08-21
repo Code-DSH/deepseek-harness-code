@@ -28,7 +28,6 @@ const HOP_BY_HOP_HEADERS = new Set([
 
 export interface LanProxyStartResult {
   port: number;
-  accessUrl: string;
 }
 
 type AuthenticationResult =
@@ -140,13 +139,9 @@ export class LanProxyHost {
   async start(loopbackOrigin: string): Promise<LanProxyStartResult> {
     if (this.server !== undefined) throw new Error("LAN proxy already started");
     const upstream = isLoopbackOrigin(loopbackOrigin);
-    const exchangeTokenBytes = Buffer.from(
-      randomBytes(32).toString("base64url"),
-    );
     const sessionTokenBytes = Buffer.from(
       randomBytes(32).toString("base64url"),
     );
-    this.exchangeTokenBytes = exchangeTokenBytes;
     this.sessionTokenBytes = sessionTokenBytes;
 
     const server = createServer((incoming, response) =>
@@ -174,10 +169,38 @@ export class LanProxyHost {
     }
 
     const port = (server.address() as AddressInfo).port;
-    return {
-      port,
-      accessUrl: `http://${LISTEN_HOST}:${port}/?${TOKEN_QUERY}=${exchangeTokenBytes.toString("utf8")}`,
-    };
+    return { port };
+  }
+
+  issueAccessUrl(): string {
+    const server = this.server;
+    const sessionTokenBytes = this.sessionTokenBytes;
+    if (
+      server === undefined ||
+      !server.listening ||
+      sessionTokenBytes === undefined
+    ) {
+      throw new Error("LAN proxy is not active");
+    }
+    const address = server.address();
+    if (address === null || typeof address === "string") {
+      throw new Error("LAN proxy listener address is unavailable");
+    }
+
+    const previousExchange = this.exchangeTokenBytes;
+    let nextExchange: Buffer;
+    while (true) {
+      nextExchange = Buffer.from(randomBytes(32).toString("base64url"));
+      const collides =
+        timingSafeEqual(nextExchange, sessionTokenBytes) ||
+        (previousExchange !== undefined &&
+          timingSafeEqual(nextExchange, previousExchange));
+      if (!collides) break;
+      nextExchange.fill(0);
+    }
+    previousExchange?.fill(0);
+    this.exchangeTokenBytes = nextExchange;
+    return `http://${LISTEN_HOST}:${address.port}/?${TOKEN_QUERY}=${nextExchange.toString("utf8")}`;
   }
 
   async stop(): Promise<void> {

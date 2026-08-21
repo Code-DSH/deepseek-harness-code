@@ -16,11 +16,11 @@ import {
 
 interface LanProxyStartResult {
   port: number;
-  accessUrl: string;
 }
 
 interface LanProxyHostLike {
   start(loopbackOrigin: string): Promise<LanProxyStartResult>;
+  issueAccessUrl(): string;
   stop(): Promise<void>;
 }
 
@@ -119,6 +119,14 @@ async function exchangeToken(accessUrl: string): Promise<{
   return { cookie: sessionCookie(response), redirect, response };
 }
 
+async function startProxy(
+  proxy: LanProxyHostLike,
+  loopbackOrigin: string,
+): Promise<LanProxyStartResult & { accessUrl: string }> {
+  const started = await proxy.start(loopbackOrigin);
+  return { ...started, accessUrl: proxy.issueAccessUrl() };
+}
+
 function firstLanIpv4Address(): string | undefined {
   for (const records of Object.values(networkInterfaces())) {
     for (const record of records ?? []) {
@@ -181,6 +189,64 @@ function websocketUpgrade(
       );
     });
   });
+}
+
+function rawWebsocketExchange(
+  host: string,
+  port: number,
+  path: string,
+): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const socket = connect({ host, port });
+    let response = "";
+    let settled = false;
+    const timer = setTimeout(() => {
+      socket.destroy();
+      if (settled) return;
+      settled = true;
+      reject(new Error("raw websocket exchange timed out"));
+    }, 2_000);
+    const finish = (): void => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      resolve(response);
+    };
+    socket.setEncoding("utf8");
+    socket.once("error", (error) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      reject(error);
+    });
+    socket.once("close", finish);
+    socket.on("data", (chunk: string) => {
+      response += chunk;
+    });
+    socket.once("connect", () => {
+      socket.write(
+        [
+          `GET ${path} HTTP/1.1`,
+          `Host: ${host}:${port}`,
+          "Connection: Upgrade",
+          "Upgrade: websocket",
+          "Sec-WebSocket-Version: 13",
+          "Sec-WebSocket-Key: cmF3LWV4Y2hhbmdlLWtleQ==",
+          "",
+          "",
+        ].join("\r\n"),
+      );
+    });
+  });
+}
+
+function rawHeader(response: string, name: string): string | undefined {
+  const prefix = `${name.toLowerCase()}:`;
+  return response
+    .split("\r\n")
+    .find((line) => line.toLowerCase().startsWith(prefix))
+    ?.slice(prefix.length)
+    .trim();
 }
 
 function openWebsocketTunnel(
@@ -364,7 +430,7 @@ describe("LAN proxy", () => {
   });
 
   it("rejects an unauthenticated request without reaching Harness", async () => {
-    const started = await proxy!.start(upstreamOrigin);
+    const started = await startProxy(proxy!, upstreamOrigin);
     const url = viaLoopback(started.accessUrl);
     url.search = "";
 
@@ -376,7 +442,7 @@ describe("LAN proxy", () => {
   });
 
   it("exchanges the query token once for a distinct session cookie", async () => {
-    const started = await proxy!.start(upstreamOrigin);
+    const started = await startProxy(proxy!, upstreamOrigin);
     const accessUrl = viaLoopback(started.accessUrl);
     const queryToken = accessUrl.searchParams.get("lanToken");
     expect(queryToken).not.toBeNull();
@@ -412,8 +478,62 @@ describe("LAN proxy", () => {
     expect(upstreamRequests).toHaveLength(1);
   });
 
-  it("forwards authenticated HTTP while removing proxy credentials and hop-by-hop headers", async () => {
+  it("rotates unused exchange URLs without invalidating the session cookie", async () => {
     const started = await proxy!.start(upstreamOrigin);
+    const firstAccessUrl = proxy!.issueAccessUrl();
+    expect(new URL(firstAccessUrl).port).toBe(String(started.port));
+    const firstExchange = await exchangeToken(firstAccessUrl);
+
+    const staleAccessUrl = proxy!.issueAccessUrl();
+    const latestAccessUrl = proxy!.issueAccessUrl();
+    expect(latestAccessUrl).not.toBe(staleAccessUrl);
+
+    const stale = await httpRequest(viaLoopback(staleAccessUrl));
+    expect(stale.status).toBe(401);
+    const latest = await httpRequest(viaLoopback(latestAccessUrl));
+    expect(latest.status).toBe(302);
+    expect(sessionCookie(latest)).toBe(firstExchange.cookie);
+
+    const authenticatedUrl = viaLoopback(latestAccessUrl);
+    authenticatedUrl.search = "";
+    const authenticated = await httpRequest(authenticatedUrl, {
+      headers: { cookie: firstExchange.cookie },
+    });
+    expect(authenticated.status).toBe(200);
+  });
+
+  it("consumes a WebSocket query exchange once while preserving its session", async () => {
+    const started = await proxy!.start(upstreamOrigin);
+    const accessUrl = new URL(proxy!.issueAccessUrl());
+    const queryToken = accessUrl.searchParams.get("lanToken");
+    const path = `${accessUrl.pathname}${accessUrl.search}`;
+
+    const exchanged = await rawWebsocketExchange(
+      "127.0.0.1",
+      started.port,
+      path,
+    );
+    expect(exchanged).toContain("HTTP/1.1 302 Found");
+    const setCookie = rawHeader(exchanged, "set-cookie");
+    expect(setCookie).toMatch(
+      /^dsh_lan_session=[A-Za-z0-9_-]+; HttpOnly; SameSite=Strict; Path=\/$/u,
+    );
+    const cookie = setCookie?.split(";", 1)[0] ?? "";
+    expect(cookie.split("=", 2)[1]).not.toBe(queryToken);
+
+    const replay = await rawWebsocketExchange("127.0.0.1", started.port, path);
+    expect(replay).toContain("HTTP/1.1 401 Unauthorized");
+
+    const authenticated = await websocketUpgrade(
+      "127.0.0.1",
+      started.port,
+      cookie,
+    );
+    expect(authenticated).toContain("HTTP/1.1 101 Switching Protocols");
+  });
+
+  it("forwards authenticated HTTP while removing proxy credentials and hop-by-hop headers", async () => {
+    const started = await startProxy(proxy!, upstreamOrigin);
     const exchanged = await exchangeToken(started.accessUrl);
     const target = viaLoopback(started.accessUrl);
     target.pathname = "/api/run";
@@ -450,7 +570,7 @@ describe("LAN proxy", () => {
   });
 
   it("listens on all interfaces instead of only loopback", async () => {
-    const started = await proxy!.start(upstreamOrigin);
+    const started = await startProxy(proxy!, upstreamOrigin);
     const exchanged = await exchangeToken(started.accessUrl);
     const lanAddress = firstLanIpv4Address() ?? "0.0.0.0";
 
@@ -465,7 +585,7 @@ describe("LAN proxy", () => {
   });
 
   it("forwards an authenticated WebSocket upgrade to the loopback origin", async () => {
-    const started = await proxy!.start(upstreamOrigin);
+    const started = await startProxy(proxy!, upstreamOrigin);
     const exchanged = await exchangeToken(started.accessUrl);
 
     const response = await websocketUpgrade(
@@ -483,7 +603,7 @@ describe("LAN proxy", () => {
   });
 
   it("closes both ends of a live WebSocket tunnel when stopped", async () => {
-    const started = await proxy!.start(upstreamOrigin);
+    const started = await startProxy(proxy!, upstreamOrigin);
     const exchanged = await exchangeToken(started.accessUrl);
     const tunnel = await openWebsocketTunnel(
       "127.0.0.1",
@@ -503,7 +623,7 @@ describe("LAN proxy", () => {
   });
 
   it("terminates an active streaming HTTP response when stopped", async () => {
-    const started = await proxy!.start(upstreamOrigin);
+    const started = await startProxy(proxy!, upstreamOrigin);
     const exchanged = await exchangeToken(started.accessUrl);
     const target = viaLoopback(started.accessUrl);
     target.pathname = "/stream";
@@ -521,7 +641,7 @@ describe("LAN proxy", () => {
   });
 
   it("refuses connections after stop and invalidates the old cookie", async () => {
-    const first = await proxy!.start(upstreamOrigin);
+    const first = await startProxy(proxy!, upstreamOrigin);
     const oldSession = await exchangeToken(first.accessUrl);
     await proxy!.stop();
 
@@ -531,7 +651,7 @@ describe("LAN proxy", () => {
       }),
     ).rejects.toThrow();
 
-    const restarted = await proxy!.start(upstreamOrigin);
+    const restarted = await startProxy(proxy!, upstreamOrigin);
     const response = await httpRequest(`http://127.0.0.1:${restarted.port}/`, {
       headers: { cookie: oldSession.cookie },
     });
