@@ -165,6 +165,121 @@ describe("official Harness plugin installation", () => {
     expect(runCommand).toHaveBeenCalledTimes(2);
   });
 
+  it.each([
+    ["missing dependency", {}],
+    [
+      "mismatched dependency",
+      { "deepseek-harness-desktop-plugin": "link:/other/plugin" },
+    ],
+  ] as const)(
+    "reruns official reconciliation when the profile has a %s",
+    async (_label, dependencies) => {
+      const root = await mkdtemp(join(tmpdir(), "dsh-plugin-profile-invalid-"));
+      const dshHome = join(root, "home");
+      const runtimeBinRoot = join(root, "app-data", "runtime-bin");
+      const desktopPlugin = await createPlugin(
+        root,
+        "desktop-plugin",
+        "deepseek-harness-desktop-plugin",
+      );
+      const packageRoot = await realpath(desktopPlugin);
+      const profileRoot = join(dshHome, "profiles", "web");
+      await mkdir(join(profileRoot, "node_modules"), { recursive: true });
+      await writeFile(
+        join(profileRoot, "package.json"),
+        `${JSON.stringify({ dependencies: { "deepseek-harness-desktop-plugin": `link:${packageRoot}` } })}\n`,
+      );
+      await writeFile(
+        join(profileRoot, "node_modules", ".modules.yaml"),
+        `${JSON.stringify({ storeDir: "/managed/pnpm-store" })}\n`,
+      );
+      const runCommand = vi.fn<OfficialCommandRunner>(() => ({
+        status: 0,
+        stdout: "",
+        stderr: "",
+      }));
+      const input = {
+        dshEntry: "/app/dsh.js",
+        dshHome,
+        nodeExecutable: "/usr/bin/node",
+        pnpmEntry: "/app/pnpm.mjs",
+        pnpmStoreDir: "/managed/pnpm-store",
+        runtimeBinRoot,
+        integratedPlugins: [
+          {
+            packageName: "deepseek-harness-desktop-plugin",
+            packageRoot: desktopPlugin,
+          },
+        ],
+        legacyPluginSpecs: [],
+        runCommand,
+      } satisfies Parameters<typeof ensureOfficialHarnessInstall>[0];
+
+      await ensureOfficialHarnessInstall(input);
+      await writeFile(
+        join(profileRoot, "package.json"),
+        `${JSON.stringify({ dependencies })}\n`,
+      );
+      const result = await ensureOfficialHarnessInstall(input);
+
+      expect(result.status).toBe("installed");
+      expect(runCommand).toHaveBeenCalledTimes(2);
+    },
+  );
+
+  it("reruns official reconciliation when the profile uses a foreign pnpm store", async () => {
+    const root = await mkdtemp(join(tmpdir(), "dsh-plugin-foreign-store-"));
+    const dshHome = join(root, "home");
+    const runtimeBinRoot = join(root, "app-data", "runtime-bin");
+    const desktopPlugin = await createPlugin(
+      root,
+      "desktop-plugin",
+      "deepseek-harness-desktop-plugin",
+    );
+    const packageRoot = await realpath(desktopPlugin);
+    const profileRoot = join(dshHome, "profiles", "web");
+    await mkdir(join(profileRoot, "node_modules"), { recursive: true });
+    await writeFile(
+      join(profileRoot, "package.json"),
+      `${JSON.stringify({ dependencies: { "deepseek-harness-desktop-plugin": `link:${packageRoot}` } })}\n`,
+    );
+    await writeFile(
+      join(profileRoot, "node_modules", ".modules.yaml"),
+      `${JSON.stringify({ storeDir: "/managed/pnpm-store" })}\n`,
+    );
+    const runCommand = vi.fn<OfficialCommandRunner>(() => ({
+      status: 0,
+      stdout: "",
+      stderr: "",
+    }));
+    const input = {
+      dshEntry: "/app/dsh.js",
+      dshHome,
+      nodeExecutable: "/usr/bin/node",
+      pnpmEntry: "/app/pnpm.mjs",
+      pnpmStoreDir: "/managed/pnpm-store",
+      runtimeBinRoot,
+      integratedPlugins: [
+        {
+          packageName: "deepseek-harness-desktop-plugin",
+          packageRoot: desktopPlugin,
+        },
+      ],
+      legacyPluginSpecs: [],
+      runCommand,
+    } satisfies Parameters<typeof ensureOfficialHarnessInstall>[0];
+
+    await ensureOfficialHarnessInstall(input);
+    await writeFile(
+      join(profileRoot, "node_modules", ".modules.yaml"),
+      `${JSON.stringify({ storeDir: "/foreign/pnpm-store" })}\n`,
+    );
+    const result = await ensureOfficialHarnessInstall(input);
+
+    expect(result.status).toBe("installed");
+    expect(runCommand).toHaveBeenCalledTimes(2);
+  });
+
   it("removes a profile node_modules linked against a foreign pnpm store", async () => {
     const root = await mkdtemp(join(tmpdir(), "dsh-plugin-store-"));
     const dshHome = join(root, "home");

@@ -22,3 +22,14 @@ Implemented warm-start reconciliation skipping with an app-owned marker under `D
 ## Concerns
 
 - The full workspace typecheck remains blocked by the unrelated missing dependency above.
+
+## Review follow-up
+
+- Added direct regression coverage for a missing profile dependency and a mismatched
+  `link:` dependency. Both invalidate the marker and rerun the official CLI.
+- Added direct regression coverage for a foreign pnpm store in `.modules.yaml`.
+  The marker is invalidated and official reconciliation reruns.
+- RED/GREEN: the focused suite was run after adding the regression tests; the existing
+  implementation already contained the invalidation branches, so the new tests passed
+  immediately rather than exposing a remaining implementation failure.
+- Focused Vitest result after the follow-up: `14 tests passed`.
