@@ -226,6 +226,14 @@ function createInterruptHandler(cleanup, exit) {
 function parseLoopbackListeners(output, platform = process.platform) {
   const listeners = [];
   for (const line of output.split("\n")) {
+    if (platform === "darwin") {
+      const match = line.match(
+        /^\S+\s+(\d+)\s+.*\sTCP\s+127\.0\.0\.1:(\d+)\s+\(LISTEN\)\s*$/u,
+      );
+      if (match)
+        listeners.push({ port: Number(match[2]), pid: Number(match[1]) });
+      continue;
+    }
     if (!line.includes("127.0.0.1") || !/LISTEN/i.test(line)) continue;
     const portMatch = line.match(/127\.0\.0\.1:(\d+)/);
     if (!portMatch) continue;
@@ -241,16 +249,27 @@ function parseLoopbackListeners(output, platform = process.platform) {
   return listeners;
 }
 
+function listenerCommand(platform = process.platform) {
+  if (platform === "win32")
+    return { command: "netstat", args: ["-ano", "-p", "tcp"] };
+  if (platform === "linux") return { command: "ss", args: ["-ltnp"] };
+  if (platform === "darwin")
+    return {
+      command: "lsof",
+      args: ["-nP", "-iTCP", "-sTCP:LISTEN"],
+    };
+  throw new Error(`unsupported smoke platform ${platform}`);
+}
+
 async function listLoopbackListeners() {
-  const command = process.platform === "win32" ? "netstat" : "ss";
-  const args = process.platform === "win32" ? ["-ano", "-p", "tcp"] : ["-ltnp"];
+  const { command, args } = listenerCommand();
   const output = await execFileAsync(command, args, {
     windowsHide: true,
   }).then(
     ({ stdout }) => stdout,
     () => "",
   );
-  return parseLoopbackListeners(output);
+  return parseLoopbackListeners(output, process.platform);
 }
 
 function assertEvidenceMetadata(value, expected) {
@@ -562,16 +581,36 @@ async function inspectArchitecture(
   {
     platform = process.platform,
     arch = process.arch,
+    expectedArchitecture,
+    runnerArchitecture,
     readFile: readExecutable = readFile,
     execFile: inspectExecutable = execFileAsync,
   } = {},
 ) {
   assertKnownRunnerArchitecture(platform, arch);
+  assertKnownRunnerArchitecture(platform, runnerArchitecture);
+  if (arch !== runnerArchitecture)
+    throw new Error(
+      `native host architecture ${arch} does not match runner architecture ${runnerArchitecture}`,
+    );
+  if (platform === "darwin") {
+    if (expectedArchitecture !== "universal")
+      throw new Error(
+        `macOS expected architecture must be universal, got ${expectedArchitecture}`,
+      );
+  } else if (expectedArchitecture !== runnerArchitecture) {
+    throw new Error(
+      `package target architecture ${expectedArchitecture} does not match runner architecture ${runnerArchitecture}`,
+    );
+  }
   if (platform === "win32") {
     const machine = String(
       parseWindowsPeMachine(await readExecutable(executable)),
     );
-    const expectedMachine = { x64: "34404", arm64: "43620" }[arch];
+    const expectedMachine = {
+      x64: "34404",
+      arm64: "43620",
+    }[expectedArchitecture];
     if (machine !== expectedMachine)
       throw new Error(`unsupported Windows PE machine ${machine}`);
     return { runner: arch, platform, machine };
@@ -777,6 +816,7 @@ async function main() {
   const executable = findExecutable();
   const packageKind = requiredArgument("--package-kind");
   const expectedArchitecture = requiredArgument("--expected-architecture");
+  const runnerArchitecture = requiredArgument("--runner-architecture");
   const artifactFilename = requiredArgument("--artifact-filename");
   const matrixLabel =
     argument("--matrix-label") ??
@@ -806,7 +846,10 @@ async function main() {
       path: resolve(artifactPath),
       sha256: artifactSha256,
       inventory: await inventory(inventoryPath),
-      architecture: await inspectArchitecture(executable),
+      architecture: await inspectArchitecture(executable, {
+        expectedArchitecture,
+        runnerArchitecture,
+      }),
     },
     runtime: { executable: resolve(executable), resources: [] },
   };
@@ -986,6 +1029,7 @@ async function main() {
 export {
   assertKnownRunnerArchitecture,
   inspectArchitecture,
+  listenerCommand,
   parseLoopbackListeners,
   assertPathWithinRoot,
   assertPathNotSymlink,

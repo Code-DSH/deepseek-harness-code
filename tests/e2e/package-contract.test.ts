@@ -285,6 +285,7 @@ describe("DeepSeek Harness Code distribution contract", () => {
     expect(workflow).toContain("${{ matrix.package-kind }}");
     expect(workflow).toContain("${{ matrix.expected-architecture }}");
     expect(workflow).toContain("--artifact-filename");
+    expect(workflow).toContain("--runner-architecture");
     expect(workflow).toContain("--evidence-root");
     expect(workflow).toContain("--evidence");
     expect(workflow).toContain("pnpm smoke:package");
@@ -369,6 +370,9 @@ describe("DeepSeek Harness Code distribution contract", () => {
     expect(macosSmokeJob).toContain("ditto");
     expect(macosSmokeJob).toContain("pnpm smoke:package");
     expect(macosSmokeJob).toContain("--expected-architecture universal");
+    expect(macosSmokeJob).toContain(
+      "--runner-architecture ${{ matrix.runner-architecture }}",
+    );
     expect(releaseJob).toContain("needs: [package, macos-smoke]");
   });
 

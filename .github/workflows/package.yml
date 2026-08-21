@@ -120,7 +120,7 @@ jobs:
             $resources = Join-Path $executable.DirectoryName "resources"
             if (-not (Test-Path $resources -PathType Container)) { throw "installed application resources were not found" }
             $hash = (Get-FileHash $artifact.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
-            pnpm smoke:package -- --matrix-label $env:MATRIX_LABEL --package-kind $env:PACKAGE_KIND --expected-architecture $env:EXPECTED_ARCHITECTURE --artifact-filename $env:ARTIFACT_FILENAME --executable $executable.FullName --resources $resources --inventory $executable.DirectoryName --artifact $artifact.FullName --artifact-sha256 $hash --evidence-root $env:EVIDENCE_ROOT --evidence (Join-Path $env:EVIDENCE_ROOT "smoke-evidence-windows.json")
+            pnpm smoke:package -- --matrix-label $env:MATRIX_LABEL --package-kind $env:PACKAGE_KIND --expected-architecture $env:EXPECTED_ARCHITECTURE --runner-architecture $env:EXPECTED_ARCHITECTURE --artifact-filename $env:ARTIFACT_FILENAME --executable $executable.FullName --resources $resources --inventory $executable.DirectoryName --artifact $artifact.FullName --artifact-sha256 $hash --evidence-root $env:EVIDENCE_ROOT --evidence (Join-Path $env:EVIDENCE_ROOT "smoke-evidence-windows.json")
             if ($LASTEXITCODE -ne 0) { throw "package smoke failed with exit code $LASTEXITCODE" }
           } catch {
             $primaryFailure = $_
@@ -187,7 +187,7 @@ jobs:
           hash=$(sha256sum "$appimage" | cut -d' ' -f1)
           executable="$squashfs_root/deepseek-harness-code"
           [[ -x "$executable" ]]
-          xvfb-run -a pnpm smoke:package -- --matrix-label "$MATRIX_LABEL" --package-kind "$PACKAGE_KIND" --expected-architecture "$EXPECTED_ARCHITECTURE" --artifact-filename "$(basename "$appimage")" --executable "$executable" --resources "$squashfs_root/resources" --inventory "$squashfs_root" --artifact "$appimage" --artifact-sha256 "$hash" --evidence-root "$EVIDENCE_ROOT" --evidence "$EVIDENCE_ROOT/smoke-evidence-linux-appimage.json"
+          xvfb-run -a pnpm smoke:package -- --matrix-label "$MATRIX_LABEL" --package-kind "$PACKAGE_KIND" --expected-architecture "$EXPECTED_ARCHITECTURE" --runner-architecture "$EXPECTED_ARCHITECTURE" --artifact-filename "$(basename "$appimage")" --executable "$executable" --resources "$squashfs_root/resources" --inventory "$squashfs_root" --artifact "$appimage" --artifact-sha256 "$hash" --evidence-root "$EVIDENCE_ROOT" --evidence "$EVIDENCE_ROOT/smoke-evidence-linux-appimage.json"
       - name: Install and smoke test Linux deb package
         if: matrix.label == 'linux-x64' || matrix.label == 'linux-arm64'
         shell: bash
@@ -242,7 +242,7 @@ jobs:
           resources="$install_dir/resources"
           [[ -d "$resources" ]]
           hash=$(sha256sum "$deb" | cut -d' ' -f1)
-          xvfb-run -a pnpm smoke:package -- --matrix-label "$MATRIX_LABEL" --package-kind "$PACKAGE_KIND" --expected-architecture "$EXPECTED_ARCHITECTURE" --artifact-filename "$(basename "$deb")" --executable "$executable" --resources "$resources" --inventory "$install_dir" --artifact "$deb" --artifact-sha256 "$hash" --evidence-root "$EVIDENCE_ROOT" --evidence "$EVIDENCE_ROOT/smoke-evidence-linux-deb.json"
+          xvfb-run -a pnpm smoke:package -- --matrix-label "$MATRIX_LABEL" --package-kind "$PACKAGE_KIND" --expected-architecture "$EXPECTED_ARCHITECTURE" --runner-architecture "$EXPECTED_ARCHITECTURE" --artifact-filename "$(basename "$deb")" --executable "$executable" --resources "$resources" --inventory "$install_dir" --artifact "$deb" --artifact-sha256 "$hash" --evidence-root "$EVIDENCE_ROOT" --evidence "$EVIDENCE_ROOT/smoke-evidence-linux-deb.json"
       - name: Upload installer artifacts
         if: always() && (matrix.label == 'windows-x64' || matrix.label == 'windows-arm64')
         uses: actions/upload-artifact@v4
@@ -348,7 +348,7 @@ jobs:
           resources="$installed_app/Contents/Resources"
           [[ -x "$executable" && -d "$resources" ]]
           hash=$(shasum -a 256 "$dmg" | cut -d' ' -f1)
-          pnpm smoke:package -- --matrix-label macos-universal --package-kind dmg --expected-architecture universal --artifact-filename "$(basename "$dmg")" --executable "$executable" --resources "$resources" --inventory "$installed_app" --artifact "$dmg" --artifact-sha256 "$hash" --evidence-root "$EVIDENCE_ROOT" --evidence "$EVIDENCE_ROOT/smoke-evidence-${{ matrix.runner-architecture }}.json"
+          pnpm smoke:package -- --matrix-label macos-universal --package-kind dmg --expected-architecture universal --runner-architecture ${{ matrix.runner-architecture }} --artifact-filename "$(basename "$dmg")" --executable "$executable" --resources "$resources" --inventory "$installed_app" --artifact "$dmg" --artifact-sha256 "$hash" --evidence-root "$EVIDENCE_ROOT" --evidence "$EVIDENCE_ROOT/smoke-evidence-${{ matrix.runner-architecture }}.json"
       - name: Upload sanitized smoke evidence
         if: always()
         uses: actions/upload-artifact@v4

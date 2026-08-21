@@ -205,6 +205,36 @@ describe("packaged runtime listener selection", () => {
     expect(listeners).toEqual([{ port: 41002, pid: 7002 }]);
   });
 
+  test("selects the native listener command for Windows, Linux, and macOS", () => {
+    expect(smokeRuntime.listenerCommand("win32")).toEqual({
+      command: "netstat",
+      args: ["-ano", "-p", "tcp"],
+    });
+    expect(smokeRuntime.listenerCommand("linux")).toEqual({
+      command: "ss",
+      args: ["-ltnp"],
+    });
+    expect(smokeRuntime.listenerCommand("darwin")).toEqual({
+      command: "lsof",
+      args: ["-nP", "-iTCP", "-sTCP:LISTEN"],
+    });
+  });
+
+  test("parses only exact macOS IPv4 loopback listeners with their PID", () => {
+    const listeners = parseLoopbackListeners(
+      [
+        "COMMAND PID USER FD TYPE DEVICE SIZE/OFF NODE NAME",
+        "node 7002 trip 24u IPv4 0x1 0t0 TCP 127.0.0.1:41002 (LISTEN)",
+        "node 7003 trip 25u IPv4 0x2 0t0 TCP *:41003 (LISTEN)",
+        "node 7004 trip 26u IPv4 0x3 0t0 TCP 0.0.0.0:41004 (LISTEN)",
+        "node 7005 trip 27u IPv6 0x4 0t0 TCP [::1]:41005 (LISTEN)",
+      ].join("\n"),
+      "darwin",
+    );
+
+    expect(listeners).toEqual([{ port: 41002, pid: 7002 }]);
+  });
+
   test("accepts only app-owned ready and final shutdown evidence for this run", () => {
     const evidence = {
       schema: 2,
@@ -352,6 +382,8 @@ describe("packaged runtime listener selection", () => {
         smokeRuntime.inspectArchitecture("C:\\DeepSeek Harness Code.exe", {
           platform: "win32",
           arch,
+          expectedArchitecture: arch,
+          runnerArchitecture: arch,
           readFile: async () => pe,
         }),
       ).resolves.toEqual({
@@ -371,6 +403,8 @@ describe("packaged runtime listener selection", () => {
         smokeRuntime.inspectArchitecture("/opt/deepseek-harness-code", {
           platform: "linux",
           arch,
+          expectedArchitecture: arch,
+          runnerArchitecture: arch,
           execFile: async () => ({ stdout: `${file}\n` }),
         }),
       ).resolves.toEqual({ runner: arch, platform: "linux", file });
@@ -386,6 +420,8 @@ describe("packaged runtime listener selection", () => {
         {
           platform: "darwin",
           arch: "arm64",
+          expectedArchitecture: "universal",
+          runnerArchitecture: "arm64",
           execFile: async () => ({ stdout: `${archs}\n` }),
         },
       ),
@@ -399,9 +435,47 @@ describe("packaged runtime listener selection", () => {
       smokeRuntime.inspectArchitecture("/tmp/DeepSeek Harness Code", {
         platform: "darwin",
         arch: "x64",
+        expectedArchitecture: "universal",
+        runnerArchitecture: "x64",
         execFile: async () => ({ stdout: "x86_64\n" }),
       }),
     ).rejects.toThrow(/universal|arm64/i);
+  });
+
+  test("rejects Windows and Linux target or host architecture mismatches", async () => {
+    await expect(
+      smokeRuntime.inspectArchitecture("C:\\DeepSeek Harness Code.exe", {
+        platform: "win32",
+        arch: "x64",
+        expectedArchitecture: "arm64",
+        runnerArchitecture: "x64",
+        readFile: async () => Buffer.alloc(128),
+      }),
+    ).rejects.toThrow(/target|expected|runner|architecture/i);
+
+    await expect(
+      smokeRuntime.inspectArchitecture("/opt/deepseek-harness-code", {
+        platform: "linux",
+        arch: "arm64",
+        expectedArchitecture: "x64",
+        runnerArchitecture: "x64",
+        execFile: async () => ({
+          stdout: "ELF 64-bit LSB pie executable, x86-64\n",
+        }),
+      }),
+    ).rejects.toThrow(/host|runner|architecture/i);
+  });
+
+  test("rejects a macOS smoke matrix that does not match the native host", async () => {
+    await expect(
+      smokeRuntime.inspectArchitecture("/tmp/DeepSeek Harness Code", {
+        platform: "darwin",
+        arch: "arm64",
+        expectedArchitecture: "universal",
+        runnerArchitecture: "x64",
+        execFile: async () => ({ stdout: "x86_64 arm64\n" }),
+      }),
+    ).rejects.toThrow(/host|runner|architecture/i);
   });
 
   test("validates matrix metadata and artifact filename architecture", () => {
