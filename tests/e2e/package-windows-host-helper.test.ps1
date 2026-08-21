@@ -25,6 +25,8 @@ $programsRoot = Join-Path $localAppData "Programs"
 $customRoot = Join-Path $fixtureRoot "runner-owned-custom"
 $nestedCustomRoot = Join-Path $fixtureRoot "runner-owned-parent"
 $nestedAppRoot = Join-Path $nestedCustomRoot "DeepSeek Harness Code"
+$registryCustomParent = Join-Path $fixtureRoot "registry-custom-parent"
+$registryCustomRoot = Join-Path $registryCustomParent "installer-selected-location"
 $registeredRoot = Join-Path $programsRoot "DeepSeek Harness Code"
 $outsideRoot = Join-Path $fixtureRoot "outside-sentinel"
 $junctionPath = Join-Path $customRoot "outside-junction"
@@ -32,6 +34,7 @@ $junctionPath = Join-Path $customRoot "outside-junction"
 try {
   New-AppLayout $customRoot
   New-AppLayout $nestedAppRoot
+  New-AppLayout $registryCustomRoot
   New-AppLayout $registeredRoot
 
   $custom = Resolve-DhscInstalledApplication -CustomRoot $customRoot -RegistryEntries @() -LocalAppData $localAppData
@@ -41,6 +44,15 @@ try {
   $nestedCustom = Resolve-DhscInstalledApplication -CustomRoot $nestedCustomRoot -RegistryEntries @() -LocalAppData $localAppData
   Assert-True ($nestedCustom.Source -eq "custom") "installer-appended custom root was not accepted"
   Assert-True ($nestedCustom.Root -eq [IO.Path]::GetFullPath($nestedAppRoot)) "installer-appended custom root was not canonical"
+
+  $customRegistryEntry = [pscustomobject]@{
+    DisplayName = "DeepSeek Harness Code"
+    InstallLocation = $registryCustomRoot
+    UninstallString = ""
+  }
+  $customFromRegistry = Resolve-DhscInstalledApplication -CustomRoot $registryCustomParent -RegistryEntries @($customRegistryEntry) -LocalAppData $localAppData
+  Assert-True ($customFromRegistry.Source -eq "custom") "registry root inside runner custom boundary was not accepted"
+  Assert-True ($customFromRegistry.Root -eq [IO.Path]::GetFullPath($registryCustomRoot)) "registry custom root was not canonical"
 
   $wideEntry = [pscustomobject]@{
     DisplayName = "DeepSeek Harness Code"
