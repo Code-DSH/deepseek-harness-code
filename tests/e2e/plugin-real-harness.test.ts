@@ -321,8 +321,8 @@ describe("desktop plugin with the real pinned Harness", () => {
     ]);
   }, 30_000);
 
-  // macOS CI may cold-download Electron before the real Harness can start,
-  // so this integration test needs more than Vitest's 15-second default.
+  // macOS CI cold real-Harness/preset setup exceeded this test's former
+  // explicit 15-second limit, so keep the scoped 45-second budget below.
   it("is discovered with English fallback metadata by the pinned rc.8 roster", async () => {
     const root = await mkdtemp(join(tmpdir(), "dsh-anchored-preset-real-"));
     temporaryRoots.add(root);
