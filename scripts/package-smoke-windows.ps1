@@ -116,7 +116,7 @@ function New-DhscNodeMoveList {
 function Hide-DhscNodeCandidates {
   param(
     [Parameter(Mandatory = $true)][AllowEmptyCollection()][string[]]$Candidates,
-    [Parameter(Mandatory = $true)][Collections.Generic.List[object]]$Moves,
+    [Parameter(Mandatory = $true)][AllowEmptyCollection()][Collections.Generic.List[object]]$Moves,
     [Parameter(Mandatory = $true)][string]$RunToken,
     [scriptblock]$MoveEntry = {
       param($From, $To)
@@ -147,7 +147,7 @@ function Hide-DhscNodeCandidates {
 
 function Restore-DhscNodeCandidates {
   param(
-    [Parameter(Mandatory = $true)][Collections.Generic.List[object]]$Moves,
+    [Parameter(Mandatory = $true)][AllowEmptyCollection()][Collections.Generic.List[object]]$Moves,
     [scriptblock]$MoveEntry = {
       param($From, $To)
       Move-Item -LiteralPath $From -Destination $To -ErrorAction Stop
@@ -181,7 +181,7 @@ function New-DhscCleanupFailureList {
 
 function Add-DhscCaughtCleanupFailure {
   param(
-    [Parameter(Mandatory = $true)][Collections.Generic.List[Exception]]$CleanupFailures,
+    [Parameter(Mandatory = $true)][AllowEmptyCollection()][Collections.Generic.List[Exception]]$CleanupFailures,
     [Parameter(Mandatory = $true)][System.Management.Automation.ErrorRecord]$ErrorRecord
   )
 
@@ -190,7 +190,7 @@ function Add-DhscCaughtCleanupFailure {
 
 function Add-DhscDirectCleanupFailure {
   param(
-    [Parameter(Mandatory = $true)][Collections.Generic.List[Exception]]$CleanupFailures,
+    [Parameter(Mandatory = $true)][AllowEmptyCollection()][Collections.Generic.List[Exception]]$CleanupFailures,
     [Parameter(Mandatory = $true)][string]$Message
   )
 
@@ -200,7 +200,7 @@ function Add-DhscDirectCleanupFailure {
 function Complete-DhscPackageStep {
   param(
     [AllowNull()][Exception]$PrimaryFailure,
-    [Parameter(Mandatory = $true)][Collections.Generic.List[Exception]]$CleanupFailures,
+    [Parameter(Mandatory = $true)][AllowEmptyCollection()][Collections.Generic.List[Exception]]$CleanupFailures,
     [scriptblock]$ReportCleanup = {
       param($Message)
       Write-Host "::error::Cleanup failed: $Message"

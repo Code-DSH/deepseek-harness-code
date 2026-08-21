@@ -583,6 +583,19 @@ describe("DeepSeek Harness Code distribution contract", () => {
     expect(helper).toContain("$ErrorRecord.Exception");
     expect(helper).toContain("$cleanupFailure.Message");
     expect(helper).toContain("throw $PrimaryFailure");
+    expect(
+      helper.match(
+        /\[AllowEmptyCollection\(\)\]\[Collections\.Generic\.List\[object\]\]\$Moves/gu,
+      ) ?? [],
+    ).toHaveLength(2);
+    expect(
+      helper.match(
+        /\[AllowEmptyCollection\(\)\]\[Collections\.Generic\.List\[Exception\]\]\$CleanupFailures/gu,
+      ) ?? [],
+    ).toHaveLength(3);
+    expect(helper).not.toMatch(
+      /\[AllowNull\(\)\]\[Collections\.Generic\.List/gu,
+    );
   });
 
   test("scopes Linux smoke package metadata to each package step", async () => {
