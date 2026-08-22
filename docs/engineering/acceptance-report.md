@@ -1,7 +1,7 @@
 ---
 id: engineering.acceptance-report
 title: DeepSeek Harness Code Acceptance Report
-summary: BETA2-2 is published as Latest with native Windows/Linux x64+arm64, dual-native macOS, no-Node, process, loopback, and manifest evidence.
+summary: BETA3 is published as Latest with native Windows/Linux x64+arm64, dual-native macOS, no-Node, process, and manifest evidence.
 kind: engineering
 status: canonical
 content_stage: final-verified
@@ -11,7 +11,7 @@ read_when: [reviewing release readiness or reproducing validation]
 skip_when: [isolated source edits before release]
 priority: must
 freshness_class: project
-last_verified: 2026-08-22T01:17:51+08:00
+last_verified: 2026-08-22T12:20:00+08:00
 owners: [primary-agent]
 source_of_truth: [../../apps, ../../packages, ../../tests, ../../release]
 related:
@@ -25,10 +25,18 @@ tags: [acceptance, release, evidence]
 
 ## Evidence state and bug classes
 
-- **Current release state**：BETA2-2 is GitHub Latest at [v0.1.0-BETA2-2](https://github.com/Code-DSH/deepseek-harness-code/releases/tag/v0.1.0-BETA2-2), sourced from `6a08c985cf0090bfdc20e1d0d07f916393668501`. Tag Run [32502448560](https://github.com/Code-DSH/deepseek-harness-code/actions/runs/32502448560) published eight installers plus `update-manifest.json`; repaired main Run [32505104693](https://github.com/Code-DSH/deepseek-harness-code/actions/runs/32505104693) supplies the explicit macOS no-Node evidence missed by the tag run's Bash 3.2 false green.
+- **Current release state**：BETA3 is GitHub Latest at [v0.1.0-BETA3](https://github.com/Code-DSH/deepseek-harness-code/releases/tag/v0.1.0-BETA3), sourced from `9762f8efe1e761ff6b175b209972103bff88e091`. Tag Run [32550253496](https://github.com/Code-DSH/deepseek-harness-code/actions/runs/32550253496) passed all seven build/native-smoke jobs and published eight installers plus `update-manifest.json`.
 - **产品 bug**影响打包应用行为：BETA1 Watchdog/锁/端口竞争、BETA2 重复 lifecycle/并发 pnpm、BETA2-1 persistent Bash hang，以及 BETA2-2 首次标记中安装后 Windows x64 runtime 未 ready。
 - **CI / 包装门禁 bug**影响发布证据可靠性：tag/ref、资产名、AppImage/deb 命令、清理、超时、用户数据隔离、证据新鲜度和 native architecture binding。
 - **覆盖缺口**表示从未在目标架构安装/解包并启动，或缺少 packaged no-Node 场景。BETA2-2 的可执行安装路径现已覆盖；Cross-build 仍不算 native execution。
+
+## BETA3 exact validation
+
+- Windows x64/arm64 NSIS installed, launched, reached ready, completed the no-Node path, exited cleanly, and uninstalled on native runners.
+- Linux x64/arm64 AppImage and deb packages launched on native runners; deb packages were installed/purged, and both formats completed no-Node evidence.
+- Universal macOS DMG was copied and launched on native Intel and Apple Silicon runners; both completed runtime and no-Node evidence.
+- Runtime ready evidence completed in 16.5–381.5 seconds across the package paths; no-Node evidence completed in 0.4–4.4 seconds. Every recorded process exited with code 0 and `exitedCleanly: true`.
+- The Release contains nine assets. The manifest's macOS ZIP, Windows x64/arm64 NSIS, and Linux x64/arm64 AppImage entries have zero SHA-256 or byte-size mismatches against GitHub's published asset metadata.
 
 ## BETA2-2 first gate and repairs
 
@@ -144,7 +152,7 @@ Release 包含 Universal DMG/ZIP、Windows x64/arm64 NSIS、Linux x64/arm64 AppI
 | Runtime preflight | 51 artifacts, 35 production dependencies, 8 critical packages, and 10 bundled plugin packages verified                       |
 | macOS package     | Local `verify:mac --universal` passed; tagged Universal macOS job passed and uploaded DMG + ZIP                              |
 
-Historical BETA2-1 and 0.3.x gate snapshots are retained for traceability; BETA2-2 is the current verified Latest release.
+Historical BETA2-1 and 0.3.x gate snapshots are retained for traceability; BETA3 is the current verified Latest release and BETA2-2 remains the previous verified release.
 
 ## Real renderer and performance evidence
 

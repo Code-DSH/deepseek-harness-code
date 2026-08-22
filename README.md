@@ -207,7 +207,7 @@ Full boundaries in [overview](./docs/architecture/overview.md) and [lifecycle](.
 | Windows  | Windows 10+, x64 and arm64         | Native NSIS install/runtime validation passed |
 | Linux    | x64 and arm64                      | Native AppImage/deb validation passed         |
 
-BETA3 upgrades the bundled official Harness to `0.1.1-rc.2`. Its tag workflow must pass native Windows/Linux x64+arm64 and macOS Intel/Apple-Silicon install/runtime/no-Node validation before GitHub publishes it as Latest. Older DHSC builds receive BETA3 through **Settings → General → Check for updates** using the signed-size/SHA-256 update manifest contract.
+BETA3 upgrades the bundled official Harness to `0.1.1-rc.2` and is now GitHub Latest. Native Windows/Linux x64+arm64 and macOS Intel/Apple-Silicon install/runtime/no-Node validation passed in [Run 32550253496](https://github.com/Code-DSH/deepseek-harness-code/actions/runs/32550253496). Older DHSC builds receive BETA3 through **Settings → General → Check for updates** using the size/SHA-256 update manifest contract.
 
 ## Install on macOS
 
