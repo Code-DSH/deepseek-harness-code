@@ -4,6 +4,8 @@ Use TDD for runtime behavior. Required layers are unit tests for state and secur
 
 Harness 0.1.1-rc.2 exposes no verified `/api/health` route. Integration tests therefore assert child liveness and an HTTP 2xx Web-root response; they also assert that Harness itself binds only to `127.0.0.1`. BETA2-2 additionally requires focused warm-reconciliation invalidation tests; token-gated LAN proxy HTTP/WebSocket, disable/invalidation, and `0.0.0.0` listener tests; fixed IPC/token-redaction tests; and Windows custom-Bash sandbox-policy / canonical-workdir tests. These are release gates, not evidence of a completed interactive validation.
 
+BETA3 native package Run [32550253496](https://github.com/Code-DSH/deepseek-harness-code/actions/runs/32550253496) passed Windows and Linux x64/arm64 plus macOS Intel/Apple Silicon runtime and packaged no-Node scenarios before publishing GitHub Latest. The same run produced the nine release assets and updater manifest.
+
 Live acceptance is separate: credentials are entered in the Harness UI by the user and are never inspected by automation. The planned 45-minute V4 Flash observation and 20 interactions are recorded only when configured.
 
 ## Release evidence vocabulary
@@ -51,7 +53,7 @@ Detailed evidence and unexecuted external checks are in the [acceptance report](
 
 The first BETA2-2 tag did not publish: main CI Run [32468966137](https://github.com/Code-DSH/deepseek-harness-code/actions/runs/32468966137) had 9 green jobs, while package Run [32468983175](https://github.com/Code-DSH/deepseek-harness-code/actions/runs/32468983175) failed at the installed Windows x64 runtime gate after NSIS installation, Node 24.18.0 detection, and pinned Harness installation. No ready evidence arrived within 600 seconds; the app exited code 1 and the release job was skipped. This is packaged-runtime evidence, not an installer-build failure, and it does not identify an exact TypeScript throw site.
 
-Before BETA2-2 is published, rerun the full project suite, structural checks, runtime-closure checks, and the repaired native platform packaging workflow. The release workflow produces platform artifacts and `update-manifest.json` only after verification. The subsequent isolated-data LAN opt-in/authenticate/disable interaction remains separate acceptance evidence; no result is implied here.
+BETA2-2 was subsequently published only after the full project suite, structural checks, runtime-closure checks, and repaired native platform packaging workflow passed. BETA3 reused those gates and passed its own native Run `32550253496`. The isolated-data LAN opt-in/authenticate/disable interaction remains separate acceptance evidence.
 
 The package contract now executes the macOS verifier against controlled mounted-app fixtures and rejects a missing LAN five-file resource set, a wrong `dsh-lan-access@1.0.0` identity, or a non-bare patch. Smoke verification also requires `dsh-lan-access/package.json` in both the packaged resource inventory and the app's ready/final evidence. These focused source tests do not replace the pending `dist:mac` plus real-DMG `verify-macos-artifact` gate.
 

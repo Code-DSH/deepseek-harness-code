@@ -1,6 +1,6 @@
 # AGENTS.md
 
-Electron 43 desktop host for DeepSeek Harness (`deepseek-harness-code@0.1.0-BETA3`, `@deepseek-ai/dsh@0.1.1-rc.2`). BETA3 is the active release candidate; BETA2-2 remains the verified GitHub Latest until the BETA3 tag workflow publishes its native packages. The broken BETA2-1 GitHub Release/assets were removed while its source tag was preserved. Community distribution — not official DeepSeek. Harness and desktop renderer stay loopback-only; disabled-by-default trusted-LAN access is an Electron-owned token-gated proxy. macOS distribution remains unsigned/ad-hoc.
+Electron 43 desktop host for DeepSeek Harness (`deepseek-harness-code@0.1.0-BETA3`, `@deepseek-ai/dsh@0.1.1-rc.2`). BETA3 is the verified GitHub Latest release, published from `9762f8e` by native package Run `32550253496`; BETA2-2 is the previous release. The broken BETA2-1 GitHub Release/assets were removed while its source tag was preserved. Community distribution — not official DeepSeek. Harness and desktop renderer stay loopback-only; disabled-by-default trusted-LAN access is an Electron-owned token-gated proxy. macOS distribution remains unsigned/ad-hoc.
 
 ## Setup
 
@@ -64,4 +64,4 @@ pnpm typecheck && pnpm lint && pnpm format:check  # structure slices (CI runs th
 - Preserve official Harness question protocol (`@deepseek-ai/dsh-tool-ask-user` etc.) — do not create a parallel wire format.
 - Never log credentials, auth headers, cookies, prompt bodies, or response bodies.
 - Runtime behavior changes are test-first; verify before claiming completion.
-- Cross-build is never native execution. BETA2-2 claims remain bound to tag Run `32502448560`, macOS no-Node repair Run `32505104693`, and published asset/manifest evidence. BETA3 must pass the same native install/runtime/no-Node matrix before publication. BETA2-1 downloads are retired; retain its source tag and archive.
+- Cross-build is never native execution. BETA3 claims are bound to tag Run `32550253496` and the published asset/manifest evidence; all six native OS/architecture runners passed install/runtime/no-Node gates before Release creation. BETA2-1 downloads are retired; retain its source tag and archive.
