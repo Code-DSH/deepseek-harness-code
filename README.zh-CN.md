@@ -203,11 +203,11 @@ V4 Pro 是该整合基础增强的重要能力之一，而非唯一中心。固�
 
 | 平台    | 目标                             | BETA2-2 发布状态            |
 | ------- | -------------------------------- | --------------------------- |
-| macOS   | macOS 12+，Intel + Apple Silicon | Universal 包验证等待 tag CI |
-| Windows | Windows 10+，x64 + arm64         | 原生包验证等待 tag CI       |
-| Linux   | x64 + arm64                      | 原生包验证等待 tag CI       |
+| macOS   | macOS 12+，Intel + Apple Silicon | Universal DMG 原生验证通过  |
+| Windows | Windows 10+，x64 + arm64         | 原生 NSIS 安装/运行验证通过 |
+| Linux   | x64 + arm64                      | 原生 AppImage/deb 验证通过  |
 
-跨平台定义已入仓；BETA2-2 尚待验证与发布。只有相应 tag CI 在原生 Runner 验证过的产物才视为已发布。
+BETA2-2 已作为 GitHub Latest 发布，并完成 Windows/Linux x64+arm64 与 macOS Intel/Apple Silicon 原生包验证。Tag Run `32502448560` 生成 Release；修复后的 Run `32505104693` 在纠正 Bash 3.2 CI 假绿后补齐了 macOS no-Node 明确证据。
 
 ## 在 macOS 上安装
 

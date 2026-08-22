@@ -1,17 +1,17 @@
 ---
 id: engineering.acceptance-report
 title: DeepSeek Harness Code Acceptance Report
-summary: BETA2-2 repaired native-package gate remains pending cloud evidence; includes the exact candidate-versus-executed matrix plus verified BETA2-1/BETA2/BETA1 history.
+summary: BETA2-2 is published as Latest with native Windows/Linux x64+arm64, dual-native macOS, no-Node, process, loopback, and manifest evidence.
 kind: engineering
 status: canonical
-content_stage: implementation-backed
+content_stage: final-verified
 scope: [desktop, watchdog, plugin, routing-suite, packaging]
 triggers: [release, acceptance, verification, DMG]
 read_when: [reviewing release readiness or reproducing validation]
 skip_when: [isolated source edits before release]
 priority: must
 freshness_class: project
-last_verified: 2026-08-21T00:00:00+08:00
+last_verified: 2026-08-22T01:17:51+08:00
 owners: [primary-agent]
 source_of_truth: [../../apps, ../../packages, ../../tests, ../../release]
 related:
@@ -25,10 +25,10 @@ tags: [acceptance, release, evidence]
 
 ## Evidence state and bug classes
 
-- **Current release state**：BETA2-2 is `pending cloud release gate`. The first tag source exists at `012527f059c5888c64830c68a7182104f36998c4`, but package Run [32468983175](https://github.com/Code-DSH/deepseek-harness-code/actions/runs/32468983175) failed and no GitHub Release was created. There is no published BETA2-2 asset/hash evidence yet.
+- **Current release state**：BETA2-2 is GitHub Latest at [v0.1.0-BETA2-2](https://github.com/Code-DSH/deepseek-harness-code/releases/tag/v0.1.0-BETA2-2), sourced from `6a08c985cf0090bfdc20e1d0d07f916393668501`. Tag Run [32502448560](https://github.com/Code-DSH/deepseek-harness-code/actions/runs/32502448560) published eight installers plus `update-manifest.json`; repaired main Run [32505104693](https://github.com/Code-DSH/deepseek-harness-code/actions/runs/32505104693) supplies the explicit macOS no-Node evidence missed by the tag run's Bash 3.2 false green.
 - **产品 bug**影响打包应用行为：BETA1 Watchdog/锁/端口竞争、BETA2 重复 lifecycle/并发 pnpm、BETA2-1 persistent Bash hang，以及 BETA2-2 首次标记中安装后 Windows x64 runtime 未 ready。
 - **CI / 包装门禁 bug**影响发布证据可靠性：tag/ref、资产名、AppImage/deb 命令、清理、超时、用户数据隔离、证据新鲜度和 native architecture binding。
-- **覆盖缺口**表示从未在目标架构安装/解包并启动，或缺少 packaged no-Node 场景。Cross-build is never native execution.
+- **覆盖缺口**表示从未在目标架构安装/解包并启动，或缺少 packaged no-Node 场景。BETA2-2 的可执行安装路径现已覆盖；Cross-build 仍不算 native execution。
 
 ## BETA2-2 first gate and repairs
 
@@ -36,25 +36,25 @@ tags: [acceptance, release, evidence]
 - In package Run [32468983175](https://github.com/Code-DSH/deepseek-harness-code/actions/runs/32468983175), linux-x64, linux-arm64, windows-arm64, and macos-universal jobs were green. The windows-x64 job installed NSIS, detected Node 24.18.0, installed the pinned Harness, then produced no ready evidence within 600 seconds and exited code 1. The release job was skipped.
 - This is an installed packaged-runtime gate failure, not an NSIS build failure. Available evidence does not identify a precise TypeScript throw site.
 - Repair commits `deacad0`, `096fe7d`, and `bddb6f7` batch the complete managed-plugin roster into one shell-free official CLI call per attempt and keep diagnostics redacted/bounded. Commits `bfca0f4` and `feb6355` define native Windows/Linux x64+arm64 and dual-native macOS smoke with exact listener PID, architecture binding, and ready duration. Commit `737d023` defines packaged-only no-Node guidance evidence for every native artifact.
-- Those commits define the candidate gate; they do not turn it green. Exact repaired cloud Run IDs, conclusions, durations, listener evidence, published assets, manifest, and hashes remain pending.
+- Subsequent cloud repairs quarantined every production Node-manager path, made Windows install-root cleanup fail closed, switched NSIS to ZIP payloads for native arm64 extraction, and made Unix quarantine filenames compatible with macOS Bash 3.2. The final evidence is recorded below.
 
 ## BETA2-2 exact validation matrix
 
-“候选定义”来自 repaired workflow contract；“实际证据”只记录已发生的 package Run 32468983175 和此前覆盖边界。Runner label 来源与 24 小时重验边界见 [GitHub Actions runner matrix](../knowledge/topics/github-actions-runner-matrix.md)。`pending` 不是失败，也不是通过。
+Runner label 来源见 [GitHub Actions runner matrix](../knowledge/topics/github-actions-runner-matrix.md)。所有 runtime evidence 均绑定 native runner/目标架构、应用 PID、Harness PID、listener PID 与 `127.0.0.1` 状态 200，并验证自然退出、进程死亡和端口关闭。所有 node-required evidence 均验证官方 Node URL、未启动 Harness、未观察到 listener 和干净退出。
 
-| 产物 / 目标架构                           | 候选 workflow 定义（build runner；安装/解包）                                    | 实际 Node-present 结果                                                                  | 实际 no-Node 结果                                    | 实际 ready duration       | 实际进程 / loopback 结果                                             | 实际 CI Run                                                                                                                                                 |
-| ----------------------------------------- | -------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- | ---------------------------------------------------- | ------------------------- | -------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Windows x64 NSIS                          | `windows-2025` x64；安装 → 启动 → 卸载；runtime + node-required                  | **失败**：NSIS 已安装，检测 Node 24.18.0，pinned Harness 已安装，但应用 code 1          | 旧 workflow 未运行；候选场景已定义，云端证据 pending | 未 ready（600s deadline） | 无 ready evidence；旧证据不足以证明精确 listener PID/loopback 所有权 | [32468983175](https://github.com/Code-DSH/deepseek-harness-code/actions/runs/32468983175)（windows-x64 failed）                                             |
-| Windows arm64 NSIS                        | `windows-11-arm` arm64；安装 → 启动 → 卸载；runtime + node-required              | 旧 job green 只证明交叉构建，不是 arm64 原生启动；候选 native 结果 pending              | 未运行；候选场景已定义，pending                      | 未采集                    | 未采集；无原生 PID/architecture/loopback 证据                        | [32468983175](https://github.com/Code-DSH/deepseek-harness-code/actions/runs/32468983175)（windows-arm64 green cross-build）                                |
-| Linux x64 AppImage                        | `ubuntu-24.04` x64；解包 → 启动；runtime + node-required                         | 旧 workflow 已做 extract+start，package job green                                       | 未运行；候选场景已定义，pending                      | 旧证据未记录精确时长      | 旧 smoke 未绑定精确 listener PID；候选证据 pending                   | [32468983175](https://github.com/Code-DSH/deepseek-harness-code/actions/runs/32468983175)（linux-x64 green）                                                |
-| Linux x64 deb                             | `ubuntu-24.04` x64；安装 → 启动 → purge；runtime + node-required                 | 旧 workflow 已做 install+start，package job green                                       | 未运行；候选场景已定义，pending                      | 旧证据未记录精确时长      | 旧 smoke 未绑定精确 listener PID；候选证据 pending                   | [32468983175](https://github.com/Code-DSH/deepseek-harness-code/actions/runs/32468983175)（linux-x64 green）                                                |
-| Linux arm64 AppImage                      | `ubuntu-24.04-arm` arm64；解包 → 启动；runtime + node-required                   | 旧 job green 只证明交叉构建，不是 arm64 原生启动；候选 native 结果 pending              | 未运行；候选场景已定义，pending                      | 未采集                    | 未采集；无原生 PID/architecture/loopback 证据                        | [32468983175](https://github.com/Code-DSH/deepseek-harness-code/actions/runs/32468983175)（linux-arm64 green cross-build）                                  |
-| Linux arm64 deb                           | `ubuntu-24.04-arm` arm64；安装 → 启动 → purge；runtime + node-required           | 旧 job green 只证明交叉构建，不是 arm64 原生启动；候选 native 结果 pending              | 未运行；候选场景已定义，pending                      | 未采集                    | 未采集；无原生 PID/architecture/loopback 证据                        | [32468983175](https://github.com/Code-DSH/deepseek-harness-code/actions/runs/32468983175)（linux-arm64 green cross-build）                                  |
-| Universal macOS DMG（Apple Silicon 执行） | `macos-15` arm64；挂载 DMG → 复制 `.app` → 启动；runtime + node-required         | 旧 macos-universal job green 为静态 DMG/产物校验，不是 arm64 原生启动；候选结果 pending | 未运行；候选场景已定义，pending                      | 未采集                    | 未采集；无原生 PID/architecture/loopback 证据                        | [32468983175](https://github.com/Code-DSH/deepseek-harness-code/actions/runs/32468983175)（macos-universal static green）                                   |
-| Universal macOS DMG（Intel 执行）         | `macos-15-intel` x64；挂载 DMG → 复制 `.app` → 启动；runtime + node-required     | 旧 macos-universal job green 为静态 DMG/产物校验，不是 x64 原生启动；候选结果 pending   | 未运行；候选场景已定义，pending                      | 未采集                    | 未采集；无原生 PID/architecture/loopback 证据                        | [32468983175](https://github.com/Code-DSH/deepseek-harness-code/actions/runs/32468983175)（macos-universal static green）                                   |
-| Universal macOS ZIP（更新载体）           | `macos-15` 打包产物；仅静态归档与 `update-manifest.json` 选择/校验，不作为启动包 | 未执行 ZIP 原生启动；候选 workflow 也未定义该启动路径                                   | 未覆盖；没有 ZIP packaged no-Node 启动场景           | 不适用                    | 不适用；ZIP 不是本矩阵的可执行安装路径                               | [32468983175](https://github.com/Code-DSH/deepseek-harness-code/actions/runs/32468983175)（macos-universal static green；release/manifest publish skipped） |
+| 产物 / 目标架构                     | 原生 runner；安装/解包                        |      ready |  no-Node | 结果与证据                                                 |
+| ----------------------------------- | --------------------------------------------- | ---------: | -------: | ---------------------------------------------------------- |
+| Windows x64 NSIS                    | `windows-2025` x64；安装 → 启动 → 卸载        | 318,679 ms |   514 ms | tag Run `32502448560` green                                |
+| Windows arm64 NSIS                  | `windows-11-arm` arm64；安装 → 启动 → 卸载    | 305,158 ms | 1,017 ms | tag Run `32502448560` green；ZIP payload                   |
+| Linux x64 AppImage                  | `ubuntu-24.04` x64；解包 → 启动               |  57,350 ms |   497 ms | tag Run `32502448560` green                                |
+| Linux x64 deb                       | `ubuntu-24.04` x64；安装 → 启动 → purge       |  20,561 ms |   459 ms | tag Run `32502448560` green                                |
+| Linux arm64 AppImage                | `ubuntu-24.04-arm` arm64；解包 → 启动         |  59,754 ms |   460 ms | tag Run `32502448560` green                                |
+| Linux arm64 deb                     | `ubuntu-24.04-arm` arm64；安装 → 启动 → purge |  17,527 ms |   434 ms | tag Run `32502448560` green                                |
+| Universal macOS DMG / Apple Silicon | `macos-15` arm64；挂载 → 复制 → 启动          |  69,378 ms |   844 ms | runtime：tag Run `32502448560`；no-Node：Run `32505104693` |
+| Universal macOS DMG / Intel         | `macos-15-intel` x64；挂载 → 复制 → 启动      | 222,212 ms | 3,230 ms | runtime：tag Run `32502448560`；no-Node：Run `32505104693` |
+| Universal macOS ZIP                 | 更新载体；静态归档与 manifest 校验            |     不适用 |   不适用 | 不作为独立启动路径                                         |
 
-发布后再补：repaired Run URL、每个 job conclusion、实际 ready duration、精确 Electron/Harness/listener PID 与 `127.0.0.1` 绑定、no-Node 指引结果、资产名、manifest 和 SHA-256。没有这些字段时不得把矩阵标成 verified。
+Release 包含 Universal DMG/ZIP、Windows x64/arm64 NSIS、Linux x64/arm64 AppImage/deb 和 `update-manifest.json`。Manifest 中 5 个更新目标的文件名、字节数和 SHA-256 与 GitHub 资产 digest 全部匹配。BETA2-1 Release/assets 已删除，源码 tag 保留。
 
 ## 0.1.0-BETA2-1 implementation evidence
 
@@ -144,7 +144,7 @@ tags: [acceptance, release, evidence]
 | Runtime preflight | 51 artifacts, 35 production dependencies, 8 critical packages, and 10 bundled plugin packages verified                       |
 | macOS package     | Local `verify:mac --universal` passed; tagged Universal macOS job passed and uploaded DMG + ZIP                              |
 
-Historical BETA2-1 and 0.3.x gate snapshots are retained for traceability; the current BETA2-2 repaired cloud gate is pending.
+Historical BETA2-1 and 0.3.x gate snapshots are retained for traceability; BETA2-2 is the current verified Latest release.
 
 ## Real renderer and performance evidence
 
@@ -173,7 +173,7 @@ The user-supplied community claim is experimental and is not a benchmark guarant
 
 - macOS Universal DMG is locally built and inspected (`--universal`).
 - BETA2/BETA2-1 published Windows NSIS and Linux AppImage/deb assets, but their historical green workflows did not natively execute every architecture. Old true install+start coverage was Windows x64 NSIS and Linux x64 deb; Linux x64 AppImage was extract+start; Windows/Linux arm64 were cross-build only; macOS was static DMG inspection.
-- BETA2-2's candidate workflow assigns `windows-2025`, `windows-11-arm`, `ubuntu-24.04`, `ubuntu-24.04-arm`, `macos-15`, and `macos-15-intel` to the native matrix. Execution remains pending until exact cloud run/job evidence is recorded in the matrix above.
+- BETA2-2 executes `windows-2025`, `windows-11-arm`, `ubuntu-24.04`, `ubuntu-24.04-arm`, `macos-15`, and `macos-15-intel` in the native matrix. Exact cloud results are recorded above.
 
 ## External limits
 
