@@ -6,7 +6,7 @@
   <p><a href="./README.md">English</a> · <a href="./README.zh-CN.md">简体中文</a></p>
   <p><a href="#专为代码而铸深度特化的-coding-agent">特化 Agent</a> · <a href="#集成理念">集成理念</a> · <a href="#架构">架构</a> · <a href="#不只是网页套壳">为什么不同</a> · <a href="#为长期运行而设计">长期运行</a> · <a href="#从源码构建">构建</a></p>
   <p>
-    <img src="https://img.shields.io/badge/version-0.1.0_BETA2--2-2563eb?style=flat-square" alt="版本 0.1.0-BETA2-2" />
+    <img src="https://img.shields.io/badge/version-0.1.0_BETA3-2563eb?style=flat-square" alt="版本 0.1.0-BETA3" />
     <img src="https://img.shields.io/badge/license-MIT-16a34a?style=flat-square" alt="MIT 许可证" />
     <img src="https://img.shields.io/badge/macOS-12%2B-111827?style=flat-square&amp;logo=apple" alt="macOS 12+" />
     <img src="https://img.shields.io/badge/Windows-10%2B-0078D4?style=flat-square&amp;logo=windows" alt="Windows 10+" />
@@ -15,7 +15,7 @@
   <p>
     <img src="https://img.shields.io/badge/Electron-43-47848F?style=flat-square&amp;logo=electron&amp;logoColor=white" alt="Electron 43" />
     <img src="https://img.shields.io/badge/TypeScript-5.9-3178C6?style=flat-square&amp;logo=typescript&amp;logoColor=white" alt="TypeScript 5.9" />
-    <img src="https://img.shields.io/badge/DeepSeek_Harness-rc.8-4F46E5?style=flat-square" alt="DeepSeek Harness rc.8" />
+    <img src="https://img.shields.io/badge/DeepSeek_Harness-0.1.1--rc.2-4F46E5?style=flat-square" alt="DeepSeek Harness 0.1.1-rc.2" />
   </p>
 </div>
 
@@ -146,26 +146,26 @@ V4 Pro 是该整合基础增强的重要能力之一，而非唯一中心。固�
 - **全局 Agent 协议** — `<DSH_HOME>/AGENTS.md`：无则安装、未改则随版升级、永不覆盖用户自有，菜单 `Use Bundled Global Prompt…` 带时间戳备份切换。
 - **全局 `dsh`** — 首次启动经 `npm install -g` 安装固定 `@deepseek-ai/dsh`，不覆用户全局，失败不阻塞。
 - **本地化预设** — `anchored-standard` / `router-standard` / `router-spec` 中英双语名，不改 ID。
-- **安全实验** — Anchored Standard 为独立 Bundle，rc.8 上失败回退 Standard。
+- **安全实验** — Anchored Standard 为独立 Bundle，在 Harness 0.1.1-rc.2 上失败回退 Standard。
 
 ## 功能矩阵
 
-| 领域     | 已包含                                                |
-| -------- | ----------------------------------------------------- |
-| 桌面宿主 | 强化窗口、启动页、原生菜单、托盘、关闭偏好            |
-| Harness  | 固定 `@deepseek-ai/dsh` rc.8，回环服务，单一 Home     |
-| V4 模型  | 官方目录与 `off` / `high` / `max` 控制                |
-| 能力栈   | Skills、Goal / Plan / Workflow / Todo / Jobs / 提问   |
-| Skills   | Superpowers 6.2.0，不覆盖用户                         |
-| 全局协议 | `AGENTS.md` 所有权安全安装与备份切换                  |
-| 全局 CLI | 固定 `dsh` 经 `npm install -g`                        |
-| 预设     | Standard 默认，可选 anchored / router                 |
-| 恢复     | 健康探测、重启、渲染器替换、端口重试                  |
-| Watchdog | 独立 IPC，有界重启与熔断                              |
-| 插件     | 桌面、UI Motion、Model2、Find、Routing 等             |
-| 诊断     | 启动证据、运行态、脱敏轮转日志                        |
-| 安全     | 沙箱渲染器、无 Node 集成、校验 IPC                    |
-| 打包     | macOS Universal DMG；Windows NSIS；Linux AppImage/deb |
+| 领域     | 已包含                                                  |
+| -------- | ------------------------------------------------------- |
+| 桌面宿主 | 强化窗口、启动页、原生菜单、托盘、关闭偏好              |
+| Harness  | 固定 `@deepseek-ai/dsh` 0.1.1-rc.2，回环服务，单一 Home |
+| V4 模型  | 官方目录与 `off` / `high` / `max` 控制                  |
+| 能力栈   | Skills、Goal / Plan / Workflow / Todo / Jobs / 提问     |
+| Skills   | Superpowers 6.2.0，不覆盖用户                           |
+| 全局协议 | `AGENTS.md` 所有权安全安装与备份切换                    |
+| 全局 CLI | 固定 `dsh` 经 `npm install -g`                          |
+| 预设     | Standard 默认，可选 anchored / router                   |
+| 恢复     | 健康探测、重启、渲染器替换、端口重试                    |
+| Watchdog | 独立 IPC，有界重启与熔断                                |
+| 插件     | 桌面、UI Motion、Model2、Find、Routing 等               |
+| 诊断     | 启动证据、运行态、脱敏轮转日志                          |
+| 安全     | 沙箱渲染器、无 Node 集成、校验 IPC                      |
+| 打包     | macOS Universal DMG；Windows NSIS；Linux AppImage/deb   |
 
 ## 路由套件
 
@@ -173,7 +173,7 @@ V4 Pro 是该整合基础增强的重要能力之一，而非唯一中心。固�
 
 - **离线快照** — 安装包内置三组件（`@dsh-external/dsh-super-injector` Bundle 层、`@dsh-external/dsh-mode-boost` 宿主增强、`router-standard` + `router-spec` 预设）。
 - **固定基线** — `injector 0.3.3` / `mode-boost 0.1.0` / `router-preset 0.2.0@eff787e`，SHA-256 存于 `build/routing-suite/versions.json`。
-- **官方安装** — 经系统 Node + 内置 pnpm 执行 `dsh plugin --profile web add`（desktop、ui-motion、model2、prompt-principles、vision-router、better-sidebar、LAN access、composition、Super Injector、Mode Boost、find-plugin）。正常 manifest 协调由 Harness 掌管；桌面宿主唯一的兼容性例外，是成功执行官方 CLI 后仅移除 rc.8 两个 `linkOnly` 子 Agent bundle 名，不改无关条目。受校验的应用自有 marker 仅在受管清单、包路径/身份、profile 依赖与 pnpm store 均未变化时跳过重复 CLI；缺失或不匹配则重新协调。损坏的 `node_modules` 自引用等失败会一次性重建后重试。
+- **官方安装** — 经系统 Node + 内置 pnpm 执行 `dsh plugin --profile web add`（desktop、ui-motion、model2、prompt-principles、vision-router、better-sidebar、LAN access、composition、Super Injector、Mode Boost、find-plugin）。正常 manifest 协调由 Harness 掌管；桌面宿主唯一的兼容性例外，是成功执行官方 CLI 后仅移除 0.1.1-rc.2 两个 `linkOnly` 子 Agent bundle 名，不改无关条目。受校验的应用自有 marker 仅在受管清单、包路径/身份、profile 依赖与 pnpm store 均未变化时跳过重复 CLI；缺失或不匹配则重新协调。损坏的 `node_modules` 自引用等失败会一次性重建后重试。
 - **审核更新** — 仅随 App 发版更新，构建前校验 SHA-256，安装后永不后台下载可变代码。
 - **所有权安全** — 不覆盖无关插件与用户自有预设，旧 Home 仅复制迁移。
 
@@ -201,13 +201,13 @@ V4 Pro 是该整合基础增强的重要能力之一，而非唯一中心。固�
 
 ## 平台状态
 
-| 平台    | 目标                             | BETA2-2 发布状态            |
+| 平台    | 目标                             | BETA3 发布门禁              |
 | ------- | -------------------------------- | --------------------------- |
 | macOS   | macOS 12+，Intel + Apple Silicon | Universal DMG 原生验证通过  |
 | Windows | Windows 10+，x64 + arm64         | 原生 NSIS 安装/运行验证通过 |
 | Linux   | x64 + arm64                      | 原生 AppImage/deb 验证通过  |
 
-BETA2-2 已作为 GitHub Latest 发布，并完成 Windows/Linux x64+arm64 与 macOS Intel/Apple Silicon 原生包验证。Tag Run `32502448560` 生成 Release；修复后的 Run `32505104693` 在纠正 Bash 3.2 CI 假绿后补齐了 macOS no-Node 明确证据。
+BETA3 将内置官方 Harness `0.1.1-rc.2`。Tag workflow 必须通过 Windows/Linux x64+arm64 与 macOS Intel/Apple Silicon 的原生安装、运行和无 Node 门禁，才会发布为 GitHub Latest。旧版 DHSC 可在 **设置 → 通用 → 检查更新** 中通过带大小与 SHA-256 校验的更新清单升级到 BETA3。
 
 ## 在 macOS 上安装
 
@@ -275,7 +275,7 @@ node scripts/verify-macos-artifact.mjs release/DeepSeek-Harness-Code-*.dmg --uni
 - 已锚定工具面的成对 Project2 验证。
 - 非重放的故障注入。
 - Skills 驱动的可版本化交付。
-- 上游插件 API 的固定 rc.8 + SHA-256 跟进。
+- 上游插件 API 的固定 0.1.1-rc.2 + SHA-256 跟进。
 
 ## 参与贡献
 

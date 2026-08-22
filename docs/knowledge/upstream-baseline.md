@@ -1,7 +1,7 @@
 ---
 id: knowledge.upstream-baseline
 title: Upstream Baseline
-summary: Version and official-contract evidence for Harness, its Home and plugin CLI, Thinking Orbs, packaging, DSH Routing Suite pins, native status ownership, and the exact rc.8 patches.
+summary: Version and official-contract evidence for Harness 0.1.1-rc.2, its Home and plugin CLI, Thinking Orbs, packaging, DSH Routing Suite pins, native status ownership, and exact local patches.
 kind: knowledge
 status: canonical
 content_stage: implementation-backed
@@ -11,8 +11,8 @@ read_when: [changing pinned versions or official integration behavior]
 skip_when: [editing app-local styling only]
 priority: must
 freshness_class: rapid
-last_verified: 2026-08-20T00:00:00+08:00
-revalidate_after: 2026-08-30T00:00:00+08:00
+last_verified: 2026-08-22T11:15:00+08:00
+revalidate_after: 2026-08-23T11:15:00+08:00
 owners: [project]
 source_of_truth:
   - https://github.com/deepseek-ai/deepseek-harness
@@ -36,7 +36,7 @@ tags: [research, versions]
 
 ## Current Conclusion
 
-Pin `@deepseek-ai/dsh@0.1.0-rc.8`, `@deepseek-ai/dsh-home-paths@0.1.0-rc.8`, Electron `43.4.0`, electron-builder `26.15.3`, pnpm `11.19.0`, `dsh-find-plugin@0.3.6`, esbuild `0.25.12`, and `thinking-orbs@0.3.1`. The official Home resolver and public `dsh plugin --profile web add` command are the only supported desktop installation boundary. Electron receives `--expose-internals`, restoring rc.8's native cascaded loader so integrated patches keep upstream bare package names. The DSH Routing Suite remains an immutable checksum-verified snapshot. Harness still supplies and owns profile reconciliation, the question protocol, Cordis bundle mechanism, conversation tree, live status semantics, and timer.
+Pin `@deepseek-ai/dsh@0.1.1-rc.2`, `@deepseek-ai/dsh-home-paths@0.1.1-rc.2`, Electron `43.4.0`, electron-builder `26.15.3`, pnpm `11.19.0`, `dsh-find-plugin@0.3.6`, esbuild `0.25.12`, and `thinking-orbs@0.3.1`. The official Home resolver and public `dsh plugin --profile web add` command remain the supported desktop installation boundary. Harness 0.1.1-rc.2 adds DeepSeek Files API image upload/reuse and model-aware image preprocessing. The DSH Routing Suite remains an immutable checksum-verified snapshot; Harness still owns profile reconciliation, the question protocol, Cordis bundle mechanism, conversation tree, live status semantics, and timer.
 
 ## Evidence
 
@@ -56,6 +56,7 @@ Pin `@deepseek-ai/dsh@0.1.0-rc.8`, `@deepseek-ai/dsh-home-paths@0.1.0-rc.8`, Ele
 | 2026-08-16   | [Router Standard](https://github.com/yjh051108/dsh-router-standard)                                                             | suite gitlink/tag `0.2.0` at `eff787e`; main `f9667f7`                                 | The immutable suite gitlink is used instead of mutable main; README version wording is not a pin                    | high       |
 | 2026-08-20   | Installed rc.8 CLI, `@deepseek-ai/dsh-home-paths`, and real Electron integration test                                           | `dsh`/Home paths `0.1.0-rc.8`, pnpm `11.19.0`                                          | Resolver precedence, public plugin reconciliation (8 plugins), bundled pnpm launcher, and bare-name boot graph      | high       |
 | 2026-08-20   | `build/routing-suite/versions.json` + `electron-builder.yml`                                                                    | injector `355238fa...391f48`, mode-boost `72836d64...ca12b`, router `a8f3616...126676` | Immutable snapshot + 8-plugin extraResources, verified by `check-runtime-closure.mjs` + `verify-macos-artifact.mjs` | high       |
+| 2026-08-22   | [Harness v0.1.1-rc.2 release](https://github.com/deepseek-ai/deepseek-harness/releases/tag/dsh-v0.1.1-rc.2) + npm metadata      | tag commit `b150a551b8d465e31e418e1b2eaf5e79bbb7d28e`; npm latest `0.1.1-rc.2`         | Files API image upload/reuse, model-aware resize/format conversion, exact package integrity and dependency graph    | high       |
 
 ## V4 Pro and Integrated Toolchain
 

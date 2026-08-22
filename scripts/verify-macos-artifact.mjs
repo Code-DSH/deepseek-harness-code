@@ -96,7 +96,7 @@ try {
     await readFile(join(resourcesRoot, "node-runtime", "package.json"), "utf8"),
   );
   if (
-    nodeRuntimePackage.dependencies?.["@deepseek-ai/dsh"] !== "0.1.0-rc.8" ||
+    nodeRuntimePackage.dependencies?.["@deepseek-ai/dsh"] !== "0.1.1-rc.2" ||
     nodeRuntimePackage.dependencies?.["dsh-find-plugin"] !== "0.3.6"
   ) {
     throw new Error(

@@ -15,12 +15,12 @@ const pluginManifest = JSON.parse(
 const requireFromPlugin = createRequire(join(pluginRoot, "package.json"));
 
 const criticalRuntimeVersions = new Map([
-  ["@deepseek-ai/dsh", "0.1.0-rc.8"],
-  ["@deepseek-ai/dsh-compaction", "0.1.0-rc.8"],
-  ["@deepseek-ai/dsh-invariants", "0.1.0-rc.8"],
-  ["@deepseek-ai/dsh-workflow", "0.1.0-rc.8"],
-  ["@deepseek-ai/dsh-client-ui-primitives", "0.1.0-rc.8"],
-  ["@deepseek-ai/dsh-home-paths", "0.1.0-rc.8"],
+  ["@deepseek-ai/dsh", "0.1.1-rc.2"],
+  ["@deepseek-ai/dsh-compaction", "0.1.1-rc.2"],
+  ["@deepseek-ai/dsh-invariants", "0.1.1-rc.2"],
+  ["@deepseek-ai/dsh-workflow", "0.1.1-rc.2"],
+  ["@deepseek-ai/dsh-client-ui-primitives", "0.1.1-rc.2"],
+  ["@deepseek-ai/dsh-home-paths", "0.1.1-rc.2"],
   ["pnpm", "11.19.0"],
   ["dsh-find-plugin", "0.3.6"],
 ]);
@@ -130,11 +130,11 @@ for (const entry of ["pnpm.mjs", "worker.js"]) {
 
 const nodeRuntimeResourceRoot = join(projectRoot, "build", "node-runtime");
 const presetLocalePatch =
-  "@deepseek-ai__dsh-client-ui-agent-preset@0.1.0-rc.8.patch";
+  "@deepseek-ai__dsh-client-ui-agent-preset@0.1.1-rc.2.patch";
 const sidebarSafeAreaPatch =
-  "@deepseek-ai__dsh-client-ui-sidebar@0.1.0-rc.8.patch";
+  "@deepseek-ai__dsh-client-ui-sidebar@0.1.1-rc.2.patch";
 const terminalBashPromptPatch =
-  "@deepseek-ai__dsh-terminal-bash@0.1.0-rc.8.patch";
+  "@deepseek-ai__dsh-terminal-bash@0.1.1-rc.2.patch";
 for (const relativePath of [
   "package.json",
   "pnpm-lock.yaml",
@@ -162,11 +162,11 @@ const nodeRuntimePackage = JSON.parse(
   await readFile(join(nodeRuntimeResourceRoot, "package.json"), "utf8"),
 );
 if (
-  nodeRuntimePackage.dependencies?.["@deepseek-ai/dsh"] !== "0.1.0-rc.8" ||
+  nodeRuntimePackage.dependencies?.["@deepseek-ai/dsh"] !== "0.1.1-rc.2" ||
   nodeRuntimePackage.dependencies?.["dsh-find-plugin"] !== "0.3.6"
 ) {
   throw new Error(
-    "build/node-runtime must pin @deepseek-ai/dsh@0.1.0-rc.8 and dsh-find-plugin@0.3.6",
+    "build/node-runtime must pin @deepseek-ai/dsh@0.1.1-rc.2 and dsh-find-plugin@0.3.6",
   );
 }
 const packagedPnpmLock = await readFile(
@@ -181,9 +181,9 @@ if (
   !packagedPnpmLock.includes("'@deepseek-ai/dsh':") ||
   !packagedPnpmLock.includes("dsh-find-plugin:") ||
   !packagedPnpmLock.includes(
-    "@deepseek-ai/dsh-client-ui-agent-preset@0.1.0-rc.8",
+    "@deepseek-ai/dsh-client-ui-agent-preset@0.1.1-rc.2",
   ) ||
-  !packagedPnpmLock.includes("@deepseek-ai/dsh-client-ui-sidebar@0.1.0-rc.8") ||
+  !packagedPnpmLock.includes("@deepseek-ai/dsh-client-ui-sidebar@0.1.1-rc.2") ||
   !packagedPnpmLock.includes("patch_hash=") ||
   !packagedPnpmWorkspace.includes(presetLocalePatch) ||
   !packagedPnpmWorkspace.includes(sidebarSafeAreaPatch) ||

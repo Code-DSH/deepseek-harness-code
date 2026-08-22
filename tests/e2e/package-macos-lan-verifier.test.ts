@@ -70,12 +70,12 @@ async function createPackagedAppFixture(options: {
   await writeFixtureFile(
     resourcesRoot,
     "node-runtime/package.json",
-    `${JSON.stringify({ dependencies: { "@deepseek-ai/dsh": "0.1.0-rc.8", "dsh-find-plugin": "0.3.6" } })}\n`,
+    `${JSON.stringify({ dependencies: { "@deepseek-ai/dsh": "0.1.1-rc.2", "dsh-find-plugin": "0.3.6" } })}\n`,
   );
   await writeFixtureFile(
     resourcesRoot,
     "node-runtime/pnpm-lock.yaml",
-    "'@deepseek-ai/dsh': 0.1.0-rc.8\ndsh-find-plugin: 0.3.6\n",
+    "'@deepseek-ai/dsh': 0.1.1-rc.2\ndsh-find-plugin: 0.3.6\n",
   );
   for (const [directory, name, version] of [
     ["dsh-ui-motion", "dsh-ui-motion", "1.0.0"],
