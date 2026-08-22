@@ -222,14 +222,14 @@ describe("desktop plugin package contract", () => {
       "@deepseek-ai/dsh-client-locale",
     );
     expect(manifest.peerDependencies?.["@deepseek-ai/dsh-client-locale"]).toBe(
-      "^0.1.0-rc.8",
+      "^0.1.1-rc.2",
     );
     expect(
       manifest.peerDependencies?.["@deepseek-ai/dsh-client-ui-primitives"],
-    ).toBe("^0.1.0-rc.8");
+    ).toBe("^0.1.1-rc.2");
     expect(
       manifest.peerDependencies?.["@deepseek-ai/dsh-client-ui-layout"],
-    ).toBe("^0.1.0-rc.8");
+    ).toBe("^0.1.1-rc.2");
   });
 
   it("does not replace the official question protocol packages", () => {
@@ -265,7 +265,7 @@ describe("desktop plugin package contract", () => {
         "@deepseek-ai/dsh-client-ui-user-questions",
         "@deepseek-ai/dsh-tool-ask-user",
         "@deepseek-ai/dsh-user-questions",
-      ].every((name) => manifest.dependencies[name] === "0.1.0-rc.8"),
+      ].every((name) => manifest.dependencies[name] === "0.1.1-rc.2"),
     ).toBe(true);
     expect(askUserSource).toContain("multi_select");
     expect(askUserSource).toContain("custom");

@@ -27,7 +27,7 @@ tags: [migration, official-cli, dsh-home]
 
 ## Current Contract
 
-DeepSeek Harness Code and standalone DeepSeek Harness share one official Home. A nonblank `DSH_HOME` overrides the location; otherwise the pinned official resolver (`@deepseek-ai/dsh-home-paths@0.1.0-rc.8`) selects `~/.dsh`. Electron's `userData` directory remains only for desktop preferences, watchdog state, logs, and the generated pnpm launcher.
+DeepSeek Harness Code and standalone DeepSeek Harness share one official Home. A nonblank `DSH_HOME` overrides the location; otherwise the pinned official resolver (`@deepseek-ai/dsh-home-paths@0.1.1-rc.2`) selects `~/.dsh`. Electron's `userData` directory remains only for desktop preferences, watchdog state, logs, and the generated pnpm launcher.
 
 On every launch, the sequence is:
 

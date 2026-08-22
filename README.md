@@ -6,7 +6,7 @@
   <p><a href="./README.md">English</a> · <a href="./README.zh-CN.md">简体中文</a></p>
   <p><a href="#forged-for-code-a-deeply-specialized-coding-agent">Specialized Agent</a> · <a href="#integration-philosophy">Integration Philosophy</a> · <a href="#architecture">Architecture</a> · <a href="#beyond-a-web-wrapper">Why Not a Wrapper</a> · <a href="#built-for-long-running-work">Long-Running</a> · <a href="#build-from-source">Build</a></p>
   <p>
-    <img src="https://img.shields.io/badge/version-0.1.0_BETA2--2-2563eb?style=flat-square" alt="Version 0.1.0-BETA2-2" />
+    <img src="https://img.shields.io/badge/version-0.1.0_BETA3-2563eb?style=flat-square" alt="Version 0.1.0-BETA3" />
     <img src="https://img.shields.io/badge/license-MIT-16a34a?style=flat-square" alt="MIT License" />
     <img src="https://img.shields.io/badge/macOS-12%2B-111827?style=flat-square&amp;logo=apple" alt="macOS 12+" />
     <img src="https://img.shields.io/badge/Windows-10%2B-0078D4?style=flat-square&amp;logo=windows" alt="Windows 10+" />
@@ -15,7 +15,7 @@
   <p>
     <img src="https://img.shields.io/badge/Electron-43-47848F?style=flat-square&amp;logo=electron&amp;logoColor=white" alt="Electron 43" />
     <img src="https://img.shields.io/badge/TypeScript-5.9-3178C6?style=flat-square&amp;logo=typescript&amp;logoColor=white" alt="TypeScript 5.9" />
-    <img src="https://img.shields.io/badge/DeepSeek_Harness-rc.8-4F46E5?style=flat-square" alt="DeepSeek Harness rc.8" />
+    <img src="https://img.shields.io/badge/DeepSeek_Harness-0.1.1--rc.2-4F46E5?style=flat-square" alt="DeepSeek Harness 0.1.1-rc.2" />
   </p>
 </div>
 
@@ -146,26 +146,26 @@ Long sessions rarely crash dramatically — pressure accumulates: renderer stall
 - **Global Agent Protocol** — `<DSH_HOME>/AGENTS.md`: auto-installed when absent, upgraded only while still app-managed, never overwriting user-owned, with timestamped backup switch via `Use Bundled Global Prompt…`.
 - **Global `dsh`** — `npm install -g` of pinned `@deepseek-ai/dsh` on first launch, never overwriting user global, fail-open.
 - **Localized presets** — `anchored-standard` / `router-standard` / `router-spec` with bilingual names, IDs unchanged.
-- **Safe experiment** — Anchored Standard as separate bundle, fails closed to Standard on rc.8.
+- **Safe experiment** — Anchored Standard as separate bundle, fails closed to Standard on Harness 0.1.1-rc.2.
 
 ## Feature matrix
 
-| Area          | Included                                                 |
-| ------------- | -------------------------------------------------------- |
-| Desktop host  | Hardened window, startup page, native menus, tray        |
-| Harness       | Pinned `@deepseek-ai/dsh` rc.8, loopback, single Home    |
-| V4 models     | Official catalog and `off` / `high` / `max`              |
-| Stack         | Skills, Goal / Plan / Workflow / Todo / Jobs / questions |
-| Skills        | Superpowers 6.2.0, never overwriting user                |
-| Global prompt | `AGENTS.md` ownership-safe install and backup switch     |
-| Global CLI    | Pinned `dsh` via `npm install -g`                        |
-| Presets       | Standard default, optional anchored / router             |
-| Recovery      | Health probes, restart, renderer replacement, port retry |
-| Watchdog      | Independent IPC, bounded restart and circuit breaker     |
-| Plugins       | Desktop, UI Motion, Model2, Find, Routing, etc.          |
-| Diagnostics   | Startup evidence, runtime state, redacted rotated logs   |
-| Security      | Sandboxed renderer, no Node integration, validated IPC   |
-| Packaging     | macOS Universal DMG; Windows NSIS; Linux AppImage/deb    |
+| Area          | Included                                                    |
+| ------------- | ----------------------------------------------------------- |
+| Desktop host  | Hardened window, startup page, native menus, tray           |
+| Harness       | Pinned `@deepseek-ai/dsh` 0.1.1-rc.2, loopback, single Home |
+| V4 models     | Official catalog and `off` / `high` / `max`                 |
+| Stack         | Skills, Goal / Plan / Workflow / Todo / Jobs / questions    |
+| Skills        | Superpowers 6.2.0, never overwriting user                   |
+| Global prompt | `AGENTS.md` ownership-safe install and backup switch        |
+| Global CLI    | Pinned `dsh` via `npm install -g`                           |
+| Presets       | Standard default, optional anchored / router                |
+| Recovery      | Health probes, restart, renderer replacement, port retry    |
+| Watchdog      | Independent IPC, bounded restart and circuit breaker        |
+| Plugins       | Desktop, UI Motion, Model2, Find, Routing, etc.             |
+| Diagnostics   | Startup evidence, runtime state, redacted rotated logs      |
+| Security      | Sandboxed renderer, no Node integration, validated IPC      |
+| Packaging     | macOS Universal DMG; Windows NSIS; Linux AppImage/deb       |
 
 ## Routing suite
 
@@ -173,7 +173,7 @@ Bundled community [dsh-routing-suite](https://github.com/yjh051108/dsh-routing-s
 
 - **Offline snapshot** — three pinned components (`@dsh-external/dsh-super-injector`, `@dsh-external/dsh-mode-boost`, `router-standard` + `router-spec`) inside app resources.
 - **Pinned baseline** — `injector 0.3.3` / `mode-boost 0.1.0` / `router-preset 0.2.0@eff787e`, SHA-256 in `build/routing-suite/versions.json`.
-- **Official install** — via system Node + bundled pnpm `dsh plugin --profile web add` (desktop, ui-motion, model2, prompt-principles, vision-router, better-sidebar, LAN access, composition, Super Injector, Mode Boost, find-plugin). Harness owns normal manifest reconciliation; the desktop host's only compatibility edit removes the two rc.8 `linkOnly` subagent bundle names after a successful CLI reconcile and never alters unrelated entries. A validated app-owned reconciliation marker skips repeated CLI additions only for an unchanged managed roster; a missing or mismatched marker, changed package root/identity, missing profile dependency, or foreign store runs the official reconciliation again. Corrupted `node_modules` self-reference is rebuilt once.
+- **Official install** — via system Node + bundled pnpm `dsh plugin --profile web add` (desktop, ui-motion, model2, prompt-principles, vision-router, better-sidebar, LAN access, composition, Super Injector, Mode Boost, find-plugin). Harness owns normal manifest reconciliation; the desktop host's only compatibility edit removes the two 0.1.1-rc.2 `linkOnly` subagent bundle names after a successful CLI reconcile and never alters unrelated entries. A validated app-owned reconciliation marker skips repeated CLI additions only for an unchanged managed roster; a missing or mismatched marker, changed package root/identity, missing profile dependency, or foreign store runs the official reconciliation again. Corrupted `node_modules` self-reference is rebuilt once.
 - **Reviewed updates** — only with new app release, SHA-256 verified before extraction, never downloading mutable code in background.
 - **Ownership-safe** — never overwrites unrelated plugins or user-owned presets, legacy Home copy-only migrated.
 
@@ -201,13 +201,13 @@ Full boundaries in [overview](./docs/architecture/overview.md) and [lifecycle](.
 
 ## Platform status
 
-| Platform | Target                             | BETA2-2 release status                        |
+| Platform | Target                             | BETA3 release gate                            |
 | -------- | ---------------------------------- | --------------------------------------------- |
 | macOS    | macOS 12+, Intel and Apple Silicon | Universal DMG native validation passed        |
 | Windows  | Windows 10+, x64 and arm64         | Native NSIS install/runtime validation passed |
 | Linux    | x64 and arm64                      | Native AppImage/deb validation passed         |
 
-BETA2-2 is published as GitHub Latest after native Windows/Linux x64+arm64 and macOS Intel/Apple-Silicon package validation. Tag Run `32502448560` produced the Release; repaired Run `32505104693` adds explicit macOS no-Node evidence after a Bash 3.2 CI false green was corrected.
+BETA3 upgrades the bundled official Harness to `0.1.1-rc.2`. Its tag workflow must pass native Windows/Linux x64+arm64 and macOS Intel/Apple-Silicon install/runtime/no-Node validation before GitHub publishes it as Latest. Older DHSC builds receive BETA3 through **Settings → General → Check for updates** using the signed-size/SHA-256 update manifest contract.
 
 ## Install on macOS
 
@@ -275,7 +275,7 @@ node scripts/verify-macos-artifact.mjs release/DeepSeek-Harness-Code-*.dmg --uni
 - Paired Project2 validation for anchored tool surface.
 - Non-replaying fault injection.
 - Versioned, Skills-driven delivery.
-- Upstream plugin API tracking behind pinned rc.8 + SHA-256.
+- Upstream plugin API tracking behind pinned 0.1.1-rc.2 + SHA-256.
 
 ## Contributing
 
