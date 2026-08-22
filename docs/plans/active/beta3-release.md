@@ -38,3 +38,8 @@ Ship `deepseek-harness-code@0.1.0-BETA3` with official `@deepseek-ai/dsh@0.1.1-r
 ## Rollback
 
 Do not move Latest if native packaging fails. The previous verified BETA2-2 Release and source tag remain intact.
+
+## Findings
+
+- Initial tag Run `32548884725` correctly blocked publication: the packaged runtime workspace omitted the newly published `@deepseek-ai/dsh-authorization@0.1.1-rc.2` from `minimumReleaseAgeExclude`, so bundled pnpm 11 rejected the first-launch install while the root workspace passed.
+- Mirroring that one policy entry removes the violation. An exact empty-store install with the bundled pnpm 11.19.0 then completed 724 production packages and native postinstalls in 234 seconds, below the 600-second packaged smoke deadline.

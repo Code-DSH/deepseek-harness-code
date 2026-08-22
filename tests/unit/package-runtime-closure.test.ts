@@ -158,6 +158,20 @@ describe("packaged runtime dependency closure", () => {
     expect(closureScript).toContain(agentPresetPatchName);
   });
 
+  it("allows every newly published Harness package in the first-launch runtime policy", async () => {
+    const [rootWorkspace, runtimeWorkspace] = await Promise.all([
+      readFile(join(projectRoot, "pnpm-workspace.yaml"), "utf8"),
+      readFile(
+        join(projectRoot, "config", "node-runtime", "pnpm-workspace.yaml"),
+        "utf8",
+      ),
+    ]);
+    const authorizationRelease = '"@deepseek-ai/dsh-authorization@0.1.1-rc.2"';
+
+    expect(rootWorkspace).toContain(authorizationRelease);
+    expect(runtimeWorkspace).toContain(authorizationRelease);
+  });
+
   it("wires the macOS sidebar safe-area patch into both runtime workspaces", async () => {
     const [rootWorkspace, runtimeWorkspace, closureScript] = await Promise.all([
       readFile(join(projectRoot, "pnpm-workspace.yaml"), "utf8"),
