@@ -1,4 +1,5 @@
 import {
+  appInfoSchema,
   desktopPreferencesSchema,
   desktopPreferencesStateSchema,
   lanAccessCopySchema,
@@ -31,6 +32,7 @@ export interface PasteTarget {
 }
 
 export interface DesktopIpcActions {
+  getAppInfo(): { name: string; version: string };
   getRuntimeState(): RuntimeState;
   restartHarness(): Promise<void>;
   openLogs(): Promise<void>;
@@ -41,6 +43,8 @@ export interface DesktopIpcActions {
   copyLanAccessUrl(value: LanAccessCopy): Promise<void>;
   paste(target: PasteTarget): void;
   checkForUpdates(): Promise<UpdaterCheckOutcome>;
+  applyUpdate(): Promise<UpdaterCheckOutcome>;
+  restartForUpdate(): Promise<void>;
   listBundledPlugins(): BundledPluginEntry[];
 }
 
@@ -60,8 +64,11 @@ export function registerDesktopIpc(
   ipc.handle("runtime:get", () =>
     runtimeStateSchema.parse(actions.getRuntimeState()),
   );
+  ipc.handle("app:info", () => appInfoSchema.parse(actions.getAppInfo()));
   ipc.handle("runtime:restart", () => actions.restartHarness());
   ipc.handle("updater:check", () => actions.checkForUpdates());
+  ipc.handle("updater:apply", () => actions.applyUpdate());
+  ipc.handle("updater:restart", () => actions.restartForUpdate());
   ipc.handle("bundled-plugins:list", () => actions.listBundledPlugins());
   ipc.handle("logs:open", () => actions.openLogs());
   ipc.handle("preferences:get", () =>

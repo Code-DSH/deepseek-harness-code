@@ -1,6 +1,11 @@
 import { join } from "node:path";
 
-import { downloadInstaller, fetchManifest, type FetchDeps } from "./fetch.js";
+import {
+  downloadInstaller,
+  fetchManifest,
+  type DownloadProgress,
+  type FetchDeps,
+} from "./fetch.js";
 import {
   platformAsset,
   type UpdateAsset,
@@ -17,12 +22,18 @@ export type DownloadFn = (
   dest: string,
   deps?: FetchDeps,
   expectedSize?: number,
+  onProgress?: (progress: DownloadProgress) => void,
 ) => Promise<void>;
 export type VerifyFn = (path: string, expected: string) => Promise<boolean>;
 export type ReplaceFn = (
   asset: UpdateAsset,
   downloadedPath: string,
 ) => Promise<void>;
+
+export type UpdateProgress =
+  | ({ phase: "downloading" } & DownloadProgress)
+  | { phase: "verifying" }
+  | { phase: "ready-to-restart" };
 
 export interface UpdaterCheckDeps {
   manifestUrl: string;
@@ -70,14 +81,33 @@ export async function checkForUpdate(
 export async function applyUpdate(
   deps: UpdaterDeps,
   asset: UpdateAsset,
+  onProgress?: (progress: UpdateProgress) => void,
 ): Promise<void> {
+  const dest = await downloadAndVerifyUpdate(deps, asset, onProgress);
+  await deps.replace(asset, dest);
+}
+
+export async function downloadAndVerifyUpdate(
+  deps: UpdaterDeps,
+  asset: UpdateAsset,
+  onProgress?: (progress: UpdateProgress) => void,
+): Promise<string> {
   const download = deps.download ?? downloadInstaller;
   const verify = deps.verify ?? verifySha256;
   const dest = join(deps.tempDir, basenameFromUrl(asset.url));
-  await download(asset.url, dest, deps.fetchDeps, asset.size);
+  onProgress?.({
+    phase: "downloading",
+    downloadedBytes: 0,
+    totalBytes: asset.size,
+  });
+  await download(asset.url, dest, deps.fetchDeps, asset.size, (progress) =>
+    onProgress?.({ phase: "downloading", ...progress }),
+  );
+  onProgress?.({ phase: "verifying" });
   const ok = await verify(dest, asset.sha256);
   if (!ok) {
     throw new Error(`updater: sha256 mismatch for ${asset.url}`);
   }
-  await deps.replace(asset, dest);
+  onProgress?.({ phase: "ready-to-restart" });
+  return dest;
 }

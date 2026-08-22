@@ -143,6 +143,37 @@ describe("updater applyUpdate", () => {
     ]);
   });
 
+  it("reports download and verification progress before replacement", async () => {
+    const asset = makeManifest("0.1.0-BETA2").assets.darwin;
+    const phases: string[] = [];
+    const deps: UpdaterDeps = {
+      manifestUrl: "x",
+      currentVersion: "0.1.0",
+      platform: "darwin",
+      tempDir: dir,
+      replace: async () => {
+        phases.push("replace");
+      },
+      download: async (_url, dest, _fetchDeps, _size, onProgress) => {
+        await writeFile(dest, Buffer.from("payload"));
+        onProgress?.({ downloadedBytes: 7, totalBytes: 7 });
+      },
+      verify: async () => {
+        phases.push("verify");
+        return true;
+      },
+    };
+    await applyUpdate(deps, asset, (progress) => phases.push(progress.phase));
+    expect(phases).toEqual([
+      "downloading",
+      "downloading",
+      "verifying",
+      "verify",
+      "ready-to-restart",
+      "replace",
+    ]);
+  });
+
   it("aborts before replace on a sha256 mismatch", async () => {
     const asset = makeManifest("0.1.0-BETA2").assets.darwin;
     let replaced = false;

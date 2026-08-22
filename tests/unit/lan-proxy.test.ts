@@ -20,6 +20,7 @@ interface LanProxyStartResult {
 
 interface LanProxyHostLike {
   start(loopbackOrigin: string): Promise<LanProxyStartResult>;
+  setPassword(password: string): void;
   issueAccessUrl(): string;
   stop(): Promise<void>;
 }
@@ -361,6 +362,13 @@ describe("LAN proxy", () => {
         response.write("stream-open");
         return;
       }
+      if (incoming.url === "/redirect") {
+        response.writeHead(302, {
+          location: `${upstreamOrigin}/workspace`,
+        });
+        response.end();
+        return;
+      }
       response.setHeader("content-type", "application/json");
       response.end(JSON.stringify(observed));
     });
@@ -429,16 +437,52 @@ describe("LAN proxy", () => {
     await close(upstream);
   });
 
-  it("rejects an unauthenticated request without reaching Harness", async () => {
+  it("allows an unauthenticated request when no password is configured", async () => {
     const started = await startProxy(proxy!, upstreamOrigin);
     const url = viaLoopback(started.accessUrl);
+    url.search = "";
     url.search = "";
 
     const response = await httpRequest(url);
 
-    expect(response.status).toBe(401);
-    expect(response.body).toBe("Unauthorized");
-    expect(upstreamRequests).toHaveLength(0);
+    expect(response.status).toBe(200);
+    expect(upstreamRequests).toHaveLength(1);
+  });
+
+  it("allows direct LAN access when no password is configured", async () => {
+    const started = await startProxy(proxy!, upstreamOrigin);
+    const url = viaLoopback(started.accessUrl);
+    url.search = "";
+    const response = await httpRequest(url);
+
+    expect(response.status).toBe(200);
+    expect(upstreamRequests).toHaveLength(1);
+  });
+
+  it("uses browser basic-auth when a LAN password is configured", async () => {
+    proxy!.setPassword("correct horse battery staple");
+    const started = await startProxy(proxy!, upstreamOrigin);
+    const url = viaLoopback(started.accessUrl);
+
+    const unauthorized = await httpRequest(url);
+    expect(unauthorized.status).toBe(401);
+    expect(unauthorized.headers["www-authenticate"]).toContain("Basic");
+
+    const wrong = await httpRequest(url, {
+      headers: {
+        authorization: `Basic ${Buffer.from("user:wrong").toString("base64")}`,
+      },
+    });
+    expect(wrong.status).toBe(401);
+
+    const authorized = await httpRequest(url, {
+      headers: {
+        authorization: `Basic ${Buffer.from(
+          "user:correct horse battery staple",
+        ).toString("base64")}`,
+      },
+    });
+    expect(authorized.status).toBe(200);
   });
 
   it("exchanges the query token once for a distinct session cookie", async () => {
@@ -584,6 +628,23 @@ describe("LAN proxy", () => {
     expect(response.status).toBe(200);
   });
 
+  it("rewrites loopback redirects for a device using the LAN address", async () => {
+    const started = await startProxy(proxy!, upstreamOrigin);
+    const exchanged = await exchangeToken(started.accessUrl);
+    const target = viaLoopback(started.accessUrl);
+    target.pathname = "/redirect";
+    target.search = "";
+
+    const response = await httpRequest(target, {
+      headers: { cookie: exchanged.cookie },
+    });
+
+    expect(response.status).toBe(302);
+    expect(response.headers.location).toBe(
+      `http://127.0.0.1:${started.port}/workspace`,
+    );
+  });
+
   it("forwards an authenticated WebSocket upgrade to the loopback origin", async () => {
     const started = await startProxy(proxy!, upstreamOrigin);
     const exchanged = await exchangeToken(started.accessUrl);
@@ -655,6 +716,6 @@ describe("LAN proxy", () => {
     const response = await httpRequest(`http://127.0.0.1:${restarted.port}/`, {
       headers: { cookie: oldSession.cookie },
     });
-    expect(response.status).toBe(401);
+    expect(response.status).toBe(200);
   });
 });

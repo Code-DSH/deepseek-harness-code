@@ -14,6 +14,7 @@ describe("desktop IPC handlers", () => {
     const setPreferences = vi.fn(async () => undefined);
     const setLanAccess = vi.fn(async () => ({
       enabled: true,
+      passwordConfigured: false,
       port: 43210,
       addresses: ["192.168.1.12"],
     }));
@@ -30,6 +31,10 @@ describe("desktop IPC handlers", () => {
       },
       {
         getRuntimeState: () => ({ phase: "ready", restartCount: 0 }),
+        getAppInfo: vi.fn(() => ({
+          name: "DeepSeek Harness Code",
+          version: "0.1.0-BETA3",
+        })),
         restartHarness: vi.fn(async () => undefined),
         openLogs: vi.fn(async () => undefined),
         getPreferences: () => ({
@@ -39,6 +44,7 @@ describe("desktop IPC handlers", () => {
         setPreferences,
         getLanAccess: () => ({
           enabled: false,
+          passwordConfigured: false,
           addresses: [],
         }),
         setLanAccess,
@@ -46,10 +52,13 @@ describe("desktop IPC handlers", () => {
         paste,
         listBundledPlugins: () => [],
         checkForUpdates: vi.fn(async () => ({ available: false })),
+        applyUpdate: vi.fn(async () => ({ available: false })),
+        restartForUpdate: vi.fn(async () => undefined),
       },
     );
 
     expect([...handlers.keys()].sort()).toEqual([
+      "app:info",
       "bundled-plugins:list",
       "lan-access:copy-url",
       "lan-access:get",
@@ -59,7 +68,9 @@ describe("desktop IPC handlers", () => {
       "preferences:set",
       "runtime:get",
       "runtime:restart",
+      "updater:apply",
       "updater:check",
+      "updater:restart",
     ]);
     expect(
       [...handlers.keys()].filter((channel) =>
@@ -88,6 +99,7 @@ describe("desktop IPC handlers", () => {
       handlers.get("lan-access:set")!(undefined, { enabled: true }),
     ).resolves.toEqual({
       enabled: true,
+      passwordConfigured: false,
       port: 43210,
       addresses: ["192.168.1.12"],
     });
@@ -130,6 +142,10 @@ describe("desktop IPC handlers", () => {
       },
       {
         getRuntimeState: () => ({ phase: "ready", restartCount: 0 }),
+        getAppInfo: vi.fn(() => ({
+          name: "DeepSeek Harness Code",
+          version: "0.1.0-BETA3",
+        })),
         restartHarness: vi.fn(async () => undefined),
         openLogs: vi.fn(async () => undefined),
         getPreferences: () => ({
@@ -146,12 +162,15 @@ describe("desktop IPC handlers", () => {
           }) as never,
         setLanAccess: vi.fn(async () => ({
           enabled: false,
+          passwordConfigured: false,
           addresses: [],
         })),
         copyLanAccessUrl: vi.fn(async () => undefined),
         paste: vi.fn(),
         listBundledPlugins: () => [],
         checkForUpdates: vi.fn(async () => ({ available: false })),
+        applyUpdate: vi.fn(async () => ({ available: false })),
+        restartForUpdate: vi.fn(async () => undefined),
       },
     );
 

@@ -14,6 +14,11 @@ export interface FetchDeps {
   validateUrl?: (raw: string) => ValidatedUpdateUrl;
 }
 
+export interface DownloadProgress {
+  downloadedBytes: number;
+  totalBytes?: number;
+}
+
 const MAX_MANIFEST_BYTES = 1024 * 1024; // 1 MiB
 const MAX_INSTALLER_BYTES = 512 * 1024 * 1024; // 512 MiB
 const TIMEOUT_MS = 5 * 60_000;
@@ -120,6 +125,7 @@ export async function downloadInstaller(
   destPath: string,
   deps?: FetchDeps,
   expectedSize?: number,
+  onProgress?: (progress: DownloadProgress) => void,
 ): Promise<void> {
   const resolved = resolveDeps(deps);
   await mkdir(dirname(destPath), { recursive: true });
@@ -128,6 +134,8 @@ export async function downloadInstaller(
     response: Response,
     path: string,
     flags: "w" | "a",
+    downloadedBefore: number,
+    totalBytes: number | undefined,
   ): Promise<void> => {
     const body = response.body;
     if (body === null) {
@@ -136,6 +144,17 @@ export async function downloadInstaller(
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
     try {
+      let downloaded = downloadedBefore;
+      const progress = new Transform({
+        transform(chunk: Buffer, _encoding, callback) {
+          downloaded += chunk.length;
+          onProgress?.({
+            downloadedBytes: downloaded,
+            ...(totalBytes === undefined ? {} : { totalBytes }),
+          });
+          callback(null, chunk);
+        },
+      });
       await pipeline(
         // fetch's Response.body is the DOM ReadableStream; Readable.fromWeb
         // expects node's stream/web ReadableStream. The two are structurally
@@ -144,6 +163,7 @@ export async function downloadInstaller(
           body as unknown as Parameters<typeof Readable.fromWeb>[0],
         ),
         new ByteLimitTransform(MAX_INSTALLER_BYTES),
+        progress,
         createWriteStream(path, { flags }),
         { signal: controller.signal },
       );
@@ -160,7 +180,19 @@ export async function downloadInstaller(
   // Keep compatibility with simple HTTP servers and any future asset host
   // that does not support ranges. GitHub release assets return 206 here.
   if (firstResponse.status === 200) {
-    await streamResponseToFile(firstResponse, destPath, "w");
+    const contentLengthHeader = firstResponse.headers.get("content-length");
+    const contentLength =
+      contentLengthHeader === null ? undefined : Number(contentLengthHeader);
+    const totalBytes =
+      expectedSize ??
+      (contentLength !== undefined && Number.isFinite(contentLength)
+        ? contentLength
+        : undefined);
+    onProgress?.({
+      downloadedBytes: 0,
+      ...(totalBytes === undefined ? {} : { totalBytes }),
+    });
+    await streamResponseToFile(firstResponse, destPath, "w", 0, totalBytes);
     if (
       expectedSize !== undefined &&
       (await stat(destPath)).size !== expectedSize
@@ -222,7 +254,14 @@ export async function downloadInstaller(
             throw new Error("updater/fetch: retry range changed");
           }
         }
-        await streamResponseToFile(response, partPath, "w");
+        onProgress?.({ downloadedBytes: nextStart, totalBytes: totalSize });
+        await streamResponseToFile(
+          response,
+          partPath,
+          "w",
+          nextStart,
+          totalSize,
+        );
         const partSize = (await stat(partPath)).size;
         if (partSize !== range.end - range.start + 1) {
           throw new Error("updater/fetch: ranged chunk size mismatch");

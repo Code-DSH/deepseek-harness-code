@@ -1,4 +1,4 @@
-import { randomBytes, timingSafeEqual } from "node:crypto";
+import { randomBytes, scryptSync, timingSafeEqual } from "node:crypto";
 import {
   createServer,
   request as requestHttp,
@@ -25,6 +25,8 @@ const HOP_BY_HOP_HEADERS = new Set([
   "transfer-encoding",
   "upgrade",
 ]);
+const PASSWORD_HASH_PREFIX = "scrypt-v1";
+const PASSWORD_KEY_BYTES = 32;
 
 export interface LanProxyStartResult {
   port: number;
@@ -92,14 +94,41 @@ function forwardingHeaders(
   return forwarded;
 }
 
-function responseHeaders(headers: IncomingHttpHeaders): OutgoingHttpHeaders {
+function responseHeaders(
+  headers: IncomingHttpHeaders,
+  upstream: URL,
+  clientOrigin: string,
+): OutgoingHttpHeaders {
   const removed = connectionHeaderNames(headers);
   const forwarded: OutgoingHttpHeaders = {};
   for (const [name, value] of Object.entries(headers)) {
     if (removed.has(name.toLowerCase()) || value === undefined) continue;
+    if (name.toLowerCase() === "location") {
+      const location = Array.isArray(value) ? value[0] : value;
+      if (location !== undefined) {
+        try {
+          const parsed = new URL(location, upstream);
+          if (parsed.origin === upstream.origin) {
+            forwarded[name] =
+              `${clientOrigin}${parsed.pathname}${parsed.search}${parsed.hash}`;
+            continue;
+          }
+        } catch {
+          // Preserve malformed/relative values for the browser to handle.
+        }
+      }
+    }
     forwarded[name] = value;
   }
   return forwarded;
+}
+
+function clientOrigin(incoming: IncomingMessage): string {
+  const host = incoming.headers.host;
+  if (host === undefined || host.length === 0) {
+    throw new Error("LAN proxy request is missing a Host header");
+  }
+  return `http://${host}`;
 }
 
 function writeSocketResponse(
@@ -128,13 +157,46 @@ function isLoopbackOrigin(value: string): URL {
   return new URL(origin.origin);
 }
 
+export function hashLanPassword(password: string): string {
+  const salt = randomBytes(16);
+  const derived = scryptSync(password, salt, PASSWORD_KEY_BYTES);
+  return `${PASSWORD_HASH_PREFIX}$${salt.toString("hex")}$${derived.toString("hex")}`;
+}
+
+function verifyLanPassword(password: string, encoded: string): boolean {
+  const parts = encoded.split("$");
+  if (parts.length !== 3 || parts[0] !== PASSWORD_HASH_PREFIX) return false;
+  const salt = Buffer.from(parts[1] ?? "", "hex");
+  const expected = Buffer.from(parts[2] ?? "", "hex");
+  if (salt.length !== 16 || expected.length !== PASSWORD_KEY_BYTES) {
+    return false;
+  }
+  const actual = scryptSync(password, salt, PASSWORD_KEY_BYTES);
+  return timingSafeEqual(actual, expected);
+}
+
 export class LanProxyHost {
   private server: Server | undefined;
   private exchangeTokenBytes: Buffer | undefined;
   private sessionTokenBytes: Buffer | undefined;
+  private passwordHash: string | undefined;
   private readonly sockets = new Set<Duplex>();
   private readonly outboundRequests = new Set<ClientRequest>();
   private readonly outboundResponses = new Set<IncomingMessage>();
+
+  setPassword(password: string): string | undefined {
+    this.passwordHash =
+      password.length === 0 ? undefined : hashLanPassword(password);
+    return this.passwordHash;
+  }
+
+  setPasswordHash(passwordHash: string | undefined): void {
+    this.passwordHash = passwordHash;
+  }
+
+  isPasswordConfigured(): boolean {
+    return this.passwordHash !== undefined;
+  }
 
   async start(loopbackOrigin: string): Promise<LanProxyStartResult> {
     if (this.server !== undefined) throw new Error("LAN proxy already started");
@@ -285,6 +347,25 @@ export class LanProxyHost {
 
   private authenticate(incoming: IncomingMessage): AuthenticationResult {
     const url = parseRequestPath(incoming.url);
+    if (this.passwordHash !== undefined) {
+      const authorization = incoming.headers.authorization;
+      if (authorization?.startsWith("Basic ")) {
+        const decoded = Buffer.from(authorization.slice(6), "base64").toString(
+          "utf8",
+        );
+        const separator = decoded.indexOf(":");
+        if (
+          separator !== -1 &&
+          verifyLanPassword(decoded.slice(separator + 1), this.passwordHash)
+        ) {
+          return {
+            status: "authenticated",
+            path: `${url.pathname}${url.search}`,
+          };
+        }
+      }
+      return { status: "rejected" };
+    }
     const queryToken = url.searchParams.get(TOKEN_QUERY);
     if (queryToken !== null) {
       url.searchParams.delete(TOKEN_QUERY);
@@ -319,7 +400,7 @@ export class LanProxyHost {
         };
       }
     }
-    return { status: "rejected" };
+    return { status: "authenticated", path: `${url.pathname}${url.search}` };
   }
 
   private handleHttp(
@@ -332,6 +413,7 @@ export class LanProxyHost {
       response.writeHead(401, {
         "cache-control": "no-store",
         "content-type": "text/plain; charset=utf-8",
+        "www-authenticate": 'Basic realm="DeepSeek Harness Code"',
       });
       response.end("Unauthorized");
       return;
@@ -364,7 +446,11 @@ export class LanProxyHost {
         response.writeHead(
           upstreamResponse.statusCode ?? 502,
           upstreamResponse.statusMessage,
-          responseHeaders(upstreamResponse.headers),
+          responseHeaders(
+            upstreamResponse.headers,
+            upstream,
+            clientOrigin(incoming),
+          ),
         );
         response.once("close", () => upstreamResponse.destroy());
         upstreamResponse.pipe(response);
@@ -395,6 +481,7 @@ export class LanProxyHost {
       writeSocketResponse(socket, 401, "Unauthorized", [
         "Cache-Control: no-store",
         "Content-Type: text/plain; charset=utf-8",
+        'WWW-Authenticate: Basic realm="DeepSeek Harness Code"',
         "Content-Length: 0",
       ]);
       return;

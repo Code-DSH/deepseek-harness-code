@@ -31,6 +31,7 @@ const DESKTOP_LOCALES = {
   zh: {
     "runtime.title": "桌面运行状态",
     "runtime.status": "Harness {phase}；重启次数：{count}",
+    "app.version": "版本 {version}",
     "phase.starting": "正在启动",
     "phase.ready": "已就绪",
     "phase.recovering": "正在恢复",
@@ -50,6 +51,7 @@ const DESKTOP_LOCALES = {
   en: {
     "runtime.title": "Desktop runtime",
     "runtime.status": "Harness {phase}; restarts: {count}",
+    "app.version": "Version {version}",
     "phase.starting": "starting",
     "phase.ready": "ready",
     "phase.recovering": "recovering",
@@ -96,23 +98,33 @@ function createDesktopSettingsModel(bridge, onChange = () => {}) {
   };
   const model = {
     state: undefined,
+    appInfo: undefined,
     closeBehavior: undefined,
     preferencesSupported: groupedCapabilities,
     error: undefined,
     async start() {
       try {
-        const [state, preferences] = groupedCapabilities
+        const appInfoPromise =
+          groupedCapabilities &&
+          bridge.app &&
+          typeof bridge.app.getInfo === "function"
+            ? bridge.app.getInfo()
+            : Promise.resolve(undefined);
+        const [state, preferences, appInfo] = groupedCapabilities
           ? await Promise.all([
               bridge.runtime.getState(),
               bridge.preferences.get(),
+              appInfoPromise,
             ])
           : await Promise.all([
               bridge.getRuntimeState(),
               bridge
                 .getCloseBehavior()
                 .then((closeBehavior) => ({ closeBehavior })),
+              Promise.resolve(undefined),
             ]);
         model.state = state;
+        model.appInfo = appInfo;
         model.closeBehavior = preferences.closeBehavior;
         const subscribe = groupedCapabilities
           ? bridge.runtime.subscribe
@@ -296,6 +308,12 @@ function DesktopSettingsRow({ t }) {
         count: restarts,
       }),
     ),
+    model.appInfo?.version &&
+      React.createElement(
+        "p",
+        { className: "dshDesktopSettingsVersion" },
+        t("app.version", { version: model.appInfo.version }),
+      ),
     React.createElement(
       "div",
       { className: "dshDesktopSettingsRow" },

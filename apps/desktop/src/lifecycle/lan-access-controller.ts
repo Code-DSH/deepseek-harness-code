@@ -8,11 +8,18 @@ import type {
 } from "../shared/contracts.js";
 import type { LanProxyHost, LanProxyStartResult } from "./lan-proxy.js";
 
-type LanProxy = Pick<LanProxyHost, "issueAccessUrl" | "start" | "stop">;
+type LanProxy = Pick<LanProxyHost, "issueAccessUrl" | "start" | "stop"> &
+  Partial<
+    Pick<
+      LanProxyHost,
+      "setPassword" | "setPasswordHash" | "isPasswordConfigured"
+    >
+  >;
 
 export interface LanAccessControllerOptions {
   proxy: LanProxy;
   persistEnabled(enabled: boolean): Promise<void>;
+  persistPasswordHash?(passwordHash: string | undefined): Promise<void>;
   resolveAddresses(): string[];
   writeClipboard(value: string): void;
 }
@@ -36,7 +43,11 @@ export class LanAccessController {
   private persistedEnabled = false;
   private loopbackOrigin: string | undefined;
   private activeOrigin: string | undefined;
-  private activeState: LanAccessState = { enabled: false, addresses: [] };
+  private activeState: LanAccessState = {
+    enabled: false,
+    passwordConfigured: false,
+    addresses: [],
+  };
   private operationQueue: Promise<void> = Promise.resolve();
 
   constructor(private readonly options: LanAccessControllerOptions) {}
@@ -44,6 +55,14 @@ export class LanAccessController {
   loadPersistedEnabled(enabled: boolean): void {
     this.desiredEnabled = enabled;
     this.persistedEnabled = enabled;
+  }
+
+  loadPersistedPassword(passwordHash: string | undefined): void {
+    this.options.proxy.setPasswordHash?.(passwordHash);
+    this.activeState = {
+      ...this.activeState,
+      passwordConfigured: this.passwordConfigured(),
+    };
   }
 
   get(): LanAccessState {
@@ -55,7 +74,20 @@ export class LanAccessController {
 
   set(command: LanAccessSet): Promise<LanAccessState> {
     this.desiredEnabled = command.enabled;
-    return this.enqueue(() => this.reconcile());
+    return this.enqueue(async () => {
+      if (command.password !== undefined) {
+        if (this.options.proxy.setPassword === undefined) {
+          throw new Error("LAN password authentication is unavailable");
+        }
+        const passwordHash = this.options.proxy.setPassword(command.password);
+        await this.options.persistPasswordHash?.(passwordHash);
+        this.activeState = {
+          ...this.activeState,
+          passwordConfigured: this.passwordConfigured(),
+        };
+      }
+      return this.reconcile();
+    });
   }
 
   onHarnessReady(origin: string): Promise<void> {
@@ -152,7 +184,12 @@ export class LanAccessController {
         this.options.proxy.issueAccessUrl(),
         addresses[0]!,
       );
-      this.activeState = { enabled: true, port: result.port, addresses };
+      this.activeState = {
+        enabled: true,
+        passwordConfigured: this.passwordConfigured(),
+        port: result.port,
+        addresses,
+      };
       this.activeOrigin = origin;
     } catch (error) {
       await this.stopAndClear();
@@ -165,12 +202,17 @@ export class LanAccessController {
     if (url.protocol !== "http:" || url.hostname !== "0.0.0.0") {
       throw new Error("LAN access URL is invalid");
     }
+    url.searchParams.delete("lanToken");
     url.hostname = address;
     return url.href;
   }
 
   private clearActiveState(): void {
-    this.activeState = { enabled: false, addresses: [] };
+    this.activeState = {
+      enabled: false,
+      passwordConfigured: this.passwordConfigured(),
+      addresses: [],
+    };
     this.activeOrigin = undefined;
   }
 
@@ -180,6 +222,10 @@ export class LanAccessController {
     } finally {
       this.clearActiveState();
     }
+  }
+
+  private passwordConfigured(): boolean {
+    return this.options.proxy.isPasswordConfigured?.() ?? false;
   }
 
   private enqueue<T>(operation: () => Promise<T>): Promise<T> {
