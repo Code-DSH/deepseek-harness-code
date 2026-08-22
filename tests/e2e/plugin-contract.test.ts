@@ -34,6 +34,9 @@ type Bridge = {
 };
 
 type ModernBridge = {
+  app?: {
+    getInfo(): Promise<{ name: string; version: string }>;
+  };
   preferences: {
     get(): Promise<{
       closeBehavior: "ask" | "minimize" | "quit";
@@ -537,6 +540,7 @@ describe("desktop plugin package contract", () => {
       bridge: ModernBridge,
     ) => {
       state: RuntimeState | undefined;
+      appInfo: { name: string; version: string } | undefined;
       closeBehavior: "ask" | "minimize" | "quit" | undefined;
       start(): Promise<void>;
       setCloseBehavior(value: "minimize" | "quit"): Promise<void>;
@@ -568,6 +572,12 @@ describe("desktop plugin package contract", () => {
           return () => undefined;
         },
       },
+      app: {
+        async getInfo() {
+          calls.push("app:info");
+          return { name: "DeepSeek Harness Code", version: "0.1.0-BETA3" };
+        },
+      },
     };
 
     const model = createModel(bridge);
@@ -575,8 +585,13 @@ describe("desktop plugin package contract", () => {
     await model.setCloseBehavior("quit");
 
     expect(model.state).toEqual({ phase: "ready", restartCount: 0 });
+    expect(model.appInfo).toEqual({
+      name: "DeepSeek Harness Code",
+      version: "0.1.0-BETA3",
+    });
     expect(model.closeBehavior).toBe("quit");
     expect(calls).toEqual([
+      "app:info",
       "runtime:getState",
       "preferences:get",
       "runtime:subscribe",

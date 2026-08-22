@@ -215,6 +215,12 @@ test("renders the rotating Orb inside the native status row and cleans up", asyn
       },
     };
     target.deepseekDesktop = {
+      app: {
+        getInfo: async () => ({
+          name: "DeepSeek Harness Code",
+          version: "0.1.0-BETA3",
+        }),
+      },
       preferences: {
         get: async () => ({
           closeBehavior: "minimize",
@@ -223,8 +229,16 @@ test("renders the rotating Orb inside the native status row and cleans up", asyn
         set: async () => undefined,
       },
       lanAccess: {
-        get: async () => ({ enabled: false, addresses: [] }),
-        set: async () => ({ enabled: false, addresses: [] }),
+        get: async () => ({
+          enabled: false,
+          passwordConfigured: false,
+          addresses: [],
+        }),
+        set: async () => ({
+          enabled: false,
+          passwordConfigured: false,
+          addresses: [],
+        }),
         copyUrl: async () => undefined,
       },
       runtime: {
@@ -235,6 +249,9 @@ test("renders the rotating Orb inside the native status row and cleans up", asyn
       },
       updater: {
         check: async () => ({ available: false }),
+        apply: async () => ({ available: false }),
+        restart: async () => undefined,
+        subscribe: () => () => undefined,
       },
       bundledPlugins: {
         list: async () => [],

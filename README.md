@@ -141,7 +141,7 @@ Long sessions rarely crash dramatically — pressure accumulates: renderer stall
 - **System appearance** — light/dark startup UI, platform title bar, official monochrome assets, reduced-motion support.
 - **Smooth navigation** — View Transitions when available, CSS fallback otherwise, no forced layout.
 - **Workspace resilience** — validated Standard switching and official session restoration.
-- **Opt-in LAN access** — disabled by default; when enabled, an Electron-owned HTTP proxy issues a fresh one-time link token for each native Copy action, exchanges it for an HttpOnly cookie, and serves a trusted LAN while Harness and the desktop renderer stay on loopback. A newer unused copied link invalidates the prior one.
+- **Opt-in LAN access** — disabled by default; when enabled, an Electron-owned HTTP proxy listens on local interfaces while Harness stays on loopback. Empty password allows direct access from a reachable LAN device; a configured password triggers browser Basic Auth for HTTP and WebSocket traffic.
 - **Skills** — Superpowers 6.2.0 installed to `<DSH_HOME>/skills`, never overwriting user-owned directories.
 - **Global Agent Protocol** — `<DSH_HOME>/AGENTS.md`: auto-installed when absent, upgraded only while still app-managed, never overwriting user-owned, with timestamped backup switch via `Use Bundled Global Prompt…`.
 - **Global `dsh`** — `npm install -g` of pinned `@deepseek-ai/dsh` on first launch, never overwriting user global, fail-open.
@@ -194,7 +194,7 @@ Full boundaries in [overview](./docs/architecture/overview.md) and [lifecycle](.
 - Sandboxed renderer, no Node integration.
 - Only the fixed `preferences`, `lanAccess`, `runtime`, `updater`, and `bundledPlugins` preload groups.
 - IPC payloads validated before desktop actions.
-- Harness itself binds only to loopback. LAN access is disabled by default; an opt-in Electron reverse proxy may listen on `0.0.0.0`. Each native Copy action issues a fresh one-time link token, replaces any earlier unredeemed link, exchanges the selected link for an HttpOnly cookie, and forwards authenticated traffic to loopback. It is trusted-LAN HTTP only, with no Internet-exposure or TLS claim.
+- Harness itself binds only to loopback. LAN access is disabled by default; an opt-in Electron reverse proxy may listen on `0.0.0.0`. Empty password permits direct trusted-LAN access; a configured password uses browser Basic Auth for HTTP and WebSocket traffic. It is trusted-LAN HTTP only, with no Internet-exposure or TLS claim.
 - Credentials stay in official Harness settings, never in bundle.
 - Logs exclude credentials, Authorization, Cookie, prompts, and responses.
 - External navigation `allow` / `open-external` policy.

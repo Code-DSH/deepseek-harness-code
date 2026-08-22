@@ -141,7 +141,7 @@ V4 Pro 是该整合基础增强的重要能力之一，而非唯一中心。固�
 - **系统外观** — 浅/深色启动页、平台标题栏、官方单色资产与减动支持。
 - **平滑导航** — View Transitions 优先，CSS 回退次之，无强制布局。
 - **工作区韧性** — 已验证 Standard 切换与官方会话恢复。
-- **可选局域网访问** — 默认关闭；启用后由 Electron 自有 HTTP 代理在每次原生“复制”时签发新的单次链接令牌，并将其兑换为 HttpOnly Cookie，再向可信局域网提供访问；Harness 与桌面渲染器仍保持回环。新复制且未使用的链接会使之前未使用的链接失效。
+- **可选局域网访问** — 默认关闭；启用后由 Electron 自有 HTTP 代理监听本地网卡，Harness 仍只监听回环地址。密码为空时，同一内网可直接访问；设置密码后，浏览器会对 HTTP 和 WebSocket 连接弹出 Basic Auth 密码框。
 - **Skills** — Superpowers 6.2.0 安装至 `<DSH_HOME>/skills`，用户同名目录永不覆盖。
 - **全局 Agent 协议** — `<DSH_HOME>/AGENTS.md`：无则安装、未改则随版升级、永不覆盖用户自有，菜单 `Use Bundled Global Prompt…` 带时间戳备份切换。
 - **全局 `dsh`** — 首次启动经 `npm install -g` 安装固定 `@deepseek-ai/dsh`，不覆用户全局，失败不阻塞。
@@ -194,7 +194,7 @@ V4 Pro 是该整合基础增强的重要能力之一，而非唯一中心。固�
 - 沙箱渲染器，禁用 Node 集成。
 - 仅 `preferences`、`lanAccess`、`runtime`、`updater`、`bundledPlugins` 五组固定 preload 能力。
 - IPC 载荷校验后才触发桌面动作。
-- Harness 始终仅绑定回环。局域网访问默认关闭；用户启用后，独立 Electron 代理才监听 `0.0.0.0`。每次原生“复制”都会签发新的单次链接令牌、使之前未兑换的链接失效，并把当前链接兑换为 HttpOnly Cookie，然后仅向回环 Harness 转发已认证流量。这是可信局域网 HTTP，不承诺公网暴露或 TLS。
+- Harness 始终仅绑定回环。局域网访问默认关闭；用户启用后，独立 Electron 代理才监听 `0.0.0.0`。密码为空时直接转发，设置密码后使用浏览器 Basic Auth 保护 HTTP 和 WebSocket。这是可信局域网 HTTP，不承诺公网暴露或 TLS。
 - 凭据仅留官方 Harness 设置，不入应用包。
 - 日志排除凭据、Authorization、Cookie、Prompt 与响应。
 - 外部导航 `allow` / `open-external` 策略。

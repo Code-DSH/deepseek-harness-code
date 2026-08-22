@@ -96,6 +96,7 @@ import { classifyNavigation } from "./security/navigation-policy.js";
 import type {
   DesktopPreferencesState,
   RuntimeNotice,
+  UpdaterStatus,
 } from "./shared/contracts.js";
 import {
   DEFAULT_DESKTOP_PREFERENCES,
@@ -123,6 +124,7 @@ const lanAccessController = new LanAccessController({
   persistEnabled: async (enabled) => {
     await preferencesStore.update({ lanAccessEnabled: enabled });
   },
+  persistPasswordHash: persistLanAccessPasswordHash,
   resolveAddresses: () => resolveLanIpv4Addresses(networkInterfaces()),
   writeClipboard: (value) => clipboard.writeText(value),
 });
@@ -195,7 +197,53 @@ async function getPreferences(): Promise<DesktopPreferencesState> {
 async function setPreferences(value: DesktopPreferencesState): Promise<void> {
   const target = settingsPath();
   await mkdir(dirname(target), { recursive: true });
-  await writeFile(target, JSON.stringify(value), {
+  let existing: Record<string, unknown> = {};
+  try {
+    const parsed: unknown = JSON.parse(await readFile(target, "utf8"));
+    if (typeof parsed === "object" && parsed !== null) {
+      existing = parsed as Record<string, unknown>;
+    }
+  } catch {
+    // Missing or malformed settings are replaced with the validated state.
+  }
+  await writeFile(target, JSON.stringify({ ...existing, ...value }), {
+    encoding: "utf8",
+    mode: 0o600,
+  });
+}
+
+async function getLanAccessPasswordHash(): Promise<string | undefined> {
+  try {
+    const parsed: unknown = JSON.parse(await readFile(settingsPath(), "utf8"));
+    const hash =
+      typeof parsed === "object" && parsed !== null
+        ? (parsed as Record<string, unknown>).lanAccessPasswordHash
+        : undefined;
+    return typeof hash === "string" && hash.startsWith("scrypt-v1$")
+      ? hash
+      : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+async function persistLanAccessPasswordHash(
+  passwordHash: string | undefined,
+): Promise<void> {
+  const target = settingsPath();
+  await mkdir(dirname(target), { recursive: true });
+  let existing: Record<string, unknown> = {};
+  try {
+    const parsed: unknown = JSON.parse(await readFile(target, "utf8"));
+    if (typeof parsed === "object" && parsed !== null) {
+      existing = parsed as Record<string, unknown>;
+    }
+  } catch {
+    // The preferences writer will fill the remaining fields later.
+  }
+  if (passwordHash === undefined) delete existing.lanAccessPasswordHash;
+  else existing.lanAccessPasswordHash = passwordHash;
+  await writeFile(target, JSON.stringify(existing), {
     encoding: "utf8",
     mode: 0o600,
   });
@@ -851,6 +899,12 @@ function buildMenu(): void {
   );
 }
 
+function publishUpdaterStatus(status: UpdaterStatus): void {
+  if (mainWindow === undefined || mainWindow.isDestroyed()) return;
+  if (mainWindow.webContents.isDestroyed()) return;
+  mainWindow.webContents.send("updater:changed", status);
+}
+
 function createTray(): void {
   if (tray !== undefined) return;
   const image = nativeImage
@@ -993,6 +1047,10 @@ async function launch(): Promise<void> {
     waitForExit: waitForChildExit,
   });
   registerDesktopIpc(ipcMain, {
+    getAppInfo: () => ({
+      name: "DeepSeek Harness Code",
+      version: app.getVersion(),
+    }),
     getRuntimeState: () => controller!.getState(),
     restartHarness: () => controller!.restart(),
     openLogs: async () => {
@@ -1007,8 +1065,10 @@ async function launch(): Promise<void> {
     copyLanAccessUrl: async (value) => lanAccessController.copyUrl(value),
     paste: (target) => target.paste(),
     checkForUpdates: () =>
-      updaterHost?.check({ silent: false }) ??
-      Promise.resolve({ available: false }),
+      updaterHost?.check() ?? Promise.resolve({ available: false }),
+    applyUpdate: () =>
+      updaterHost?.apply() ?? Promise.resolve({ available: false }),
+    restartForUpdate: () => updaterHost?.restart() ?? Promise.resolve(),
     listBundledPlugins: () => [],
   });
   buildMenu();
@@ -1018,6 +1078,7 @@ async function launch(): Promise<void> {
   lanAccessController.loadPersistedEnabled(
     preferencesStore.get().lanAccessEnabled,
   );
+  lanAccessController.loadPersistedPassword(await getLanAccessPasswordHash());
   await controller.start();
   healthTimer = setInterval(
     () => void controller?.checkHealth().catch(reportRuntimeFailure),
@@ -1055,7 +1116,7 @@ if (hasSingleInstanceLock) {
 
 const launchOnce = createSingleFlightAction(async () => {
   await launch();
-  updaterHost = new UpdaterHost({ parentWindow: () => mainWindow });
+  updaterHost = new UpdaterHost({ publishStatus: publishUpdaterStatus });
 });
 
 const lifecycle = hasSingleInstanceLock

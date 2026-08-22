@@ -8,10 +8,14 @@ import {
 describe("preload bridge", () => {
   it("exposes only approved capability APIs and uses fixed IPC channels", async () => {
     const invoke = vi.fn(async (channel: string) => {
+      if (channel === "app:info") {
+        return { name: "DeepSeek Harness Code", version: "0.1.0-BETA3" };
+      }
       if (channel === "runtime:get") return { phase: "ready", restartCount: 0 };
       if (channel === "lan-access:get" || channel === "lan-access:set") {
         return {
           enabled: true,
+          passwordConfigured: false,
           port: 43210,
           addresses: ["192.168.1.12"],
         };
@@ -26,6 +30,7 @@ describe("preload bridge", () => {
     const bridge = createDesktopBridge({ invoke, on, removeListener });
 
     expect(Object.keys(bridge).sort()).toEqual([
+      "app",
       "bundledPlugins",
       "lanAccess",
       "preferences",
@@ -39,14 +44,26 @@ describe("preload bridge", () => {
       "restartHarness",
       "subscribe",
     ]);
+    expect(Object.keys(bridge.app).sort()).toEqual(["getInfo"]);
+    expect(Object.keys(bridge.updater).sort()).toEqual([
+      "apply",
+      "check",
+      "restart",
+      "subscribe",
+    ]);
     expect(Object.keys(bridge.lanAccess).sort()).toEqual([
       "copyUrl",
       "get",
       "set",
     ]);
     await bridge.runtime.getState();
+    await expect(bridge.app.getInfo()).resolves.toEqual({
+      name: "DeepSeek Harness Code",
+      version: "0.1.0-BETA3",
+    });
     await expect(bridge.lanAccess.get()).resolves.toEqual({
       enabled: true,
+      passwordConfigured: false,
       port: 43210,
       addresses: ["192.168.1.12"],
     });

@@ -23,11 +23,11 @@
 
 ## 2. 分平台流程
 
-| 平台 | 有 Node | 无 Node | 更新包 | 替换方式 |
-|---|---|---|---|---|
-| Windows | NSIS 安装，首次启动执行 runtime + 插件安装 | 弹窗打开官方 `.msi` | NSIS `.exe` | 启动 `installer /S --force-close` 后退出 |
-| macOS | DMG/ZIP 拷贝到 Applications，首次启动执行 runtime + 插件安装 | 弹窗打开官方 `.pkg` | Universal `.zip` | 解压 `.app`，helper 等待退出后 swap，`xattr -cr` 后重新打开 |
-| Linux | AppImage/deb 安装，首次启动执行 runtime + 插件安装 | 弹窗打开 nodejs.org 下载页 | AppImage（deb 仅提示） | 替换 `process.execPath` 后重启 |
+| 平台    | 有 Node                                                      | 无 Node                    | 更新包                 | 替换方式                                                    |
+| ------- | ------------------------------------------------------------ | -------------------------- | ---------------------- | ----------------------------------------------------------- |
+| Windows | NSIS 安装，首次启动执行 runtime + 插件安装                   | 弹窗打开官方 `.msi`        | NSIS `.exe`            | 启动 `installer /S --force-close` 后退出                    |
+| macOS   | DMG/ZIP 拷贝到 Applications，首次启动执行 runtime + 插件安装 | 弹窗打开官方 `.pkg`        | Universal `.zip`       | 解压 `.app`，helper 等待退出后 swap，`xattr -cr` 后重新打开 |
+| Linux   | AppImage/deb 安装，首次启动执行 runtime + 插件安装           | 弹窗打开 nodejs.org 下载页 | AppImage（deb 仅提示） | 替换 `process.execPath` 后重启                              |
 
 ### 2.1 六种场景速览
 

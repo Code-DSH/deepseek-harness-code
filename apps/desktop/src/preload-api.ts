@@ -1,4 +1,5 @@
 import {
+  appInfoSchema,
   desktopPreferencesSchema,
   desktopPreferencesStateSchema,
   lanAccessCopySchema,
@@ -8,6 +9,7 @@ import {
   type BundledPluginEntry,
   type DeepSeekDesktopBridge,
   type UpdaterCheckOutcome,
+  updaterStatusSchema,
 } from "./shared/contracts.js";
 
 export interface RendererIpc {
@@ -68,6 +70,11 @@ export function installPasteShortcut(
 
 export function createDesktopBridge(ipc: RendererIpc): DeepSeekDesktopBridge {
   return {
+    app: {
+      async getInfo() {
+        return appInfoSchema.parse(await ipc.invoke("app:info"));
+      },
+    },
     preferences: {
       async get() {
         return desktopPreferencesStateSchema.parse(
@@ -117,6 +124,18 @@ export function createDesktopBridge(ipc: RendererIpc): DeepSeekDesktopBridge {
     updater: {
       async check() {
         return (await ipc.invoke("updater:check")) as UpdaterCheckOutcome;
+      },
+      async apply() {
+        return (await ipc.invoke("updater:apply")) as UpdaterCheckOutcome;
+      },
+      async restart() {
+        await ipc.invoke("updater:restart");
+      },
+      subscribe(listener) {
+        const wrapped = (_event: unknown, payload: unknown) =>
+          listener(updaterStatusSchema.parse(payload));
+        ipc.on("updater:changed", wrapped);
+        return () => ipc.removeListener("updater:changed", wrapped);
       },
     },
     bundledPlugins: {

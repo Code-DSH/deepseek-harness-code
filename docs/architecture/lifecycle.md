@@ -22,6 +22,10 @@ The first window close asks once and persists either minimize-to-tray or quit; G
 
 Runtime state delivery is an observer only. If the renderer has already been destroyed, its `Object has been destroyed` exception is isolated and cannot interrupt Harness retirement. A real regression run confirmed the former orphan child now exits during normal quit.
 
+The updater publishes host-owned status through the fixed `updater:changed` bridge and renders an in-app overlay for update availability, byte progress, SHA-256 verification, and the final restart choice. Downloaded assets are not handed to the platform replacement helper until the user selects “Restart and complete update”; the helper then performs the verified replacement and relaunch.
+
+Opt-in LAN access keeps Harness on loopback and uses the Electron proxy on all local interfaces. With an empty password the proxy forwards reachable same-LAN requests directly; with a password it challenges HTTP and WebSocket requests using browser Basic Auth and verifies a salted password hash. The proxy rewrites upstream absolute loopback redirects back to the requesting LAN origin, so a second device stays on the copied LAN URL through navigation and authentication. This remains trusted-LAN HTTP only: the host firewall must allow the selected port, both devices must be on the same reachable network, and guest Wi-Fi/client isolation can still block peer access.
+
 ## Streaming Stall
 
 Ninety seconds without stream activity surfaces a waiting/connection status. A healthy service is never killed and a model request is never replayed automatically.
