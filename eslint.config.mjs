@@ -9,6 +9,7 @@ export default [
       ".worktrees/**",
       "build/node-runtime/**",
       "build/routing-suite/**",
+      "deps/deepseek-harness/**",
       "dist/**",
       "node_modules/**",
       "release/**",

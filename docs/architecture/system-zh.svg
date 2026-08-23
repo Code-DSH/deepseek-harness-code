@@ -63,7 +63,7 @@
   <!-- Header -->
   <rect class="zone" x="24" y="16" width="1552" height="56" rx="16"/>
   <text class="heading" x="44" y="38">DeepSeek Harness Code — Code Agent 桌面系统</text>
-  <text class="small" x="44" y="58">Electron 43 · @deepseek-ai/dsh@0.1.1-rc.2 · 系统 Node ≥22.13 · 仅回环地址 · pnpm 11.19.0 · asar:false</text>
+  <text class="small" x="44" y="58">Electron 43 · Code-DSH 0.1.1-rc.2.code.1 · Node ^22.19 或 ≥24（拒绝 23）· 仅回环地址 · pnpm 11.19.0 · asar:false</text>
   <text class="tiny" x="1240" y="38">社区发行版 — 非 DeepSeek 官方</text>
   <text class="tiny" x="1240" y="54">固定版本 · 打包验证 · 所有权安全</text>
 
@@ -90,7 +90,7 @@
   <text class="label" x="421" y="202">系统 Node 解析</text>
   <text class="small" x="421" y="222">PATH + Homebrew / nvm / Volta / fnm</text>
   <text class="small" x="421" y="238">mise / Scoop / NVM_DIR / VOLTA_HOME</text>
-  <text class="small" x="421" y="254">≥22.13 自动探测 · GUI PATH 兼容</text>
+  <text class="small" x="421" y="254">^22.19 或 ≥24 自动探测 · 拒绝 Node 23 · GUI PATH 兼容</text>
   <text class="small" x="421" y="270">内置 pnpm 运行时 → userData</text>
   <text class="tiny" x="421" y="290">build/node-runtime/pnpm.mjs</text>
 
@@ -182,7 +182,7 @@
   <text class="small" x="346" y="760">→ 晋升：dev_tool_search</text>
   <text class="small" x="346" y="774">   + skill_search/load</text>
   <text class="tiny" x="346" y="790">持久化解锁 · 子代理常驻</text>
-  <text class="tiny" x="346" y="804">0.1.1-rc.2 下失败回退 Standard</text>
+  <text class="tiny" x="346" y="804">0.1.1-rc.2.code.1 下失败回退 Standard</text>
 
   <rect class="zone" x="608" y="690" width="260" height="150" rx="10"/>
   <text class="label-sm" x="620" y="710">提示词原则与超能力</text>
@@ -202,21 +202,21 @@
   <text class="tiny" x="894" y="790">0.2.0 eff787e · SHA-256 固定</text>
   <text class="tiny" x="894" y="804">无运行时下载器 · 不可变</text>
 
-  <!-- Official plugin install bar -->
+  <!-- Public plugin reconciliation bar -->
   <rect class="host" x="60" y="852" width="1080" height="64" rx="8"/>
-  <text class="tiny" x="76" y="870">官方协调：</text><text class="small" x="140" y="870">dsh plugin --profile web add</text><text class="tiny" x="340" y="870"> 经系统 Node + 内置 pnpm · --expose-internals</text>
-  <text class="tiny" x="76" y="886">Harness 掌管正常协调 · 桌面仅在 CLI 成功后移除 0.1.1-rc.2 linkOnly 重复项</text>
+  <text class="tiny" x="76" y="870">公开协调：</text><text class="small" x="140" y="870">dsh plugin --profile web add</text><text class="tiny" x="340" y="870"> 经系统 Node + 内置 pnpm · --expose-internals</text>
+  <text class="tiny" x="76" y="886">维护版 Harness 掌管协调 · 完整本地 family 提供子 Agent 包</text>
   <text class="tiny" x="76" y="902">Bundle：desktop-plugin · dsh-ui-motion · dsh-model2-selector · dsh-ui-polish · dsh-updater-check · dsh-lan-access · prompt-principles · vision-router · better-sidebar · superpowers · composition · injector · mode-boost · dsh-find-plugin</text>
 
   <!-- Row 5: Data + External -->
   <rect class="data" x="44" y="930" width="680" height="160"/>
   <text class="subheading" x="60" y="952">持久化 — 应用用户数据（.app 之外）</text>
-  <text class="label-sm" x="60" y="972">官方 Home</text><text class="small" x="130" y="972">解析：$DSH_HOME → ~/.dsh (@deepseek-ai/dsh-home-paths@0.1.1-rc.2)</text>
+  <text class="label-sm" x="60" y="972">DSH Home</text><text class="small" x="130" y="972">解析：$DSH_HOME → ~/.dsh (@deepseek-ai/dsh-home-paths@0.1.1-rc.2.code.1)</text>
   <text class="small" x="60" y="990">dsh-home：设置 / 凭据 / 会话 / 工作区 / .agent-presets / skills</text>
   <text class="small" x="60" y="1006">遗留迁移：仅复制 · 目标胜出 · 拒绝符号链接 · 0600/0700 · 幂等</text>
   <text class="label-sm" x="60" y="1025">诊断</text><text class="small" x="110" y="1025">Electron / Harness / Watchdog 日志 · 脱敏 · 10MB ×5 轮转 · openLogs</text>
-  <text class="label-sm" x="60" y="1044">全局</text><text class="small" x="106" y="1044">npm install -g dsh@固定版本 · 失败开放 · 永不覆盖用户全局</text>
-  <text class="label-sm" x="60" y="1063">证明</text><text class="small" x="102" y="1063">preflight：51 产物 · 35 依赖 · 8 关键版本 · 10 Bundle · SHA-256 已验证</text>
+  <text class="label-sm" x="60" y="1044">全局</text><text class="small" x="106" y="1044">用户自行管理 dsh · 应用不执行全局安装</text>
+  <text class="label-sm" x="60" y="1063">证明</text><text class="small" x="102" y="1063">gitlink + provenance · 227 本地包 · SHA-256 已验证</text>
 
   <rect class="external" x="744" y="930" width="410" height="160"/>
   <text class="subheading" x="760" y="952">Provider 与分发边界</text>
@@ -307,5 +307,5 @@
   <line class="flow-purple" x1="650" y1="1240" x2="716" y2="1240"/><text class="small" x="724" y="1244">恢复</text>
   <line class="flow-red" x1="820" y1="1240" x2="886" y2="1240"/><text class="small" x="894" y="1244">退出</text>
   <text class="tiny" x="1030" y="1244">Electron 主进程掌管窗口/子进程/桥接 · Harness 掌管会话/协议 · Watchdog 掌管重启 · Preload 掌管校验</text>
-  <text class="tiny" x="44" y="1262">打包：asar:false（0.1.1-rc.2 在 ASAR 内客户端图为空）· extraResources 不可变 · 构建在 tar 前校验 SHA-256 · 无运行时路由下载</text>
+  <text class="tiny" x="44" y="1262">打包：asar:false（维护版基线在 ASAR 内客户端图为空）· extraResources 不可变 · 构建在 tar 前校验 SHA-256 · 无运行时路由下载</text>
 </svg>

@@ -1,7 +1,7 @@
 ---
 id: knowledge.upstream-baseline
 title: Upstream Baseline
-summary: Version and official-contract evidence for Harness 0.1.1-rc.2, its Home and plugin CLI, Thinking Orbs, packaging, DSH Routing Suite pins, native status ownership, and exact local patches.
+summary: Upstream 0.1.1-rc.2 evidence and the pinned Code-DSH maintained 0.1.1-rc.2.code.1 family contract.
 kind: knowledge
 status: canonical
 content_stage: implementation-backed
@@ -15,6 +15,7 @@ last_verified: 2026-08-22T11:15:00+08:00
 revalidate_after: 2026-08-23T11:15:00+08:00
 owners: [project]
 source_of_truth:
+  - https://github.com/Code-DSH/deepseek-harness
   - https://github.com/deepseek-ai/deepseek-harness
   - https://www.npmjs.com/package/@deepseek-ai/dsh
   - https://www.electronjs.org/docs/latest/
@@ -36,7 +37,7 @@ tags: [research, versions]
 
 ## Current Conclusion
 
-Pin `@deepseek-ai/dsh@0.1.1-rc.2`, `@deepseek-ai/dsh-home-paths@0.1.1-rc.2`, Electron `43.4.0`, electron-builder `26.15.3`, pnpm `11.19.0`, `dsh-find-plugin@0.3.6`, esbuild `0.25.12`, and `thinking-orbs@0.3.1`. The official Home resolver and public `dsh plugin --profile web add` command remain the supported desktop installation boundary. Harness 0.1.1-rc.2 adds DeepSeek Files API image upload/reuse and model-aware image preprocessing. The DSH Routing Suite remains an immutable checksum-verified snapshot; Harness still owns profile reconciliation, the question protocol, Cordis bundle mechanism, conversation tree, live status semantics, and timer.
+Pin the `deps/deepseek-harness` gitlink to the Code-DSH repository and consume the complete `0.1.1-rc.2.code.1` family from local tarballs. The maintained source is based on upstream commit `b150a551b8d465e31e418e1b2eaf5e79bbb7d28e` and carries Windows plugin argument quoting, persistent Bash prompt handling, four product preset localizations, and the macOS sidebar inset. Keep Electron `43.4.0`, electron-builder `26.15.3`, pnpm `11.19.0`, `dsh-find-plugin@0.3.6`, esbuild `0.25.12`, and `thinking-orbs@0.3.1`. `DSH_HOME`/`~/.dsh`, the public plugin CLI, question protocol, Cordis bundle mechanism, conversation tree, and status semantics remain unchanged.
 
 ## Evidence
 
@@ -57,6 +58,7 @@ Pin `@deepseek-ai/dsh@0.1.1-rc.2`, `@deepseek-ai/dsh-home-paths@0.1.1-rc.2`, Ele
 | 2026-08-20   | Installed rc.8 CLI, `@deepseek-ai/dsh-home-paths`, and real Electron integration test                                           | `dsh`/Home paths `0.1.0-rc.8`, pnpm `11.19.0`                                          | Resolver precedence, public plugin reconciliation (8 plugins), bundled pnpm launcher, and bare-name boot graph      | high       |
 | 2026-08-20   | `build/routing-suite/versions.json` + `electron-builder.yml`                                                                    | injector `355238fa...391f48`, mode-boost `72836d64...ca12b`, router `a8f3616...126676` | Immutable snapshot + 8-plugin extraResources, verified by `check-runtime-closure.mjs` + `verify-macos-artifact.mjs` | high       |
 | 2026-08-22   | [Harness v0.1.1-rc.2 release](https://github.com/deepseek-ai/deepseek-harness/releases/tag/dsh-v0.1.1-rc.2) + npm metadata      | tag commit `b150a551b8d465e31e418e1b2eaf5e79bbb7d28e`; npm latest `0.1.1-rc.2`         | Files API image upload/reuse, model-aware resize/format conversion, exact package integrity and dependency graph    | high       |
+| 2026-08-23   | [Code-DSH maintained Harness](https://github.com/Code-DSH/deepseek-harness)                                                     | commit `6f3bf64735b00754d843ff31ae645b62a32414c8`; family `0.1.1-rc.2.code.1`          | Four former desktop patches migrated to maintained source; complete family pack and provenance boundary             | high       |
 
 ## V4 Pro and Integrated Toolchain
 

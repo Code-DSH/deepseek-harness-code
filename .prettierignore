@@ -1,8 +1,10 @@
 .cache
 .omo/
 .mimosa
+.pnpm-store
 .worktrees
 build
+deps/deepseek-harness
 dist
 node_modules
 release

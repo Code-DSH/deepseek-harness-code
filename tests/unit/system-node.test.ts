@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   compareNodeVersions,
+  isSupportedNodeVersion,
   MINIMUM_NODE_VERSION,
   resolveSystemNode,
   type SystemNodeDeps,
@@ -13,6 +14,7 @@ interface FakeFilesystem {
   files: Set<string>;
   dirs: Record<string, string[]>;
   symlinks: Record<string, string>;
+  versions?: Record<string, string>;
   nonExecutable?: Set<string>;
   logs: string[];
 }
@@ -24,6 +26,14 @@ function fakeDeps(fake: FakeFilesystem): Partial<SystemNodeDeps> {
       fake.files.has(path) && !(fake.nonExecutable?.has(path) ?? false),
     listDir: (path) => fake.dirs[path] ?? [],
     realpath: (path) => fake.symlinks[path] ?? path,
+    readVersion: (path) => {
+      const resolved = fake.symlinks[path] ?? path;
+      return (
+        fake.versions?.[path] ??
+        resolved.match(/(?:^|[\\/])v?(\d+\.\d+\.\d+)(?:[\\/]|$)/u)?.[1] ??
+        "24.0.0"
+      );
+    },
     log: (message) => {
       fake.logs.push(message);
     },
@@ -34,12 +44,21 @@ const DARWIN_HOME = "/Users/test";
 
 describe("system Node.js detection", () => {
   it("compares dotted versions numerically", () => {
-    expect(compareNodeVersions("22.12.0", MINIMUM_NODE_VERSION)).toBeLessThan(
+    expect(compareNodeVersions("22.18.0", MINIMUM_NODE_VERSION)).toBeLessThan(
       0,
     );
-    expect(compareNodeVersions("22.13.0", MINIMUM_NODE_VERSION)).toBe(0);
+    expect(compareNodeVersions("22.19.0", MINIMUM_NODE_VERSION)).toBe(0);
     expect(compareNodeVersions("26.7.0", "24.18.0")).toBeGreaterThan(0);
     expect(compareNodeVersions("v24.1.0", "24.1.5")).toBeLessThan(0);
+  });
+
+  it("accepts Node 22.19+ and 24+ while rejecting Node 23", () => {
+    expect(isSupportedNodeVersion("22.18.0")).toBe(false);
+    expect(isSupportedNodeVersion("22.19.0")).toBe(true);
+    expect(isSupportedNodeVersion("22.20.0")).toBe(true);
+    expect(isSupportedNodeVersion("23.11.1")).toBe(false);
+    expect(isSupportedNodeVersion("24.0.0")).toBe(true);
+    expect(isSupportedNodeVersion("26.7.0")).toBe(true);
   });
 
   it("resolves node from the PATH without version metadata", () => {
@@ -57,8 +76,8 @@ describe("system Node.js detection", () => {
     });
     expect(resolved).toMatchObject({
       executable: "/usr/bin/node",
-      version: null,
-      major: null,
+      version: "24.0.0",
+      major: 24,
       source: "path",
     });
   });
@@ -105,9 +124,11 @@ describe("system Node.js detection", () => {
     });
     expect(resolved).toMatchObject({
       executable: "/usr/local/bin/node",
-      version: null,
+      version: "24.0.0",
     });
-    expect(fake.logs.join("\n")).toContain("older than");
+    expect(fake.logs.join("\n")).toContain(
+      "version 20.1.0 is unsupported (requires ^22.19.0 or >=24.0.0)",
+    );
   });
 
   it("prefers the newest nvm installation that is present", () => {
@@ -210,8 +231,8 @@ describe("system Node.js detection", () => {
     });
     expect(resolved).toMatchObject({
       executable: nodeExe,
-      version: null,
-      major: null,
+      version: "24.0.0",
+      major: 24,
       source: "path",
     });
   });
@@ -250,14 +271,14 @@ describe("system Node.js detection", () => {
     );
     const expected = posix.join(
       fnmRoot,
-      "v22.14.0",
+      "v22.19.0",
       "installation",
       "bin",
       "node",
     );
     const fake: FakeFilesystem = {
       files: new Set([expected]),
-      dirs: { [fnmRoot]: ["v22.14.0"] },
+      dirs: { [fnmRoot]: ["v22.19.0"] },
       symlinks: {},
       logs: [],
     };
@@ -269,7 +290,7 @@ describe("system Node.js detection", () => {
     });
     expect(resolved).toMatchObject({
       executable: expected,
-      version: "22.14.0",
+      version: "22.19.0",
       source: "known-location",
     });
   });

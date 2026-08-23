@@ -1,9 +1,16 @@
-import { access, readFile } from "node:fs/promises";
+import { createHash } from "node:crypto";
+import { spawnSync } from "node:child_process";
+import { createReadStream } from "node:fs";
+import { access, readFile, readdir } from "node:fs/promises";
 import { createRequire } from "node:module";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const projectRoot = dirname(dirname(fileURLToPath(import.meta.url)));
+const maintainedRepositoryUrl =
+  "https://github.com/Code-DSH/deepseek-harness.git";
+const maintainedFamilyVersion = "0.1.1-rc.2.code.1";
+const strictProvenance = process.argv.includes("--release");
 const manifest = JSON.parse(
   await readFile(join(projectRoot, "package.json"), "utf8"),
 );
@@ -15,12 +22,12 @@ const pluginManifest = JSON.parse(
 const requireFromPlugin = createRequire(join(pluginRoot, "package.json"));
 
 const criticalRuntimeVersions = new Map([
-  ["@deepseek-ai/dsh", "0.1.1-rc.2"],
-  ["@deepseek-ai/dsh-compaction", "0.1.1-rc.2"],
-  ["@deepseek-ai/dsh-invariants", "0.1.1-rc.2"],
-  ["@deepseek-ai/dsh-workflow", "0.1.1-rc.2"],
-  ["@deepseek-ai/dsh-client-ui-primitives", "0.1.1-rc.2"],
-  ["@deepseek-ai/dsh-home-paths", "0.1.1-rc.2"],
+  ["@deepseek-ai/dsh", maintainedFamilyVersion],
+  ["@deepseek-ai/dsh-compaction", maintainedFamilyVersion],
+  ["@deepseek-ai/dsh-invariants", maintainedFamilyVersion],
+  ["@deepseek-ai/dsh-workflow", maintainedFamilyVersion],
+  ["@deepseek-ai/dsh-client-ui-primitives", maintainedFamilyVersion],
+  ["@deepseek-ai/dsh-home-paths", maintainedFamilyVersion],
   ["pnpm", "11.19.0"],
   ["dsh-find-plugin", "0.3.6"],
 ]);
@@ -95,6 +102,34 @@ function resolveDependency(name) {
   throw new Error(`production dependency is not resolvable: ${name}`);
 }
 
+function capture(command, args, cwd = projectRoot) {
+  const result = spawnSync(command, args, {
+    cwd,
+    encoding: "utf8",
+    shell: false,
+    windowsHide: true,
+  });
+  if (result.error !== undefined || result.status !== 0) {
+    throw new Error(
+      `${command} ${args.join(" ")} failed: ${result.error?.message ?? result.stderr}`,
+    );
+  }
+  return result.stdout.trim();
+}
+
+async function sha256(path) {
+  const digest = createHash("sha256");
+  for await (const chunk of createReadStream(path)) digest.update(chunk);
+  return digest.digest("hex");
+}
+
+function tarballName(name, version) {
+  const unscoped = name.startsWith("@")
+    ? name.slice(1).replace("/", "-")
+    : name;
+  return `${unscoped}-${version}.tgz`;
+}
+
 for (const path of runtimeArtifacts) await access(join(projectRoot, path));
 
 const resolvedDependencies = [];
@@ -129,46 +164,29 @@ for (const entry of ["pnpm.mjs", "worker.js"]) {
 }
 
 const nodeRuntimeResourceRoot = join(projectRoot, "build", "node-runtime");
-const presetLocalePatch =
-  "@deepseek-ai__dsh-client-ui-agent-preset@0.1.1-rc.2.patch";
-const sidebarSafeAreaPatch =
-  "@deepseek-ai__dsh-client-ui-sidebar@0.1.1-rc.2.patch";
-const terminalBashPromptPatch =
-  "@deepseek-ai__dsh-terminal-bash@0.1.1-rc.2.patch";
 for (const relativePath of [
   "package.json",
   "pnpm-lock.yaml",
+  "pnpm-workspace.yaml",
+  "maintained-harness.json",
   "pnpm.mjs",
   "worker.js",
 ]) {
   await access(join(nodeRuntimeResourceRoot, relativePath));
 }
-for (const runtimePatch of [
-  presetLocalePatch,
-  sidebarSafeAreaPatch,
-  terminalBashPromptPatch,
-]) {
-  const sourcePatch = await readFile(
-    join(projectRoot, "config", "node-runtime", "patches", runtimePatch),
-  );
-  const stagedPatch = await readFile(
-    join(nodeRuntimeResourceRoot, "patches", runtimePatch),
-  );
-  if (!sourcePatch.equals(stagedPatch)) {
-    throw new Error(`build/node-runtime must carry the exact ${runtimePatch}`);
-  }
-}
+const configRuntimeRoot = join(projectRoot, "config", "node-runtime");
 const nodeRuntimePackage = JSON.parse(
   await readFile(join(nodeRuntimeResourceRoot, "package.json"), "utf8"),
 );
-if (
-  nodeRuntimePackage.dependencies?.["@deepseek-ai/dsh"] !== "0.1.1-rc.2" ||
-  nodeRuntimePackage.dependencies?.["dsh-find-plugin"] !== "0.3.6"
-) {
-  throw new Error(
-    "build/node-runtime must pin @deepseek-ai/dsh@0.1.1-rc.2 and dsh-find-plugin@0.3.6",
-  );
-}
+const configRuntimePackage = JSON.parse(
+  await readFile(join(configRuntimeRoot, "package.json"), "utf8"),
+);
+const maintainedHarness = JSON.parse(
+  await readFile(
+    join(nodeRuntimeResourceRoot, "maintained-harness.json"),
+    "utf8",
+  ),
+);
 const packagedPnpmLock = await readFile(
   join(nodeRuntimeResourceRoot, "pnpm-lock.yaml"),
   "utf8",
@@ -177,21 +195,155 @@ const packagedPnpmWorkspace = await readFile(
   join(nodeRuntimeResourceRoot, "pnpm-workspace.yaml"),
   "utf8",
 );
+const configPnpmLock = await readFile(
+  join(configRuntimeRoot, "pnpm-lock.yaml"),
+  "utf8",
+);
+const configPnpmWorkspace = await readFile(
+  join(configRuntimeRoot, "pnpm-workspace.yaml"),
+  "utf8",
+);
+
 if (
-  !packagedPnpmLock.includes("'@deepseek-ai/dsh':") ||
-  !packagedPnpmLock.includes("dsh-find-plugin:") ||
-  !packagedPnpmLock.includes(
-    "@deepseek-ai/dsh-client-ui-agent-preset@0.1.1-rc.2",
-  ) ||
-  !packagedPnpmLock.includes("@deepseek-ai/dsh-client-ui-sidebar@0.1.1-rc.2") ||
-  !packagedPnpmLock.includes("patch_hash=") ||
-  !packagedPnpmWorkspace.includes(presetLocalePatch) ||
-  !packagedPnpmWorkspace.includes(sidebarSafeAreaPatch) ||
-  !packagedPnpmWorkspace.includes(terminalBashPromptPatch)
+  maintainedHarness.schemaVersion !== 1 ||
+  maintainedHarness.repositoryUrl !== maintainedRepositoryUrl ||
+  maintainedHarness.familyVersion !== maintainedFamilyVersion ||
+  !Array.isArray(maintainedHarness.packages) ||
+  maintainedHarness.packages.length === 0
+) {
+  throw new Error("maintained Harness provenance is invalid");
+}
+
+const gitmodules = await readFile(join(projectRoot, ".gitmodules"), "utf8");
+if (
+  !gitmodules.includes("path = deps/deepseek-harness") ||
+  !gitmodules.includes(`url = ${maintainedRepositoryUrl}`) ||
+  /^\s*branch\s*=/mu.test(gitmodules)
 ) {
   throw new Error(
-    "build/node-runtime is missing pinned Harness packages or required client patches",
+    "deepseek-harness submodule URL or pinning policy is invalid",
   );
+}
+const submoduleRoot = join(projectRoot, "deps", "deepseek-harness");
+const submoduleCommit = capture("git", ["rev-parse", "HEAD"], submoduleRoot);
+const gitlinkEntry = capture("git", [
+  "ls-files",
+  "--stage",
+  "--",
+  "deps/deepseek-harness",
+]);
+const gitlinkCommit = gitlinkEntry.match(/^160000\s+([a-f0-9]{40})\s/u)?.[1];
+if (
+  gitlinkCommit === undefined ||
+  submoduleCommit !== gitlinkCommit ||
+  maintainedHarness.submoduleCommit !== gitlinkCommit
+) {
+  throw new Error("maintained Harness gitlink and provenance commit disagree");
+}
+if (
+  strictProvenance &&
+  capture(
+    "git",
+    ["status", "--porcelain", "--untracked-files=all"],
+    submoduleRoot,
+  ) !== ""
+) {
+  throw new Error(
+    "release builds require a clean maintained Harness submodule",
+  );
+}
+
+const packageNames = maintainedHarness.packages.map((entry) => entry.name);
+const sortedNames = [...packageNames].sort((left, right) =>
+  left.localeCompare(right),
+);
+if (
+  new Set(packageNames).size !== packageNames.length ||
+  packageNames.some((name, index) => name !== sortedNames[index])
+) {
+  throw new Error(
+    "maintained Harness provenance packages must be unique and sorted",
+  );
+}
+
+const expectedTarballs = new Set();
+for (const entry of maintainedHarness.packages) {
+  if (
+    typeof entry.name !== "string" ||
+    !entry.name.startsWith("@deepseek-ai/") ||
+    entry.version !== maintainedFamilyVersion ||
+    entry.file !== tarballName(entry.name, entry.version) ||
+    typeof entry.sha256 !== "string" ||
+    !/^[a-f0-9]{64}$/u.test(entry.sha256)
+  ) {
+    throw new Error(
+      `invalid maintained Harness package provenance: ${entry.name}`,
+    );
+  }
+  const specifier = `file:vendor/dsh/${entry.file}`;
+  expectedTarballs.add(entry.file);
+  for (const [label, runtimePackage] of [
+    ["config", configRuntimePackage],
+    ["build", nodeRuntimePackage],
+  ]) {
+    if (runtimePackage.dependencies?.[entry.name] !== specifier) {
+      throw new Error(
+        `${label} runtime does not pin ${entry.name} to ${specifier}`,
+      );
+    }
+  }
+  for (const [label, lock, workspace] of [
+    ["config", configPnpmLock, configPnpmWorkspace],
+    ["build", packagedPnpmLock, packagedPnpmWorkspace],
+  ]) {
+    if (!lock.includes(specifier) || !workspace.includes(specifier)) {
+      throw new Error(
+        `${label} runtime does not override ${entry.name} locally`,
+      );
+    }
+  }
+  const tarballPath = join(
+    nodeRuntimeResourceRoot,
+    "vendor",
+    "dsh",
+    entry.file,
+  );
+  if ((await sha256(tarballPath)) !== entry.sha256) {
+    throw new Error(
+      `maintained Harness tarball digest mismatch: ${entry.file}`,
+    );
+  }
+}
+const stagedTarballs = (
+  await readdir(join(nodeRuntimeResourceRoot, "vendor", "dsh"))
+).filter((entry) => entry.endsWith(".tgz"));
+if (
+  stagedTarballs.length !== expectedTarballs.size ||
+  stagedTarballs.some((entry) => !expectedTarballs.has(entry))
+) {
+  throw new Error("build/node-runtime/vendor/dsh is not the complete family");
+}
+if (
+  nodeRuntimePackage.dependencies?.["dsh-find-plugin"] !== "0.3.6" ||
+  configRuntimePackage.dependencies?.["dsh-find-plugin"] !== "0.3.6"
+) {
+  throw new Error("node runtime must pin dsh-find-plugin@0.3.6");
+}
+
+const rootPnpmLock = await readFile(
+  join(projectRoot, "pnpm-lock.yaml"),
+  "utf8",
+);
+for (const packageName of packageNames) {
+  const registryKey = new RegExp(
+    `^  ['"]?${packageName.replace(/[.*+?^${}()|[\]\\]/gu, "\\$&")}@`,
+    "mu",
+  );
+  if (registryKey.test(rootPnpmLock)) {
+    throw new Error(
+      `root lockfile contains registry DSH package ${packageName}`,
+    );
+  }
 }
 
 const builderConfig = await readFile(
@@ -390,6 +542,8 @@ process.stdout.write(
     runtimeArtifacts: runtimeArtifacts.length,
     productionDependencies: resolvedDependencies.length,
     criticalRuntimePackages: criticalRuntimeVersions.size,
+    maintainedHarnessPackages: maintainedHarness.packages.length,
+    maintainedHarnessCommit: submoduleCommit,
     bundledPluginPackages: 10,
   })}\n`,
 );

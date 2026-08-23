@@ -25,8 +25,6 @@ export interface NodeRuntimePaths {
   dshVisionRouterRoot: string;
   dshSuperpowersRoot: string;
   deepseekHarnessCompositionRoot: string;
-  dshSubagentCodexRoot: string;
-  dshSubagentClaudeCodeRoot: string;
   serverEverythingRoot: string;
   pnpmStoreDir: string;
   markerPath: string;
@@ -77,20 +75,6 @@ export function resolveNodeRuntimePaths(
       "packages",
       "node_modules",
       "deepseek-harness-composition",
-    ),
-    dshSubagentCodexRoot: join(
-      rootDir,
-      "packages",
-      "node_modules",
-      "@deepseek-ai",
-      "dsh-subagent-codex",
-    ),
-    dshSubagentClaudeCodeRoot: join(
-      rootDir,
-      "packages",
-      "node_modules",
-      "@deepseek-ai",
-      "dsh-subagent-claude-code",
     ),
     serverEverythingRoot: join(
       rootDir,
@@ -253,26 +237,15 @@ export const installRuntimePackages: InstallRuntimePackages = async ({
     join(runtimeResourceDir, "pnpm-lock.yaml"),
     join(paths.packagesDir, "pnpm-lock.yaml"),
   );
-  // pnpm resolves patchedDependencies and allowBuilds from the workspace
-  // file; without it a frozen install rejects the lockfile's patch hashes.
+  // pnpm resolves allowBuilds and the maintained-family overrides from the
+  // workspace file; without it the frozen install could consult the registry
+  // for transitive DSH family dependencies.
   await copyFile(
     join(runtimeResourceDir, "pnpm-workspace.yaml"),
     join(paths.packagesDir, "pnpm-workspace.yaml"),
   );
-  await rm(join(paths.packagesDir, "patches", ".mimosa"), {
-    recursive: true,
-    force: true,
-  });
-  await cp(
-    join(runtimeResourceDir, "patches"),
-    join(paths.packagesDir, "patches"),
-    {
-      recursive: true,
-      filter: isRuntimeResourcePath,
-    },
-  );
-  // The vendored plugin tarballs behind file: specifiers in the manifest must
-  // sit next to the copied manifest for a reproducible frozen install.
+  // Every file: dependency, including the complete maintained DSH family,
+  // must sit next to the copied manifest for a reproducible frozen install.
   await rm(join(paths.packagesDir, "vendor", ".mimosa"), {
     recursive: true,
     force: true,

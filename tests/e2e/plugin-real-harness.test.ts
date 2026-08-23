@@ -13,7 +13,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { reserveLoopbackPort } from "../../apps/desktop/src/lifecycle/port-retry.js";
 import {
   ensureAnchoredStandardPreset,
-  ensureOfficialHarnessInstall,
+  ensureMaintainedHarnessInstall,
 } from "../../apps/desktop/src/lifecycle/desktop-plugin-link.js";
 
 const repositoryRoot = process.cwd();
@@ -284,19 +284,19 @@ describe("desktop plugin with the real pinned Harness", () => {
       runtimeBinRoot,
       env: process.env,
     };
-    await ensureOfficialHarnessInstall({
+    await ensureMaintainedHarnessInstall({
       ...baseInput,
       integratedPlugins: [
         { packageName: "user-owned-plugin", packageRoot: userPlugin },
       ],
     });
-    await ensureOfficialHarnessInstall({
+    await ensureMaintainedHarnessInstall({
       ...baseInput,
       integratedPlugins: [
         { packageName: "managed-desktop-plugin", packageRoot: managedPlugin },
       ],
     });
-    await ensureOfficialHarnessInstall({
+    await ensureMaintainedHarnessInstall({
       ...baseInput,
       integratedPlugins: [
         { packageName: "managed-desktop-plugin", packageRoot: managedPlugin },
@@ -462,7 +462,7 @@ describe("desktop plugin with the real pinned Harness", () => {
     const root = await mkdtemp(join(tmpdir(), "dsh-desktop-plugin-"));
     temporaryRoots.add(root);
     const dshHome = join(root, "home");
-    await ensureOfficialHarnessInstall({
+    await ensureMaintainedHarnessInstall({
       dshEntry: bootDshEntry,
       dshHome,
       nodeExecutable: process.execPath,

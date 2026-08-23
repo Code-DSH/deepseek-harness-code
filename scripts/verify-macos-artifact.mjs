@@ -1,4 +1,6 @@
 import { execFileSync } from "node:child_process";
+import { createHash } from "node:crypto";
+import { createReadStream } from "node:fs";
 import { access, mkdtemp, readFile, readdir, rm, stat } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -13,6 +15,12 @@ const mountPoint = await mkdtemp(join(tmpdir(), "deepseek-harness-code-dmg-"));
 
 function run(command, args, options = {}) {
   return execFileSync(command, args, { encoding: "utf8", ...options }).trim();
+}
+
+async function sha256(path) {
+  const digest = createHash("sha256");
+  for await (const chunk of createReadStream(path)) digest.update(chunk);
+  return digest.digest("hex");
 }
 
 async function walk(root) {
@@ -70,6 +78,8 @@ try {
   const nodeRuntimeResources = [
     "node-runtime/package.json",
     "node-runtime/pnpm-lock.yaml",
+    "node-runtime/pnpm-workspace.yaml",
+    "node-runtime/maintained-harness.json",
     "node-runtime/pnpm.mjs",
     "node-runtime/worker.js",
     "global-agent-prompt/protocol.md",
@@ -95,22 +105,30 @@ try {
   const nodeRuntimePackage = JSON.parse(
     await readFile(join(resourcesRoot, "node-runtime", "package.json"), "utf8"),
   );
+  const maintainedHarness = JSON.parse(
+    await readFile(
+      join(resourcesRoot, "node-runtime", "maintained-harness.json"),
+      "utf8",
+    ),
+  );
   if (
-    nodeRuntimePackage.dependencies?.["@deepseek-ai/dsh"] !== "0.1.1-rc.2" ||
+    maintainedHarness.schemaVersion !== 1 ||
+    maintainedHarness.repositoryUrl !==
+      "https://github.com/Code-DSH/deepseek-harness.git" ||
+    maintainedHarness.familyVersion !== "0.1.1-rc.2.code.1" ||
+    !Array.isArray(maintainedHarness.packages) ||
+    maintainedHarness.packages.length === 0 ||
     nodeRuntimePackage.dependencies?.["dsh-find-plugin"] !== "0.3.6"
   ) {
     throw new Error(
-      "packaged node-runtime manifest does not contain the pinned Harness packages",
+      "packaged node-runtime does not contain the maintained Harness provenance",
     );
   }
   const packagedPnpmLock = await readFile(
     join(resourcesRoot, "node-runtime", "pnpm-lock.yaml"),
     "utf8",
   );
-  if (
-    !packagedPnpmLock.includes("'@deepseek-ai/dsh':") ||
-    !packagedPnpmLock.includes("dsh-find-plugin:")
-  ) {
+  if (!packagedPnpmLock.includes("dsh-find-plugin:")) {
     throw new Error(
       "packaged node-runtime lockfile is missing the pinned Harness packages",
     );
@@ -119,6 +137,30 @@ try {
     specifier: path.slice(resourcesRoot.length + 1),
     path,
   }));
+  for (const entry of maintainedHarness.packages) {
+    const specifier = `file:vendor/dsh/${entry.file}`;
+    const tarball = join(
+      resourcesRoot,
+      "node-runtime",
+      "vendor",
+      "dsh",
+      entry.file,
+    );
+    if (
+      entry.version !== "0.1.1-rc.2.code.1" ||
+      nodeRuntimePackage.dependencies?.[entry.name] !== specifier ||
+      !packagedPnpmLock.includes(specifier) ||
+      (await sha256(tarball)) !== entry.sha256
+    ) {
+      throw new Error(
+        `invalid packaged maintained Harness package: ${entry.name}`,
+      );
+    }
+    runtimeModules.push({
+      specifier: tarball.slice(resourcesRoot.length + 1),
+      path: tarball,
+    });
+  }
   const integratedPluginArtifacts = [
     "dsh-ui-motion/package.json",
     "dsh-ui-motion/index.js",

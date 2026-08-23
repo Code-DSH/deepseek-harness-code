@@ -71,14 +71,14 @@ describe("assertAllowedDownloadUrl", () => {
   it("accepts a valid https URL to nodejs.org", () => {
     expect(() =>
       assertAllowedDownloadUrl(
-        "https://nodejs.org/dist/v22.13.0/SHASUMS256.txt",
+        "https://nodejs.org/dist/v22.19.0/SHASUMS256.txt",
       ),
     ).not.toThrow();
   });
 
   it("rejects an http URL", () => {
     expect(() =>
-      assertAllowedDownloadUrl("http://nodejs.org/dist/v22.13.0/test.tar.gz"),
+      assertAllowedDownloadUrl("http://nodejs.org/dist/v22.19.0/test.tar.gz"),
     ).toThrow(/https/i);
   });
 
@@ -127,15 +127,15 @@ describe("assertAllowedDownloadUrl", () => {
 
 describe("extractChecksumFromShasums", () => {
   const shasums = [
-    "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08  node-v22.13.0-darwin-arm64.tar.gz",
-    "a591a6d40bf0082038c5d2c72f1e2e2c2b0b822cd15d6c15b0f00a08  node-v22.13.0-darwin-x64.tar.gz",
-    "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855  node-v22.13.0.pkg",
+    "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08  node-v22.19.0-darwin-arm64.tar.gz",
+    "a591a6d40bf0082038c5d2c72f1e2e2c2b0b822cd15d6c15b0f00a08  node-v22.19.0-darwin-x64.tar.gz",
+    "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855  node-v22.19.0.pkg",
   ].join("\n");
 
   it("extracts the checksum for a known filename", () => {
     const checksum = extractChecksumFromShasums(
       shasums,
-      "node-v22.13.0-darwin-arm64.tar.gz",
+      "node-v22.19.0-darwin-arm64.tar.gz",
     );
     expect(checksum).toBe(
       "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08",
@@ -143,7 +143,7 @@ describe("extractChecksumFromShasums", () => {
   });
 
   it("extracts the checksum for the pkg installer", () => {
-    const checksum = extractChecksumFromShasums(shasums, "node-v22.13.0.pkg");
+    const checksum = extractChecksumFromShasums(shasums, "node-v22.19.0.pkg");
     expect(checksum).toBe(
       "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
     );
@@ -158,7 +158,7 @@ describe("extractChecksumFromShasums", () => {
   });
 
   it("returns undefined for empty content", () => {
-    const checksum = extractChecksumFromShasums("", "node-v22.13.0.pkg");
+    const checksum = extractChecksumFromShasums("", "node-v22.19.0.pkg");
     expect(checksum).toBeUndefined();
   });
 });

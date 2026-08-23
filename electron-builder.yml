@@ -14,7 +14,7 @@ files:
   - apps/desktop/src/dependency-install.html
   - package.json
   # The packaged app carries no node_modules. The first launch runs on the
-  # auto-detected system official Node.js (>=22.13) and installs the pinned
+  # auto-detected system Node.js (^22.19.0 or >=24.0.0) and installs the local
   # Harness packages into the user-data directory.
   - "!node_modules/**/*"
   - "!**/node_modules/**/*"

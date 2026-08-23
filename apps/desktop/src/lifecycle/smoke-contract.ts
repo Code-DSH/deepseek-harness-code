@@ -4,7 +4,7 @@ import { isAbsolute, relative, resolve } from "node:path";
 
 import { redactStartupDiagnostic } from "./startup-diagnostics.js";
 import { getNodeDownloadUrls } from "./node-downloader.js";
-import { MINIMUM_NODE_VERSION } from "./system-node.js";
+import { isSupportedNodeVersion, MINIMUM_NODE_VERSION } from "./system-node.js";
 
 const MATRIX = {
   "windows-x64": { packageKind: "nsis", expectedArchitecture: "x64" },
@@ -370,30 +370,15 @@ export function validateSmokeRuntimeProvenance(
     throw new Error("system Node executable must be an existing file");
   if (
     runtime.systemNode.version === null ||
-    compareVersions(runtime.systemNode.version, "22.13.0") < 0
+    !isSupportedNodeVersion(runtime.systemNode.version)
   )
-    throw new Error("system Node version must be at least 22.13.0");
+    throw new Error("system Node version must satisfy ^22.19.0 or >=24.0.0");
   const roots = isolatedRoots.map((root) => realpathSync(resolve(root)));
   for (const value of [runtime.harnessHome, runtime.resourceRoot]) {
     const resolved = realpathSync(resolve(value));
     if (!roots.some((root) => isEvidencePathWithinRoot(resolved, root)))
       throw new Error("runtime provenance escapes isolated roots");
   }
-}
-
-function compareVersions(left: string, right: string): number {
-  const parse = (value: string) =>
-    value
-      .match(/^(\d+)\.(\d+)\.(\d+)/u)
-      ?.slice(1)
-      .map(Number) ?? [];
-  const leftParts = parse(left);
-  const rightParts = parse(right);
-  for (let index = 0; index < 3; index += 1) {
-    const difference = (leftParts[index] ?? 0) - (rightParts[index] ?? 0);
-    if (difference !== 0) return difference;
-  }
-  return 0;
 }
 
 export function buildSmokeReadyEvidence(

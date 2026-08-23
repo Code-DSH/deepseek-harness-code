@@ -35,13 +35,13 @@ tags: [research, agent-preset, progressive-discovery]
 
 ## Current conclusion
 
-The mechanism is feasible on pinned `@deepseek-ai/dsh@0.1.1-rc.2` as a per-session Agent Preset. It does not export a warmed model state and does not inspect or replay reasoning text. The useful state is durable Harness session history: the first request is assembled with a two-tool schema, and subsequent schemas are derived from persisted events.
+The mechanism is feasible on the pinned maintained `@deepseek-ai/dsh@0.1.1-rc.2.code.1` as a per-session Agent Preset. It does not export a warmed model state and does not inspect or replay reasoning text. The useful state is durable Harness session history: the first request is assembled with a two-tool schema, and subsequent schemas are derived from persisted events.
 
 ## Pinned source and local integration
 
 - Upstream: [`xiaobright/dsh-anchored-standard`](https://github.com/xiaobright/dsh-anchored-standard), commit `db4527a2a70a9032d3a8525ce3c0ea6ef528d6fc`, MIT.
 - Bundled package: `packages/anchored-standard-plugin` version `0.2.0`.
-- Local patches are limited to locale-aware **渐进式标准模式 / Progressive Standard Mode** display copy (English-only `preset.yml` fallback plus an exact 0.1.1-rc.2 `@deepseek-ai/dsh-client-ui-agent-preset` patch for zh/en picker dictionaries), 0.1.1-rc.2 packaging/lifecycle integration, and strict failure when a phase-required tool is absent. The same allowlist also localizes `cordis-with-products`, `router-spec`, and `router-standard`; unknown user presets keep their own metadata.
+- Product-owned preset copy uses the locale-aware **渐进式标准模式 / Progressive Standard Mode** fallback, while the maintained Harness source owns the zh/en picker dictionaries for `anchored-standard`, `cordis-with-products`, `router-spec`, and `router-standard`. Unknown user presets keep their own metadata; this desktop repository carries no DSH pnpm patch.
 - Installer provenance includes `LICENSE`, `NOTICE`, `UPSTREAM.json`, `LOCAL-PATCHES.md`, package version, and an app-managed SHA-256 marker.
 - Installation: atomic sync to `<DSH_HOME>/.agent-presets/anchored-standard` with ownership marker; user-owned same-name presets are never overwritten; invalid packaged resources produce an `unavailable` notice and Standard remains operational.
 

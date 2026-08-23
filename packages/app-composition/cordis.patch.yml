@@ -1,8 +1,8 @@
 # deepseek-harness-composition bundle layer: the app-managed composition
-# entries, applied through the official plugin patch path at `dsh plugin add`
+# entries, applied through the public plugin patch path at `dsh plugin add`
 # time. The user's own profile patch layer is never read or modified here.
 - insert:
-    # Official DSH MCP client bridge, connected to the official everything
+    # Maintained DSH MCP client bridge, connected to the bundled everything
     # test server for link validation. `dsh-mcp-everything` is the
     # app-provided launcher shim (runtime-bin/dsh-mcp-everything,
     # dsh-mcp-everything.cmd) that starts the pinned local copy of the
@@ -26,7 +26,7 @@
         serverName: context7
         transport: streamable-http
         url: https://mcp.context7.com/mcp
-    # Official Codex subagent provider (one-shot, app-server protocol).
+    # Bundled Codex subagent provider (one-shot, app-server protocol).
     # Needs `codex` on PATH: host PATH lacks the user's install locations,
     # so they are supplied explicitly; local ~/.codex/auth.json provides
     # authentication.
@@ -35,7 +35,7 @@
       config:
         env:
           PATH: /opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin
-    # Official Claude Code subagent provider (one-shot, Agent SDK).
+    # Bundled Claude Code subagent provider (one-shot, Agent SDK).
     # Requires the native `claude` executable on PATH to actually run.
     - id: subagent-claude-code
       name: "@deepseek-ai/dsh-subagent-claude-code"

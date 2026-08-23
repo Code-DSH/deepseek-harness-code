@@ -103,9 +103,9 @@ function validNodeRequiredEvidence() {
     nodeRequired: {
       phase: "node-required",
       scenario: "node-required",
-      minimumNodeVersion: "22.13.0",
-      installerUrl: "https://nodejs.org/dist/v22.13.0/node-v22.13.0-x64.msi",
-      archiveUrl: "https://nodejs.org/dist/v22.13.0/node-v22.13.0-win-x64.zip",
+      minimumNodeVersion: "22.19.0",
+      installerUrl: "https://nodejs.org/dist/v22.19.0/node-v22.19.0-x64.msi",
+      archiveUrl: "https://nodejs.org/dist/v22.19.0/node-v22.19.0-win-x64.zip",
       platform: "win32",
       architecture: "x64",
       appPid: 7000,
@@ -270,7 +270,7 @@ describe("packaged runtime listener selection", () => {
       "discoverSystemNodeVersionCandidates",
     );
     const directoryEntries = new Map([
-      ["/home/runner/.nvm/versions/node", ["v22.13.0", "invalid"]],
+      ["/home/runner/.nvm/versions/node", ["v22.19.0", "invalid"]],
       ["/home/runner/.fnm/node-versions", ["v24.18.0"]],
       ["/home/runner/.local/share/mise/installs/node", ["23.4.0"]],
       ["/home/runner/.volta/tools/image/node", ["22.14.0"]],
@@ -285,7 +285,7 @@ describe("packaged runtime listener selection", () => {
     );
 
     expect(candidates.map(({ path }) => path)).toEqual([
-      "/home/runner/.nvm/versions/node/v22.13.0/bin/node",
+      "/home/runner/.nvm/versions/node/v22.19.0/bin/node",
       "/home/runner/.fnm/node-versions/v24.18.0/installation/bin/node",
       "/home/runner/.local/share/mise/installs/node/23.4.0/bin/node",
       "/home/runner/.volta/tools/image/node/22.14.0/bin/node",

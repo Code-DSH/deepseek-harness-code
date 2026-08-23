@@ -51,6 +51,11 @@ jobs:
       SMOKE_TIMEOUT_MS: 600000
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - name: Record maintained Harness gitlink
+        shell: bash
+        run: mkdir -p build && git rev-parse HEAD:deps/deepseek-harness > build/harness-gitlink.txt
       - uses: pnpm/action-setup@v4
         with:
           version: 11.19.0
@@ -58,6 +63,9 @@ jobs:
         with:
           node-version: 24.18.0
           cache: pnpm
+          cache-dependency-path: |
+            pnpm-lock.yaml
+            build/harness-gitlink.txt
       - run: pnpm install --frozen-lockfile
       - name: Validate tag version
         shell: bash
@@ -401,6 +409,11 @@ jobs:
       SMOKE_TIMEOUT_MS: 600000
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - name: Record maintained Harness gitlink
+        shell: bash
+        run: mkdir -p build && git rev-parse HEAD:deps/deepseek-harness > build/harness-gitlink.txt
       - uses: pnpm/action-setup@v4
         with:
           version: 11.19.0
@@ -408,6 +421,9 @@ jobs:
         with:
           node-version: 24.18.0
           cache: pnpm
+          cache-dependency-path: |
+            pnpm-lock.yaml
+            build/harness-gitlink.txt
       - run: pnpm install --frozen-lockfile
       - uses: actions/download-artifact@v4
         with:
@@ -511,6 +527,8 @@ jobs:
       contents: write
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: recursive
       - uses: actions/download-artifact@v4
         with:
           path: artifacts

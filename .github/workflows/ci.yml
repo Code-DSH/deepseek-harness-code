@@ -21,6 +21,11 @@ jobs:
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - name: Record maintained Harness gitlink
+        shell: bash
+        run: mkdir -p build && git rev-parse HEAD:deps/deepseek-harness > build/harness-gitlink.txt
       - uses: pnpm/action-setup@v4
         with:
           version: 11.19.0
@@ -28,8 +33,12 @@ jobs:
         with:
           node-version: 24.18.0
           cache: pnpm
+          cache-dependency-path: |
+            pnpm-lock.yaml
+            build/harness-gitlink.txt
       - run: pnpm install --frozen-lockfile
       - run: pnpm build:icon
+      - run: pnpm build:harness
       - run: pnpm check
 
   # Code compliance: dependency vulnerability audit, runtime closure of the
@@ -40,6 +49,11 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - name: Record maintained Harness gitlink
+        shell: bash
+        run: mkdir -p build && git rev-parse HEAD:deps/deepseek-harness > build/harness-gitlink.txt
       - uses: pnpm/action-setup@v4
         with:
           version: 11.19.0
@@ -47,13 +61,16 @@ jobs:
         with:
           node-version: 24.18.0
           cache: pnpm
+          cache-dependency-path: |
+            pnpm-lock.yaml
+            build/harness-gitlink.txt
       - run: pnpm install --frozen-lockfile
       - name: Dependency vulnerability audit
         run: pnpm audit --prod
       - name: Build distribution artifacts
         run: pnpm build
       - name: Runtime closure check
-        run: node scripts/check-runtime-closure.mjs
+        run: pnpm preflight:runtime
       - name: License notices present
         run: test -s build/THIRD-PARTY-NOTICES.md
 
@@ -71,6 +88,11 @@ jobs:
       PLAYWRIGHT_BROWSERS_PATH: ${{ github.workspace }}/build/playwright
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - name: Record maintained Harness gitlink
+        shell: bash
+        run: mkdir -p build && git rev-parse HEAD:deps/deepseek-harness > build/harness-gitlink.txt
       - uses: pnpm/action-setup@v4
         with:
           version: 11.19.0
@@ -78,13 +100,16 @@ jobs:
         with:
           node-version: 24.18.0
           cache: pnpm
+          cache-dependency-path: |
+            pnpm-lock.yaml
+            build/harness-gitlink.txt
       - run: pnpm install --frozen-lockfile
       - name: Restore Playwright browser cache
         id: playwright-cache
         uses: actions/cache@v4
         with:
           path: ${{ env.PLAYWRIGHT_BROWSERS_PATH }}
-          key: playwright-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+          key: playwright-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml', 'build/harness-gitlink.txt') }}
       - name: Build distribution artifacts
         # The unit closure contract and the packaged runtime suites exercise
         # generated outputs (dist/**, build/routing-suite), so tests run only
@@ -106,6 +131,11 @@ jobs:
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - name: Record maintained Harness gitlink
+        shell: bash
+        run: mkdir -p build && git rev-parse HEAD:deps/deepseek-harness > build/harness-gitlink.txt
       - uses: pnpm/action-setup@v4
         with:
           version: 11.19.0
@@ -113,7 +143,11 @@ jobs:
         with:
           node-version: 24.18.0
           cache: pnpm
+          cache-dependency-path: |
+            pnpm-lock.yaml
+            build/harness-gitlink.txt
       - run: pnpm install --frozen-lockfile
+      - run: pnpm build:harness
       - run: pnpm check:memory
 
   # Platform packaging adaptation: build, verify runtime closure, and produce
@@ -137,6 +171,11 @@ jobs:
     timeout-minutes: 40
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - name: Record maintained Harness gitlink
+        shell: bash
+        run: mkdir -p build && git rev-parse HEAD:deps/deepseek-harness > build/harness-gitlink.txt
       - uses: pnpm/action-setup@v4
         with:
           version: 11.19.0
@@ -144,7 +183,10 @@ jobs:
         with:
           node-version: 24.18.0
           cache: pnpm
+          cache-dependency-path: |
+            pnpm-lock.yaml
+            build/harness-gitlink.txt
       - run: pnpm install --frozen-lockfile
       - run: pnpm build
-      - run: node scripts/check-runtime-closure.mjs
+      - run: pnpm preflight:runtime
       - run: ${{ matrix.command }}

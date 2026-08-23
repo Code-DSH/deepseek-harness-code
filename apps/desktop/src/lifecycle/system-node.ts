@@ -5,14 +5,13 @@ import {
   readdirSync,
   realpathSync,
 } from "node:fs";
+import { spawnSync } from "node:child_process";
 import { homedir } from "node:os";
 import { posix, win32 } from "node:path";
 
-// The bundled pnpm launcher (11.19.0) declares `engines: node >=22.13`; the
-// pinned Harness packages declare no engine range. Any official Node.js at or
-// above this floor works, with no upper bound. Detection is filesystem-only:
-// no discovered executable is ever run by this module.
-export const MINIMUM_NODE_VERSION = "22.13.0";
+// The maintained Harness runtime supports Node 22 from 22.19 onward and every
+// release from Node 24 onward. Node 23 is intentionally unsupported.
+export const MINIMUM_NODE_VERSION = "22.19.0";
 export const NODE_DOWNLOAD_PAGE_URL = "https://nodejs.org/en/download";
 
 export type SystemNodeSource = "path" | "known-location";
@@ -33,6 +32,7 @@ export interface SystemNodeDeps {
   isExecutable: (path: string) => boolean;
   listDir: (path: string) => string[];
   realpath: (path: string) => string;
+  readVersion: (executable: string) => string | null;
   log: (message: string) => void;
 }
 
@@ -71,6 +71,16 @@ function parseNodeVersion(value: string): [number, number, number] | undefined {
     Number.parseInt(match[2] ?? "0", 10),
     Number.parseInt(match[3] ?? "0", 10),
   ];
+}
+
+export function isSupportedNodeVersion(value: string): boolean {
+  const parsed = parseNodeVersion(value);
+  if (parsed === undefined) return false;
+  const [major] = parsed;
+  return (
+    (major === 22 && compareNodeVersions(value, MINIMUM_NODE_VERSION) >= 0) ||
+    major >= 24
+  );
 }
 
 /**
@@ -295,18 +305,25 @@ function validateCandidate(
   if (deps.platform !== "win32" && !deps.isExecutable(executable)) {
     return undefined;
   }
-  const version = deriveNodeVersion(executable, deps.realpath);
-  if (
-    version !== null &&
-    compareNodeVersions(version, MINIMUM_NODE_VERSION) < 0
-  ) {
+  const pathVersion = deriveNodeVersion(executable, deps.realpath);
+  if (pathVersion !== null && !isSupportedNodeVersion(pathVersion)) {
     deps.log(
-      `Skipping Node.js candidate ${executable}: version ${version} is older than ${MINIMUM_NODE_VERSION}.`,
+      `Skipping Node.js candidate ${executable}: version ${pathVersion} is unsupported (requires ^22.19.0 or >=24.0.0).`,
     );
     return undefined;
   }
-  const major =
-    version === null ? null : (parseNodeVersion(version)?.[0] ?? null);
+  const versionOutput = deps.readVersion(executable);
+  const version =
+    versionOutput === null
+      ? null
+      : (parseNodeVersion(versionOutput)?.join(".") ?? null);
+  if (version === null || !isSupportedNodeVersion(version)) {
+    deps.log(
+      `Skipping Node.js candidate ${executable}: executable version is ${version ?? "unavailable"} (requires ^22.19.0 or >=24.0.0).`,
+    );
+    return undefined;
+  }
+  const major = parseNodeVersion(version)?.[0] ?? null;
   return { executable, version, major, source };
 }
 
@@ -344,20 +361,29 @@ function defaultDeps(overrides: Partial<SystemNodeDeps>): SystemNodeDeps {
         }
       }),
     realpath: overrides.realpath ?? ((path: string) => realpathSync(path)),
+    readVersion:
+      overrides.readVersion ??
+      ((executable: string) => {
+        const result = spawnSync(executable, ["--version"], {
+          encoding: "utf8",
+          shell: false,
+          windowsHide: true,
+          timeout: 5_000,
+        });
+        return result.status === 0 ? result.stdout.trim() : null;
+      }),
     log: overrides.log ?? ((message) => process.stderr.write(`${message}\n`)),
   };
 }
 
 /**
- * Locate a system-installed Node.js without executing anything. Detection
- * order: the PATH, then common install locations (nodejs.org installer,
+ * Locate a supported system-installed Node.js. Detection order: the PATH,
+ * then common install locations (nodejs.org installer,
  * Homebrew, nvm, Volta, fnm, mise, n, Scoop, nvm-windows, Chocolatey), with
  * version-manager roots overridable through NVM_DIR / VOLTA_HOME / FNM_DIR
  * environment variables. Version-manager directories always prefer the newest
- * installed version. Candidates whose path encodes a version below
- * MINIMUM_NODE_VERSION are skipped; a node that is present but actually broken
- * surfaces later through the guarded package-install and Harness startup
- * flows, which offer recovery instead of silent failure.
+ * installed version. Every discovered executable is queried with `--version`;
+ * unsupported or broken candidates are skipped before package installation.
  */
 export function resolveSystemNode(
   overrides: Partial<SystemNodeDeps> = {},

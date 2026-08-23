@@ -1,0 +1,3 @@
+[submodule "deepseek-harness"]
+	path = deps/deepseek-harness
+	url = https://github.com/Code-DSH/deepseek-harness.git

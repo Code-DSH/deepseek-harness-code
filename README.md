@@ -15,12 +15,13 @@
   <p>
     <img src="https://img.shields.io/badge/Electron-43-47848F?style=flat-square&amp;logo=electron&amp;logoColor=white" alt="Electron 43" />
     <img src="https://img.shields.io/badge/TypeScript-5.9-3178C6?style=flat-square&amp;logo=typescript&amp;logoColor=white" alt="TypeScript 5.9" />
-    <img src="https://img.shields.io/badge/DeepSeek_Harness-0.1.1--rc.2-4F46E5?style=flat-square" alt="DeepSeek Harness 0.1.1-rc.2" />
+    <img src="https://img.shields.io/badge/Code--DSH_Harness-0.1.1--rc.2.code.1-4F46E5?style=flat-square" alt="Code-DSH maintained Harness 0.1.1-rc.2.code.1" />
   </p>
 </div>
 
 > [!IMPORTANT]
 > DeepSeek Harness Code is a community project. It is not an official DeepSeek release and is not affiliated with DeepSeek.
+> The desktop pins the [Code-DSH maintained Harness](https://github.com/Code-DSH/deepseek-harness) as a Git submodule; it does not install the official npm DSH family at build time or first launch.
 
 > Born for Code — The Code Engineering Specialized Version of DeepSeek Harness.
 
@@ -47,7 +48,7 @@ We don't chase boundless complexity. We adhere to a code-tailored engineering ph
 3. **Deterministic Delivery** — Test- and verification-driven, replacing model hallucination with real execution results.
 4. **Controllable & Traceable** — Full change logs and rollback, ensuring every modification is safe and transparent.
 
-> DHC remains a community project built on the official Harness format and runtime. No model weights are bundled, no provider boundary is replaced — users never need to assemble a fragile toolchain by hand.
+> DHC remains a community project built on the public Harness format and the Code-DSH maintained runtime. No model weights are bundled and no provider boundary is replaced.
 
 ## QQ community
 
@@ -61,7 +62,7 @@ Join the DHC community QQ group to share feedback, usage tips, and project discu
 
 ## One complete DeepSeek Harness distribution
 
-A complete, coherent Harness distribution — not a model launcher or plugin collection. The official Base and Web bundles bring the core of the DeepSeek Agent stack into one app:
+A complete, coherent Harness distribution — not a model launcher or plugin collection. The maintained Base and Web bundles bring the core of the DeepSeek Agent stack into one app:
 
 - **Models & reasoning** — V4 Pro / V4 Flash catalog, reasoning effort `off` / `high` / `max`, 1M context, retry and streaming.
 - **Skills** — runtime, file discovery, Skills UI, badges, and official Skill tool.
@@ -102,21 +103,21 @@ The next step is not a keyword to "turn on reasoning," but controlling the first
 
 ## Beyond a Web wrapper
 
-| Capability          | Basic Web wrapper      | DeepSeek Harness Code                                             |
-| ------------------- | ---------------------- | ----------------------------------------------------------------- |
-| Runtime             | Loads a remote page    | Bundled Chromium + official Harness + plugins, auto-detected Node |
-| Model integration   | Inherits page models   | First-class V4 Pro / Flash catalog and reasoning controls         |
-| Agent toolkit       | None                   | Plugins, Skills, Goal / Plan / Workflow, questions, subagents     |
-| Process ownership   | Page is the product    | Desktop host owns Harness startup, readiness, restart, shutdown   |
-| Long-session health | Manual refresh         | Non-overlapping health probes and evidence-based recovery         |
-| Web freeze          | Reload entire app      | Detect unresponsive renderer, rebuild window, keep Harness alive  |
-| Service failure     | Noticed after UI stops | Auto-recover after consecutive probe failures or child exit       |
-| Desktop crash       | No independent layer   | IPC-only Watchdog with bounded backoff and circuit breaker        |
-| Memory pressure     | Inherits unbounded     | Bounds growth paths, rotates logs, retires failed processes       |
-| Diagnostics         | Browser console only   | Redacted Electron / Harness / Watchdog logs, in-app access        |
-| Desktop integration | Window chrome only     | Native tray/menu, close policy, system theme, shortcuts           |
-| Security boundary   | Broad preload access   | Loopback-only Harness + five validated preload groups             |
-| Distribution        | Requires external env  | Self-contained app, auto-detected common install locations        |
+| Capability          | Basic Web wrapper      | DeepSeek Harness Code                                            |
+| ------------------- | ---------------------- | ---------------------------------------------------------------- |
+| Runtime             | Loads a remote page    | Bundled Chromium + maintained Harness + plugins, system Node     |
+| Model integration   | Inherits page models   | First-class V4 Pro / Flash catalog and reasoning controls        |
+| Agent toolkit       | None                   | Plugins, Skills, Goal / Plan / Workflow, questions, subagents    |
+| Process ownership   | Page is the product    | Desktop host owns Harness startup, readiness, restart, shutdown  |
+| Long-session health | Manual refresh         | Non-overlapping health probes and evidence-based recovery        |
+| Web freeze          | Reload entire app      | Detect unresponsive renderer, rebuild window, keep Harness alive |
+| Service failure     | Noticed after UI stops | Auto-recover after consecutive probe failures or child exit      |
+| Desktop crash       | No independent layer   | IPC-only Watchdog with bounded backoff and circuit breaker       |
+| Memory pressure     | Inherits unbounded     | Bounds growth paths, rotates logs, retires failed processes      |
+| Diagnostics         | Browser console only   | Redacted Electron / Harness / Watchdog logs, in-app access       |
+| Desktop integration | Window chrome only     | Native tray/menu, close policy, system theme, shortcuts          |
+| Security boundary   | Broad preload access   | Loopback-only Harness + five validated preload groups            |
+| Distribution        | Requires external env  | Self-contained app, auto-detected common install locations       |
 
 > Lightweight wrappers solve "open this site like an app"; DHC solves "operate Harness as a resilient desktop coding system."
 
@@ -134,7 +135,7 @@ Long sessions rarely crash dramatically — pressure accumulates: renderer stall
 
 ## Modern desktop experience
 
-- **Self-contained host, system Node** — Chromium / Harness / plugins / Watchdog bundled in .app, running on system Node ≥22.13, installed to user data on first launch, auto-detected even under minimal GUI PATH.
+- **Self-contained host, system Node** — Chromium / Harness / plugins / Watchdog bundled in .app, running on Node 22.19+ or 24+ (Node 23 is unsupported), installed to user data on first launch, auto-detected even under minimal GUI PATH.
 - **Official Harness surface** — sessions, profiles, providers, workspace, and question flows remain official.
 - **Integrated settings** — runtime status, restart, logs, and close behavior in General settings with official UI primitives.
 - **Native lifecycle** — open, restart, logs, and quit from persistent tray/menu; close-to-tray or direct quit.
@@ -144,28 +145,28 @@ Long sessions rarely crash dramatically — pressure accumulates: renderer stall
 - **Opt-in LAN access** — disabled by default; when enabled, an Electron-owned HTTP proxy issues a fresh one-time link token for each native Copy action, exchanges it for an HttpOnly cookie, and serves a trusted LAN while Harness and the desktop renderer stay on loopback. A newer unused copied link invalidates the prior one.
 - **Skills** — Superpowers 6.2.0 installed to `<DSH_HOME>/skills`, never overwriting user-owned directories.
 - **Global Agent Protocol** — `<DSH_HOME>/AGENTS.md`: auto-installed when absent, upgraded only while still app-managed, never overwriting user-owned, with timestamped backup switch via `Use Bundled Global Prompt…`.
-- **Global `dsh`** — `npm install -g` of pinned `@deepseek-ai/dsh` on first launch, never overwriting user global, fail-open.
+- **Global `dsh` untouched** — startup never runs `npm install -g` and never changes an existing user-managed global CLI.
 - **Localized presets** — `anchored-standard` / `router-standard` / `router-spec` with bilingual names, IDs unchanged.
-- **Safe experiment** — Anchored Standard as separate bundle, fails closed to Standard on Harness 0.1.1-rc.2.
+- **Safe experiment** — Anchored Standard as a separate bundle, fails closed to Standard on maintained Harness 0.1.1-rc.2.code.1.
 
 ## Feature matrix
 
-| Area          | Included                                                    |
-| ------------- | ----------------------------------------------------------- |
-| Desktop host  | Hardened window, startup page, native menus, tray           |
-| Harness       | Pinned `@deepseek-ai/dsh` 0.1.1-rc.2, loopback, single Home |
-| V4 models     | Official catalog and `off` / `high` / `max`                 |
-| Stack         | Skills, Goal / Plan / Workflow / Todo / Jobs / questions    |
-| Skills        | Superpowers 6.2.0, never overwriting user                   |
-| Global prompt | `AGENTS.md` ownership-safe install and backup switch        |
-| Global CLI    | Pinned `dsh` via `npm install -g`                           |
-| Presets       | Standard default, optional anchored / router                |
-| Recovery      | Health probes, restart, renderer replacement, port retry    |
-| Watchdog      | Independent IPC, bounded restart and circuit breaker        |
-| Plugins       | Desktop, UI Motion, Model2, Find, Routing, etc.             |
-| Diagnostics   | Startup evidence, runtime state, redacted rotated logs      |
-| Security      | Sandboxed renderer, no Node integration, validated IPC      |
-| Packaging     | macOS Universal DMG; Windows NSIS; Linux AppImage/deb       |
+| Area          | Included                                                 |
+| ------------- | -------------------------------------------------------- |
+| Desktop host  | Hardened window, startup page, native menus, tray        |
+| Harness       | Code-DSH family 0.1.1-rc.2.code.1, loopback, single Home |
+| V4 models     | Official catalog and `off` / `high` / `max`              |
+| Stack         | Skills, Goal / Plan / Workflow / Todo / Jobs / questions |
+| Skills        | Superpowers 6.2.0, never overwriting user                |
+| Global prompt | `AGENTS.md` ownership-safe install and backup switch     |
+| Global CLI    | User-managed; never installed or modified by the app     |
+| Presets       | Standard default, optional anchored / router             |
+| Recovery      | Health probes, restart, renderer replacement, port retry |
+| Watchdog      | Independent IPC, bounded restart and circuit breaker     |
+| Plugins       | Desktop, UI Motion, Model2, Find, Routing, etc.          |
+| Diagnostics   | Startup evidence, runtime state, redacted rotated logs   |
+| Security      | Sandboxed renderer, no Node integration, validated IPC   |
+| Packaging     | macOS Universal DMG; Windows NSIS; Linux AppImage/deb    |
 
 ## Routing suite
 
@@ -173,7 +174,7 @@ Bundled community [dsh-routing-suite](https://github.com/yjh051108/dsh-routing-s
 
 - **Offline snapshot** — three pinned components (`@dsh-external/dsh-super-injector`, `@dsh-external/dsh-mode-boost`, `router-standard` + `router-spec`) inside app resources.
 - **Pinned baseline** — `injector 0.3.3` / `mode-boost 0.1.0` / `router-preset 0.2.0@eff787e`, SHA-256 in `build/routing-suite/versions.json`.
-- **Official install** — via system Node + bundled pnpm `dsh plugin --profile web add` (desktop, ui-motion, model2, prompt-principles, vision-router, better-sidebar, LAN access, composition, Super Injector, Mode Boost, find-plugin). Harness owns normal manifest reconciliation; the desktop host's only compatibility edit removes the two 0.1.1-rc.2 `linkOnly` subagent bundle names after a successful CLI reconcile and never alters unrelated entries. A validated app-owned reconciliation marker skips repeated CLI additions only for an unchanged managed roster; a missing or mismatched marker, changed package root/identity, missing profile dependency, or foreign store runs the official reconciliation again. Corrupted `node_modules` self-reference is rebuilt once.
+- **Public CLI reconciliation** — via system Node + bundled pnpm `dsh plugin --profile web add` (desktop, ui-motion, model2, prompt-principles, vision-router, better-sidebar, LAN access, composition, Super Injector, Mode Boost, find-plugin). The maintained Harness owns manifest reconciliation. A validated app-owned marker skips repeated CLI additions only for an unchanged managed roster; a missing or mismatched marker, changed package root/identity, missing profile dependency, or foreign store runs reconciliation again. The complete maintained runtime provides the subagent packages; no `linkOnly` post-processing remains.
 - **Reviewed updates** — only with new app release, SHA-256 verified before extraction, never downloading mutable code in background.
 - **Ownership-safe** — never overwrites unrelated plugins or user-owned presets, legacy Home copy-only migrated.
 
@@ -185,7 +186,7 @@ Bundled community [dsh-routing-suite](https://github.com/yjh051108/dsh-routing-s
   <em>Figure 1 — Code Agent desktop architecture. Electron Main owns window/child/bridge; Harness owns sessions/protocol; Watchdog owns relaunch; Preload owns validation. See <a href="./docs/architecture/overview.md">overview</a> and <a href="./docs/architecture/lifecycle.md">lifecycle</a>. Chinese: <a href="./docs/architecture/system-zh.svg">system-zh.svg</a></em>
 </p>
 
-In one picture: host creates window, resolves system Node, reconciles plugins via public CLI, starts `dsh web` on loopback and health-checks with non-overlapping 5s probes; Preload is the only renderer↔main seam (`preferences`, `lanAccess`, `runtime`, `updater`, `bundledPlugins`); BrowserWindow hosts official Harness Web and workbench; Harness child runs the full Agent runtime on `127.0.0.1` official Home; intelligence plane shapes tool surface and knowledge; Watchdog restarts via IPC with bounded backoff; persistence stays outside `.app`.
+In one picture: host creates window, resolves system Node, reconciles plugins via the public CLI, starts maintained `dsh web` on loopback and health-checks with non-overlapping 5s probes; Preload is the only renderer↔main seam (`preferences`, `lanAccess`, `runtime`, `updater`, `bundledPlugins`); the Harness child uses `DSH_HOME`/`~/.dsh`; Watchdog restarts via IPC with bounded backoff; persistence stays outside `.app`.
 
 Full boundaries in [overview](./docs/architecture/overview.md) and [lifecycle](./docs/architecture/lifecycle.md), light/dark adaptive.
 
@@ -223,7 +224,7 @@ Do not disable Gatekeeper globally. See [complete unsigned guide](./docs/operati
 
 ### Requirements
 
-- Node.js ≥22.13 (toolchain and runtime)
+- Node.js 22.19+ or 24+ (toolchain and runtime; Node 23 is unsupported)
 - pnpm 11.19.0 (via pinned command below)
 - Platform-native packaging tools
 
@@ -275,7 +276,7 @@ node scripts/verify-macos-artifact.mjs release/DeepSeek-Harness-Code-*.dmg --uni
 - Paired Project2 validation for anchored tool surface.
 - Non-replaying fault injection.
 - Versioned, Skills-driven delivery.
-- Upstream plugin API tracking behind pinned 0.1.1-rc.2 + SHA-256.
+- Upstream plugin API tracking through the pinned Code-DSH submodule and locally hashed 0.1.1-rc.2.code.1 family.
 
 ## Contributing
 

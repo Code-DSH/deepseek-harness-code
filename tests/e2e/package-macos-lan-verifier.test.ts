@@ -1,4 +1,5 @@
 import { execFile } from "node:child_process";
+import { createHash } from "node:crypto";
 import { chmod, mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
@@ -43,6 +44,7 @@ async function createPackagedAppFixture(options: {
     "anchored-standard-plugin/LOCAL-PATCHES.md",
     "node-runtime/pnpm.mjs",
     "node-runtime/worker.js",
+    "node-runtime/pnpm-workspace.yaml",
     "global-agent-prompt/protocol.md",
     "prompt-principles-plugin/index.js",
     "prompt-principles-plugin/client.js",
@@ -67,15 +69,41 @@ async function createPackagedAppFixture(options: {
     "anchored-standard-plugin/UPSTREAM.json",
     `${JSON.stringify({ commit: "db4527a2a70a9032d3a8525ce3c0ea6ef528d6fc" })}\n`,
   );
+  const familyFile = "deepseek-ai-dsh-0.1.1-rc.2.code.1.tgz";
+  const familyContent = "fixture\n";
+  const familySpecifier = `file:vendor/dsh/${familyFile}`;
+  await writeFixtureFile(
+    resourcesRoot,
+    `node-runtime/vendor/dsh/${familyFile}`,
+    familyContent,
+  );
+  await writeFixtureFile(
+    resourcesRoot,
+    "node-runtime/maintained-harness.json",
+    `${JSON.stringify({
+      schemaVersion: 1,
+      repositoryUrl: "https://github.com/Code-DSH/deepseek-harness.git",
+      submoduleCommit: "6f3bf64735b00754d843ff31ae645b62a32414c8",
+      familyVersion: "0.1.1-rc.2.code.1",
+      packages: [
+        {
+          name: "@deepseek-ai/dsh",
+          version: "0.1.1-rc.2.code.1",
+          file: familyFile,
+          sha256: createHash("sha256").update(familyContent).digest("hex"),
+        },
+      ],
+    })}\n`,
+  );
   await writeFixtureFile(
     resourcesRoot,
     "node-runtime/package.json",
-    `${JSON.stringify({ dependencies: { "@deepseek-ai/dsh": "0.1.1-rc.2", "dsh-find-plugin": "0.3.6" } })}\n`,
+    `${JSON.stringify({ dependencies: { "@deepseek-ai/dsh": familySpecifier, "dsh-find-plugin": "0.3.6" } })}\n`,
   );
   await writeFixtureFile(
     resourcesRoot,
     "node-runtime/pnpm-lock.yaml",
-    "'@deepseek-ai/dsh': 0.1.1-rc.2\ndsh-find-plugin: 0.3.6\n",
+    `'@deepseek-ai/dsh': ${familySpecifier}\ndsh-find-plugin: 0.3.6\n`,
   );
   for (const [directory, name, version] of [
     ["dsh-ui-motion", "dsh-ui-motion", "1.0.0"],

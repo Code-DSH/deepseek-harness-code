@@ -8,7 +8,6 @@ import {
   symlink,
   writeFile,
 } from "node:fs/promises";
-import { mkdirSync, writeFileSync } from "node:fs";
 import { createHash } from "node:crypto";
 import { tmpdir } from "node:os";
 import { delimiter, dirname, join, resolve } from "node:path";
@@ -16,9 +15,9 @@ import { delimiter, dirname, join, resolve } from "node:path";
 import { describe, expect, it, vi } from "vitest";
 
 import {
-  ensureOfficialHarnessInstall,
+  ensureMaintainedHarnessInstall,
   migrateLegacyHarnessHome,
-  type OfficialCommandRunner,
+  type MaintainedCommandRunner,
 } from "../../apps/desktop/src/lifecycle/desktop-plugin-link.js";
 
 async function createPlugin(
@@ -43,7 +42,7 @@ async function createPlugin(
   return pluginRoot;
 }
 
-describe("official Harness plugin installation", () => {
+describe("maintained Harness plugin installation", () => {
   it("skips unchanged reconciliation on warm startup", async () => {
     const root = await mkdtemp(join(tmpdir(), "dsh-plugin-warm-"));
     const dshHome = join(root, "home");
@@ -74,7 +73,7 @@ describe("official Harness plugin installation", () => {
       "utf8",
     );
     const markerPayload = JSON.stringify({
-      schemaVersion: 2,
+      schemaVersion: 3,
       owner: "deepseek-harness-code",
       releaseIdentity: "unknown",
       storeDir: resolve(inputStoreDir),
@@ -86,7 +85,6 @@ describe("official Harness plugin installation", () => {
           manifestDigest: createHash("sha256")
             .update(manifestContent)
             .digest("hex"),
-          linkOnly: false,
         },
       ],
     });
@@ -97,7 +95,7 @@ describe("official Harness plugin installation", () => {
         digest: createHash("sha256").update(markerPayload).digest("hex"),
       })}\n`,
     );
-    const runCommand = vi.fn<OfficialCommandRunner>(() => ({
+    const runCommand = vi.fn<MaintainedCommandRunner>(() => ({
       status: 0,
       stdout: "",
       stderr: "",
@@ -117,27 +115,27 @@ describe("official Harness plugin installation", () => {
       ],
       legacyPluginSpecs: [],
       runCommand,
-    } satisfies Parameters<typeof ensureOfficialHarnessInstall>[0];
+    } satisfies Parameters<typeof ensureMaintainedHarnessInstall>[0];
 
-    await expect(ensureOfficialHarnessInstall(input)).resolves.toMatchObject({
+    await expect(ensureMaintainedHarnessInstall(input)).resolves.toMatchObject({
       status: "unchanged",
     });
-    await expect(ensureOfficialHarnessInstall(input)).resolves.toMatchObject({
+    await expect(ensureMaintainedHarnessInstall(input)).resolves.toMatchObject({
       status: "unchanged",
     });
     expect(runCommand).not.toHaveBeenCalled();
   });
 
-  it("does not invoke the official plugin CLI for an empty reconciliation roster", async () => {
+  it("does not invoke the public plugin CLI for an empty reconciliation roster", async () => {
     const root = await mkdtemp(join(tmpdir(), "dsh-plugin-empty-roster-"));
-    const runCommand = vi.fn<OfficialCommandRunner>(() => ({
+    const runCommand = vi.fn<MaintainedCommandRunner>(() => ({
       status: 0,
       stdout: "",
       stderr: "",
     }));
 
     await expect(
-      ensureOfficialHarnessInstall({
+      ensureMaintainedHarnessInstall({
         dshEntry: "/packages/node_modules/@deepseek-ai/dsh/lib/bin.js",
         dshHome: join(root, "home"),
         nodeExecutable: "/usr/bin/node",
@@ -178,7 +176,7 @@ describe("official Harness plugin installation", () => {
       join(profileRoot, "node_modules", ".modules.yaml"),
       `${JSON.stringify({ storeDir: pnpmStoreDir })}\n`,
     );
-    const runCommand = vi.fn<OfficialCommandRunner>(() => ({
+    const runCommand = vi.fn<MaintainedCommandRunner>(() => ({
       status: 0,
       stdout: "",
       stderr: "",
@@ -199,9 +197,9 @@ describe("official Harness plugin installation", () => {
       ],
       legacyPluginSpecs: [],
       runCommand,
-    } satisfies Parameters<typeof ensureOfficialHarnessInstall>[0];
+    } satisfies Parameters<typeof ensureMaintainedHarnessInstall>[0];
 
-    await expect(ensureOfficialHarnessInstall(input)).resolves.toMatchObject({
+    await expect(ensureMaintainedHarnessInstall(input)).resolves.toMatchObject({
       status: "unchanged",
     });
     expect(runCommand).not.toHaveBeenCalled();
@@ -242,7 +240,7 @@ describe("official Harness plugin installation", () => {
       join(dshHome, ".deepseek-harness-code-plugin-reconciliation.json"),
       "{not-json\n",
     );
-    const runCommand = vi.fn<OfficialCommandRunner>(() => ({
+    const runCommand = vi.fn<MaintainedCommandRunner>(() => ({
       status: 0,
       stdout: "",
       stderr: "",
@@ -263,9 +261,9 @@ describe("official Harness plugin installation", () => {
       ],
       legacyPluginSpecs: [],
       runCommand,
-    } satisfies Parameters<typeof ensureOfficialHarnessInstall>[0];
+    } satisfies Parameters<typeof ensureMaintainedHarnessInstall>[0];
 
-    await expect(ensureOfficialHarnessInstall(input)).resolves.toMatchObject({
+    await expect(ensureMaintainedHarnessInstall(input)).resolves.toMatchObject({
       status: "installed",
     });
     expect(runCommand).toHaveBeenCalledTimes(1);
@@ -297,7 +295,7 @@ describe("official Harness plugin installation", () => {
         join(profileRoot, "node_modules", ".modules.yaml"),
         `${JSON.stringify({ storeDir: "C:/managed/pnpm-store" })}\n`,
       );
-      const runCommand = vi.fn<OfficialCommandRunner>(() => ({
+      const runCommand = vi.fn<MaintainedCommandRunner>(() => ({
         status: 0,
         stdout: "",
         stderr: "",
@@ -320,8 +318,10 @@ describe("official Harness plugin installation", () => {
         runCommand,
       };
 
-      await ensureOfficialHarnessInstall(input);
-      await expect(ensureOfficialHarnessInstall(input)).resolves.toMatchObject({
+      await ensureMaintainedHarnessInstall(input);
+      await expect(
+        ensureMaintainedHarnessInstall(input),
+      ).resolves.toMatchObject({
         status: "unchanged",
       });
       expect(runCommand).not.toHaveBeenCalled();
@@ -352,7 +352,7 @@ describe("official Harness plugin installation", () => {
       join(profileRoot, "node_modules", ".modules.yaml"),
       `${JSON.stringify({ storeDir: "/managed/pnpm-store" })}\n`,
     );
-    const runCommand = vi.fn<OfficialCommandRunner>(() => ({
+    const runCommand = vi.fn<MaintainedCommandRunner>(() => ({
       status: 0,
       stdout: "",
       stderr: "",
@@ -375,7 +375,7 @@ describe("official Harness plugin installation", () => {
       runCommand,
     };
 
-    await ensureOfficialHarnessInstall(input);
+    await ensureMaintainedHarnessInstall(input);
     const marker = JSON.parse(
       await readFile(
         join(dshHome, ".deepseek-harness-code-plugin-reconciliation.json"),
@@ -388,17 +388,15 @@ describe("official Harness plugin installation", () => {
         packageName: string;
         manifestVersion: string;
         manifestDigest: string;
-        linkOnly: boolean;
       }>;
     };
     expect(marker).toMatchObject({
-      schemaVersion: 2,
+      schemaVersion: 3,
       releaseIdentity: "0.1.0-test.1",
       packages: [
         {
           packageName: "deepseek-harness-desktop-plugin",
           manifestVersion: "1.0.0",
-          linkOnly: false,
         },
       ],
     });
@@ -411,238 +409,16 @@ describe("official Harness plugin installation", () => {
         dsh: { bundle: { patch: "./cordis.patch.yml" } },
       })}\n`,
     );
-    await expect(ensureOfficialHarnessInstall(input)).resolves.toMatchObject({
+    await expect(ensureMaintainedHarnessInstall(input)).resolves.toMatchObject({
       status: "installed",
     });
     expect(runCommand).toHaveBeenCalledTimes(1);
 
     const changedReleaseInput = { ...input, releaseIdentity: "0.1.0-test.2" };
     await expect(
-      ensureOfficialHarnessInstall(changedReleaseInput),
+      ensureMaintainedHarnessInstall(changedReleaseInput),
     ).resolves.toMatchObject({ status: "installed" });
     expect(runCommand).toHaveBeenCalledTimes(2);
-  });
-
-  it("reconciles when linkOnly changes to false and keeps the normal bundle", async () => {
-    const root = await mkdtemp(join(tmpdir(), "dsh-plugin-link-only-toggle-"));
-    const dshHome = join(root, "home");
-    const runtimeBinRoot = join(root, "app-data", "runtime-bin");
-    const plugin = await createPlugin(
-      root,
-      "toggle-plugin",
-      "deepseek-harness-toggle-plugin",
-    );
-    const packageRoot = await realpath(plugin);
-    const profileRoot = join(dshHome, "profiles", "web");
-    const profilePath = join(profileRoot, "package.json");
-    await mkdir(join(profileRoot, "node_modules"), { recursive: true });
-    const writeProfile = async (bundles: string[]) => {
-      await writeFile(
-        profilePath,
-        `${JSON.stringify({
-          dependencies: {
-            "deepseek-harness-toggle-plugin": `link:${packageRoot}`,
-          },
-          dsh: { profile: { bundles } },
-        })}\n`,
-      );
-    };
-    await writeProfile(["deepseek-harness-toggle-plugin"]);
-    await writeFile(
-      join(profileRoot, "node_modules", ".modules.yaml"),
-      `${JSON.stringify({ storeDir: "/managed/pnpm-store" })}\n`,
-    );
-    const runCommand = vi.fn<OfficialCommandRunner>(() => ({
-      status: 0,
-      stdout: "",
-      stderr: "",
-    }));
-    const baseInput = {
-      dshEntry: "/app/dsh.js",
-      dshHome,
-      nodeExecutable: "/usr/bin/node",
-      pnpmEntry: "/app/pnpm.mjs",
-      pnpmStoreDir: "/managed/pnpm-store",
-      runtimeBinRoot,
-      releaseIdentity: "0.1.0-test",
-      legacyPluginSpecs: [],
-      runCommand,
-    };
-
-    await ensureOfficialHarnessInstall({
-      ...baseInput,
-      integratedPlugins: [
-        {
-          packageName: "deepseek-harness-toggle-plugin",
-          packageRoot: plugin,
-          linkOnly: true,
-        },
-      ],
-    });
-    await writeProfile(["deepseek-harness-toggle-plugin"]);
-    const result = await ensureOfficialHarnessInstall({
-      ...baseInput,
-      integratedPlugins: [
-        {
-          packageName: "deepseek-harness-toggle-plugin",
-          packageRoot: plugin,
-          linkOnly: false,
-        },
-      ],
-    });
-
-    expect(result.status).toBe("installed");
-    expect(runCommand).toHaveBeenCalledTimes(2);
-    expect(JSON.parse(await readFile(profilePath, "utf8"))).toMatchObject({
-      dsh: { profile: { bundles: ["deepseek-harness-toggle-plugin"] } },
-    });
-  });
-
-  it("removes only link-only names from bundles after official reconciliation", async () => {
-    const root = await mkdtemp(join(tmpdir(), "dsh-plugin-link-only-"));
-    const dshHome = join(root, "home");
-    const runtimeBinRoot = join(root, "app-data", "runtime-bin");
-    const linkOnlyPlugin = await createPlugin(
-      root,
-      "subagent-codex",
-      "@deepseek-ai/dsh-subagent-codex",
-    );
-    const regularPlugin = await createPlugin(
-      root,
-      "regular-plugin",
-      "deepseek-harness-desktop-plugin",
-    );
-    const profileRoot = join(dshHome, "profiles", "web");
-    await mkdir(join(profileRoot, "node_modules"), { recursive: true });
-    const profile = {
-      dependencies: {
-        "@deepseek-ai/dsh-subagent-codex": `link:${await realpath(linkOnlyPlugin)}`,
-        "deepseek-harness-desktop-plugin": `link:${await realpath(regularPlugin)}`,
-        "user-plugin": "user-plugin@1.0.0",
-      },
-      dsh: {
-        profile: {
-          bundles: [
-            "user-bundle",
-            "@deepseek-ai/dsh-subagent-codex",
-            "deepseek-harness-desktop-plugin",
-          ],
-        },
-      },
-      userField: { preserved: true },
-    };
-    const profilePath = join(profileRoot, "package.json");
-    await writeFile(
-      join(profileRoot, "node_modules", ".modules.yaml"),
-      `${JSON.stringify({ storeDir: "/managed/pnpm-store" })}\n`,
-    );
-    const runCommand = vi.fn<OfficialCommandRunner>(() => {
-      mkdirSync(profileRoot, { recursive: true });
-      writeFileSync(profilePath, `${JSON.stringify(profile)}\n`);
-      return { status: 0, stdout: "", stderr: "" };
-    });
-
-    const result = await ensureOfficialHarnessInstall({
-      dshEntry: "/app/dsh.js",
-      dshHome,
-      nodeExecutable: "/usr/bin/node",
-      pnpmEntry: "/app/pnpm.mjs",
-      pnpmStoreDir: "/managed/pnpm-store",
-      runtimeBinRoot,
-      integratedPlugins: [
-        {
-          packageName: "@deepseek-ai/dsh-subagent-codex",
-          packageRoot: linkOnlyPlugin,
-          linkOnly: true,
-        },
-        {
-          packageName: "deepseek-harness-desktop-plugin",
-          packageRoot: regularPlugin,
-        },
-      ],
-      legacyPluginSpecs: [],
-      runCommand,
-    });
-
-    expect(result.status).toBe("installed");
-    expect(runCommand).toHaveBeenCalledTimes(1);
-    expect(
-      JSON.parse(await readFile(join(profileRoot, "package.json"), "utf8")),
-    ).toEqual({
-      ...profile,
-      dsh: {
-        profile: {
-          bundles: ["user-bundle", "deepseek-harness-desktop-plugin"],
-        },
-      },
-    });
-  });
-
-  it("invalidates a warm marker when a link-only bundle is reintroduced", async () => {
-    const root = await mkdtemp(join(tmpdir(), "dsh-plugin-link-only-marker-"));
-    const dshHome = join(root, "home");
-    const runtimeBinRoot = join(root, "app-data", "runtime-bin");
-    const linkOnlyPlugin = await createPlugin(
-      root,
-      "subagent-codex",
-      "@deepseek-ai/dsh-subagent-codex",
-    );
-    const profileRoot = join(dshHome, "profiles", "web");
-    await mkdir(join(profileRoot, "node_modules"), { recursive: true });
-    const packageRoot = await realpath(linkOnlyPlugin);
-    const writeProfile = async (bundles: string[]) => {
-      await writeFile(
-        join(profileRoot, "package.json"),
-        `${JSON.stringify({
-          dependencies: {
-            "@deepseek-ai/dsh-subagent-codex": `link:${packageRoot}`,
-          },
-          dsh: { profile: { bundles } },
-        })}\n`,
-      );
-    };
-    await writeProfile(["user-bundle"]);
-    await writeFile(
-      join(profileRoot, "node_modules", ".modules.yaml"),
-      `${JSON.stringify({ storeDir: "/managed/pnpm-store" })}\n`,
-    );
-    const runCommand = vi.fn<OfficialCommandRunner>(() => ({
-      status: 0,
-      stdout: "",
-      stderr: "",
-    }));
-    const input = {
-      dshEntry: "/app/dsh.js",
-      dshHome,
-      nodeExecutable: "/usr/bin/node",
-      pnpmEntry: "/app/pnpm.mjs",
-      pnpmStoreDir: "/managed/pnpm-store",
-      runtimeBinRoot,
-      integratedPlugins: [
-        {
-          packageName: "@deepseek-ai/dsh-subagent-codex",
-          packageRoot: linkOnlyPlugin,
-          linkOnly: true,
-        },
-      ],
-      legacyPluginSpecs: [],
-      runCommand,
-    } satisfies Parameters<typeof ensureOfficialHarnessInstall>[0];
-
-    await ensureOfficialHarnessInstall(input);
-    await writeProfile(["user-bundle", "@deepseek-ai/dsh-subagent-codex"]);
-    const result = await ensureOfficialHarnessInstall(input);
-
-    expect(result.status).toBe("installed");
-    expect(runCommand).toHaveBeenCalledTimes(1);
-    expect(
-      JSON.parse(await readFile(join(profileRoot, "package.json"), "utf8")),
-    ).toEqual({
-      dependencies: {
-        "@deepseek-ai/dsh-subagent-codex": `link:${packageRoot}`,
-      },
-      dsh: { profile: { bundles: ["user-bundle"] } },
-    });
   });
 
   it.each([
@@ -656,12 +432,12 @@ describe("official Harness plugin installation", () => {
       );
       const dshHome = join(root, "home");
       const runtimeBinRoot = join(root, "app-data", "runtime-bin");
-      const linkOnlyPlugin = await createPlugin(
+      const plugin = await createPlugin(
         root,
         "subagent-codex",
         "@deepseek-ai/dsh-subagent-codex",
       );
-      const packageRoot = await realpath(linkOnlyPlugin);
+      const packageRoot = await realpath(plugin);
       const profileRoot = join(dshHome, "profiles", "web");
       const profilePath = join(profileRoot, "package.json");
       await mkdir(join(profileRoot, "node_modules"), { recursive: true });
@@ -678,7 +454,7 @@ describe("official Harness plugin installation", () => {
         join(profileRoot, "node_modules", ".modules.yaml"),
         `${JSON.stringify({ storeDir: "/managed/pnpm-store" })}\n`,
       );
-      const runCommand = vi.fn<OfficialCommandRunner>(() => ({
+      const runCommand = vi.fn<MaintainedCommandRunner>(() => ({
         status: 0,
         stdout: "",
         stderr: "",
@@ -693,22 +469,23 @@ describe("official Harness plugin installation", () => {
         integratedPlugins: [
           {
             packageName: "@deepseek-ai/dsh-subagent-codex",
-            packageRoot: linkOnlyPlugin,
-            linkOnly: true,
+            packageRoot: plugin,
           },
         ],
         legacyPluginSpecs: [],
         runCommand,
-      } satisfies Parameters<typeof ensureOfficialHarnessInstall>[0];
+      } satisfies Parameters<typeof ensureMaintainedHarnessInstall>[0];
 
-      await ensureOfficialHarnessInstall(input);
+      await ensureMaintainedHarnessInstall(input);
       if (mutation === "missing") {
         await rm(profilePath);
       } else {
         await writeFile(profilePath, "{not-json");
       }
 
-      await expect(ensureOfficialHarnessInstall(input)).resolves.toMatchObject({
+      await expect(
+        ensureMaintainedHarnessInstall(input),
+      ).resolves.toMatchObject({
         status: "installed",
       });
       expect(runCommand).toHaveBeenCalledTimes(1);
@@ -744,7 +521,7 @@ describe("official Harness plugin installation", () => {
       join(dshHome, "profiles", "web", "node_modules", ".modules.yaml"),
       `${JSON.stringify({ storeDir: "/app-data/node-runtime/pnpm-store" })}\n`,
     );
-    const runCommand = vi.fn<OfficialCommandRunner>(() => ({
+    const runCommand = vi.fn<MaintainedCommandRunner>(() => ({
       status: 0,
       stdout: "",
       stderr: "",
@@ -760,7 +537,7 @@ describe("official Harness plugin installation", () => {
       runCommand,
     };
 
-    await ensureOfficialHarnessInstall({
+    await ensureMaintainedHarnessInstall({
       ...baseInput,
       integratedPlugins: [
         {
@@ -769,7 +546,7 @@ describe("official Harness plugin installation", () => {
         },
       ],
     });
-    const result = await ensureOfficialHarnessInstall({
+    const result = await ensureMaintainedHarnessInstall({
       ...baseInput,
       integratedPlugins: [
         {
@@ -811,7 +588,7 @@ describe("official Harness plugin installation", () => {
         join(profileRoot, "node_modules", ".modules.yaml"),
         `${JSON.stringify({ storeDir: "/managed/pnpm-store" })}\n`,
       );
-      const runCommand = vi.fn<OfficialCommandRunner>(() => ({
+      const runCommand = vi.fn<MaintainedCommandRunner>(() => ({
         status: 0,
         stdout: "",
         stderr: "",
@@ -831,14 +608,14 @@ describe("official Harness plugin installation", () => {
         ],
         legacyPluginSpecs: [],
         runCommand,
-      } satisfies Parameters<typeof ensureOfficialHarnessInstall>[0];
+      } satisfies Parameters<typeof ensureMaintainedHarnessInstall>[0];
 
-      await ensureOfficialHarnessInstall(input);
+      await ensureMaintainedHarnessInstall(input);
       await writeFile(
         join(profileRoot, "package.json"),
         `${JSON.stringify({ dependencies })}\n`,
       );
-      const result = await ensureOfficialHarnessInstall(input);
+      const result = await ensureMaintainedHarnessInstall(input);
 
       expect(result.status).toBe("installed");
       expect(runCommand).toHaveBeenCalledTimes(1);
@@ -865,7 +642,7 @@ describe("official Harness plugin installation", () => {
       join(profileRoot, "node_modules", ".modules.yaml"),
       `${JSON.stringify({ storeDir: "/managed/pnpm-store" })}\n`,
     );
-    const runCommand = vi.fn<OfficialCommandRunner>(() => ({
+    const runCommand = vi.fn<MaintainedCommandRunner>(() => ({
       status: 0,
       stdout: "",
       stderr: "",
@@ -885,14 +662,14 @@ describe("official Harness plugin installation", () => {
       ],
       legacyPluginSpecs: [],
       runCommand,
-    } satisfies Parameters<typeof ensureOfficialHarnessInstall>[0];
+    } satisfies Parameters<typeof ensureMaintainedHarnessInstall>[0];
 
-    await ensureOfficialHarnessInstall(input);
+    await ensureMaintainedHarnessInstall(input);
     await writeFile(
       join(profileRoot, "node_modules", ".modules.yaml"),
       `${JSON.stringify({ storeDir: "/foreign/pnpm-store" })}\n`,
     );
-    const result = await ensureOfficialHarnessInstall(input);
+    const result = await ensureMaintainedHarnessInstall(input);
 
     expect(result.status).toBe("installed");
     expect(runCommand).toHaveBeenCalledTimes(1);
@@ -916,13 +693,13 @@ describe("official Harness plugin installation", () => {
         storeDir: join(root, "user-global-pnpm-store", "v11"),
       })}\n`,
     );
-    const runCommand = vi.fn<OfficialCommandRunner>(() => ({
+    const runCommand = vi.fn<MaintainedCommandRunner>(() => ({
       status: 0,
       stdout: "",
       stderr: "",
     }));
 
-    const result = await ensureOfficialHarnessInstall({
+    const result = await ensureMaintainedHarnessInstall({
       dshEntry: "/packages/node_modules/@deepseek-ai/dsh/lib/bin.js",
       dshHome,
       nodeExecutable: "/usr/bin/node",
@@ -964,13 +741,13 @@ describe("official Harness plugin installation", () => {
         storeDir: "/app-data/node-runtime/pnpm-store/v11",
       })}\n`,
     );
-    const runCommand = vi.fn<OfficialCommandRunner>(() => ({
+    const runCommand = vi.fn<MaintainedCommandRunner>(() => ({
       status: 0,
       stdout: "",
       stderr: "",
     }));
 
-    await ensureOfficialHarnessInstall({
+    await ensureMaintainedHarnessInstall({
       dshEntry: "/packages/node_modules/@deepseek-ai/dsh/lib/bin.js",
       dshHome,
       nodeExecutable: "/usr/bin/node",
@@ -1014,7 +791,7 @@ describe("official Harness plugin installation", () => {
       })}\n`,
     );
     let calls = 0;
-    const runCommand = vi.fn<OfficialCommandRunner>(() => {
+    const runCommand = vi.fn<MaintainedCommandRunner>(() => {
       calls += 1;
       return calls === 1
         ? {
@@ -1025,7 +802,7 @@ describe("official Harness plugin installation", () => {
         : { status: 0, stdout: "", stderr: "" };
     });
 
-    const result = await ensureOfficialHarnessInstall({
+    const result = await ensureMaintainedHarnessInstall({
       dshEntry: "/packages/node_modules/@deepseek-ai/dsh/lib/bin.js",
       dshHome,
       nodeExecutable: "/usr/bin/node",
@@ -1099,13 +876,13 @@ describe("official Harness plugin installation", () => {
       "mode-boost",
       "@dsh-external/dsh-mode-boost",
     );
-    const runCommand = vi.fn<OfficialCommandRunner>(() => ({
+    const runCommand = vi.fn<MaintainedCommandRunner>(() => ({
       status: 0,
       stdout: "",
       stderr: "",
     }));
 
-    const result = await ensureOfficialHarnessInstall({
+    const result = await ensureMaintainedHarnessInstall({
       dshEntry:
         "/user-data/node-runtime/packages/node_modules/@deepseek-ai/dsh/lib/bin.js",
       dshHome,
@@ -1196,14 +973,14 @@ describe("official Harness plugin installation", () => {
   it("fails without running a mismatched or failed package", async () => {
     const root = await mkdtemp(join(tmpdir(), "dsh-plugin-rejected-"));
     const mismatched = await createPlugin(root, "plugin", "actual-package");
-    const runCommand = vi.fn<OfficialCommandRunner>(() => ({
+    const runCommand = vi.fn<MaintainedCommandRunner>(() => ({
       status: 17,
       stdout: "",
       stderr: "sensitive package-manager details",
     }));
 
     await expect(
-      ensureOfficialHarnessInstall({
+      ensureMaintainedHarnessInstall({
         dshEntry: "/app/dsh.js",
         dshHome: join(root, "home"),
         nodeExecutable: process.execPath,
@@ -1223,7 +1000,7 @@ describe("official Harness plugin installation", () => {
       `${JSON.stringify({ name: "expected-package", version: "1.0.0" })}\n`,
     );
     await expect(
-      ensureOfficialHarnessInstall({
+      ensureMaintainedHarnessInstall({
         dshEntry: "/app/dsh.js",
         dshHome: join(root, "home"),
         nodeExecutable: process.execPath,
@@ -1236,7 +1013,7 @@ describe("official Harness plugin installation", () => {
         runCommand,
       }),
     ).rejects.toThrow(
-      "official plugin installation failed for expected-package (exit 17)",
+      "maintained Harness plugin installation failed for expected-package (exit 17)",
     );
   });
 
@@ -1253,13 +1030,13 @@ describe("official Harness plugin installation", () => {
       "second-plugin",
     );
     const stderr = "x".repeat(2_100);
-    const runCommand = vi.fn<OfficialCommandRunner>(() => ({
+    const runCommand = vi.fn<MaintainedCommandRunner>(() => ({
       status: 17,
       stdout: "",
       stderr,
     }));
 
-    const errorMessage = await ensureOfficialHarnessInstall({
+    const errorMessage = await ensureMaintainedHarnessInstall({
       dshEntry: "/app/dsh.js",
       dshHome: join(root, "home"),
       nodeExecutable: "/usr/bin/node",
@@ -1278,23 +1055,23 @@ describe("official Harness plugin installation", () => {
         error instanceof Error ? error.message : String(error),
     );
     expect(errorMessage).toContain(
-      "official plugin installation failed for first-plugin, second-plugin (exit 17)",
+      "maintained Harness plugin installation failed for first-plugin, second-plugin (exit 17)",
     );
     expect(runCommand).toHaveBeenCalledTimes(2);
     expect(errorMessage.endsWith("x".repeat(2_000))).toBe(true);
     expect(errorMessage).not.toContain("x".repeat(2_001));
   });
 
-  it("redacts sensitive stderr before including it in an official plugin failure", async () => {
+  it("redacts sensitive stderr before including it in a maintained plugin failure", async () => {
     const root = await mkdtemp(join(tmpdir(), "dsh-plugin-redacted-stderr-"));
     const plugin = await createPlugin(root, "plugin", "redacted-plugin");
-    const runCommand = vi.fn<OfficialCommandRunner>(() => ({
+    const runCommand = vi.fn<MaintainedCommandRunner>(() => ({
       status: 17,
       stderr:
         "Authorization: Bearer authorization-secret cookie=session-secret api_key=api-key-secret password=password-secret secret=generic-secret token=token-secret https://user:synthetic-credential@host.example/plugin.git git+https://user:synthetic-credential@host.example/plugin.git",
     }));
 
-    const errorMessage = await ensureOfficialHarnessInstall({
+    const errorMessage = await ensureMaintainedHarnessInstall({
       dshEntry: "/app/dsh.js",
       dshHome: join(root, "home"),
       nodeExecutable: "/usr/bin/node",
@@ -1329,17 +1106,17 @@ describe("official Harness plugin installation", () => {
     expect(runCommand).toHaveBeenCalledTimes(2);
   });
 
-  it("redacts and bounds a failed official plugin spawn error message", async () => {
+  it("redacts and bounds a failed maintained plugin spawn error message", async () => {
     const root = await mkdtemp(join(tmpdir(), "dsh-plugin-redacted-error-"));
     const plugin = await createPlugin(root, "plugin", "redacted-plugin");
     const rawMessage = `${"x".repeat(1_990)}token=tail`;
     expect(rawMessage).toHaveLength(2_000);
-    const runCommand = vi.fn<OfficialCommandRunner>(() => ({
+    const runCommand = vi.fn<MaintainedCommandRunner>(() => ({
       status: null,
       error: new Error(rawMessage),
     }));
 
-    const errorMessage = await ensureOfficialHarnessInstall({
+    const errorMessage = await ensureMaintainedHarnessInstall({
       dshEntry: "/app/dsh.js",
       dshHome: join(root, "home"),
       nodeExecutable: "/usr/bin/node",
