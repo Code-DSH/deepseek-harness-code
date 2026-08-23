@@ -144,7 +144,7 @@
 
   <rect class="runtime" x="584" y="418" width="570" height="220"/>
   <text class="subheading" x="600" y="440">Agent Runtime — Harness Child Process</text>
-  <text class="label" x="600" y="460">dsh web --host 127.0.0.1 --port &lt;port&gt; --expose-internals</text>
+  <text class="label" x="600" y="460">dsh web --host 127.0.0.1 --port &lt;port&gt; --no-open --expose-internals</text>
   <text class="small" x="600" y="480">System Node child · official Home $DSH_HOME / ~/.dsh</text>
   <text class="small" x="600" y="496">Loopback HTTP + SSE · 5s timeout · Sessions persisted</text>
   <text class="label-sm" x="600" y="516">Code Agent Loop</text><text class="small" x="700" y="516">Goal → Plan → Todo → Tools → Jobs → Workflow → Compaction</text>

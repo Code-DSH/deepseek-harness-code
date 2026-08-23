@@ -143,7 +143,7 @@
 
   <rect class="runtime" x="584" y="418" width="570" height="220"/>
   <text class="subheading" x="600" y="440">Agent 运行时 — Harness 子进程</text>
-  <text class="label" x="600" y="460">dsh web --host 127.0.0.1 --port &lt;port&gt; --expose-internals</text>
+  <text class="label" x="600" y="460">dsh web --host 127.0.0.1 --port &lt;port&gt; --no-open --expose-internals</text>
   <text class="small" x="600" y="480">系统 Node 子进程 · 官方 Home $DSH_HOME / ~/.dsh</text>
   <text class="small" x="600" y="496">回环 HTTP + SSE · 5s 超时 · 会话持久化</text>
   <text class="label-sm" x="600" y="516">Code Agent 循环</text><text class="small" x="700" y="516">目标 → 计划 → 待办 → 工具 → 任务 → 工作流 → 压缩</text>
