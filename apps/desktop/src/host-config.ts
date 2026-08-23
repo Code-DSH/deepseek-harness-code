@@ -84,6 +84,7 @@ export function createHarnessLaunchSpec(
       "127.0.0.1",
       "--port",
       String(input.port),
+      "--no-open",
     ],
     env: {
       DSH_HOME: input.dshHome,

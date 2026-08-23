@@ -39,7 +39,7 @@ describe("Electron host configuration", () => {
     });
   });
 
-  it("launches the official dsh web entry through the system Node runtime on loopback", () => {
+  it("launches dsh web on loopback without opening an external browser", () => {
     expect(
       createHarnessLaunchSpec({
         nodeExecutable: "/opt/homebrew/bin/node",
@@ -59,6 +59,7 @@ describe("Electron host configuration", () => {
         "127.0.0.1",
         "--port",
         "41234",
+        "--no-open",
       ],
       env: {
         DSH_HOME:
