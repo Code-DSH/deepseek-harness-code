@@ -38,9 +38,12 @@ const SHORT = "dsh-plugin-market";
 
 /* ─────────────── 结构化安装规格校验（§8.3） ─────────────── */
 
-const PKG_DIR_RE = /^\/[^\0\n\r\t|&;<>'"`$(){}\[\]]{1,400}$/;
-const PKG_NAME_RE = /^(@[a-z0-9][a-z0-9._-]*\/)?[a-z0-9][a-z0-9._-]{0,120}$/i;
-const GIT_URL_RE = /^https:\/\/github\.com\/[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+(\.git)?$/;
+const PKG_DIR_RE = /^(\/|[A-Za-z]:[\\/])[^\0\n\r\t|&;<>'"`$(){}\[\]]{1,400}$/;
+const NAME_SEG_RE = /[A-Za-z0-9_-]+(\.[A-Za-z0-9_-]+)*/;
+const PKG_NAME_RE = new RegExp(`^(@${NAME_SEG_RE.source}\\/)?${NAME_SEG_RE.source}$`);
+const GIT_URL_RE = new RegExp(
+  `^https:\\/\\/github\\.com\\/${NAME_SEG_RE.source}\\/${NAME_SEG_RE.source}(\\.git)?$`,
+);
 
 function validateInstallSpec(raw) {
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
@@ -134,12 +137,7 @@ function trimOutput(raw) {
 
 /* ─────────────── Hub 只读代理 ─────────────── */
 
-function hexEscape(value) {
-  return String(value)
-    .replace(/[^a-zA-Z0-9-._~:/?#\[\]@!$&'()*+,;=% ]/g, (c) => "%" + c.charCodeAt(0).toString(16).toUpperCase());
-}
-
-async function proxyHub(req, res, url) {
+async function proxyHub(req, res, url, cors) {
   const upstream = HUB_BASE + url.pathname + url.search;
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), PROXY_TIMEOUT_MS);
@@ -152,13 +150,13 @@ async function proxyHub(req, res, url) {
     });
   } catch (e) {
     clearTimeout(timer);
-    res.writeHead(503, { "Content-Type": "application/json; charset=utf-8", "Access-Control-Allow-Origin": "*" });
+    res.writeHead(503, { "Content-Type": "application/json; charset=utf-8", ...cors });
     res.end(JSON.stringify({ error: { code: "hub_unavailable", message: "市场服务暂不可达" } }));
     return;
   }
   clearTimeout(timer);
   const body = Buffer.from(await hubRes.arrayBuffer());
-  const headers = { "Content-Type": "application/json; charset=utf-8", "Access-Control-Allow-Origin": "*" };
+  const headers = { "Content-Type": "application/json; charset=utf-8", ...cors };
   const etag = hubRes.headers.get("etag");
   if (etag) headers["ETag"] = etag;
   res.writeHead(hubRes.status, headers);
@@ -196,10 +194,35 @@ export function apply(ctx) {
   try {
     server = http.createServer(async (req, res) => {
       const url = new URL(req.url, `http://127.0.0.1:${BASE_PORT}`);
-      const origin = req.headers.origin;
-      const cors = origin
-        ? { "Access-Control-Allow-Origin": origin, "Access-Control-Allow-Methods": "GET, POST, OPTIONS", "Access-Control-Allow-Headers": "Content-Type, If-None-Match" }
-        : { "Access-Control-Allow-Origin": "*" };
+      const rawOrigin = req.headers.origin;
+      const rawHost = String(req.headers.host || "");
+
+      // ── 访问控制（C1 review 修复）────────────────────────────
+      // Host 必须解析为环回（防伪造 Host / DNS rebinding 绕过）。
+      if (!/^(127\.0\.0\.1|\[::1\]|localhost)(:\d+)?$/.test(rawHost)) {
+        res.writeHead(400, { "Content-Type": "application/json; charset=utf-8" });
+        res.end(JSON.stringify({ error: { code: "bad_host" } }));
+        return;
+      }
+      // Origin 存在时必须是本机环回页面；其它任何网站 Origin → 403 且不带
+      // 任何 CORS 头（浏览器因 JSON 请求触发预检，预检 403 直接拦截请求，
+      // 恶意站点无法发出安装请求，也无法读取任何响应）。
+      let cors = {};
+      if (rawOrigin) {
+        if (!/^https?:\/\/(127\.0\.0\.1|\[::1\]|localhost)(:\d+)?$/.test(rawOrigin)) {
+          res.writeHead(403, { "Content-Type": "application/json; charset=utf-8" });
+          res.end(JSON.stringify({ error: { code: "forbidden" } }));
+          return;
+        }
+        cors = {
+          "Access-Control-Allow-Origin": rawOrigin,
+          Vary: "Origin",
+          "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+          "Access-Control-Allow-Headers": "Content-Type, If-None-Match",
+        };
+      }
+      // 无 Origin 请求（curl / 本地进程）在 Host 环回校验通过后放行，
+      // 不带 ACAO 头——浏览器场景必有 Origin，此路径不可被网页复用。
 
       if (req.method === "OPTIONS") {
         res.writeHead(204, cors);
@@ -213,7 +236,7 @@ export function apply(ctx) {
       }
 
       if (req.method === "GET" && url.pathname.startsWith("/api/v1/")) {
-        return proxyHub(req, res, url);
+        return proxyHub(req, res, url, cors);
       }
 
       if (req.method === "POST" && url.pathname === "/install") {
@@ -237,7 +260,6 @@ export function apply(ctx) {
     });
 
     // loopback only；从 BASE_PORT 起尝试递增端口
-    server.on("error", () => { /* 端口被占时由 listen 错误处理 */ });
     server.listen(BASE_PORT, "127.0.0.1");
   } catch (e) {
     ctx.logger?.warn?.("[%s] loopback server 启动失败: %s", SHORT, String(e));

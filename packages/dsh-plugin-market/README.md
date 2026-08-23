@@ -5,12 +5,16 @@ DeepSeek Harness Code 插件市场插件：在 **设置 → 插件市场** 提�
 
 遵循 [plugin-market-development.md](../../Downloads/plugin-market-development.md) v1 设计草案：
 - 页面宿主：`settings.section`（id=`plugin-market`，官方 additive slot，不伪造页面）
-- 数据：Client 优先直连 DSHC-Hub（`http://127.0.0.1:8741`），受 CSP 拦截时自动
+- 数据：Client 优先直连 DSHC-Hub **生产地址 `http://38.76.196.236:8741`**
+  （GitHub `dsh-plugin` topic 聚合目录，761+ 插件），受 CSP 拦截时自动
   降级到 host loopback 代理（`http://127.0.0.1:8742` → `/api/v1/*` 只读转发）
+- **出网披露**：打开市场页会向 `38.76.196.236:8741` 发出目录请求；GitHub 插件
+  详情 README 由用户本地直读 `raw.githubusercontent.com`（可被 CSP 拦截后
+  改经服务器转发，服务器不落盘）
 - GitHub：二次校验 `https://github.com/<owner>/<repo>` 后 `window.open` 系统浏览器
 - 安装：详情页展示结构化规格 + 风险提示 → 用户明确确认 → host 窄权限
-  `POST /install`（白名单字段校验 + 拒绝 command/script）→ 官方
-  `dsh plugin --profile web add <pkg>`（参数数组 + `shell:false`）；
+  `POST /install`（白名单字段校验 + 拒绝 command/script + **Origin/Host 环回钉死**）
+  → 官方 `dsh plugin --profile web add <pkg>`（参数数组 + `shell:false`）；
   host 通道不可达时降级为「复制官方安装命令」（package 白名单校验后进命令）
 - host 只监听 `127.0.0.1` loopback；不访问 token/session/settings；不落盘缓存
 
@@ -36,8 +40,10 @@ node -e 'new Function(require("fs").readFileSync("lib/client.js","utf8"))'
 
 ## 后端（DSHC-Hub）
 
-仓库外独立交付：`../dshc-hub-mock/`（本地 mock，契约同 §6.2）。
-配置：`DSHC_HUB_BASE`（默认 `http://127.0.0.1:8741`）、`DSHC_HOST_PORT`（默认 8742）、
+仓库外独立交付：`../dshc-hub-mock/`（部署于 `38.76.196.236:8741` 的聚合服务，
+契约同 §6.2；种子 + GitHub 聚合，README 以超链接/内存转发交付、不落盘）。
+配置：`DSHC_HUB_BASE`（默认 `http://38.76.196.236:8741`；本地 mock 联调可
+覆盖为 `http://127.0.0.1:8741`）、`DSHC_HOST_PORT`（默认 8742）、
 `DSHC_PROFILE`（安装目标 profile，默认 `web`）。
 
 ## 安全说明（§8.3）
