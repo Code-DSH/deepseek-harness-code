@@ -1,6 +1,6 @@
 # Packages
 
-This directory holds all first-party bundles that ship inside the DeepSeek Harness Code desktop app. Every package is reconciled via the official `dsh plugin --profile web add` flow using the auto-detected system Node (>=22.13) + bundled pnpm runtime — no manual `package.json` edits.
+This directory holds all first-party bundles that ship inside the DeepSeek Harness Code desktop app. Every package is reconciled through the public `dsh plugin --profile web add` flow using the auto-detected system Node (22.19+ or 24+, excluding Node 23) and bundled pnpm runtime — no manual `package.json` edits.
 
 ## Integrated plugin inventory
 
@@ -24,7 +24,7 @@ This directory holds all first-party bundles that ship inside the DeepSeek Harne
 ## Build
 
 ```bash
-pnpm build              # clean + node-runtime + routing-suite + desktop + watchdog + plugin + anchored + sidebar
+pnpm build              # clean + maintained Harness + node-runtime + routing-suite + desktop + plugins
 pnpm build:plugin       # desktop plugin only (esbuild)
 pnpm build:sidebar      # better-sidebar
 pnpm --dir packages/anchored-standard-plugin test

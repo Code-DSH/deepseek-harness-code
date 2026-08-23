@@ -17,14 +17,19 @@ async function readProjectFile(relativePath: string): Promise<string> {
 }
 
 describe("DeepSeek Harness Code distribution contract", () => {
-  test("pins the BETA3 desktop and upstream Harness release", async () => {
+  test("pins the BETA3 desktop and maintained Harness submodule", async () => {
     const manifest = JSON.parse(await readProjectFile("package.json")) as {
       version: string;
       dependencies: Record<string, string>;
     };
 
     expect(manifest.version).toBe("0.1.0-BETA3");
-    expect(manifest.dependencies["@deepseek-ai/dsh"]).toBe("0.1.1-rc.2");
+    expect(manifest.dependencies["@deepseek-ai/dsh"]).toBe(
+      "link:deps/deepseek-harness/apps/cli",
+    );
+    expect(manifest.dependencies["@deepseek-ai/dsh-tools"]).toBe(
+      "link:deps/deepseek-harness/packages/core/tools",
+    );
   });
 
   test("declares the renamed Universal macOS product with ad-hoc signing", async () => {
@@ -65,6 +70,10 @@ describe("DeepSeek Harness Code distribution contract", () => {
     expect(iconScript).toContain("deepseek-harness-code.ico");
     expect(iconScript).toContain("deepseek-harness-code.png");
     expect(iconScript).toContain("deepseek-harness-code-tray.png");
+    expect(iconScript).toMatch(
+      /const source = join\(\s*root,\s*"deps",\s*"deepseek-harness",\s*"apps",\s*"web",\s*"public",\s*"favicon\.svg",?\s*\)/u,
+    );
+    expect(iconScript).not.toContain("createRequire");
     expect(config).toContain("build/deepseek-harness-code-tray.png");
     expect(config).toContain("to: deepseek-harness-code-tray.png");
     expect(config).toContain("to: deepseek-harness-code.png");

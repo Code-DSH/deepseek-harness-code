@@ -1,7 +1,7 @@
 ---
 id: operations.harness-home-migration
 title: Harness Home Migration
-summary: First-launch copy-only migration into the official Harness Home and official CLI reconciliation for bundled and legacy plugins.
+summary: First-launch copy-only migration into DSH_HOME and public CLI reconciliation for bundled and legacy plugins.
 kind: runbook
 status: canonical
 content_stage: implementation-backed
@@ -27,15 +27,15 @@ tags: [migration, official-cli, dsh-home]
 
 ## Current Contract
 
-DeepSeek Harness Code and standalone DeepSeek Harness share one official Home. A nonblank `DSH_HOME` overrides the location; otherwise the pinned official resolver (`@deepseek-ai/dsh-home-paths@0.1.1-rc.2`) selects `~/.dsh`. Electron's `userData` directory remains only for desktop preferences, watchdog state, logs, and the generated pnpm launcher.
+DeepSeek Harness Code and standalone DeepSeek Harness share one Home. A nonblank `DSH_HOME` overrides the location; otherwise the maintained resolver selects `~/.dsh`. Electron's `userData` directory remains for desktop preferences, watchdog state, logs, the app-owned package runtime, and launcher shims.
 
 On every launch, the sequence is:
 
-1. Resolve the official Home and the retired source at `<Electron userData>/dsh-home`.
+1. Resolve DSH Home and the retired source at `<Electron userData>/dsh-home`.
 2. Copy only target-absent supported data from the retired source.
-3. Validate the integrated-plugin profile links, managed pnpm store, and link-only bundle state. A complete profile created by an older release is adopted and receives the current reconciliation marker; only missing or incompatible state reconciles missing legacy profile dependencies and integrated plugins through `dsh plugin --profile web add`.
+3. Validate the integrated-plugin profile links and managed pnpm store. A complete profile created by an older release is adopted and receives the current reconciliation marker; only missing or incompatible state reconciles dependencies through `dsh plugin --profile web add`.
 4. Synchronize app-owned Superpowers Skills and Agent Presets, plus the Global Agent Prompt.
-5. Start `dsh web` with the same official Home and `--expose-internals`.
+5. Start maintained `dsh web` with the same Home and `--expose-internals`.
 
 Repeated runs are idempotent. The public CLI retains unrelated dependencies and bundle entries.
 
@@ -43,7 +43,7 @@ Repeated runs are idempotent. The public CLI retains unrelated dependencies and 
 
 The copy allow-list is credentials, anonymous ID, settings, root patch/activity files, sessions, attachments, storages, Skills, Agent Presets, and Super Injector state. Profile manifests, lockfiles, and profile `node_modules` are not copied; their dependency declarations are read only to request equivalent public-CLI installation.
 
-- The official target always wins a path conflict.
+- The existing target always wins a path conflict.
 - Identical files are treated as unchanged.
 - Symbolic links are skipped and never followed.
 - Credentials and settings are written with mode `0600`; created directories use `0700`.
@@ -52,7 +52,7 @@ The copy allow-list is credentials, anonymous ID, settings, root patch/activity 
 
 ## Integrated Plugins
 
-The app bundles and installs these packages using the same official mechanism as `dsh plugin add` (via the auto-detected system Node >=22.13 + bundled pnpm runtime):
+The app installs these packages through the public `dsh plugin add` mechanism using Node 22.19+ or 24+ and bundled pnpm. The DSH family itself comes only from the Code-DSH submodule tarballs:
 
 - `deepseek-harness-desktop-plugin`
 - `dsh-ui-motion@1.1.0`
@@ -69,7 +69,7 @@ The app bundles and installs these packages using the same official mechanism as
 - `deepseek-harness-composition` (MCP everything + Context7, subagent codex/claude)
 - `anchored-standard` preset (synchronized as Agent Preset, not a Web bundle)
 
-The generated `pnpm`/`pnpm.cmd` launcher points to the pnpm runtime inside the application and is prepended to the child command's private `PATH` together with the detected system Node's bin directory. It does not change the user's shell or require a system pnpm installation (a system official Node.js >=22.13 is required and auto-detected). The plugin patches retain bare package names under `--expose-internals`.
+The generated `pnpm`/`pnpm.cmd` launcher points to the pnpm runtime inside the application and is prepended to the child command's private `PATH` with the detected Node bin. It does not change the user's shell or require system pnpm. Startup never installs a global `dsh`; plugin patches retain bare package names under `--expose-internals`.
 
 ## Conflict Diagnosis
 

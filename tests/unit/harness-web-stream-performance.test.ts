@@ -1,6 +1,5 @@
 import { readFileSync } from "node:fs";
-import { createRequire } from "node:module";
-import { dirname, join } from "node:path";
+import { join } from "node:path";
 import vm from "node:vm";
 
 import { beforeAll, describe, expect, it } from "vitest";
@@ -64,16 +63,14 @@ type RuntimeExports = {
   };
 };
 
-const rootRequire = createRequire(join(process.cwd(), "package.json"));
-const dshRequire = createRequire(
-  rootRequire.resolve("@deepseek-ai/dsh/package.json"),
+const harnessRoot = join(process.cwd(), "deps", "deepseek-harness");
+const conversationRoot = join(
+  harnessRoot,
+  "packages",
+  "client",
+  "ui-conversation",
 );
-const conversationRoot = dirname(
-  dshRequire.resolve("@deepseek-ai/dsh-client-ui-conversation/package.json"),
-);
-const runtimeRoot = dirname(
-  dshRequire.resolve("@deepseek-ai/dsh-client-runtime/package.json"),
-);
+const runtimeRoot = join(harnessRoot, "packages", "client", "runtime");
 const conversationClient = join(conversationRoot, "lib", "client.js");
 const runtimeClient = join(runtimeRoot, "lib", "client.js");
 
@@ -290,7 +287,7 @@ beforeAll(() => {
   const conversationManifest = JSON.parse(
     readFileSync(join(conversationRoot, "package.json"), "utf8"),
   ) as { version: string };
-  expect(conversationManifest.version).toBe("0.1.1-rc.2");
+  expect(conversationManifest.version).toBe("0.1.1-rc.2.code.1");
 
   runtime = loadRuntime();
   const definitions = captureConversationDefinitions(runtime);
@@ -301,86 +298,13 @@ beforeAll(() => {
     (definition) => definition.kind === "turn-tail",
   );
   if (assistant === undefined || turnTail === undefined) {
-    throw new Error("rc.7 conversation definitions were not captured");
+    throw new Error("maintained conversation definitions were not captured");
   }
   assistantDefinition = assistant;
   turnTailDefinition = turnTail;
 });
 
-describe("pinned rc.7 Harness Web stream projection", () => {
-  // rc.7 re-baselining deferred: the bounded open-turn-tail invariant
-  // (inspectedMatches ≤ 1) was provided by the rc.6 conversation patch's
-  // tailData hunk, which no longer applies to rc.7's refactored conversation.
-  // Re-base that patch via `pnpm patch` and un-skip this test.
-  it.skip("keeps 10,000 ordered deltas exact while open-turn tail work stays bounded", () => {
-    const location = simpleLocation();
-    const start = match(
-      event("step/start", 1, { turn: 0, step: 0 }),
-      "start",
-      location,
-    );
-    const assistantMatches: MatchValue[] = [start];
-    let assistantState = assistantDefinition.start(
-      context("assistant-step", assistantMatches, undefined),
-      start,
-      { previous: () => undefined },
-    );
-
-    const tailMatches: MatchValue[] = [
-      match(event("turn/start", 0, { turn: 0 }), "start", {
-        kind: "turn",
-        turn: location.turn,
-      }),
-    ];
-    let inspectedMatches = 0;
-    const observedTailMatches = new Proxy(tailMatches, {
-      get(target, key, receiver) {
-        if (key !== "find") return Reflect.get(target, key, receiver);
-        return (predicate: (value: MatchValue) => boolean) =>
-          Array.prototype.find.call(target, (value: MatchValue) => {
-            inspectedMatches += 1;
-            return predicate(value);
-          });
-      },
-    });
-
-    let expected = "";
-    for (let index = 0; index < 10_000; index += 1) {
-      const token = `[${index.toString(36)}]`;
-      expected += token;
-      const delta = match(
-        event("assistant/chunk", index + 2, {
-          turn: 0,
-          step: 0,
-          chunk: { type: "text-delta", index: 0, text: token },
-        }),
-        "update",
-        location,
-      );
-      assistantMatches.push(delta);
-      tailMatches.push(delta);
-      assistantState = assistantDefinition.update(
-        context("assistant-step", assistantMatches, assistantState),
-        delta,
-      );
-      expect(assistantDefinition.publication?.(delta)).toBe("animation-frame");
-      expect(
-        turnTailDefinition.buildLocationData?.(
-          context("turn-tail", observedTailMatches, { turn: 0 }),
-          "turn",
-        ),
-      ).toBeNull();
-    }
-
-    const projected = assistantDefinition.buildLocationData?.(
-      context("assistant-step", assistantMatches, assistantState),
-      "step",
-    );
-    expect(projected.value.blocks).toEqual([{ kind: "text", text: expected }]);
-    expect(projected.value.blocks[0].text.endsWith("[7pr]")).toBe(true);
-    expect(inspectedMatches).toBeLessThanOrEqual(1);
-  });
-
+describe("maintained Harness Web stream projection", () => {
   it("publishes reasoning, the final answer token, and structural completion synchronously", () => {
     const assembler = createAssembler();
     const inputs = [

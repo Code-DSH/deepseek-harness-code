@@ -739,19 +739,19 @@ function expectedNodeUrls(platform, architecture) {
     throw new Error(`unsupported Node installer architecture ${architecture}`);
   if (platform === "win32") {
     return {
-      installerUrl: `https://nodejs.org/dist/v22.13.0/node-v22.13.0-${architecture}.msi`,
-      archiveUrl: `https://nodejs.org/dist/v22.13.0/node-v22.13.0-win-${architecture}.zip`,
+      installerUrl: `https://nodejs.org/dist/v22.19.0/node-v22.19.0-${architecture}.msi`,
+      archiveUrl: `https://nodejs.org/dist/v22.19.0/node-v22.19.0-win-${architecture}.zip`,
     };
   }
   if (platform === "darwin")
     return {
-      installerUrl: "https://nodejs.org/dist/v22.13.0/node-v22.13.0.pkg",
-      archiveUrl: `https://nodejs.org/dist/v22.13.0/node-v22.13.0-darwin-${architecture}.tar.gz`,
+      installerUrl: "https://nodejs.org/dist/v22.19.0/node-v22.19.0.pkg",
+      archiveUrl: `https://nodejs.org/dist/v22.19.0/node-v22.19.0-darwin-${architecture}.tar.gz`,
     };
   if (platform === "linux")
     return {
       installerUrl: "https://nodejs.org/en/download",
-      archiveUrl: `https://nodejs.org/dist/v22.13.0/node-v22.13.0-linux-${architecture}.tar.xz`,
+      archiveUrl: `https://nodejs.org/dist/v22.19.0/node-v22.19.0-linux-${architecture}.tar.xz`,
     };
   throw new Error(`unsupported Node installer platform ${platform}`);
 }
@@ -788,7 +788,7 @@ function verifyNodeRequiredEvidence(evidence, expected) {
     expected.runnerArchitecture,
   );
   if (
-    nodeRequired.minimumNodeVersion !== "22.13.0" ||
+    nodeRequired.minimumNodeVersion !== "22.19.0" ||
     nodeRequired.installerUrl !== expectedUrls.installerUrl ||
     nodeRequired.archiveUrl !== expectedUrls.archiveUrl
   )
@@ -960,12 +960,10 @@ async function assertRuntimeProvenance(smokeEvidence, userData, resourcesRoot) {
     },
   );
   const match = stdout.trim().match(/^v(\d+)\.(\d+)\.(\d+)$/u);
-  if (
-    !match ||
-    Number(match[1]) < 22 ||
-    (Number(match[1]) === 22 && Number(match[2]) < 13)
-  )
-    throw new Error("system Node must be semantic version 22.13.0 or newer");
+  const major = Number(match?.[1]);
+  const minor = Number(match?.[2]);
+  if (!match || !((major === 22 && minor >= 19) || major >= 24))
+    throw new Error("system Node must satisfy ^22.19.0 or >=24.0.0");
   if (ready.systemNode.version !== stdout.trim().slice(1))
     throw new Error("system Node version provenance does not match executable");
 }

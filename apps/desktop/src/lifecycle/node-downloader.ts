@@ -14,7 +14,7 @@ import { URL } from "node:url";
  * system Node is detected. This is the minimum supported version — the same
  * floor enforced by {@link system-node.ts#MINIMUM_NODE_VERSION}.
  */
-export const BUNDLED_NODE_VERSION = "22.13.0";
+export const BUNDLED_NODE_VERSION = "22.19.0";
 
 const NODE_DIST_BASE = "https://nodejs.org/dist";
 const NODE_DOWNLOAD_PAGE = "https://nodejs.org/en/download";

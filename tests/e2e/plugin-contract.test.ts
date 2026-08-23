@@ -1,19 +1,17 @@
 import { spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { createRequire } from "node:module";
-import { dirname, join } from "node:path";
+import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import vm from "node:vm";
 
 import { describe, expect, it } from "vitest";
 
 const repositoryRoot = process.cwd();
+const harnessRoot = join(repositoryRoot, "deps", "deepseek-harness");
 const pluginRoot = join(repositoryRoot, "packages", "desktop-plugin");
 const packageName = "deepseek-harness-desktop-plugin";
 const nodeRequire = createRequire(join(repositoryRoot, "package.json"));
-const dshRequire = createRequire(
-  nodeRequire.resolve("@deepseek-ai/dsh/package.json"),
-);
 const { JSDOM } = nodeRequire("jsdom") as {
   JSDOM: new (html?: string, options?: { url?: string }) => any;
 };
@@ -222,14 +220,14 @@ describe("desktop plugin package contract", () => {
       "@deepseek-ai/dsh-client-locale",
     );
     expect(manifest.peerDependencies?.["@deepseek-ai/dsh-client-locale"]).toBe(
-      "^0.1.1-rc.2",
+      "0.1.1-rc.2.code.1",
     );
     expect(
       manifest.peerDependencies?.["@deepseek-ai/dsh-client-ui-primitives"],
-    ).toBe("^0.1.1-rc.2");
+    ).toBe("0.1.1-rc.2.code.1");
     expect(
       manifest.peerDependencies?.["@deepseek-ai/dsh-client-ui-layout"],
-    ).toBe("^0.1.1-rc.2");
+    ).toBe("0.1.1-rc.2.code.1");
   });
 
   it("does not replace the official question protocol packages", () => {
@@ -237,26 +235,40 @@ describe("desktop plugin package contract", () => {
       readFileSync(join(pluginRoot, "package.json"), "utf8"),
     ) as {
       dependencies: Record<string, string>;
+      devDependencies: Record<string, string>;
     };
-    const pnpmRequire = createRequire(
-      join(repositoryRoot, "node_modules", ".pnpm", "lock.yaml"),
-    );
     const askUserSource = readFileSync(
-      pnpmRequire
-        .resolve("@deepseek-ai/dsh-tool-ask-user/package.json")
-        .replace("package.json", "lib/index.js"),
+      join(
+        harnessRoot,
+        "packages",
+        "interaction",
+        "tool-ask-user",
+        "lib",
+        "index.js",
+      ),
       "utf8",
     );
     const questionTypes = readFileSync(
-      pnpmRequire
-        .resolve("@deepseek-ai/dsh-user-questions/package.json")
-        .replace("package.json", "lib/types/types.d.ts"),
+      join(
+        harnessRoot,
+        "packages",
+        "interaction",
+        "user-questions",
+        "lib",
+        "types",
+        "types.d.ts",
+      ),
       "utf8",
     );
     const questionClient = readFileSync(
-      pnpmRequire
-        .resolve("@deepseek-ai/dsh-client-ui-user-questions/package.json")
-        .replace("package.json", "lib/client.js"),
+      join(
+        harnessRoot,
+        "packages",
+        "client",
+        "ui-user-questions",
+        "lib",
+        "client.js",
+      ),
       "utf8",
     );
 
@@ -265,7 +277,13 @@ describe("desktop plugin package contract", () => {
         "@deepseek-ai/dsh-client-ui-user-questions",
         "@deepseek-ai/dsh-tool-ask-user",
         "@deepseek-ai/dsh-user-questions",
-      ].every((name) => manifest.dependencies[name] === "0.1.1-rc.2"),
+      ].every(
+        (name) =>
+          manifest.dependencies[name] === undefined &&
+          manifest.devDependencies[name]?.startsWith(
+            "link:../../deps/deepseek-harness/",
+          ),
+      ),
     ).toBe(true);
     expect(askUserSource).toContain("multi_select");
     expect(askUserSource).toContain("custom");
@@ -758,19 +776,30 @@ describe("desktop plugin package contract", () => {
       dom.window.document,
       dom.window as unknown as Window,
     );
-    dom.window.document.documentElement.dataset.dshDesktopPlatform = "macos";
-
     expect(
       dom.window.getComputedStyle(dom.window.document.body).paddingTop,
     ).toBe("");
 
     const sidebarClient = join(
-      dirname(
-        dshRequire.resolve("@deepseek-ai/dsh-client-ui-sidebar/package.json"),
-      ),
+      harnessRoot,
+      "packages",
+      "client",
+      "ui-sidebar",
       "lib",
       "client.js",
     );
+    const sidebarSource = readFileSync(sidebarClient, "utf8");
+    const expandedRule = sidebarSource.match(
+      /:root\[data-dsh-desktop-platform=macos\] \.([\w-]+)\{padding-top:46px\}/,
+    );
+    const collapsedRule = sidebarSource.match(
+      /:root\[data-dsh-desktop-platform=macos\] \.([\w-]+)\.([\w-]+)\{padding-top:58px\}/,
+    );
+    expect(expandedRule).not.toBeNull();
+    expect(collapsedRule).not.toBeNull();
+    if (expandedRule === null || collapsedRule === null) {
+      throw new Error("maintained Sidebar macOS inset rules were not built");
+    }
     let sidebarRegistration:
       | { factory(require: (id: string) => unknown): unknown }
       | undefined;
@@ -785,7 +814,7 @@ describe("desktop plugin package contract", () => {
       document: dom.window.document,
       window: dom.window,
     });
-    new vm.Script(readFileSync(sidebarClient, "utf8")).runInContext(ctx);
+    new vm.Script(sidebarSource).runInContext(ctx);
     const noop = () => undefined;
     sidebarRegistration?.factory((id) => {
       if (id === "react") return new Proxy({}, { get: () => noop });
@@ -793,10 +822,12 @@ describe("desktop plugin package contract", () => {
       return new Proxy({}, { get: () => noop });
     });
     const sidebar = dom.window.document.createElement("div");
-    sidebar.className = "hHd-Xa_root";
+    sidebar.className = expandedRule[1]!;
     dom.window.document.body.append(sidebar);
+    expect(dom.window.getComputedStyle(sidebar).paddingTop).toBe("");
+    dom.window.document.documentElement.dataset.dshDesktopPlatform = "macos";
     expect(dom.window.getComputedStyle(sidebar).paddingTop).toBe("46px");
-    sidebar.classList.add("hHd-Xa_collapsed");
+    sidebar.classList.add(collapsedRule[2]!);
     expect(dom.window.getComputedStyle(sidebar).paddingTop).toBe("58px");
     dispose();
   });

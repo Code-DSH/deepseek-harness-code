@@ -20,7 +20,7 @@ Vision-router issues: ensure a `+ Auto Vision` model group is selected before se
 
 Better-sidebar: external plugins register via `ctx.betterSidebar`; if the sidebar fails to mount, check `pnpm test:mount` and verify no `client-editor.js` chunk is missing.
 
-The packaged app intentionally does not use ASAR (`asar: false`). Re-enabling ASAR without also changing rc.8 package discovery can produce an empty `window.__DSH_BOOT__.entries` list and a blank or incomplete UI. The app requires system Node >=22.13; missing Node surfaces a guided dialog at startup.
+The packaged app intentionally does not use ASAR (`asar: false`). Re-enabling ASAR without also changing Harness package discovery can produce an empty `window.__DSH_BOOT__.entries` list and a blank or incomplete UI. The app accepts system Node 22.19+ and 24+ but rejects Node 23; missing or unsupported Node surfaces a guided dialog at startup.
 
 If first-launch package installation reports `ENOENT ... packages/patches/.mimosa/hook-state/sess_*.json`, the installed resources contain local tool-session state from an older build rather than a missing Node.js installation. Current builds exclude `.mimosa` from packaged patch/vendor resources and remove stale copies before invoking pnpm; reinstall the current build and retry detection.
 

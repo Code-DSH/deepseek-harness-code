@@ -77,7 +77,6 @@ import {
   adoptBundledGlobalAgentPrompt,
   installGlobalAgentPromptForStartup,
 } from "./lifecycle/global-agent-prompt-link.js";
-import { ensureGlobalDshCli } from "./lifecycle/global-cli-link.js";
 import {
   MINIMUM_NODE_VERSION,
   NODE_DOWNLOAD_PAGE_URL,
@@ -87,7 +86,7 @@ import {
 import { getNodeDownloadUrls } from "./lifecycle/node-downloader.js";
 import { replaceWindowKeepingHostAlive } from "./lifecycle/window-recovery.js";
 import {
-  ensureOfficialHarnessInstall,
+  ensureMaintainedHarnessInstall,
   installAnchoredStandardPresetForStartup,
   installSuperpowersSkillsForStartup,
   migrateLegacyHarnessHome,
@@ -407,9 +406,9 @@ async function showNodeRequiredDialog(
     title: "Node.js required",
     message: isMissing
       ? "DeepSeek Harness Code needs an official system Node.js installation to run the local Harness."
-      : "The pinned Harness packages could not be installed.",
+      : "The maintained Harness packages could not be installed.",
     detail: isMissing
-      ? `No usable Node.js installation was detected. Install Node.js from the official installer, then retry detection. Version ${MINIMUM_NODE_VERSION} or newer is required.`
+      ? `No usable Node.js installation was detected. Install Node.js from the official installer, then retry detection. Node.js ^${MINIMUM_NODE_VERSION} or >=24.0.0 is required; Node.js 23 is unsupported.`
       : `${failedError.message.slice(0, 2_000)}\n\nOfficial Node.js download: ${NODE_DOWNLOAD_PAGE_URL}`,
   };
   const result =
@@ -472,26 +471,8 @@ async function prepareSystemNodeRuntime(
       systemNodeRuntime = node;
       if (ensured.installed) {
         process.stderr.write(
-          `Installed pinned Harness packages under ${userDataPath}/node-runtime.\n`,
+          `Installed Code-DSH maintained Harness packages under ${userDataPath}/node-runtime.\n`,
         );
-      }
-      // Best-effort official CLI availability: failures never block startup.
-      const globalCli = await ensureGlobalDshCli({
-        nodeExecutable: node.executable,
-        runtimeResourcePath,
-      }).catch((error: unknown): { status: "failed"; message?: string } => ({
-        status: "failed",
-        message: error instanceof Error ? error.message : String(error),
-      }));
-      if (globalCli.status === "installed") {
-        process.stderr.write(
-          `Installed the official dsh@${globalCli.pinnedVersion} command globally; it is available in new terminal sessions.\n`,
-        );
-      } else if (
-        globalCli.status !== "present" &&
-        globalCli.message !== undefined
-      ) {
-        process.stderr.write(`Global dsh CLI: ${globalCli.message}\n`);
       }
       return;
     } catch (error) {
@@ -565,7 +546,7 @@ async function startHarness(): Promise<HarnessChild> {
   const migration = await migrateLegacyHarnessHome({ legacyHome, dshHome });
   if (migration.conflicts.length > 0) {
     process.stderr.write(
-      `Legacy Harness data preserved at the official Home without overwriting existing entries: ${migration.conflicts.join(", ")}\n`,
+      `Legacy Harness data preserved in DSH_HOME without overwriting existing entries: ${migration.conflicts.join(", ")}\n`,
     );
   }
   if (migration.skippedSymlinks.length > 0) {
@@ -573,7 +554,7 @@ async function startHarness(): Promise<HarnessChild> {
       `Legacy Harness migration skipped symbolic links: ${migration.skippedSymlinks.join(", ")}\n`,
     );
   }
-  await ensureOfficialHarnessInstall({
+  await ensureMaintainedHarnessInstall({
     dshEntry,
     dshHome,
     nodeExecutable: systemNodeExecutable(),
@@ -622,16 +603,6 @@ async function startHarness(): Promise<HarnessChild> {
       {
         packageName: "deepseek-harness-composition",
         packageRoot: runtime.deepseekHarnessCompositionRoot,
-      },
-      {
-        packageName: "@deepseek-ai/dsh-subagent-codex",
-        packageRoot: runtime.dshSubagentCodexRoot,
-        linkOnly: true,
-      },
-      {
-        packageName: "@deepseek-ai/dsh-subagent-claude-code",
-        packageRoot: runtime.dshSubagentClaudeCodeRoot,
-        linkOnly: true,
       },
       {
         packageName: "@dsh-external/dsh-super-injector",
@@ -690,7 +661,7 @@ async function startHarness(): Promise<HarnessChild> {
   });
   if (globalPrompt.status === "installed") {
     process.stderr.write(
-      "Installed the bundled global AGENTS.md prompt under the official Harness home.\n",
+      "Installed the bundled global AGENTS.md prompt under DSH_HOME.\n",
     );
   } else if (globalPrompt.status === "updated") {
     process.stderr.write(
