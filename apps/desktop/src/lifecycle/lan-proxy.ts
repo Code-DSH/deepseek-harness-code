@@ -12,9 +12,13 @@ import {
 import type { AddressInfo } from "node:net";
 import type { Duplex } from "node:stream";
 
+import type { UpdaterStatus } from "../shared/contracts.js";
+
 const LISTEN_HOST = "0.0.0.0";
 const SESSION_COOKIE = "dsh_lan_session";
 const TOKEN_QUERY = "lanToken";
+const UPDATE_STATUS_PATH = "/__dsh/update/status";
+const UPDATE_EVENTS_PATH = "/__dsh/update/events";
 const HOP_BY_HOP_HEADERS = new Set([
   "connection",
   "keep-alive",
@@ -30,6 +34,13 @@ const PASSWORD_KEY_BYTES = 32;
 
 export interface LanProxyStartResult {
   port: number;
+}
+
+export interface LanProxyHostOptions {
+  getUpdaterStatus?: () => UpdaterStatus;
+  subscribeUpdaterStatus?: (
+    listener: (status: UpdaterStatus) => void,
+  ) => () => void;
 }
 
 type AuthenticationResult =
@@ -140,6 +151,14 @@ function writeSocketResponse(
   socket.end([`HTTP/1.1 ${status} ${reason}`, ...headers, "", ""].join("\r\n"));
 }
 
+function writeUpdaterEvent(
+  response: ServerResponse,
+  status: UpdaterStatus,
+): void {
+  if (response.destroyed) return;
+  response.write(`event: update\ndata: ${JSON.stringify(status)}\n\n`);
+}
+
 function waitForSocketClose(socket: Duplex): Promise<void> {
   if (socket.destroyed) return Promise.resolve();
   return new Promise((resolve) => socket.once("close", resolve));
@@ -183,6 +202,13 @@ export class LanProxyHost {
   private readonly sockets = new Set<Duplex>();
   private readonly outboundRequests = new Set<ClientRequest>();
   private readonly outboundResponses = new Set<IncomingMessage>();
+  private readonly statusStreams = new Set<{
+    response: ServerResponse;
+    unsubscribe: () => void;
+    heartbeat: ReturnType<typeof setInterval>;
+  }>();
+
+  constructor(private readonly options: LanProxyHostOptions = {}) {}
 
   setPassword(password: string): string | undefined {
     this.passwordHash =
@@ -273,6 +299,11 @@ export class LanProxyHost {
     for (const response of this.outboundResponses) response.destroy();
     for (const request of this.outboundRequests) request.destroy();
     for (const socket of this.sockets) socket.destroy();
+    for (const stream of [...this.statusStreams]) {
+      stream.unsubscribe();
+      clearInterval(stream.heartbeat);
+      stream.response.end();
+    }
     const serverClosed =
       server === undefined
         ? Promise.resolve()
@@ -287,6 +318,7 @@ export class LanProxyHost {
     this.sockets.clear();
     this.outboundRequests.clear();
     this.outboundResponses.clear();
+    this.statusStreams.clear();
   }
 
   private trackSocket(socket: Duplex): void {
@@ -429,6 +461,15 @@ export class LanProxyHost {
       return;
     }
 
+    const authenticatedPath = parseRequestPath(authentication.path).pathname;
+    if (
+      authenticatedPath === UPDATE_STATUS_PATH ||
+      authenticatedPath === UPDATE_EVENTS_PATH
+    ) {
+      this.handleUpdaterStatus(incoming, response, authenticatedPath);
+      return;
+    }
+
     const target = new URL(authentication.path, upstream);
     const outbound = requestHttp(
       target,
@@ -468,6 +509,71 @@ export class LanProxyHost {
     });
     incoming.once("aborted", () => outbound.destroy());
     incoming.pipe(outbound);
+  }
+
+  private handleUpdaterStatus(
+    incoming: IncomingMessage,
+    response: ServerResponse,
+    path: string,
+  ): void {
+    if (incoming.method !== "GET") {
+      response.writeHead(405, {
+        allow: "GET",
+        "cache-control": "no-store",
+        "content-type": "text/plain; charset=utf-8",
+      });
+      response.end("Method Not Allowed");
+      return;
+    }
+
+    if (path === UPDATE_STATUS_PATH) {
+      const body = JSON.stringify(
+        this.options.getUpdaterStatus?.() ?? { phase: "idle" },
+      );
+      response.writeHead(200, {
+        "cache-control": "no-store",
+        "content-length": Buffer.byteLength(body),
+        "content-type": "application/json; charset=utf-8",
+        "x-content-type-options": "nosniff",
+      });
+      response.end(body);
+      return;
+    }
+
+    response.writeHead(200, {
+      "cache-control": "no-store",
+      connection: "keep-alive",
+      "content-type": "text/event-stream; charset=utf-8",
+      "x-content-type-options": "nosniff",
+    });
+    response.flushHeaders();
+
+    const stream: {
+      response: ServerResponse;
+      unsubscribe: () => void;
+      heartbeat: ReturnType<typeof setInterval>;
+    } = {
+      response,
+      unsubscribe: () => undefined,
+      heartbeat: setInterval(() => {
+        if (!response.destroyed) response.write(": keep-alive\n\n");
+      }, 15_000),
+    };
+    const cleanup = (): void => {
+      if (!this.statusStreams.delete(stream)) return;
+      stream.unsubscribe();
+      clearInterval(stream.heartbeat);
+    };
+    response.once("close", cleanup);
+    this.statusStreams.add(stream);
+    writeUpdaterEvent(
+      response,
+      this.options.getUpdaterStatus?.() ?? { phase: "idle" },
+    );
+    const listener = (status: UpdaterStatus): void =>
+      writeUpdaterEvent(response, status);
+    stream.unsubscribe =
+      this.options.subscribeUpdaterStatus?.(listener) ?? (() => undefined);
   }
 
   private handleUpgrade(

@@ -25,11 +25,13 @@
 ### Task 1: Preserve the working tree and record the integration baseline
 
 **Files:**
+
 - Modify: `docs/superpowers/specs/2026-08-23-plugin-updater-lan-status-design.md`
 - Modify: `docs/superpowers/plans/2026-08-23-plugin-updater-lan-status.md`
 - Inspect only: current dirty files, `origin/main`, `origin/review/install-update-flow`, and all branch refs
 
 **Interfaces:**
+
 - Consumes: current worktree at `review/install-update-flow`, `origin/main@9e78d31`, existing PR #33.
 - Produces: a recoverable plan and a captured list of pre-existing modified/untracked paths.
 
@@ -56,7 +58,7 @@
 
   Expected: remote refs are current; PR #33 status is evidence only and does not replace local verification.
 
-- [ ] **Step 3: Commit only the design and plan documents**
+- [x] **Step 3: Commit only the design and plan documents**
 
   Run:
 
@@ -70,6 +72,7 @@
 ### Task 2: Add the replayable updater status store
 
 **Files:**
+
 - Create: `apps/desktop/src/lifecycle/updater-status.ts`
 - Test: `tests/unit/updater/status.test.ts`
 - Modify: `apps/desktop/src/main.ts`
@@ -80,14 +83,15 @@
 - Modify: `tests/unit/ipc-handlers.test.ts`
 
 **Interfaces:**
-- Produces `createUpdaterStatusStore(initial?: UpdaterStatus)` with `get(): UpdaterStatus`, `publish(status: UpdaterStatus): void`, and `subscribe(listener: (status: UpdaterStatus) => void): () => void`.
+
+- Produces `createUpdaterStatusStore(initial?: UpdaterStatus)` with `get(): UpdaterStatus`, `publish(status: UpdaterStatus): void`, and `subscribe(listener: (status: UpdaterStatus) => void, options?: { replay?: boolean }): () => void`.
 - Produces preload `window.deepseekDesktop.updater.getStatus(): Promise<UpdaterStatus>` and keeps `check/apply/restart/subscribe` unchanged.
 
-- [ ] **Step 1: Write the failing store test**
+- [x] **Step 1: Write the failing store test**
 
   Add tests asserting an initial `idle` snapshot, immediate subscriber replay, later publish delivery, unsubscribe behavior, and defensive snapshot copies.
 
-- [ ] **Step 2: Run the focused test and observe the expected failure**
+- [x] **Step 2: Run the focused test and observe the expected failure**
 
   ```bash
   pnpm exec vitest run tests/unit/updater/status.test.ts
@@ -95,15 +99,15 @@
 
   Expected: FAIL because `updater-status.ts` does not yet export the store.
 
-- [ ] **Step 3: Implement the minimal store**
+- [x] **Step 3: Implement the minimal store**
 
   Use a `Set` of listeners, publish a copied status object, invoke a new subscriber with the current snapshot, and return an idempotent unsubscribe function. Do not add persistence or timers.
 
-- [ ] **Step 4: Wire the store into main and preload**
+- [x] **Step 4: Wire the store into main and preload**
 
   Main keeps one store initialized to `{ phase: "idle" }`. `publishUpdaterStatus` publishes before sending Electron IPC. Add fixed IPC channel `updater:status` and schema-parse the result. The LAN proxy will consume the same store in Task 3.
 
-- [ ] **Step 5: Update bridge/IPC contract tests and run focused tests**
+- [x] **Step 5: Update bridge/IPC contract tests and run focused tests**
 
   ```bash
   pnpm exec vitest run tests/unit/updater/status.test.ts tests/unit/preload-bridge.test.ts tests/unit/ipc-handlers.test.ts
@@ -114,19 +118,21 @@
 ### Task 3: Add authenticated LAN status JSON and SSE routes
 
 **Files:**
+
 - Modify: `apps/desktop/src/lifecycle/lan-proxy.ts`
 - Modify: `apps/desktop/src/main.ts`
 - Test: `tests/unit/lan-proxy.test.ts`
 
 **Interfaces:**
+
 - `LanProxyHost` accepts optional `getUpdaterStatus?: () => UpdaterStatus` and `subscribeUpdaterStatus?: (listener: (status: UpdaterStatus) => void) => () => void`.
 - Routes are `GET /__dsh/update/status` and `GET /__dsh/update/events`; both return the existing `UpdaterStatus` shape and never forward upstream.
 
-- [ ] **Step 1: Write failing route tests**
+- [x] **Step 1: Write failing route tests**
 
   Add tests for JSON snapshot, SSE initial event plus a later published event, no upstream request, empty-password direct access, and configured-password 401/Basic Auth behavior.
 
-- [ ] **Step 2: Run the focused LAN tests and observe failure**
+- [x] **Step 2: Run the focused LAN tests and observe failure**
 
   ```bash
   pnpm exec vitest run tests/unit/lan-proxy.test.ts
@@ -134,15 +140,15 @@
 
   Expected: FAIL because the special status routes do not yet exist.
 
-- [ ] **Step 3: Implement the JSON route**
+- [x] **Step 3: Implement the JSON route**
 
   Authenticate first, accept only `GET`, serialize the bounded current status with `cache-control: no-store`, `content-type: application/json; charset=utf-8`, and `x-content-type-options: nosniff`.
 
-- [ ] **Step 4: Implement the SSE route and cleanup**
+- [x] **Step 4: Implement the SSE route and cleanup**
 
   Authenticate first, send one `update` event immediately, subscribe to later status changes, send a `: keep-alive` comment every 15 seconds, and remove the listener/timer on client close or proxy stop. Track all status streams so `stop()` cannot leave them open.
 
-- [ ] **Step 5: Run the focused LAN suite**
+- [x] **Step 5: Run the focused LAN suite**
 
   ```bash
   pnpm exec vitest run tests/unit/lan-proxy.test.ts tests/unit/lan-access-controller.test.ts
@@ -153,20 +159,22 @@
 ### Task 4: Move the update panel into `dsh-updater-check`
 
 **Files:**
+
 - Modify: `packages/dsh-updater-check/lib/client.js`
 - Modify: `apps/desktop/src/preload.ts`
 - Test: `tests/e2e/plugin-updater-check.test.ts`
 - Modify: `tests/unit/preload-bridge.test.ts` if the overlay import contract changes
 
 **Interfaces:**
+
 - The plugin consumes `window.deepseekDesktop.updater` in Electron and same-origin `/__dsh/update/events` in LAN browsers.
 - The plugin exports the same official loader shape (`inject: ["slots"]`, `apply(ctx)`), with all visible update UI created by the plugin.
 
-- [ ] **Step 1: Write failing plugin behavior tests**
+- [x] **Step 1: Write failing plugin behavior tests**
 
   Load the plugin through the existing VM harness and assert that its source/module installs a settings row, subscribes to desktop `getStatus/subscribe`, opens the action panel for `available`, renders percentage and byte counts for `downloading`, renders verification and ready-to-restart copy, and does not expose an update mutation function to a remote browser.
 
-- [ ] **Step 2: Run the focused plugin test and observe failure**
+- [x] **Step 2: Run the focused plugin test and observe failure**
 
   ```bash
   pnpm exec vitest run --config tests/e2e/plugin-vitest.config.ts tests/e2e/plugin-updater-check.test.ts
@@ -174,15 +182,15 @@
 
   Expected: FAIL because the current plugin only owns the settings row and the preload owns the overlay.
 
-- [ ] **Step 3: Implement the plugin panel**
+- [x] **Step 3: Implement the plugin panel**
 
   Add a small plugin-owned panel with a single status renderer. Desktop mode calls `getStatus()` on mount, subscribes to updates, and uses `check/apply/restart` only for host actions. Remote mode opens the authenticated SSE endpoint and falls back to bounded polling of `/__dsh/update/status`; remote mode displays status only and says “请在主机桌面确认更新”. Keep bytes and messages bounded by the existing schema.
 
-- [ ] **Step 4: Remove the duplicate preload overlay**
+- [x] **Step 4: Remove the duplicate preload overlay**
 
   Delete only the DOM overlay creation/subscription from `apps/desktop/src/preload.ts`; keep `contextBridge.exposeInMainWorld` and paste shortcut behavior unchanged. This changes our host preload, not official Harness source.
 
-- [ ] **Step 5: Run focused plugin and bridge tests**
+- [x] **Step 5: Run focused plugin and bridge tests**
 
   ```bash
   pnpm exec vitest run --config tests/e2e/plugin-vitest.config.ts tests/e2e/plugin-updater-check.test.ts
@@ -194,6 +202,7 @@
 ### Task 5: Update implementation-backed docs and check the package boundary
 
 **Files:**
+
 - Modify: `packages/dsh-updater-check/package.json`
 - Modify: `packages/README.md`
 - Modify: `docs/architecture/overview.md`
@@ -204,18 +213,19 @@
 - Test: `tests/unit/package-runtime-closure.test.ts` or the closest existing plugin inventory contract
 
 **Interfaces:**
+
 - Documents the plugin-owned UI and host-owned capability boundary without claiming official Harness source changes.
 - Package resources continue to include only the plugin package files required by `electron-builder.yml`.
 
-- [ ] **Step 1: Add/adjust the package contract assertion**
+- [x] **Step 1: Add/adjust the package contract assertion**
 
   Assert the updater package manifest keeps the official Web client platform and bare-name patch, and that no `@deepseek-ai/dsh` source path is bundled or modified.
 
-- [ ] **Step 2: Update docs from observed behavior**
+- [x] **Step 2: Update docs from observed behavior**
 
   Document the two LAN read-only endpoints, authentication behavior, host-only mutation, and the plugin UI ownership. Remove stale wording that says the preload owns the visible update dialog.
 
-- [ ] **Step 3: Run doc/security checks**
+- [x] **Step 3: Run doc/security checks**
 
   ```bash
   pnpm verify:docs
@@ -228,10 +238,12 @@
 ### Task 6: Full verification and local build
 
 **Files:**
+
 - Build outputs: `dist/`, `build/`, `release/` (generated only; do not hand-edit)
 - Test: all existing suites and `scripts/verify-macos-artifact.mjs`
 
 **Interfaces:**
+
 - Consumes the final implementation tree and existing pinned dependency lockfile.
 - Produces a Universal DMG and ZIP with the verified plugin/runtime inventory.
 
@@ -273,9 +285,11 @@
 ### Task 7: Integrate cloud branches without destructive history rewriting
 
 **Files:**
+
 - Git refs/commits only; no source file target is predetermined until branch diffs are reviewed
 
 **Interfaces:**
+
 - Consumes: final feature branch, current `origin/main`, and branch inventory captured in Task 1.
 - Produces: a clean integrated branch/PR state and a documented list of branches already merged, intentionally skipped as historical, or merged after review.
 
@@ -315,10 +329,10 @@
 
 ## Completion checklist
 
-- [ ] Official Harness source remains unchanged.
-- [ ] All visible updater UI is owned by `dsh-updater-check`.
-- [ ] Desktop updater has replayable state and live progress.
-- [ ] LAN HTTP exposes authenticated read-only status JSON/SSE.
-- [ ] Remote clients cannot update or restart the host.
+- [x] Official Harness source remains unchanged.
+- [x] All visible updater UI is owned by `dsh-updater-check`.
+- [x] Desktop updater has replayable state and live progress.
+- [x] LAN HTTP exposes authenticated read-only status JSON/SSE.
+- [x] Remote clients cannot update or restart the host.
 - [ ] Focused, full, security, documentation, build, and DMG checks pass.
 - [ ] Effective cloud branches are integrated without destructive history rewrite.

@@ -12,6 +12,9 @@ describe("preload bridge", () => {
         return { name: "DeepSeek Harness Code", version: "0.1.0-BETA3" };
       }
       if (channel === "runtime:get") return { phase: "ready", restartCount: 0 };
+      if (channel === "updater:status") {
+        return { phase: "downloading", downloadedBytes: 128, totalBytes: 256 };
+      }
       if (channel === "lan-access:get" || channel === "lan-access:set") {
         return {
           enabled: true,
@@ -48,6 +51,7 @@ describe("preload bridge", () => {
     expect(Object.keys(bridge.updater).sort()).toEqual([
       "apply",
       "check",
+      "getStatus",
       "restart",
       "subscribe",
     ]);
@@ -57,6 +61,11 @@ describe("preload bridge", () => {
       "set",
     ]);
     await bridge.runtime.getState();
+    await expect(bridge.updater.getStatus()).resolves.toEqual({
+      phase: "downloading",
+      downloadedBytes: 128,
+      totalBytes: 256,
+    });
     await expect(bridge.app.getInfo()).resolves.toEqual({
       name: "DeepSeek Harness Code",
       version: "0.1.0-BETA3",

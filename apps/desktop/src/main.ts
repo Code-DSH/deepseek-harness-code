@@ -59,6 +59,7 @@ import {
   type SmokeReadyEvidence,
 } from "./lifecycle/smoke-contract.js";
 import { UpdaterHost } from "./lifecycle/updater-host.js";
+import { createUpdaterStatusStore } from "./lifecycle/updater-status.js";
 import { LanProxyHost } from "./lifecycle/lan-proxy.js";
 import {
   LanAccessController,
@@ -113,7 +114,12 @@ let harnessOrigin = "";
 let healthTimer: ReturnType<typeof setInterval> | undefined;
 let watchdogHost: WatchdogHost | undefined;
 let updaterHost: UpdaterHost | undefined;
-const lanProxyHost = new LanProxyHost();
+const updaterStatusStore = createUpdaterStatusStore();
+const lanProxyHost = new LanProxyHost({
+  getUpdaterStatus: () => updaterStatusStore.get(),
+  subscribeUpdaterStatus: (listener) =>
+    updaterStatusStore.subscribe(listener, { replay: false }),
+});
 let tray: Tray | undefined;
 const preferencesStore = new DesktopPreferencesStore(
   DEFAULT_DESKTOP_PREFERENCES,
@@ -900,6 +906,7 @@ function buildMenu(): void {
 }
 
 function publishUpdaterStatus(status: UpdaterStatus): void {
+  updaterStatusStore.publish(status);
   if (mainWindow === undefined || mainWindow.isDestroyed()) return;
   if (mainWindow.webContents.isDestroyed()) return;
   mainWindow.webContents.send("updater:changed", status);
@@ -1064,6 +1071,7 @@ async function launch(): Promise<void> {
     setLanAccess: (value) => lanAccessController.set(value),
     copyLanAccessUrl: async (value) => lanAccessController.copyUrl(value),
     paste: (target) => target.paste(),
+    getUpdaterStatus: () => updaterStatusStore.get(),
     checkForUpdates: () =>
       updaterHost?.check() ?? Promise.resolve({ available: false }),
     applyUpdate: () =>

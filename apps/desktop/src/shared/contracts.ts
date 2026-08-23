@@ -173,6 +173,7 @@ export interface DeepSeekDesktopBridge {
     subscribe(listener: (state: RuntimeState) => void): () => void;
   };
   updater: {
+    getStatus(): Promise<UpdaterStatus>;
     check(): Promise<UpdaterCheckOutcome>;
     apply(): Promise<UpdaterCheckOutcome>;
     restart(): Promise<void>;

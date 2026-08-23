@@ -65,6 +65,9 @@ export class UpdaterHost {
     void opts;
     if (this.checking) return { available: false };
     this.checking = true;
+    this.pendingAsset = undefined;
+    this.pendingVersion = undefined;
+    this.pendingNotes = undefined;
     this.publish({ phase: "checking" });
     try {
       const result = await checkForUpdate(this.deps);

@@ -122,6 +122,9 @@ export function createDesktopBridge(ipc: RendererIpc): DeepSeekDesktopBridge {
       },
     },
     updater: {
+      async getStatus() {
+        return updaterStatusSchema.parse(await ipc.invoke("updater:status"));
+      },
       async check() {
         return (await ipc.invoke("updater:check")) as UpdaterCheckOutcome;
       },

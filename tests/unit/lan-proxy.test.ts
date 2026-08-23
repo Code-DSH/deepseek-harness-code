@@ -13,6 +13,7 @@ import {
   expect,
   it,
 } from "vitest";
+import type { UpdaterStatus } from "../../apps/desktop/src/shared/contracts.js";
 
 interface LanProxyStartResult {
   port: number;
@@ -23,6 +24,13 @@ interface LanProxyHostLike {
   setPassword(password: string): void;
   issueAccessUrl(): string;
   stop(): Promise<void>;
+}
+
+interface LanProxyOptions {
+  getUpdaterStatus?: () => UpdaterStatus;
+  subscribeUpdaterStatus?: (
+    listener: (status: UpdaterStatus) => void,
+  ) => () => void;
 }
 
 interface UpstreamRequest {
@@ -38,7 +46,9 @@ interface HttpResult {
   body: string;
 }
 
-type LanProxyHostConstructor = new () => LanProxyHostLike;
+type LanProxyHostConstructor = new (
+  options?: LanProxyOptions,
+) => LanProxyHostLike;
 
 async function loadLanProxyHost(): Promise<LanProxyHostConstructor> {
   const module = await import("../../apps/desktop/src/lifecycle/lan-proxy.js");
@@ -306,7 +316,11 @@ function openWebsocketTunnel(
 function openHttpStream(
   url: string | URL,
   cookie: string,
-): Promise<{ firstChunk: string; socket: Socket }> {
+): Promise<{
+  firstChunk: string;
+  socket: Socket;
+  response: import("node:http").IncomingMessage;
+}> {
   return new Promise((resolve, reject) => {
     let settled = false;
     const outbound = request(url, { headers: { cookie } }, (response) => {
@@ -314,7 +328,7 @@ function openHttpStream(
         const socket = response.socket;
         if (settled || socket === null) return;
         settled = true;
-        resolve({ firstChunk: chunk.toString("utf8"), socket });
+        resolve({ firstChunk: chunk.toString("utf8"), socket, response });
       });
     });
     outbound.once("error", (error) => {
@@ -323,6 +337,27 @@ function openHttpStream(
       reject(error);
     });
     outbound.end();
+  });
+}
+
+function waitForResponseData(
+  response: import("node:http").IncomingMessage,
+  marker: string,
+): Promise<boolean> {
+  return new Promise((resolve) => {
+    let data = "";
+    const onData = (chunk: Buffer): void => {
+      data += chunk.toString("utf8");
+      if (!data.includes(marker)) return;
+      clearTimeout(timer);
+      response.off("data", onData);
+      resolve(true);
+    };
+    const timer = setTimeout(() => {
+      response.off("data", onData);
+      resolve(false);
+    }, 2_000);
+    response.on("data", onData);
   });
 }
 
@@ -483,6 +518,71 @@ describe("LAN proxy", () => {
       },
     });
     expect(authorized.status).toBe(200);
+  });
+
+  it("serves a read-only updater status snapshot without forwarding upstream", async () => {
+    const status: UpdaterStatus = {
+      phase: "downloading",
+      version: "0.1.0-BETA3",
+      downloadedBytes: 512,
+      totalBytes: 1024,
+    };
+    const LanProxyHost = await loadLanProxyHost();
+    proxy = new LanProxyHost({ getUpdaterStatus: () => status });
+    const started = await startProxy(proxy, upstreamOrigin);
+    const url = viaLoopback(started.accessUrl);
+    url.pathname = "/__dsh/update/status";
+    url.search = "";
+
+    const response = await httpRequest(url);
+
+    expect(response.status).toBe(200);
+    expect(response.headers["cache-control"]).toBe("no-store");
+    expect(response.headers["content-type"]).toContain("application/json");
+    expect(JSON.parse(response.body)).toEqual(status);
+    expect(upstreamRequests).toHaveLength(0);
+  });
+
+  it("streams the current and later updater statuses to an authenticated LAN client", async () => {
+    let status: UpdaterStatus = {
+      phase: "available",
+      version: "0.1.0-BETA3",
+    };
+    let listener: ((next: UpdaterStatus) => void) | undefined;
+    const LanProxyHost = await loadLanProxyHost();
+    proxy = new LanProxyHost({
+      getUpdaterStatus: () => status,
+      subscribeUpdaterStatus: (next) => {
+        listener = next;
+        return () => {
+          listener = undefined;
+        };
+      },
+    });
+    const started = await startProxy(proxy, upstreamOrigin);
+    const url = viaLoopback(started.accessUrl);
+    url.pathname = "/__dsh/update/events";
+    url.search = "";
+
+    const stream = await openHttpStream(url, "");
+    expect(stream.firstChunk).toContain(
+      `event: update\ndata: ${JSON.stringify(status)}\n\n`,
+    );
+
+    status = {
+      phase: "downloading",
+      version: "0.1.0-BETA3",
+      downloadedBytes: 512,
+      totalBytes: 1024,
+    };
+    const laterStatus = waitForResponseData(
+      stream.response,
+      '"downloadedBytes":512',
+    );
+    listener?.(status);
+    expect(await laterStatus).toBe(true);
+    stream.socket.destroy();
+    expect(upstreamRequests).toHaveLength(0);
   });
 
   it("exchanges the query token once for a distinct session cookie", async () => {

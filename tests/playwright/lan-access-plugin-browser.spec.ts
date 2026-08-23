@@ -127,6 +127,7 @@ test("shows every address and copies only the selected address payload", async (
         subscribe: () => () => undefined,
       },
       updater: {
+        getStatus: async () => ({ phase: "idle" as const }),
         check: async () => ({ available: false }),
         apply: async () => ({ available: false }),
         restart: async () => undefined,

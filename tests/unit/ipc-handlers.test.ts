@@ -31,6 +31,7 @@ describe("desktop IPC handlers", () => {
       },
       {
         getRuntimeState: () => ({ phase: "ready", restartCount: 0 }),
+        getUpdaterStatus: () => ({ phase: "idle" }),
         getAppInfo: vi.fn(() => ({
           name: "DeepSeek Harness Code",
           version: "0.1.0-BETA3",
@@ -71,6 +72,7 @@ describe("desktop IPC handlers", () => {
       "updater:apply",
       "updater:check",
       "updater:restart",
+      "updater:status",
     ]);
     expect(
       [...handlers.keys()].filter((channel) =>
@@ -142,6 +144,7 @@ describe("desktop IPC handlers", () => {
       },
       {
         getRuntimeState: () => ({ phase: "ready", restartCount: 0 }),
+        getUpdaterStatus: () => ({ phase: "idle" }),
         getAppInfo: vi.fn(() => ({
           name: "DeepSeek Harness Code",
           version: "0.1.0-BETA3",
