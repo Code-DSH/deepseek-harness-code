@@ -16,3 +16,4 @@ build/routing-suite/
 build/node-runtime/
 build/
 config/node-runtime/vendor/dsh/
+/.pnpm-store
