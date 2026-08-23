@@ -21,22 +21,42 @@ export interface SecureWebPreferences {
   contextIsolation: true;
   sandbox: true;
   nodeIntegration: false;
-  preload: string;
+  preload?: string;
 }
 
 export function createSecureWebPreferences(
-  preload: string,
+  preload?: string,
 ): SecureWebPreferences {
   return {
     contextIsolation: true,
     sandbox: true,
     nodeIntegration: false,
-    preload,
+    ...(preload === undefined ? {} : { preload }),
   };
 }
 
 export function createStartupPagePath(appPath: string): string {
   return join(appPath, "apps", "desktop", "src", "startup.html");
+}
+
+export function createDependencyInstallPagePath(appPath: string): string {
+  return join(appPath, "apps", "desktop", "src", "dependency-install.html");
+}
+
+export function createDependencyInstallWindowOptions() {
+  return {
+    title: "DeepSeek Harness Code",
+    width: 420,
+    height: 180,
+    show: false,
+    modal: true,
+    resizable: false,
+    minimizable: false,
+    maximizable: false,
+    fullscreenable: false,
+    closable: false,
+    autoHideMenuBar: true,
+  };
 }
 
 export function createTrayIconPath(

@@ -11,6 +11,7 @@ directories:
 files:
   - dist/desktop/**/*
   - apps/desktop/src/startup.html
+  - apps/desktop/src/dependency-install.html
   - package.json
   # The packaged app carries no node_modules. The first launch runs on the
   # auto-detected system official Node.js (>=22.13) and installs the pinned

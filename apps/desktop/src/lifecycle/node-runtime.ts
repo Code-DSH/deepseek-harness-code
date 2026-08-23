@@ -1,4 +1,3 @@
-import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { createReadStream } from "node:fs";
 import {
@@ -13,6 +12,7 @@ import {
 } from "node:fs/promises";
 import { basename, delimiter, dirname, join } from "node:path";
 import type { ResolvedSystemNode } from "./system-node.js";
+import { runAsyncCommand } from "./async-command.js";
 
 const MARKER_SCHEMA_VERSION = 2;
 
@@ -222,11 +222,16 @@ export function childEnvWithNodeOnPath(
   };
 }
 
-export type InstallRuntimePackages = (input: {
+export interface InstallRuntimePackagesInput {
   nodeExecutable: string;
   pnpmEntry: string;
   paths: NodeRuntimePaths;
-}) => Promise<void>;
+  runCommand?: typeof runAsyncCommand;
+}
+
+export type InstallRuntimePackages = (
+  input: InstallRuntimePackagesInput,
+) => Promise<void>;
 
 function isRuntimeResourcePath(source: string): boolean {
   return basename(source) !== ".mimosa";
@@ -236,6 +241,7 @@ export const installRuntimePackages: InstallRuntimePackages = async ({
   nodeExecutable,
   pnpmEntry,
   paths,
+  runCommand = runAsyncCommand,
 }) => {
   const runtimeResourceDir = dirname(pnpmEntry);
   await mkdir(paths.packagesDir, { recursive: true, mode: 0o700 });
@@ -276,9 +282,9 @@ export const installRuntimePackages: InstallRuntimePackages = async ({
     join(paths.packagesDir, "vendor"),
     { recursive: true, filter: isRuntimeResourcePath },
   ).catch(() => undefined);
-  const result = spawnSync(
-    nodeExecutable,
-    [
+  const result = await runCommand({
+    command: nodeExecutable,
+    args: [
       pnpmEntry,
       "install",
       "--dir",
@@ -289,14 +295,9 @@ export const installRuntimePackages: InstallRuntimePackages = async ({
       paths.pnpmStoreDir,
       "--reporter=append-only",
     ],
-    {
-      encoding: "utf8",
-      env: childEnvWithNodeOnPath(nodeExecutable),
-      shell: false,
-      windowsHide: true,
-      timeout: 15 * 60_000,
-    },
-  );
+    env: childEnvWithNodeOnPath(nodeExecutable),
+    timeoutMs: 15 * 60_000,
+  });
   if (result.error !== undefined || result.status !== 0) {
     const diagnostic =
       result.error?.message ?? String(result.stderr ?? "").slice(0, 2_000);
@@ -313,6 +314,7 @@ export interface EnsureRuntimePackagesInput {
   platform?: NodeJS.Platform;
   arch?: string;
   installRuntimePackages?: InstallRuntimePackages;
+  onInstallStart?: () => void | Promise<void>;
 }
 
 export interface EnsureRuntimePackagesResult {
@@ -364,6 +366,7 @@ export async function ensureRuntimePackages(
 
   await mkdir(paths.rootDir, { recursive: true, mode: 0o700 });
   const install = input.installRuntimePackages ?? installRuntimePackages;
+  await input.onInstallStart?.();
   await install({
     nodeExecutable: input.systemNode.executable,
     pnpmEntry: join(input.runtimeResourcePath, "pnpm.mjs"),

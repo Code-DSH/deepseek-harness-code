@@ -21,4 +21,17 @@ describe("startup loading UI", () => {
     expect(html).not.toContain("DeepSeek Harness Code</h1>");
     expect(html).toContain("prefers-reduced-motion: reduce");
   });
+
+  it("explains the first-launch dependency install in a modal progress page", async () => {
+    const html = await readFile(
+      join(process.cwd(), "apps/desktop/src/dependency-install.html"),
+      "utf8",
+    );
+    expect(html).toContain("首次启动需要安装依赖");
+    expect(html).toContain("预计需要 5–10 分钟，具体取决于网络速度。");
+    expect(html).toContain("<progress");
+    expect(html).toContain('aria-label="正在安装依赖"');
+    expect(html).toContain("prefers-color-scheme: dark");
+    expect(html).not.toContain("script");
+  });
 });

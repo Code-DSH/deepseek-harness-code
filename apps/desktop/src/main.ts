@@ -17,6 +17,8 @@ import {
 } from "electron";
 
 import {
+  createDependencyInstallPagePath,
+  createDependencyInstallWindowOptions,
   createHarnessLaunchSpec,
   resolveHarnessDataPaths,
   createSecureWebPreferences,
@@ -110,6 +112,7 @@ import {
 } from "./application-menu.js";
 
 let mainWindow: BrowserWindow | undefined;
+let dependencyInstallWindow: BrowserWindow | undefined;
 let controller: HarnessRuntimeController | undefined;
 let harnessOrigin = "";
 let healthTimer: ReturnType<typeof setInterval> | undefined;
@@ -219,16 +222,17 @@ async function chooseCloseBehavior(): Promise<PersistedCloseBehavior> {
 
 function configureWindowNavigation(
   window: BrowserWindow,
-  allowStartupPage: boolean,
+  allowedLocalPagePath?: string,
 ): void {
-  const startupPageUrl = pathToFileURL(
-    createStartupPagePath(app.getAppPath()),
-  ).href;
+  const allowedLocalPageUrl =
+    allowedLocalPagePath === undefined
+      ? undefined
+      : pathToFileURL(allowedLocalPagePath).href;
   const handleNavigation = (event: Electron.Event, url: string) => {
     const decision = classifyNavigation(
       url,
       harnessOrigin,
-      allowStartupPage ? startupPageUrl : undefined,
+      allowedLocalPageUrl,
     );
     if (decision === "allow-in-app") return;
     event.preventDefault();
@@ -238,11 +242,8 @@ function configureWindowNavigation(
   window.webContents.on("will-redirect", handleNavigation);
   window.webContents.setWindowOpenHandler(({ url }) => {
     if (
-      classifyNavigation(
-        url,
-        harnessOrigin,
-        allowStartupPage ? startupPageUrl : undefined,
-      ) === "open-external"
+      classifyNavigation(url, harnessOrigin, allowedLocalPageUrl) ===
+      "open-external"
     ) {
       void shell.openExternal(url);
     }
@@ -266,7 +267,10 @@ function createWindow(showStartupPage = true): BrowserWindow {
     webPreferences: createSecureWebPreferences(join(__dirname, "preload.js")),
   });
   mainWindow = window;
-  configureWindowNavigation(window, showStartupPage);
+  const startupPagePath = showStartupPage
+    ? createStartupPagePath(app.getAppPath())
+    : undefined;
+  configureWindowNavigation(window, startupPagePath);
   window.on("ready-to-show", () => window.show());
   window.webContents.on("render-process-gone", () =>
     controller?.handleRendererGone(),
@@ -287,9 +291,43 @@ function createWindow(showStartupPage = true): BrowserWindow {
     event.preventDefault();
     void handleWindowClose(window).catch(reportRuntimeFailure);
   });
-  if (showStartupPage)
-    void window.loadFile(createStartupPagePath(app.getAppPath()));
+  if (startupPagePath !== undefined) void window.loadFile(startupPagePath);
   return window;
+}
+
+function showDependencyInstallProgress(): void {
+  if (
+    dependencyInstallWindow !== undefined &&
+    !dependencyInstallWindow.isDestroyed()
+  ) {
+    return;
+  }
+  if (mainWindow === undefined || mainWindow.isDestroyed()) return;
+
+  const pagePath = createDependencyInstallPagePath(app.getAppPath());
+  const progressWindow = new BrowserWindow({
+    ...createDependencyInstallWindowOptions(),
+    parent: mainWindow,
+    webPreferences: createSecureWebPreferences(),
+  });
+  dependencyInstallWindow = progressWindow;
+  configureWindowNavigation(progressWindow, pagePath);
+  progressWindow.once("ready-to-show", () => {
+    if (!progressWindow.isDestroyed()) progressWindow.show();
+  });
+  progressWindow.on("closed", () => {
+    if (dependencyInstallWindow === progressWindow)
+      dependencyInstallWindow = undefined;
+  });
+  void progressWindow.loadFile(pagePath).catch(reportRuntimeFailure);
+}
+
+function closeDependencyInstallProgress(): void {
+  const progressWindow = dependencyInstallWindow;
+  dependencyInstallWindow = undefined;
+  if (progressWindow !== undefined && !progressWindow.isDestroyed()) {
+    progressWindow.destroy();
+  }
 }
 
 async function handleWindowClose(window: BrowserWindow): Promise<void> {
@@ -458,6 +496,7 @@ async function prepareSystemNodeRuntime(
         userDataPath,
         runtimeResourcePath,
         systemNode: node,
+        onInstallStart: showDependencyInstallProgress,
       });
       nodeRuntimePaths = ensured.paths;
       systemNodeRuntime = node;
@@ -466,7 +505,7 @@ async function prepareSystemNodeRuntime(
           `Installed pinned Harness packages under ${userDataPath}/node-runtime.\n`,
         );
       }
-      // Best-effort official CLI availability: never block startup on it.
+      // Best-effort official CLI availability: failures never block startup.
       const globalCli = await ensureGlobalDshCli({
         nodeExecutable: node.executable,
         runtimeResourcePath,
@@ -484,8 +523,10 @@ async function prepareSystemNodeRuntime(
       ) {
         process.stderr.write(`Global dsh CLI: ${globalCli.message}\n`);
       }
+      closeDependencyInstallProgress();
       return;
     } catch (error) {
+      closeDependencyInstallProgress();
       const failedError =
         error instanceof Error ? error : new Error("Unknown runtime error");
       const choice = await showNodeRequiredDialog(failedError);
