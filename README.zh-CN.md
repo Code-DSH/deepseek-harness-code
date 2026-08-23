@@ -151,22 +151,22 @@ V4 Pro 是该整合基础增强的重要能力之一，而非唯一中心。固�
 
 ## 功能矩阵
 
-| 领域     | 已包含                                                  |
-| -------- | ------------------------------------------------------- |
-| 桌面宿主 | 强化窗口、启动页、原生菜单、托盘、关闭偏好              |
-| Harness  | 固定 `@deepseek-ai/dsh` 0.1.1-rc.2，回环服务，单一 Home |
-| V4 模型  | 官方目录与 `off` / `high` / `max` 控制                  |
-| 能力栈   | Skills、Goal / Plan / Workflow / Todo / Jobs / 提问     |
-| Skills   | Superpowers 6.2.0，不覆盖用户                           |
-| 全局协议 | `AGENTS.md` 所有权安全安装与备份切换                    |
-| 全局 CLI | 固定 `dsh` 经 `npm install -g`                          |
-| 预设     | Standard 默认，可选 anchored / router                   |
-| 恢复     | 健康探测、重启、渲染器替换、端口重试                    |
-| Watchdog | 独立 IPC，有界重启与熔断                                |
+| 领域     | 已包含                                                             |
+| -------- | ------------------------------------------------------------------ |
+| 桌面宿主 | 强化窗口、启动页、原生菜单、托盘、关闭偏好                         |
+| Harness  | 固定 `@deepseek-ai/dsh` 0.1.1-rc.2，回环服务，单一 Home            |
+| V4 模型  | 官方目录与 `off` / `high` / `max` 控制                             |
+| 能力栈   | Skills、Goal / Plan / Workflow / Todo / Jobs / 提问                |
+| Skills   | Superpowers 6.2.0，不覆盖用户                                      |
+| 全局协议 | `AGENTS.md` 所有权安全安装与备份切换                               |
+| 全局 CLI | 固定 `dsh` 经 `npm install -g`                                     |
+| 预设     | Standard 默认，可选 anchored / router                              |
+| 恢复     | 健康探测、重启、渲染器替换、端口重试                               |
+| Watchdog | 独立 IPC，有界重启与熔断                                           |
 | 插件     | 桌面、UI Motion、Model2、Find、Routing、Settings Tools、插件市场等 |
-| 诊断     | 启动证据、运行态、脱敏轮转日志                          |
-| 安全     | 沙箱渲染器、无 Node 集成、校验 IPC                      |
-| 打包     | macOS Universal DMG；Windows NSIS；Linux AppImage/deb   |
+| 诊断     | 启动证据、运行态、脱敏轮转日志                                     |
+| 安全     | 沙箱渲染器、无 Node 集成、校验 IPC                                 |
+| 打包     | macOS Universal DMG；Windows NSIS；Linux AppImage/deb              |
 
 ## 路由套件
 

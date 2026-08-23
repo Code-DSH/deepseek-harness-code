@@ -251,7 +251,11 @@ for (const [directory, packageName, version] of [
   ["dsh-updater-check", "dsh-updater-check", "1.0.0"],
   ["dsh-lan-access", "dsh-lan-access", "1.0.0"],
   ["dsh-settings-tools", "dsh-settings-tools", "1.0.0"],
-  ["dsh-plugin-market", "@dsh-external/deepseek-harness-plugin-market", "0.1.0"],
+  [
+    "dsh-plugin-market",
+    "@dsh-external/deepseek-harness-plugin-market",
+    "0.1.0",
+  ],
   ["dsh-superpowers", "dsh-superpowers", "0.1.0"],
 ]) {
   const pluginRoot = join(projectRoot, "packages", directory);

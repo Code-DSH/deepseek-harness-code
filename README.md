@@ -151,22 +151,22 @@ Long sessions rarely crash dramatically — pressure accumulates: renderer stall
 
 ## Feature matrix
 
-| Area          | Included                                                    |
-| ------------- | ----------------------------------------------------------- |
-| Desktop host  | Hardened window, startup page, native menus, tray           |
-| Harness       | Pinned `@deepseek-ai/dsh` 0.1.1-rc.2, loopback, single Home |
-| V4 models     | Official catalog and `off` / `high` / `max`                 |
-| Stack         | Skills, Goal / Plan / Workflow / Todo / Jobs / questions    |
-| Skills        | Superpowers 6.2.0, never overwriting user                   |
-| Global prompt | `AGENTS.md` ownership-safe install and backup switch        |
-| Global CLI    | Pinned `dsh` via `npm install -g`                           |
-| Presets       | Standard default, optional anchored / router                |
-| Recovery      | Health probes, restart, renderer replacement, port retry    |
-| Watchdog      | Independent IPC, bounded restart and circuit breaker        |
+| Area          | Included                                                                       |
+| ------------- | ------------------------------------------------------------------------------ |
+| Desktop host  | Hardened window, startup page, native menus, tray                              |
+| Harness       | Pinned `@deepseek-ai/dsh` 0.1.1-rc.2, loopback, single Home                    |
+| V4 models     | Official catalog and `off` / `high` / `max`                                    |
+| Stack         | Skills, Goal / Plan / Workflow / Todo / Jobs / questions                       |
+| Skills        | Superpowers 6.2.0, never overwriting user                                      |
+| Global prompt | `AGENTS.md` ownership-safe install and backup switch                           |
+| Global CLI    | Pinned `dsh` via `npm install -g`                                              |
+| Presets       | Standard default, optional anchored / router                                   |
+| Recovery      | Health probes, restart, renderer replacement, port retry                       |
+| Watchdog      | Independent IPC, bounded restart and circuit breaker                           |
 | Plugins       | Desktop, UI Motion, Model2, Find, Routing, Settings Tools, Plugin Market, etc. |
-| Diagnostics   | Startup evidence, runtime state, redacted rotated logs      |
-| Security      | Sandboxed renderer, no Node integration, validated IPC      |
-| Packaging     | macOS Universal DMG; Windows NSIS; Linux AppImage/deb       |
+| Diagnostics   | Startup evidence, runtime state, redacted rotated logs                         |
+| Security      | Sandboxed renderer, no Node integration, validated IPC                         |
+| Packaging     | macOS Universal DMG; Windows NSIS; Linux AppImage/deb                          |
 
 ## Routing suite
 
