@@ -40,8 +40,8 @@ describe("global dsh CLI provisioning", () => {
     const resource = await createResource(root);
     const runNpm = vi
       .fn<NpmRunner>()
-      .mockReturnValueOnce(lsResult())
-      .mockReturnValueOnce({ status: 0, stdout: "", stderr: "" });
+      .mockResolvedValueOnce(lsResult())
+      .mockResolvedValueOnce({ status: 0, stdout: "", stderr: "" });
 
     const result = await ensureGlobalDshCli({
       nodeExecutable: "/usr/bin/node",
@@ -71,7 +71,7 @@ describe("global dsh CLI provisioning", () => {
   it("does nothing when the pinned version is already global", async () => {
     const root = await mkdtemp(join(tmpdir(), "dhc-cli-present-"));
     const resource = await createResource(root);
-    const runNpm = vi.fn<NpmRunner>().mockReturnValue(lsResult("0.1.0-rc.6"));
+    const runNpm = vi.fn<NpmRunner>().mockResolvedValue(lsResult("0.1.0-rc.6"));
 
     const result = await ensureGlobalDshCli({
       nodeExecutable: "/usr/bin/node",
@@ -89,7 +89,7 @@ describe("global dsh CLI provisioning", () => {
   it("keeps a user-managed global version and only reports the mismatch", async () => {
     const root = await mkdtemp(join(tmpdir(), "dhc-cli-mismatch-"));
     const resource = await createResource(root);
-    const runNpm = vi.fn<NpmRunner>().mockReturnValue(lsResult("0.2.0"));
+    const runNpm = vi.fn<NpmRunner>().mockResolvedValue(lsResult("0.2.0"));
 
     const result = await ensureGlobalDshCli({
       nodeExecutable: "/usr/bin/node",
@@ -105,7 +105,7 @@ describe("global dsh CLI provisioning", () => {
   it("degrades to a manual command when npm itself is unavailable", async () => {
     const root = await mkdtemp(join(tmpdir(), "dhc-cli-nonpm-"));
     const resource = await createResource(root);
-    const runNpm = vi.fn<NpmRunner>().mockReturnValue({
+    const runNpm = vi.fn<NpmRunner>().mockResolvedValue({
       status: null,
       stdout: "",
       stderr: "",
@@ -129,8 +129,8 @@ describe("global dsh CLI provisioning", () => {
     const resource = await createResource(root);
     const runNpm = vi
       .fn<NpmRunner>()
-      .mockReturnValueOnce(lsResult())
-      .mockReturnValueOnce({
+      .mockResolvedValueOnce(lsResult())
+      .mockResolvedValueOnce({
         status: 1,
         stdout: "",
         stderr: "network unreachable",

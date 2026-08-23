@@ -18,6 +18,7 @@ import {
   resolveNodeRuntimePaths,
   sha256File,
 } from "../../apps/desktop/src/lifecycle/node-runtime.js";
+import { runAsyncCommand } from "../../apps/desktop/src/lifecycle/async-command.js";
 import type { ResolvedSystemNode } from "../../apps/desktop/src/lifecycle/system-node.js";
 
 function systemNode(
@@ -59,6 +60,23 @@ async function createInstalledPackages(paths: {
 }
 
 describe("pinned runtime packages driven by the system Node", () => {
+  it("runs the package installer without blocking the Electron event loop", async () => {
+    let settled = false;
+    const install = runAsyncCommand({
+      command: process.execPath,
+      args: ["-e", "setTimeout(() => process.exit(0), 200)"],
+      env: process.env,
+      timeoutMs: 1_000,
+    });
+    void install.then(() => {
+      settled = true;
+    });
+
+    await new Promise<void>((resolve) => setTimeout(resolve, 20));
+    expect(settled).toBe(false);
+    await expect(install).resolves.toMatchObject({ status: 0, stderr: "" });
+  });
+
   it("does not copy local Mimosa session state into the installed runtime", async () => {
     const root = await mkdtemp(join(tmpdir(), "dhc-node-stage-"));
     const resource = join(root, "resource");
@@ -225,6 +243,7 @@ describe("pinned runtime packages driven by the system Node", () => {
     const install = vi.fn(async () => {
       await createInstalledPackages(paths);
     });
+    const onInstallStart = vi.fn();
 
     const first = await ensureRuntimePackages({
       userDataPath: userData,
@@ -233,10 +252,12 @@ describe("pinned runtime packages driven by the system Node", () => {
       platform: "darwin",
       arch: "x64",
       installRuntimePackages: install,
+      onInstallStart,
     });
 
     expect(first).toMatchObject({ installed: true, paths });
     expect(install).toHaveBeenCalledTimes(1);
+    expect(onInstallStart).toHaveBeenCalledTimes(1);
     expect(install).toHaveBeenCalledWith(
       expect.objectContaining({
         nodeExecutable: "/usr/bin/node",
@@ -262,9 +283,11 @@ describe("pinned runtime packages driven by the system Node", () => {
       platform: "darwin",
       arch: "x64",
       installRuntimePackages: install,
+      onInstallStart,
     });
     expect(second.installed).toBe(false);
     expect(install).toHaveBeenCalledTimes(1);
+    expect(onInstallStart).toHaveBeenCalledTimes(1);
   });
 
   it("reinstalls when the system Node major version changes", async () => {

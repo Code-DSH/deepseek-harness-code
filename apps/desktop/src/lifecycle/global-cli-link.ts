@@ -1,9 +1,9 @@
-import { spawnSync } from "node:child_process";
 import { accessSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 
 import { childEnvWithNodeOnPath } from "./node-runtime.js";
+import { runAsyncCommand } from "./async-command.js";
 
 export type GlobalDshCliStatus =
   | "installed"
@@ -25,7 +25,7 @@ export interface NpmCommandResult {
   error?: Error;
 }
 
-export type NpmRunner = (args: readonly string[]) => NpmCommandResult;
+export type NpmRunner = (args: readonly string[]) => Promise<NpmCommandResult>;
 
 export interface EnsureGlobalDshCliInput {
   nodeExecutable: string;
@@ -74,36 +74,14 @@ function createDefaultNpmRunner(nodeExecutable: string): NpmRunner {
     npmCliAvailable = false;
   }
   const env = childEnvWithNodeOnPath(nodeExecutable);
-  return (args) => {
-    const result = npmCliAvailable
-      ? spawnSync(nodeExecutable, [npmCli, ...args], {
-          encoding: "utf8",
-          env,
-          shell: false,
-          windowsHide: true,
-          timeout: 10 * 60_000,
-        })
-      : spawnSync("npm", [...args], {
-          encoding: "utf8",
-          env,
-          shell: false,
-          windowsHide: true,
-          timeout: 10 * 60_000,
-        });
-    if (result.error !== undefined) {
-      return {
-        status: null,
-        stdout: result.stdout ?? "",
-        stderr: result.stderr ?? "",
-        error: result.error,
-      };
-    }
-    return {
-      status: result.status,
-      stdout: result.stdout ?? "",
-      stderr: result.stderr ?? "",
-    };
-  };
+  return async (args) =>
+    await runAsyncCommand({
+      command: npmCliAvailable ? nodeExecutable : "npm",
+      args: npmCliAvailable ? [npmCli, ...args] : args,
+      env,
+      timeoutMs: 10 * 60_000,
+      maxOutputCharacters: 10_000,
+    });
 }
 
 function parseInstalledVersion(lsJson: string): string | undefined {
@@ -124,7 +102,8 @@ function parseInstalledVersion(lsJson: string): string | undefined {
  * upstream one-liner (`npm install -g @deepseek-ai/dsh`). Runs at every
  * startup: installs the app's pinned version when the CLI is missing, leaves
  * an existing user installation untouched (noting version differences), and
- * never blocks app startup — failures degrade to a logged manual command.
+ * never freezes Electron's event loop; failures degrade to a logged manual
+ * command.
  */
 export async function ensureGlobalDshCli(
   input: EnsureGlobalDshCliInput,
@@ -132,7 +111,13 @@ export async function ensureGlobalDshCli(
   const pinnedVersion = await readPinnedDshVersion(input.runtimeResourcePath);
   const runNpm = input.runNpm ?? createDefaultNpmRunner(input.nodeExecutable);
 
-  const listing = runNpm(["ls", "-g", DSH_PACKAGE, "--depth=0", "--json"]);
+  const listing = await runNpm([
+    "ls",
+    "-g",
+    DSH_PACKAGE,
+    "--depth=0",
+    "--json",
+  ]);
   if (listing.error !== undefined) {
     return {
       status: "failed",
@@ -153,7 +138,11 @@ export async function ensureGlobalDshCli(
     };
   }
 
-  const install = runNpm(["install", "-g", `${DSH_PACKAGE}@${pinnedVersion}`]);
+  const install = await runNpm([
+    "install",
+    "-g",
+    `${DSH_PACKAGE}@${pinnedVersion}`,
+  ]);
   if (install.error !== undefined || install.status !== 0) {
     const diagnostic =
       install.error?.message ?? String(install.stderr).slice(0, 500);

@@ -162,6 +162,7 @@ describe("DeepSeek Harness Code distribution contract", () => {
       "THIRD-PARTY-NOTICES.md",
       "packages/anchored-standard-plugin",
       "apps/desktop/src/startup.html",
+      "apps/desktop/src/dependency-install.html",
       "build/THIRD-PARTY-NOTICES.md",
       "build/node-runtime",
       "config/global-agent-prompt",
