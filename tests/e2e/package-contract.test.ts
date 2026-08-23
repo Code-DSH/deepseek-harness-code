@@ -67,6 +67,10 @@ describe("DeepSeek Harness Code distribution contract", () => {
     expect(iconScript).toContain("deepseek-harness-code.ico");
     expect(iconScript).toContain("deepseek-harness-code.png");
     expect(iconScript).toContain("deepseek-harness-code-tray.png");
+    expect(iconScript).toMatch(
+      /const source = join\(\s*root,\s*"deps",\s*"deepseek-harness",\s*"apps",\s*"web",\s*"public",\s*"favicon\.svg",?\s*\)/u,
+    );
+    expect(iconScript).not.toContain("createRequire");
     expect(config).toContain("build/deepseek-harness-code-tray.png");
     expect(config).toContain("to: deepseek-harness-code-tray.png");
     expect(config).toContain("to: deepseek-harness-code.png");

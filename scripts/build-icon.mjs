@@ -6,21 +6,19 @@ import {
   rm,
   writeFile,
 } from "node:fs/promises";
-import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import sharp from "sharp";
 
 const root = process.cwd();
-const require = createRequire(join(root, "package.json"));
-const dshManifest = require.resolve("@deepseek-ai/dsh/package.json");
-const dshRequire = createRequire(dshManifest);
-const webAppManifest = dshRequire.resolve(
-  "@deepseek-ai/dsh-web-app/package.json",
-);
-const webAppRequire = createRequire(webAppManifest);
-const source = webAppRequire.resolve(
-  "@deepseek-ai/dsh-web-frontend/dist/favicon.svg",
+const source = join(
+  root,
+  "deps",
+  "deepseek-harness",
+  "apps",
+  "web",
+  "public",
+  "favicon.svg",
 );
 const buildRoot = join(root, "build");
 const outputRoot = process.env.DSH_ICON_OUTPUT_DIR ?? buildRoot;
