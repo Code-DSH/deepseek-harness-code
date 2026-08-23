@@ -73,4 +73,9 @@ describe("updater/semver isNewerVersion", () => {
     expect(isNewerVersion("0.1.0-BETA1", "0.1.0-BETA1")).toBe(false);
     expect(isNewerVersion("0.1.0-BETA1", "0.1.0-BETA2")).toBe(false);
   });
+
+  it("offers BETA3 to every BETA2 release", () => {
+    expect(isNewerVersion("0.1.0-BETA3", "0.1.0-BETA2")).toBe(true);
+    expect(isNewerVersion("0.1.0-BETA3", "0.1.0-BETA2-2")).toBe(true);
+  });
 });

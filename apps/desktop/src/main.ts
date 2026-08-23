@@ -50,11 +50,14 @@ import { WatchdogHost } from "./lifecycle/watchdog-host.js";
 import { writeEvidenceAtomically } from "./lifecycle/atomic-evidence.js";
 import {
   buildSmokeFinalEvidence,
+  buildSmokeNodeRequiredEvidence,
   buildSmokeReadyEvidence,
   awaitSmokeAcknowledgement,
   completeSmokeShutdown,
   parseSmokeConfig,
   resolveApplicationUserDataPath,
+  resolveStartupSystemNode,
+  shouldCreateWindowOnActivate,
   validateSmokeRuntimeProvenance,
   type SmokeReadyEvidence,
 } from "./lifecycle/smoke-contract.js";
@@ -144,6 +147,7 @@ const smokeConfig = parseSmokeConfig(process.env, {
 const smokeStartedAt = smokeConfig?.startedAt ?? new Date().toISOString();
 let smokeReadyEvidence: SmokeReadyEvidence | undefined;
 let smokeFailureWritten = false;
+let nodeRequiredSmokeActive = false;
 
 async function writeSmokeEvidence(value: unknown): Promise<void> {
   if (smokeConfig === undefined) return;
@@ -465,11 +469,15 @@ async function showNodeRequiredDialog(
   return (["retry", "manual", "quit"] as const)[response] ?? "quit";
 }
 
-async function prepareSystemNodeRuntime(): Promise<void> {
+async function prepareSystemNodeRuntime(
+  initialSystemNode?: ResolvedSystemNode,
+): Promise<void> {
   const userDataPath = app.getPath("userData");
   const runtimeResourcePath = nodeRuntimeResourcePath();
+  let firstResolution = initialSystemNode;
   for (;;) {
-    const node = resolveSystemNode();
+    const node = firstResolution ?? resolveSystemNode();
+    firstResolution = undefined;
     if (node === undefined) {
       const choice = await showNodeRequiredDialog();
       if (choice === "manual") {
@@ -946,6 +954,41 @@ function createTray(): void {
 }
 
 async function launch(): Promise<void> {
+  let initialSystemNode: ResolvedSystemNode | undefined;
+  if (smokeConfig?.scenario === "node-required") {
+    const resolution = resolveStartupSystemNode(smokeConfig, resolveSystemNode);
+    if (resolution.mode === "node-required") {
+      nodeRequiredSmokeActive = true;
+      const nodeRequired = buildSmokeNodeRequiredEvidence(smokeConfig, {
+        platform: process.platform,
+        architecture: process.arch,
+        appPid: process.pid,
+      });
+      await writeSmokeEvidence({
+        schema: 2,
+        runId: smokeConfig.runId,
+        startedAt: smokeStartedAt,
+        nodeRequired,
+      });
+      await awaitSmokeAcknowledgement(
+        {
+          acknowledgementPath: smokeConfig.acknowledgementPath ?? "",
+          runId: smokeConfig.runId,
+          appPid: process.pid,
+          timeoutMs: 30_000,
+          pollIntervalMs: 100,
+        },
+        {
+          now: performance.now.bind(performance),
+          delay: (milliseconds) =>
+            new Promise<void>((resolve) => setTimeout(resolve, milliseconds)),
+          requestQuit: () => queueMicrotask(() => app.quit()),
+        },
+      );
+      return;
+    }
+    initialSystemNode = resolution.node;
+  }
   watchdogHost = new WatchdogHost({
     appPath: app.getAppPath(),
     resourcesPath: process.resourcesPath,
@@ -960,7 +1003,7 @@ async function launch(): Promise<void> {
     );
   }
   createWindow();
-  await prepareSystemNodeRuntime();
+  await prepareSystemNodeRuntime(initialSystemNode);
   controller = new HarnessRuntimeController({
     origin: () => harnessOrigin,
     startHarness,
@@ -1105,6 +1148,10 @@ function reportRuntimeFailure(error: unknown): void {
 
 function reportLaunchFailure(error: unknown): void {
   reportRuntimeFailure(error);
+  if (nodeRequiredSmokeActive) {
+    void writeSmokeFailure(error).finally(() => app.exit(1));
+    return;
+  }
   void writeSmokeFailure(error).catch(reportRuntimeFailure);
   const message =
     error instanceof Error
@@ -1136,8 +1183,14 @@ const lifecycle = hasSingleInstanceLock
       },
       {
         activate: () => {
-          if (BrowserWindow.getAllWindows().length === 0) createWindow();
-          else mainWindow?.show();
+          const windowCount = BrowserWindow.getAllWindows().length;
+          if (
+            shouldCreateWindowOnActivate(nodeRequiredSmokeActive, windowCount)
+          ) {
+            createWindow();
+          } else if (!nodeRequiredSmokeActive) {
+            mainWindow?.show();
+          }
         },
         launch: launchOnce,
         shutdown: shutdownNormally,

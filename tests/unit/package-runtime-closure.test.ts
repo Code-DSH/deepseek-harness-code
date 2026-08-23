@@ -11,8 +11,8 @@ const requireFromProject = createRequire(join(projectRoot, "package.json"));
 const pluginRoot = join(projectRoot, "packages", "desktop-plugin");
 const execFileAsync = promisify(execFile);
 const agentPresetPatchName =
-  "@deepseek-ai__dsh-client-ui-agent-preset@0.1.0-rc.8.patch";
-const sidebarPatchName = "@deepseek-ai__dsh-client-ui-sidebar@0.1.0-rc.8.patch";
+  "@deepseek-ai__dsh-client-ui-agent-preset@0.1.1-rc.2.patch";
+const sidebarPatchName = "@deepseek-ai__dsh-client-ui-sidebar@0.1.1-rc.2.patch";
 
 describe("packaged runtime dependency closure", () => {
   it("ships the LAN access settings plugin in the packaged runtime", async () => {
@@ -80,7 +80,7 @@ describe("packaged runtime dependency closure", () => {
       await readFile(join(projectRoot, "package.json"), "utf8"),
     ) as { dependencies: Record<string, string> };
     expect(manifest.dependencies["@deepseek-ai/dsh-home-paths"]).toBe(
-      "0.1.0-rc.8",
+      "0.1.1-rc.2",
     );
     expect(manifest.dependencies.pnpm).toBe("11.19.0");
 
@@ -90,7 +90,7 @@ describe("packaged runtime dependency closure", () => {
         "utf8",
       ),
     ) as { dependencies: Record<string, string> };
-    expect(runtimeManifest.dependencies["@deepseek-ai/dsh"]).toBe("0.1.0-rc.8");
+    expect(runtimeManifest.dependencies["@deepseek-ai/dsh"]).toBe("0.1.1-rc.2");
     expect(runtimeManifest.dependencies["dsh-find-plugin"]).toBe("0.3.6");
     const runtimeLock = await readFile(
       join(projectRoot, "config", "node-runtime", "pnpm-lock.yaml"),
@@ -98,6 +98,15 @@ describe("packaged runtime dependency closure", () => {
     );
     expect(runtimeLock).toContain("'@deepseek-ai/dsh':");
     expect(runtimeLock).toContain("dsh-find-plugin:");
+
+    const sidebarSnapshot = runtimeLock.match(
+      /dsh-better-sidebar@file:vendor\/dsh-better-sidebar-0\.12\.3\.tgz:[\s\S]*?\n\s*dsh-find-plugin@/,
+    )?.[0];
+    expect(sidebarSnapshot).toBeDefined();
+    expect(sidebarSnapshot).toContain(
+      "'@deepseek-ai/dsh-client-ui-slots': ^0.1.1-rc.2",
+    );
+    expect(sidebarSnapshot).not.toContain("0.1.0-rc.8");
 
     const prepareScript = await readFile(
       join(projectRoot, "scripts", "prepare-node-runtime.mjs"),
@@ -147,6 +156,20 @@ describe("packaged runtime dependency closure", () => {
     expect(rootWorkspace).toContain(agentPresetPatchName);
     expect(runtimeWorkspace).toContain(agentPresetPatchName);
     expect(closureScript).toContain(agentPresetPatchName);
+  });
+
+  it("allows every newly published Harness package in the first-launch runtime policy", async () => {
+    const [rootWorkspace, runtimeWorkspace] = await Promise.all([
+      readFile(join(projectRoot, "pnpm-workspace.yaml"), "utf8"),
+      readFile(
+        join(projectRoot, "config", "node-runtime", "pnpm-workspace.yaml"),
+        "utf8",
+      ),
+    ]);
+    const authorizationRelease = '"@deepseek-ai/dsh-authorization@0.1.1-rc.2"';
+
+    expect(rootWorkspace).toContain(authorizationRelease);
+    expect(runtimeWorkspace).toContain(authorizationRelease);
   });
 
   it("wires the macOS sidebar safe-area patch into both runtime workspaces", async () => {
@@ -216,7 +239,7 @@ describe("packaged runtime dependency closure", () => {
       await readFile(join(projectRoot, "package.json"), "utf8"),
     ) as { dependencies: Record<string, string> };
     expect(manifest.dependencies["@deepseek-ai/dsh-workflow"]).toBe(
-      "0.1.0-rc.8",
+      "0.1.1-rc.2",
     );
   });
 
@@ -226,13 +249,13 @@ describe("packaged runtime dependency closure", () => {
     ) as { dependencies: Record<string, string> };
 
     expect(manifest.dependencies["@deepseek-ai/dsh-compaction"]).toBe(
-      "0.1.0-rc.8",
+      "0.1.1-rc.2",
     );
     expect(manifest.dependencies["@deepseek-ai/dsh-invariants"]).toBe(
-      "0.1.0-rc.8",
+      "0.1.1-rc.2",
     );
     expect(manifest.dependencies["@deepseek-ai/dsh-client-ui-primitives"]).toBe(
-      "0.1.0-rc.8",
+      "0.1.1-rc.2",
     );
   });
 

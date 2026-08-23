@@ -23,6 +23,8 @@ import {
   win32 as windowsPath,
 } from "node:path";
 
+import { redactStartupDiagnostic } from "./startup-diagnostics.js";
+
 const ANCHORED_PRESET_ID = "anchored-standard";
 const SUPERPOWERS_PACKAGE_NAME = "superpowers";
 const SUPERPOWERS_SKILLS_DIRECTORY = "skills";
@@ -649,6 +651,9 @@ export async function ensureOfficialHarnessInstall(
       installSpec: plugin.packageRoot,
     })),
   ];
+  if (installRequests.length === 0) {
+    return { status: "unchanged", packages: [] };
+  }
 
   const installState =
     legacyPluginSpecs.length === 0
@@ -701,32 +706,31 @@ export async function ensureOfficialHarnessInstall(
   };
   const runCommand = input.runCommand ?? defaultOfficialCommandRunner;
   const installAll = async (): Promise<void> => {
-    for (const request of installRequests) {
-      const result = runCommand(
-        input.nodeExecutable,
-        [
-          input.dshEntry,
-          "plugin",
-          "--profile",
-          "web",
-          "add",
-          request.installSpec,
-        ],
-        {
-          encoding: "utf8",
-          env,
-          shell: false,
-          windowsHide: true,
-        },
+    const result = runCommand(
+      input.nodeExecutable,
+      [
+        input.dshEntry,
+        "plugin",
+        "--profile",
+        "web",
+        "add",
+        ...installRequests.map((request) => request.installSpec),
+      ],
+      {
+        encoding: "utf8",
+        env,
+        shell: false,
+        windowsHide: true,
+      },
+    );
+    if (result.error !== undefined || result.status !== 0) {
+      const exit = result.status === null ? "spawn" : String(result.status);
+      const diagnostic = redactStartupDiagnostic(
+        result.error?.message ?? String(result.stderr ?? ""),
+      ).slice(0, 2_000);
+      throw new Error(
+        `official plugin installation failed for ${installRequests.map((request) => request.packageName).join(", ")} (exit ${exit}): ${diagnostic}`,
       );
-      if (result.error !== undefined || result.status !== 0) {
-        const exit = result.status === null ? "spawn" : String(result.status);
-        const diagnostic =
-          result.error?.message ?? String(result.stderr ?? "").slice(0, 2_000);
-        throw new Error(
-          `official plugin installation failed for ${request.packageName} (exit ${exit}): ${diagnostic}`,
-        );
-      }
     }
   };
   try {

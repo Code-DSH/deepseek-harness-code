@@ -89,7 +89,304 @@ function validSmokeEvidence(resources) {
   };
 }
 
+function requiredRuntimeExport(name) {
+  const value = smokeRuntime[name];
+  expect(value, `missing packaged smoke export ${name}`).toBeTypeOf("function");
+  return value;
+}
+
+function validNodeRequiredEvidence() {
+  return {
+    schema: 2,
+    runId: "run-1",
+    startedAt: expectedMetadata.startedAt,
+    nodeRequired: {
+      phase: "node-required",
+      scenario: "node-required",
+      minimumNodeVersion: "22.13.0",
+      installerUrl: "https://nodejs.org/dist/v22.13.0/node-v22.13.0-x64.msi",
+      archiveUrl: "https://nodejs.org/dist/v22.13.0/node-v22.13.0-win-x64.zip",
+      platform: "win32",
+      architecture: "x64",
+      appPid: 7000,
+      packaged: true,
+      harnessStarted: false,
+      listenerObserved: false,
+      ...expectedMetadata,
+      timestamps: { nodeRequiredAt: "2026-08-19T00:00:01.000Z" },
+    },
+  };
+}
+
 describe("packaged runtime listener selection", () => {
+  test("validates node-required evidence separately from Harness runtime evidence", () => {
+    const verifyNodeRequiredEvidence = requiredRuntimeExport(
+      "verifyNodeRequiredEvidence",
+    );
+
+    expect(
+      verifyNodeRequiredEvidence(validNodeRequiredEvidence(), {
+        ...expectedMetadata,
+        platform: "win32",
+        runnerArchitecture: "x64",
+        maxDurationMs: 10 * 60_000,
+      }),
+    ).toEqual({ appPid: 7000, nodeRequiredDurationMs: 1_000 });
+
+    for (const forbidden of ["harnessOrigin", "harnessPid", "listenerPid"]) {
+      const evidence = validNodeRequiredEvidence();
+      evidence.nodeRequired[forbidden] = forbidden.endsWith("Pid")
+        ? 7002
+        : "http://127.0.0.1:41002";
+      expect(() =>
+        verifyNodeRequiredEvidence(evidence, {
+          ...expectedMetadata,
+          platform: "win32",
+          runnerArchitecture: "x64",
+        }),
+      ).toThrow(/Harness|listener|origin|PID/i);
+    }
+
+    for (const mutation of [
+      { minimumNodeVersion: "22.12.0" },
+      { installerUrl: "https://example.com/node.msi" },
+      { archiveUrl: "https://example.com/node.zip" },
+    ]) {
+      const evidence = validNodeRequiredEvidence();
+      Object.assign(evidence.nodeRequired, mutation);
+      expect(() =>
+        verifyNodeRequiredEvidence(evidence, {
+          ...expectedMetadata,
+          platform: "win32",
+          runnerArchitecture: "x64",
+        }),
+      ).toThrow(/official Node installer/i);
+    }
+  });
+
+  test("removes Node lookup managers and hosted Node paths only for node-required", () => {
+    const buildPackagedSmokeEnvironment = requiredRuntimeExport(
+      "buildPackagedSmokeEnvironment",
+    );
+    const env = {
+      PATH: "/opt/hostedtoolcache/node/24.18.0/x64/bin:/usr/local/bin:/usr/bin:/bin",
+      NVM_DIR: "/home/runner/.nvm",
+      VOLTA_HOME: "/home/runner/.volta",
+      FNM_DIR: "/home/runner/.fnm",
+      NODE_OPTIONS: "--require=/tmp/bootstrap.cjs",
+      PNPM_HOME: "/home/runner/.local/share/pnpm",
+      KEEP_ME: "yes",
+    };
+
+    expect(buildPackagedSmokeEnvironment("linux", env, "runtime")).toEqual(env);
+    expect(
+      buildPackagedSmokeEnvironment("linux", env, "node-required"),
+    ).toEqual({
+      PATH: "/usr/local/bin:/usr/bin:/bin",
+      KEEP_ME: "yes",
+    });
+  });
+
+  test("uses Windows PATH semantics while preserving required system utilities", () => {
+    const buildPackagedSmokeEnvironment = requiredRuntimeExport(
+      "buildPackagedSmokeEnvironment",
+    );
+    const env = {
+      Path: [
+        "C:\\hostedtoolcache\\windows\\node\\24.18.0\\x64",
+        "C:\\Program Files\\nodejs",
+        "C:\\Windows\\System32",
+        "C:\\Windows",
+      ].join(";"),
+      SystemRoot: "C:\\Windows",
+      ComSpec: "C:\\Windows\\System32\\cmd.exe",
+      NVM_HOME: "C:\\nvm",
+    };
+
+    expect(
+      buildPackagedSmokeEnvironment("win32", env, "node-required"),
+    ).toEqual({
+      Path: "C:\\Windows\\System32;C:\\Windows",
+      SystemRoot: "C:\\Windows",
+      ComSpec: "C:\\Windows\\System32\\cmd.exe",
+    });
+  });
+
+  test("covers every fixed production Node candidate on Linux, macOS, and Windows", () => {
+    const systemNodeCandidateEntries = requiredRuntimeExport(
+      "systemNodeCandidateEntries",
+    );
+    const unixEnv = {};
+    expect(
+      systemNodeCandidateEntries("linux", unixEnv, "/home/runner").map(
+        ({ path }) => path,
+      ),
+    ).toEqual([
+      "/usr/local/bin/node",
+      "/snap/bin/node",
+      "/usr/bin/node",
+      "/usr/bin/nodejs",
+      "/home/runner/.volta/bin/node",
+      "/home/runner/.asdf/shims/node",
+      "/home/runner/.local/bin/node",
+      "/home/runner/bin/node",
+    ]);
+    expect(
+      systemNodeCandidateEntries("darwin", unixEnv, "/Users/runner").map(
+        ({ path }) => path,
+      ),
+    ).toEqual([
+      "/opt/homebrew/bin/node",
+      "/usr/local/bin/node",
+      "/Users/runner/.volta/bin/node",
+      "/Users/runner/.asdf/shims/node",
+      "/Users/runner/.local/bin/node",
+      "/Users/runner/bin/node",
+    ]);
+    expect(
+      systemNodeCandidateEntries(
+        "win32",
+        {
+          ProgramFiles: "C:\\Program Files",
+          "ProgramFiles(x86)": "C:\\Program Files (x86)",
+          ProgramData: "C:\\ProgramData",
+          USERPROFILE: "C:\\Users\\runneradmin",
+          LOCALAPPDATA: "C:\\Users\\runneradmin\\AppData\\Local",
+        },
+        "C:\\Users\\runneradmin",
+      ).map(({ path }) => path),
+    ).toEqual([
+      "C:\\Program Files\\nodejs\\node.exe",
+      "C:\\Program Files (x86)\\nodejs\\node.exe",
+      "C:\\ProgramData\\chocolatey\\bin\\node.exe",
+      "C:\\Users\\runneradmin\\scoop\\shims\\node.exe",
+      "C:\\Users\\runneradmin\\.volta\\bin\\node.exe",
+      "C:\\Users\\runneradmin\\AppData\\Local\\.volta\\bin\\node.exe",
+    ]);
+  });
+
+  test("discovers production version-manager Node candidates for quarantine", async () => {
+    const discoverSystemNodeVersionCandidates = requiredRuntimeExport(
+      "discoverSystemNodeVersionCandidates",
+    );
+    const directoryEntries = new Map([
+      ["/home/runner/.nvm/versions/node", ["v22.13.0", "invalid"]],
+      ["/home/runner/.fnm/node-versions", ["v24.18.0"]],
+      ["/home/runner/.local/share/mise/installs/node", ["23.4.0"]],
+      ["/home/runner/.volta/tools/image/node", ["22.14.0"]],
+      ["/usr/local/n/versions/node", ["24.1.0", "22.23.2"]],
+    ]);
+
+    const candidates = await discoverSystemNodeVersionCandidates(
+      "linux",
+      {},
+      "/home/runner",
+      async (directory) => directoryEntries.get(directory) ?? [],
+    );
+
+    expect(candidates.map(({ path }) => path)).toEqual([
+      "/home/runner/.nvm/versions/node/v22.13.0/bin/node",
+      "/home/runner/.fnm/node-versions/v24.18.0/installation/bin/node",
+      "/home/runner/.local/share/mise/installs/node/23.4.0/bin/node",
+      "/home/runner/.volta/tools/image/node/22.14.0/bin/node",
+      "/usr/local/n/versions/node/22.23.2/bin/node",
+      "/usr/local/n/versions/node/24.1.0/bin/node",
+    ]);
+  });
+
+  test("never moves the parent Node real file but may move a candidate symlink", () => {
+    const shouldQuarantineNodeCandidate = requiredRuntimeExport(
+      "shouldQuarantineNodeCandidate",
+    );
+
+    expect(
+      shouldQuarantineNodeCandidate({
+        candidatePath: "/usr/local/bin/node",
+        parentExecutablePath: "/opt/hostedtoolcache/node/bin/node",
+        candidateIsSymlink: false,
+        candidateFileId: "1:42",
+        parentFileId: "1:42",
+        platform: "linux",
+      }),
+    ).toBe(false);
+    expect(
+      shouldQuarantineNodeCandidate({
+        candidatePath: "/usr/local/bin/node",
+        parentExecutablePath: "/opt/hostedtoolcache/node/bin/node",
+        candidateIsSymlink: true,
+        candidateFileId: "1:42",
+        parentFileId: "1:42",
+        platform: "linux",
+      }),
+    ).toBe(true);
+    expect(
+      shouldQuarantineNodeCandidate({
+        candidatePath: "C:\\Program Files\\nodejs\\node.exe",
+        parentExecutablePath: "c:\\Program Files\\nodejs\\node.exe",
+        candidateIsSymlink: false,
+        candidateFileId: "",
+        parentFileId: "",
+        platform: "win32",
+      }),
+    ).toBe(false);
+    expect(
+      shouldQuarantineNodeCandidate({
+        candidatePath: "C:\\Program Files\\nodejs\\node.exe",
+        parentExecutablePath:
+          "C:\\hostedtoolcache\\windows\\node\\24.18.0\\arm64\\node.exe",
+        candidateIsSymlink: false,
+        candidateFileId: "0:0",
+        parentFileId: "0:0",
+        platform: "win32",
+      }),
+    ).toBe(true);
+  });
+
+  test("runs runtime and node-required against every installed package form", async () => {
+    const workflow = await readFile(
+      new URL("../../.github/workflows/package.yml", import.meta.url),
+      "utf8",
+    );
+
+    for (const [label, packageKind, architecture] of [
+      ["windows-x64", "nsis", "x64"],
+      ["windows-arm64", "nsis", "arm64"],
+      ["linux-x64", "appimage", "x64"],
+      ["linux-x64", "deb", "x64"],
+      ["linux-arm64", "appimage", "arm64"],
+      ["linux-arm64", "deb", "arm64"],
+      ["macos-arm64", "dmg", "arm64"],
+      ["macos-x64", "dmg", "x64"],
+    ]) {
+      expect(workflow, `${label} matrix row`).toMatch(
+        new RegExp(
+          `- label: ${label}[\\s\\S]*?(?:expected-architecture|runner-architecture): ${architecture}`,
+          "u",
+        ),
+      );
+      const packageToken =
+        packageKind === "appimage"
+          ? "linux-appimage"
+          : packageKind === "deb"
+            ? "linux-deb"
+            : label.startsWith("windows")
+              ? "windows"
+              : "\\$\\{\\{ matrix\\.runner-architecture \\}\\}";
+      expect(workflow, `${label} ${packageKind} runtime`).toMatch(
+        new RegExp(
+          `--scenario runtime[^\\n]*smoke-evidence-${packageToken}\\.json`,
+          "u",
+        ),
+      );
+      expect(workflow, `${label} ${packageKind} node-required`).toMatch(
+        new RegExp(
+          `--scenario node-required[^\\n]*smoke-evidence-${packageToken}-node-required\\.json`,
+          "u",
+        ),
+      );
+    }
+  });
+
   test("builds positive resource fixtures with platform path semantics", () => {
     expect(
       fixtureResourcePath(["dsh-lan-access", "package.json"], win32.join),
@@ -149,6 +446,38 @@ describe("packaged runtime listener selection", () => {
     });
   });
 
+  test("immediately rejects node-required when the same run publishes runtime ready evidence", async () => {
+    const root = await mkdtemp(join(tmpdir(), "dsh-node-remained-"));
+    const path = join(root, "app.json");
+    await writeFile(
+      path,
+      JSON.stringify({
+        schema: 2,
+        runId: "run-node-remained",
+        ready: { phase: "ready" },
+      }),
+    );
+    const started = Date.now();
+    let rejection;
+
+    try {
+      await smokeRuntime.waitForEvidence(
+        path,
+        Date.now() + 1_500,
+        "run-node-remained",
+        "node-required",
+      );
+    } catch (error) {
+      rejection = error;
+    }
+
+    expect(rejection).toBeInstanceOf(Error);
+    expect(rejection.message).toBe(
+      "system Node remained resolvable during node-required smoke",
+    );
+    expect(Date.now() - started).toBeLessThan(300);
+  });
+
   test("retries removal of the isolated smoke user-data directory", async () => {
     let received;
     await removeSmokeUserData("/tmp/isolated-smoke", async (...args) => {
@@ -200,6 +529,36 @@ describe("packaged runtime listener selection", () => {
     const listeners = parseLoopbackListeners(
       "  TCP    127.0.0.1:41002    0.0.0.0:0    LISTENING    7002",
       "win32",
+    );
+
+    expect(listeners).toEqual([{ port: 41002, pid: 7002 }]);
+  });
+
+  test("selects the native listener command for Windows, Linux, and macOS", () => {
+    expect(smokeRuntime.listenerCommand("win32")).toEqual({
+      command: "netstat",
+      args: ["-ano", "-p", "tcp"],
+    });
+    expect(smokeRuntime.listenerCommand("linux")).toEqual({
+      command: "ss",
+      args: ["-ltnp"],
+    });
+    expect(smokeRuntime.listenerCommand("darwin")).toEqual({
+      command: "lsof",
+      args: ["-nP", "-iTCP", "-sTCP:LISTEN"],
+    });
+  });
+
+  test("parses only exact macOS IPv4 loopback listeners with their PID", () => {
+    const listeners = parseLoopbackListeners(
+      [
+        "COMMAND PID USER FD TYPE DEVICE SIZE/OFF NODE NAME",
+        "node 7002 trip 24u IPv4 0x1 0t0 TCP 127.0.0.1:41002 (LISTEN)",
+        "node 7003 trip 25u IPv4 0x2 0t0 TCP *:41003 (LISTEN)",
+        "node 7004 trip 26u IPv4 0x3 0t0 TCP 0.0.0.0:41004 (LISTEN)",
+        "node 7005 trip 27u IPv6 0x4 0t0 TCP [::1]:41005 (LISTEN)",
+      ].join("\n"),
+      "darwin",
     );
 
     expect(listeners).toEqual([{ port: 41002, pid: 7002 }]);
@@ -261,6 +620,7 @@ describe("packaged runtime listener selection", () => {
       appPid: 7000,
       harnessPid: 7002,
       port: 41002,
+      readyDurationMs: 1_000,
     });
   });
 
@@ -319,19 +679,132 @@ describe("packaged runtime listener selection", () => {
     ).toThrow(/listener owner/i);
   });
 
-  test("fails closed for unknown Linux and Windows runner architectures but preserves macOS variants", () => {
-    expect(() => assertKnownRunnerArchitecture("linux", "arm64")).toThrow(
-      /architecture/i,
-    );
+  test("accepts x64 and arm64 only on every packaged smoke platform", () => {
+    for (const platform of ["win32", "linux", "darwin"]) {
+      for (const arch of ["x64", "arm64"]) {
+        expect(() =>
+          assertKnownRunnerArchitecture(platform, arch),
+        ).not.toThrow();
+      }
+    }
     expect(() => assertKnownRunnerArchitecture("win32", "ia32")).toThrow(
       /architecture/i,
     );
     expect(() => assertKnownRunnerArchitecture("linux", "mips64")).toThrow(
       /architecture/i,
     );
-    expect(() =>
-      assertKnownRunnerArchitecture("darwin", "arm64"),
-    ).not.toThrow();
+    expect(() => assertKnownRunnerArchitecture("freebsd", "x64")).toThrow(
+      /platform/i,
+    );
+  });
+
+  test("inspects native PE x64 and arm64 machine fixtures", async () => {
+    for (const [arch, machine] of [
+      ["x64", 34404],
+      ["arm64", 43620],
+    ]) {
+      const pe = Buffer.alloc(128);
+      pe.writeUInt32LE(64, 60);
+      pe.writeUInt16LE(machine, 68);
+
+      await expect(
+        smokeRuntime.inspectArchitecture("C:\\DeepSeek Harness Code.exe", {
+          platform: "win32",
+          arch,
+          expectedArchitecture: arch,
+          runnerArchitecture: arch,
+          readFile: async () => pe,
+        }),
+      ).resolves.toEqual({
+        runner: arch,
+        platform: "win32",
+        machine: String(machine),
+      });
+    }
+  });
+
+  test("inspects native Linux x86-64 and AArch64 ELF fixtures", async () => {
+    for (const [arch, file] of [
+      ["x64", "ELF 64-bit LSB pie executable, x86-64, version 1 (SYSV)"],
+      ["arm64", "ELF 64-bit LSB pie executable, ARM aarch64, version 1 (SYSV)"],
+    ]) {
+      await expect(
+        smokeRuntime.inspectArchitecture("/opt/deepseek-harness-code", {
+          platform: "linux",
+          arch,
+          expectedArchitecture: arch,
+          runnerArchitecture: arch,
+          execFile: async () => ({ stdout: `${file}\n` }),
+        }),
+      ).resolves.toEqual({ runner: arch, platform: "linux", file });
+    }
+  });
+
+  test("requires both x86_64 and arm64 slices in the macOS executable", async () => {
+    const archs = "x86_64 arm64";
+
+    await expect(
+      smokeRuntime.inspectArchitecture(
+        "/tmp/Applications/DeepSeek Harness Code.app/Contents/MacOS/DeepSeek Harness Code",
+        {
+          platform: "darwin",
+          arch: "arm64",
+          expectedArchitecture: "universal",
+          runnerArchitecture: "arm64",
+          execFile: async () => ({ stdout: `${archs}\n` }),
+        },
+      ),
+    ).resolves.toEqual({
+      runner: "arm64",
+      platform: "darwin",
+      archs,
+    });
+
+    await expect(
+      smokeRuntime.inspectArchitecture("/tmp/DeepSeek Harness Code", {
+        platform: "darwin",
+        arch: "x64",
+        expectedArchitecture: "universal",
+        runnerArchitecture: "x64",
+        execFile: async () => ({ stdout: "x86_64\n" }),
+      }),
+    ).rejects.toThrow(/universal|arm64/i);
+  });
+
+  test("rejects Windows and Linux target or host architecture mismatches", async () => {
+    await expect(
+      smokeRuntime.inspectArchitecture("C:\\DeepSeek Harness Code.exe", {
+        platform: "win32",
+        arch: "x64",
+        expectedArchitecture: "arm64",
+        runnerArchitecture: "x64",
+        readFile: async () => Buffer.alloc(128),
+      }),
+    ).rejects.toThrow(/target|expected|runner|architecture/i);
+
+    await expect(
+      smokeRuntime.inspectArchitecture("/opt/deepseek-harness-code", {
+        platform: "linux",
+        arch: "arm64",
+        expectedArchitecture: "x64",
+        runnerArchitecture: "x64",
+        execFile: async () => ({
+          stdout: "ELF 64-bit LSB pie executable, x86-64\n",
+        }),
+      }),
+    ).rejects.toThrow(/host|runner|architecture/i);
+  });
+
+  test("rejects a macOS smoke matrix that does not match the native host", async () => {
+    await expect(
+      smokeRuntime.inspectArchitecture("/tmp/DeepSeek Harness Code", {
+        platform: "darwin",
+        arch: "arm64",
+        expectedArchitecture: "universal",
+        runnerArchitecture: "x64",
+        execFile: async () => ({ stdout: "x86_64 arm64\n" }),
+      }),
+    ).rejects.toThrow(/host|runner|architecture/i);
   });
 
   test("validates matrix metadata and artifact filename architecture", () => {
@@ -528,6 +1001,22 @@ describe("packaged runtime listener selection", () => {
     expect(() => verifySmokeEvidence(evidence, expectedMetadata)).toThrow(
       /timestamp|fresh/i,
     );
+  });
+
+  test("rejects readiness beyond the 600000 ms hard deadline", () => {
+    const evidence = validSmokeEvidence([
+      fixtureResourcePath(["dsh-lan-access", "package.json"]),
+    ]);
+    evidence.ready.timestamps.readyAt = "2026-08-19T00:10:00.001Z";
+    evidence.final.timestamps.readyAt = evidence.ready.timestamps.readyAt;
+    evidence.final.timestamps.finalAt = "2026-08-19T00:10:00.002Z";
+
+    expect(() =>
+      verifySmokeEvidence(evidence, {
+        ...expectedMetadata,
+        maxDurationMs: 600_000,
+      }),
+    ).toThrow(/ready|600000|deadline|duration/i);
   });
 
   test("times out when the ready acknowledgement is missing", async () => {

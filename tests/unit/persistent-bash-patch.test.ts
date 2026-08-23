@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
 const repoRoot = process.cwd();
-const patchName = "@deepseek-ai__dsh-terminal-bash@0.1.0-rc.8.patch";
+const patchName = "@deepseek-ai__dsh-terminal-bash@0.1.1-rc.2.patch";
 
 describe("persistent Bash terminal runtime patch", () => {
   it("uses the persistent Bash prompt and derives the prompt-tail bound", () => {
@@ -28,7 +28,7 @@ describe("persistent Bash terminal runtime patch", () => {
     );
 
     expect(workspace).toContain(
-      `"@deepseek-ai/dsh-terminal-bash@0.1.0-rc.8": patches/${patchName}`,
+      `"@deepseek-ai/dsh-terminal-bash@0.1.1-rc.2": patches/${patchName}`,
     );
   });
 });

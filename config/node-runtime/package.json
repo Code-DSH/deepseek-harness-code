@@ -5,9 +5,9 @@
   "type": "module",
   "description": "Pinned runtime packages installed on first launch with the detected system Node.js",
   "dependencies": {
-    "@deepseek-ai/dsh": "0.1.0-rc.8",
-    "@deepseek-ai/dsh-subagent-claude-code": "0.1.0-rc.8",
-    "@deepseek-ai/dsh-subagent-codex": "0.1.0-rc.8",
+    "@deepseek-ai/dsh": "0.1.1-rc.2",
+    "@deepseek-ai/dsh-subagent-claude-code": "0.1.1-rc.2",
+    "@deepseek-ai/dsh-subagent-codex": "0.1.1-rc.2",
     "@modelcontextprotocol/server-everything": "2026.7.4",
     "deepseek-harness-composition": "file:vendor/deepseek-harness-composition-1.0.0.tgz",
     "dsh-better-sidebar": "file:vendor/dsh-better-sidebar-0.12.3.tgz",

@@ -129,3 +129,5 @@
 - [ ] Build a macOS package and validate it.
 - [x] Use Computer Use to confirm the installed General-settings plugin row is present and default-off; user separately confirmed the plugin was loaded and tested, so no agent-side LAN activation was performed.
 - [ ] Review the final diff, commit, push the release tag, and let the packaging workflow publish `update-manifest.json` and platform artifacts.
+
+The first `v0.1.0-BETA2-2` tag attempt failed its Windows x64 installed-package smoke before publishing a Release. Recovery, expanded native architecture/no-Node validation, and the replacement-tag procedure continue in [Beta 2-2 release gate recovery](./beta2-2-release-gate.md).

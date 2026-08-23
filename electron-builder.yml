@@ -153,6 +153,11 @@ nsis:
   oneClick: false
   perMachine: false
   allowToChangeInstallationDirectory: true
+  # The desktop updater downloads and verifies whole installers from its own
+  # manifest, so NSIS blockmap/differential payloads are unused. ZIP avoids the
+  # native 7z extraction path that fails silently on Windows arm64 runners.
+  differentialPackage: false
+  useZip: true
   artifactName: DeepSeek-Harness-Code-${version}-windows-${arch}-setup.${ext}
 linux:
   category: Development

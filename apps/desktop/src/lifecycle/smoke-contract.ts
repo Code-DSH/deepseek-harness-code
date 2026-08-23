@@ -3,6 +3,8 @@ import { readFile } from "node:fs/promises";
 import { isAbsolute, relative, resolve } from "node:path";
 
 import { redactStartupDiagnostic } from "./startup-diagnostics.js";
+import { getNodeDownloadUrls } from "./node-downloader.js";
+import { MINIMUM_NODE_VERSION } from "./system-node.js";
 
 const MATRIX = {
   "windows-x64": { packageKind: "nsis", expectedArchitecture: "x64" },
@@ -18,6 +20,7 @@ const MATRIX = {
   },
 } as const;
 type SmokeMatrixLabel = keyof typeof MATRIX;
+export type SmokeScenario = "runtime" | "node-required";
 
 export type SmokeConfig = {
   readonly path: string;
@@ -25,12 +28,35 @@ export type SmokeConfig = {
   readonly root: string;
   readonly userDataPath: string;
   readonly runId: string;
+  readonly scenario: SmokeScenario;
   readonly matrixLabel: SmokeMatrixLabel;
   readonly packageKind: string;
   readonly expectedArchitecture: string;
   readonly artifactFilename: string;
   readonly artifactSha256: string;
   readonly startedAt: string;
+};
+
+export type SmokeNodeRequiredEvidence = {
+  readonly phase: "node-required";
+  readonly scenario: "node-required";
+  readonly minimumNodeVersion: string;
+  readonly installerUrl: string;
+  readonly archiveUrl: string;
+  readonly platform: NodeJS.Platform;
+  readonly architecture: string;
+  readonly appPid: number;
+  readonly packaged: true;
+  readonly harnessStarted: false;
+  readonly listenerObserved: false;
+  readonly runId: string;
+  readonly matrixLabel: SmokeMatrixLabel;
+  readonly packageKind: string;
+  readonly expectedArchitecture: string;
+  readonly artifactFilename: string;
+  readonly artifactSha256: string;
+  readonly startedAt: string;
+  readonly timestamps: { readonly nodeRequiredAt: string };
 };
 
 export type SmokeReadyEvidence = {
@@ -110,6 +136,9 @@ export function parseSmokeConfig(
   },
 ): SmokeConfig | undefined {
   if (env.SMOKE_MODE !== "ci") return undefined;
+  const scenario = env.SMOKE_SCENARIO ?? "runtime";
+  if (scenario !== "runtime" && scenario !== "node-required") return undefined;
+  if (scenario === "node-required" && !options.isPackaged) return undefined;
   if (!options.isPackaged && env.SMOKE_ALLOW_UNPACKAGED !== "1")
     return undefined;
   const path = env.SMOKE_EVIDENCE_PATH;
@@ -152,12 +181,85 @@ export function parseSmokeConfig(
     userDataPath,
     ...(acknowledgementPath === "" ? {} : { acknowledgementPath }),
     runId,
+    scenario,
     matrixLabel: matrixLabel as SmokeMatrixLabel,
     packageKind,
     expectedArchitecture,
     artifactFilename,
     artifactSha256,
     startedAt,
+  };
+}
+
+export function resolveStartupSystemNode<T>(
+  config: Pick<SmokeConfig, "scenario"> | undefined,
+  resolver: () => T,
+):
+  | { readonly mode: "runtime"; readonly node: T }
+  | {
+      readonly mode: "node-required";
+    } {
+  const node = resolver();
+  return node === undefined && config?.scenario === "node-required"
+    ? { mode: "node-required" }
+    : { mode: "runtime", node };
+}
+
+export function shouldCreateWindowOnActivate(
+  nodeRequiredSmokeActive: boolean,
+  windowCount: number,
+): boolean {
+  return !nodeRequiredSmokeActive && windowCount === 0;
+}
+
+export function buildSmokeNodeRequiredEvidence(
+  config: SmokeConfig,
+  runtime: {
+    readonly platform: NodeJS.Platform;
+    readonly architecture: string;
+    readonly appPid: number;
+  },
+): SmokeNodeRequiredEvidence {
+  if (config.scenario !== "node-required") {
+    throw new Error("node-required evidence requires its validated scenario");
+  }
+  if (!Number.isInteger(runtime.appPid) || runtime.appPid <= 0) {
+    throw new Error("node-required evidence requires a valid application PID");
+  }
+  const { installerUrl, archiveUrl } = getNodeDownloadUrls(
+    runtime.platform,
+    runtime.architecture,
+    MINIMUM_NODE_VERSION,
+  );
+  for (const url of [installerUrl, archiveUrl]) {
+    const parsedUrl = new URL(url);
+    if (
+      parsedUrl.protocol !== "https:" ||
+      parsedUrl.hostname !== "nodejs.org"
+    ) {
+      throw new Error("node-required Node URL must use official nodejs.org");
+    }
+  }
+  return {
+    phase: "node-required",
+    scenario: "node-required",
+    minimumNodeVersion: MINIMUM_NODE_VERSION,
+    installerUrl,
+    archiveUrl,
+    platform: runtime.platform,
+    architecture: runtime.architecture,
+    appPid: runtime.appPid,
+    packaged: true,
+    harnessStarted: false,
+    listenerObserved: false,
+    runId: config.runId,
+    matrixLabel: config.matrixLabel,
+    packageKind: config.packageKind,
+    expectedArchitecture: config.expectedArchitecture,
+    artifactFilename: config.artifactFilename,
+    artifactSha256: config.artifactSha256,
+    startedAt: config.startedAt,
+    timestamps: { nodeRequiredAt: new Date().toISOString() },
   };
 }
 

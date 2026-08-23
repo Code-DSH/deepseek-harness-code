@@ -1,0 +1,308 @@
+---
+id: plan.beta2-2-release-gate
+title: Beta 2-2 Release Gate Recovery
+summary: 修复 Beta 2-2 Windows 冷启动超时，补齐原生架构与无 Node 安装场景，更新版本差异文档，并在全部云端门禁通过后发布。
+kind: plan
+status: canonical
+content_stage: final-verified
+scope: [release, ci, packaging, installation, documentation]
+triggers: [beta2-2, release, ci, package smoke, node prerequisite]
+read_when: [恢复 Beta 2-2 发布或审计 Beta 1/Beta 2 差异]
+skip_when: [与发布无关的局部代码修改]
+priority: must
+freshness_class: project
+last_verified: 2026-08-22T01:17:51+08:00
+owners: [primary-agent]
+source_of_truth:
+  - ../../../.github/workflows/
+  - ../../../scripts/smoke-packaged-runtime.mjs
+  - ../../../apps/desktop/src/
+  - ../../../tests/
+related:
+  prerequisites:
+    - ./beta2-2-lan-access.md
+    - ../../engineering/testing.md
+  next:
+    - ../../releases/0.1.0-BETA2-2.md
+supersedes: []
+tags: [execplan, release, ci, beta2-2]
+---
+
+# Beta 2-2 Release Gate Recovery Implementation Plan
+
+> **For agentic workers:** REQUIRED SUB-SKILL: Use `superpowers:subagent-driven-development` or `superpowers:executing-plans` task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+
+**Goal:** Publish `0.1.0-BETA2-2` only after the installed artifacts start successfully on native x64/arm64 runners, the no-Node prerequisite path is verified, and the version-difference documentation matches Git/CI evidence.
+
+**Architecture:** Keep the product contract unchanged: Harness remains loopback-only and the app requires an official system Node.js `>=22.13`. Reduce first-launch work by passing the complete managed plugin roster to one official `dsh plugin --profile web add` invocation, then make the package smoke runner architecture-aware and add a separate no-Node evidence phase that never starts Harness. GitHub Actions builds once per native target and runs installer/application smoke checks on matching hosted virtual machines before the release job can run.
+
+**Tech Stack:** Electron 43.4.0, TypeScript/Node.js 24, Vitest, GitHub Actions, electron-builder 26.15.3, official `@deepseek-ai/dsh@0.1.0-rc.8` CLI.
+
+**Spec:** User request dated 2026-08-21 plus [Beta 2-2 LAN design](../../superpowers/specs/2026-08-21-beta2-2-lan-access-design.md).
+
+## Global Constraints
+
+- Harness must continue to bind only to `127.0.0.1`; package smoke must prove the listener owner is the Harness PID.
+- The app must use the system-installed official Node.js `>=22.13`; it must not download, bundle, or silently install Node.js.
+- No-Node verification must prove the official installer-link guidance and absence of a Harness process without blocking on an interactive dialog.
+- Plugin changes must continue through `dsh plugin --profile web add`, preserve user plugin specs, use `shell: false`, and never hand-edit normal profile dependencies.
+- Native smoke must run on matching x64/arm64 runner architecture. Cross-built artifacts may be uploaded but do not count as installation/startup evidence.
+- A 600-second cold-start ceiling is the release limit. Evidence must record elapsed startup time so a timeout cannot be reported as a successful slow install.
+- `v0.1.0-BETA2-2` may be moved only because its first tag workflow failed before a GitHub Release was created. `v0.1.0-BETA2-1` source tag remains for history when its downloadable Release/assets are removed.
+- Never print credentials, cookies, prompt bodies, or response bodies in CI evidence.
+
+## Read Set
+
+- [Beta 2-2 LAN plan](./beta2-2-lan-access.md) — existing feature boundary and pending release task; verified 2026-08-21.
+- [Testing strategy](../../engineering/testing.md) — current test layers and claims; verified 2026-08-21.
+- [BETA1 notes](../../releases/0.1.0-BETA1.md), [BETA2 notes](../../releases/0.1.0-BETA2.md), and [BETA2-1 notes](../../releases/0.1.0-BETA2-1.md) — release-difference source documents; verified against Git tags and CI 2026-08-21.
+- GitHub Actions runs `32468966137` and `32468983175` — source SHA `012527f`; main CI green, Windows x64 installed-package smoke failed before ready evidence.
+- GitHub Issue #10 — BETA1 watchdog restart race; GitHub Issue #17 — Windows source-build prerequisites and Node documentation drift.
+- GitHub runner-images current labels — `ubuntu-24.04-arm`, `windows-11-arm`, `macos-15`, and `macos-15-intel`; verified from the official runner-images repository 2026-08-21.
+
+## Current Facts and Root-Cause Hypothesis
+
+- The failed Windows x64 job installed the NSIS package, detected Node.js `24.18.0`, and installed the pinned Harness runtime before exceeding the 600-second ready-evidence deadline.
+- The first failed tag source at `012527f` performed 16 serial synchronous official plugin CLI calls during cold start. The repaired candidate combines the exact same validated install specs into one official CLI call per attempt.
+- Hypothesis: repeated pnpm resolution/linking in the failed tag's 16 serial CLI invocations dominated Windows cold-start time. Local tests support the repair contract, but the hypothesis is accepted only if the same Windows package smoke becomes green and emits bounded elapsed-time evidence.
+
+---
+
+### Task 1: Batch official plugin reconciliation and prove the Windows timeout regression
+
+**Files:**
+
+- Modify: `tests/unit/desktop-plugin-link.test.ts`
+- Modify: `apps/desktop/src/lifecycle/desktop-plugin-link.ts`
+
+**Interfaces:**
+
+- Consumes the existing validated `installRequests` array.
+- Produces one `runCommand(nodeExecutable, [dshEntry, "plugin", "--profile", "web", "add", ...installSpecs], options)` call per attempt.
+- Preserves the current one-time corrupted-`node_modules` retry and combined diagnostic capped at 2,000 characters.
+
+- [x] **Step 1: Verify RED against `012527f`**
+
+  Run the changed unit test against the tagged production implementation. Expected failure: the command runner is called once per plugin instead of once for the complete roster.
+
+- [x] **Step 2: Verify the exact batched argv contract**
+
+  Assert the literal prefix `plugin --profile web add`, followed by the legacy spec first and every resolved integrated plugin root in input order. Assert `shell: false`, the managed `DSH_HOME`/pnpm environment, and that an empty install roster never invokes the CLI.
+
+- [x] **Step 3: Implement the single official CLI invocation**
+
+  Keep input validation and `shell: false`; join package names only for the error message and do not concatenate shell text.
+
+- [x] **Step 4: Verify GREEN**
+
+  Run `pnpm exec vitest run tests/unit/desktop-plugin-link.test.ts`. Expected: all non-Windows fixtures pass and the Windows-only fixture remains the only designed skip on macOS.
+
+- [x] **Step 5: Commit**
+
+  Commit only the two files with subject `fix(desktop): batch official plugin reconciliation`.
+
+### Task 2: Run package startup smoke on native Windows, Linux, and both macOS architectures
+
+**Files:**
+
+- Modify: `tests/e2e/package-smoke-runtime.test.mjs`
+- Modify: `tests/e2e/package-contract.test.ts`
+- Modify: `scripts/smoke-packaged-runtime.mjs`
+- Modify: `.github/workflows/package.yml`
+
+**Interfaces:**
+
+- `assertKnownRunnerArchitecture(platform, arch)` accepts `x64` and `arm64` for Windows, Linux, and macOS only.
+- `inspectArchitecture(executable)` validates PE x64 `0x8664`, PE arm64 `0xaa64`, Linux x86-64/AArch64 ELF, and macOS Universal Mach-O (`x86_64` + `arm64`).
+- Package jobs run on `windows-2025`, `windows-11-arm`, `ubuntu-24.04`, `ubuntu-24.04-arm`, and a macOS build runner. macOS launch validation downloads the same Universal artifact on both `macos-15` and `macos-15-intel`.
+
+- [x] **Step 1: Write failing architecture and workflow-contract tests**
+
+  Add literal fixtures for PE machine `34404` and `43620`, Linux `x86-64` and `ARM aarch64`, Universal Mach-O arch output, native runner labels, and smoke-step conditions for both architectures.
+
+- [x] **Step 2: Run RED**
+
+  Run `pnpm exec vitest run --config tests/e2e/package-vitest.config.ts tests/e2e/package-smoke-runtime.test.mjs tests/e2e/package-contract.test.ts`. Expected: arm64 runner acceptance and native workflow assertions fail against the current implementation.
+
+- [x] **Step 3: Implement architecture-aware inspection and native workflow jobs**
+
+  Replace x64-only guards with platform/architecture pairs. Preserve exact artifact filename/target checks. Run Windows install/smoke/uninstall on x64 and arm64; run Linux AppImage and deb smoke/purge on x64 and arm64; mount/download the Universal macOS artifact and run the installed-app smoke on Apple Silicon and Intel.
+
+- [x] **Step 4: Record elapsed time**
+
+  Add `runtime.readyDurationMs` to sanitized evidence and reject values above `SMOKE_TIMEOUT_MS=600000`.
+
+- [x] **Step 5: Run GREEN**
+
+  Run the focused package suite, then `pnpm test:package`. Expected: zero failures.
+
+- [x] **Step 6: Commit**
+
+  Commit the four files with subject `ci: verify packages on native architectures`.
+
+### Task 3: Add a real packaged no-Node prerequisite smoke phase
+
+**Files:**
+
+- Modify: `tests/unit/smoke-contract.test.ts`
+- Modify: `tests/e2e/package-smoke-runtime.test.mjs`
+- Modify: `apps/desktop/src/lifecycle/smoke-contract.ts`
+- Modify: `apps/desktop/src/main.ts`
+- Modify: `scripts/smoke-packaged-runtime.mjs`
+- Modify: `.github/workflows/package.yml`
+
+**Interfaces:**
+
+- `SmokeConfig` gains a validated scenario enum `runtime | node-required`; normal users cannot activate it because smoke configuration remains packaged-only, nonce-bound, matrix-allowlisted, and evidence-root constrained.
+- The `node-required` scenario runs the installed app with Node paths removed from the child environment, records the official architecture-specific installer URL and minimum version, confirms no Harness ready/listener evidence, exits zero after acknowledgement, and never opens an external browser in CI.
+- The parent smoke verifier validates this evidence separately from normal runtime ready/final evidence.
+
+- [x] **Step 1: Write failing smoke-config and no-Node evidence tests**
+
+  Cover invalid scenario rejection, packaged-only gating, official `https://nodejs.org/` installer URL, `22.13.0` minimum, no Harness PID/origin fields, and clean acknowledgement/exit.
+
+- [x] **Step 2: Run RED**
+
+  Run `pnpm exec vitest run tests/unit/smoke-contract.test.ts --config tests/e2e/package-vitest.config.ts tests/e2e/package-smoke-runtime.test.mjs`. Expected: the scenario is absent and no-Node evidence cannot be produced.
+
+- [x] **Step 3: Implement the packaged-only no-Node path**
+
+  Keep the normal dialog unchanged outside CI. In validated smoke mode, write the node-required evidence instead of showing a blocking dialog or opening the URL, await the nonce acknowledgement, then request a clean quit.
+
+- [x] **Step 4: Add native no-Node workflow steps**
+
+  Reuse each installed/extracted artifact after the runtime smoke. Strip Node from the child lookup environment without removing OS utilities needed by Electron. Require the node-required evidence and clean exit on Windows x64/arm64, Linux x64/arm64, macOS Apple Silicon, and macOS Intel.
+
+- [x] **Step 5: Run GREEN and security checks**
+
+  Run focused tests, `pnpm check`, and `node scripts/check-security-contract.mjs`. Expected: no automatic Node downloader/installer path becomes reachable.
+
+- [x] **Step 6: Commit**
+
+  Commit the six files with subject `test(package): verify no-node guidance`.
+
+### Task 4: Rewrite Beta release and CI coverage documentation from verified evidence
+
+**Files:**
+
+- Modify: `docs/releases/0.1.0-BETA1.md`
+- Modify: `docs/releases/0.1.0-BETA2.md`
+- Modify: `docs/releases/0.1.0-BETA2-1.md`
+- Modify: `docs/releases/0.1.0-BETA2-2.md`
+- Modify: `docs/engineering/testing.md`
+- Modify: `docs/engineering/acceptance-report.md`
+- Modify: `docs/project/status.md`
+- Modify: `docs/index.md`
+- Modify: `docs/plans/index.md`
+- Create: `docs/knowledge/topics/github-actions-runner-matrix.md`
+- Modify: `docs/knowledge/index.md`
+- Modify: `AGENTS.md`
+
+**Interfaces:**
+
+- Documentation distinguishes product bugs, CI/release-pipeline bugs, and coverage gaps.
+- It states that no formal `BETA1-1` tag or Release exists; if the reported name meant BETA2-1, the retired-download reason and known installation/prerequisite failures are listed under BETA2-1 without rewriting history.
+- It corrects the BETA1 Node-model drift: PR #4 predates the BETA1 tag, so the tag code used system Node even though the old release prose claimed portable download.
+
+- [x] **Step 1: Write the evidence-backed change summary**
+
+  Include BETA1 watchdog restart/lock/process-leak bugs, BETA2 single lifecycle and rc.8 fixes, BETA2 native packaging hardening, BETA2-1 persistent Bash/update fixes, and BETA2-2 installation/startup/native-matrix changes.
+
+- [x] **Step 2: Add the exact validation matrix**
+
+  For every artifact identify build runner, install/extract method, Node-present result, no-Node result, ready duration, process/loopback result, and CI Run URL. Never label a cross-build as native execution.
+
+- [x] **Step 2a: Record current runner-label knowledge**
+
+  Add a rapid-freshness knowledge record with retrieval date, official `actions/runner-images` source, exact x64/arm64 labels, applicability, confidence, and 24-hour revalidation boundary; link it from the knowledge index.
+
+- [x] **Step 3: Update statuses only after evidence exists**
+
+  Before cloud success keep BETA2-2 `pending`; after success record exact run IDs, job conclusions, published assets, and verification date.
+
+- [x] **Step 4: Validate docs**
+
+  Run `node scripts/check-doc-links.mjs`, `pnpm format:check`, and search for stale `pending tag CI`, `BETA1-1`, portable-Node, and unsupported coverage claims.
+
+- [x] **Step 5: Commit**
+
+  Commit documentation with subject `docs: publish beta2 repair and validation notes`.
+
+### Task 5: Run full gates, replace the failed tag, publish Beta 2-2, and retire Beta 2-1 downloads
+
+**Files:**
+
+- Update after cloud verification: `docs/releases/0.1.0-BETA2-2.md`, `docs/engineering/acceptance-report.md`, `docs/project/status.md`, `docs/index.md`, `AGENTS.md`, this plan.
+
+- [x] **Step 1: Run local release gates on the exact candidate commit**
+
+  Run `pnpm build`, `pnpm test`, `pnpm check`, and `pnpm preflight:runtime`; review `git diff --check` and the complete branch diff.
+
+  Fresh evidence on exact candidate `f0414b7`: `pnpm build`, `pnpm test` (382 passed / 4 designed skips in the unit stage, 117 Anchored, 24 plugin, 58 package, and 3 Playwright), `pnpm check`, `pnpm preflight:runtime` (56 artifacts / 35 production dependencies / 8 critical versions / 10 plugins), and `pnpm check:memory` all exited 0. Universal macOS distribution plus real-DMG verification exited 0 on the immediately preceding code candidate `1b05f5c`; the only later production change was the focused Basic Auth diagnostic-redaction fix, which passed its direct tests and the exact-HEAD full build/test/check gates. The documentation gate checked 59 files. At that milestone local evidence alone did not satisfy cloud release steps; the final cloud evidence is recorded under Progress.
+
+- [x] **Step 2: Push through the repository integration path**
+
+  Push the feature branch, create/review/merge a PR to `main`, and confirm the resulting `main` CI has every job green.
+
+- [x] **Step 3: Run package workflow before moving the tag**
+
+  Dispatch `Package DeepSeek Harness Code` on the merged `main` SHA. Require every build/install/runtime/no-Node/macOS dual-architecture job to pass and retain sanitized evidence artifacts.
+
+- [x] **Step 4: Replace only the unpublished failed tag**
+
+  Confirm `gh release view v0.1.0-BETA2-2` still returns not found, delete only the old remote tag pointing at `012527f`, create an annotated `v0.1.0-BETA2-2` tag at the verified merged SHA, and push it.
+
+- [x] **Step 5: Verify tag publishing**
+
+  Wait for the tag workflow. Require all jobs green, `Publish GitHub release` green, the Release marked Latest/non-prerelease, all platform assets present, and `update-manifest.json` hashes matching downloaded artifacts.
+
+- [x] **Step 6: Retire the broken Beta 2-1 download**
+
+  At the operator's emergency request, GitHub Release/assets `v0.1.0-BETA2-1` were deleted before Beta 2-2 publication on 2026-08-21. The source tag and archived documentation remain; `gh release view v0.1.0-BETA2-1` returns not found.
+
+- [x] **Step 7: Write final evidence and commit documentation sync**
+
+  Record exact main/tag SHAs, CI Run IDs, job matrix, durations, Release URL/assets, Beta 2-1 retirement, and remaining limitations. Mark this plan `final-verified` only after those checks pass.
+
+## Risks and Rollback
+
+- Native ARM runner labels may be capacity-constrained. Queue delay is not a pass; the release remains blocked until a matching runner executes the artifact.
+- A batched official CLI call may expose an upstream multi-spec incompatibility. Roll back to serial calls only if a measured native run proves batching invalid; do not raise the 600-second limit as a substitute.
+- The no-Node smoke path is CI-only and must remain impossible to activate in an unpackaged or unvalidated process.
+- If the moved tag workflow fails, delete no existing Release. Fix forward on `main`, replace the still-unpublished Beta 2-2 tag again, and retain all failed Run IDs in the plan.
+
+## Definition of Done
+
+- Every local suite and every job in the final main/tag workflows is green.
+- Windows and Linux x64/arm64 artifacts run on matching native runners; macOS Universal runs on both Apple Silicon and Intel.
+- Node-present and no-Node prerequisite paths emit verified, sanitized, bounded-time evidence.
+- Beta differences and bugs are documented without inventing BETA1-1 or mislabeling CI failures as product failures.
+- Beta 2-2 is Latest with a verified manifest and complete assets; Beta 2-1 downloadable Release/assets are removed while its source tag remains.
+
+## Decision Log
+
+- 2026-08-21 — Treat “BETA1-1” as an unverified name, not a version. Git tags, Releases, history, and code search contain no such release.
+- 2026-08-21 — The failed `012527f` tag may move because its publish job never ran and no Beta 2-2 Release exists; preserving a known-bad unpublished source pointer would not provide a usable release boundary.
+- 2026-08-21 — “No Node installation” means verifying the supported guided prerequisite flow. Automatic Node installation is prohibited by the confirmed project contract.
+
+## Progress
+
+- 2026-08-22 — Final verified state: `main@6a08c98` passed CI Run `32500224845` and pre-release package Run `32500248923`; moved tag `v0.1.0-BETA2-2` published Release assets through tag Run `32502448560`. All five build jobs, Windows x64/arm64 install-runtime-node-required-uninstall, Linux x64/arm64 AppImage/deb runtime-node-required, and dual-native macOS runtime jobs were green. Release is Latest/non-prerelease with eight installers plus `update-manifest.json`; all five updater targets match GitHub asset filename, size, and SHA-256. BETA2-1 Release/assets are absent and its source tag remains. Post-publication evidence inspection found macOS Bash 3.2 skipped no-Node because `BASHPID` was unbound despite a green job; PR #28 fixed the workflow only, and Run `32505104693` then produced real Apple Silicon (844ms) and Intel (3230ms) node-required evidence with official architecture URLs, no Harness/listener, and clean exits. Release notes were corrected online and in-repo.
+- 2026-08-21 — PR #19 merged as `main@34776bc`; merged-main CI Run `32489172332` passed all 9 jobs. The operator then explicitly changed the retirement order because of active severe user reports: BETA2-1 GitHub Release/assets were deleted immediately and absence was verified while its source tag remained. Pre-tag package Run `32489425705` exposed two additional runner-specific gaps without publishing anything: Linux x64/arm64 production resolution still found `n`-managed Node under `/usr/local/n/versions/node`, and Windows arm64 did not place the app directly at the requested `/D` root or expose a visible uninstall registry entry. PR #20 / `main@5cfd45e` fixed the version-manager quarantine; Run `32491088389` proved both Linux architectures green but showed that electron-builder's assisted installer appends the exact product directory to the requested custom root. The current follow-up accepts only that exact runner-owned child layout, preserving the existing direct-layout and cleanup safety checks. Cloud rerun remains pending.
+- 2026-08-21 — PR #21 / `main@754227c` retained all green Linux results in Run `32492182024`, but Windows arm64 still required registry fallback after custom-root checks. Inspection of electron-builder 26.15.3's installer source identified the exact mismatch: its default uninstall `DisplayName` is `${productName} ${version}`, while the helper filtered only the product name. The current follow-up invokes the assisted silent installer with explicit `/currentuser` and derives the exact versioned display name from the candidate `package.json`; no wildcard registry match is permitted. Cloud rerun remains pending.
+- 2026-08-21 — PR #22 / `main@78906a7` made the Windows arm64 versioned uninstall entry resolvable in Run `32493347472`; the next fail-closed boundary rejected its registered install root because `/D` placed it under the runner-owned custom root rather than per-user Programs. The current follow-up accepts an exact registry root only when it equals or is a strict descendant of that run's custom root and still has the complete direct app layout. Registry roots outside that boundary continue to require a strict Programs descendant, and recursive cleanup still requires a no-reparse-point tree. Cloud rerun remains pending.
+- 2026-08-21 — PR #23 / `main@a755a72` accepted the registered Windows arm64 root inside the runner custom boundary in Run `32494535991`; the next fail-closed check proved that registry root is an installer-selected parent rather than the direct app layout. The current follow-up first rejects every reparse point under the runner custom root, then accepts exactly one immediate child with the complete exe/resources/exact-uninstaller layout. It does not scan outside the run-owned boundary. Cloud rerun remains pending.
+- 2026-08-21 — PR #24 / `main@93e60d4` proved in Run `32495727798` that the Windows arm64 app layout is deeper than one child beneath the safe registered parent. The current follow-up keeps the full no-reparse pre-scan, recursively locates the exact product executable only inside the runner-owned custom root, and requires exactly one parent directory with the complete exe/resources/exact-uninstaller layout. Zero or ambiguous layouts fail closed. Cloud rerun remains pending.
+- 2026-08-21 — PR #25 / `main@74fe800` retained the bounded recursive search in Run `32496810930`, but the Windows arm64 `InstallLocation` alone still resolved no complete layout. The current follow-up independently derives exact candidate roots from both `InstallLocation` and the exact uninstaller command, requires every root to remain inside the run-owned custom boundary or strict per-user Programs boundary, and requires all candidates to converge on exactly one complete app layout. Failure diagnostics report counts only, never paths. Cloud rerun remains pending.
+- 2026-08-21 — PR #26 / `main@c9439b0` proved in Run `32499162661` that exact `InstallLocation` and `UninstallString` converge on one safe root but the Windows arm64 silent installer extracts zero complete app layouts. electron-builder 26.15.3 source shows `useZip` is ignored while differential packaging remains enabled. Because this product's updater verifies whole installers with its own manifest and never publishes NSIS blockmaps, the current follow-up disables `differentialPackage` and enables `useZip` together, replacing the failing native arm64 7z payload path. Cloud rerun remains pending.
+- 2026-08-22 — PR #27 / `main@6a08c98` passed pre-release Run `32500248923` and tag Run `32502448560`; BETA2-2 was published as Latest with all eight installers plus a manifest whose five updater targets match GitHub asset size/SHA-256 records. Post-run evidence inspection then found a CI false green: both macOS normal runtime scenarios passed, but the Bash 3.2 shell lacks `BASHPID`, so the no-Node command never ran and its evidence was absent. The current follow-up uses portable `${BASHPID:-$$}` in every Unix quarantine path and adds a contract regression. A repaired main package run must prove both macOS node-required evidence files before this plan becomes final-verified.
+- 2026-08-21 — PR #19 Windows CI Run `32487900919` provided an exact RED for the PowerShell helper: the first `Add-DhscDirectCleanupFailure -CleanupFailures` call rejected an initially empty `List<Exception>` because a mandatory collection parameter lacked `AllowEmptyCollection`. The same binding rule applied to empty Node move lists and the final cleanup list. The local fix adds `AllowEmptyCollection` to the two strongly typed `List<object>` move parameters and three strongly typed `List<Exception>` cleanup parameters only; null remains forbidden. Local focused/package/check gates are not a substitute for the pending PR #19 Windows rerun or full cloud acceptance.
+- 2026-08-21 — Cloud fix 1 review round 2 added a fail-closed custom-root cleanup scan and a uniform Windows cleanup exception contract: a manual .NET stack inspects each top-level child before descending and rejects every reparse point/junction before recursive deletion; cleanup collections contain Exceptions only, report `.Message`, and preserve the primary failure over cleanup failures. The Windows-only executable fixture now includes an outside-sentinel junction case plus typed direct/caught cleanup and final-priority cases. Local non-Windows package gates retain the designed Windows skip; Windows CI and cloud acceptance remain pending.
+- 2026-08-21 — Cloud fix 1 review round 1 tightened the Windows host boundary locally: uninstall-registry fallback now accepts one exact product entry only when exe/resources/exact uninstaller are direct siblings under a strict per-user Programs descendant; registry roots are never force-deleted, while only the runner-owned custom root may be removed recursively. Windows Node move/restore and install-root resolution now share a dot-source helper with an executable Windows-only fixture (non-Windows designed skip). Focused/package/check gates are local evidence only; a Windows CI execution and the full native cloud matrix remain pending.
+- 2026-08-21 — Cloud package Run `32482981873` on `main@bb622a1` failed and remains non-acceptance evidence: Linux x64/arm64 runtime smoke passed (arm64 ready in 48,569ms) but both no-Node phases correctly exposed `/usr/local/bin/node`; Windows x64 runtime passed in 302,660ms but its no-Node phase exposed `C:\Program Files\nodejs\node.exe`; Windows arm64 NSIS exited 0 but the requested custom install root contained no app executable; macOS smoke was skipped after the package matrix failed. Root causes are hosted-runner standard Node candidates not being quarantined and the Windows workflow treating NSIS `/D` as authoritative instead of resolving the exact product uninstall registration. Cloud release validation, tag replacement, publication, and retirement remain pending.
+- 2026-08-21 — Read-only audit complete: main CI `32468966137` green; first tag package CI `32468983175` failed at the Windows x64 installed-app ready deadline, so no BETA2-2 Release was created. Four other package jobs were green, but ARM/macOS runtime coverage was incomplete.
+- Task 1 complete — commits `deacad0`, `096fe7d`, and `bddb6f7`; two review-fix rounds addressed diagnostic redaction and the final 2,000-character bound; final task review was clean.
+- Task 2 complete — commits `bfca0f4` and `feb6355`; one review-fix round bound Darwin listener parsing and package architecture to native runners; final task review was clean. Cloud-native execution remains Task 5 evidence.
+- Task 3 complete — commits `737d023`, `af8524d`, and `0c5cf6a`; two review-fix rounds required the real Node resolver and immediate same-run mismatch propagation; final task review was clean. Cloud-native execution remains Task 5 evidence.
+- Task 4 complete — commits `60f0207`, `6456049`, `989131a`, and `1b05f5c`; two review-fix rounds corrected the Node timeline, DMG/ZIP execution scope, 600-second wording, and macOS no-Node claims; final task review was clean with cloud facts still pending.
+- Task 5 complete — local build/test/check/runtime/memory gates passed; `main@6a08c98`, tag/pre-release cloud runs, publication, manifest verification, BETA2-1 retirement, and repaired macOS no-Node evidence are recorded above.

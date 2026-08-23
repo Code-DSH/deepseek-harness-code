@@ -323,7 +323,7 @@ describe("desktop plugin with the real pinned Harness", () => {
 
   // macOS CI cold real-Harness/preset setup exceeded this test's former
   // explicit 15-second limit, so keep the scoped 45-second budget below.
-  it("is discovered with English fallback metadata by the pinned rc.8 roster", async () => {
+  it("is discovered with English fallback metadata by the pinned rc.2 roster", async () => {
     const root = await mkdtemp(join(tmpdir(), "dsh-anchored-preset-real-"));
     temporaryRoots.add(root);
     const dshHome = join(root, "home");
