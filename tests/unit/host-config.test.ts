@@ -4,7 +4,6 @@ import { describe, expect, it } from "vitest";
 
 import {
   createDependencyInstallPagePath,
-  createDependencyInstallWindowOptions,
   createHarnessLaunchSpec,
   resolveHarnessDataPaths,
   createStartupPagePath,
@@ -37,11 +36,6 @@ describe("Electron host configuration", () => {
       sandbox: true,
       nodeIntegration: false,
       preload: "/app/preload.cjs",
-    });
-    expect(createSecureWebPreferences()).toEqual({
-      contextIsolation: true,
-      sandbox: true,
-      nodeIntegration: false,
     });
   });
 
@@ -79,23 +73,10 @@ describe("Electron host configuration", () => {
     );
   });
 
-  it("uses a fixed modal page for first-launch dependency installation", () => {
+  it("uses a fixed page for first-launch dependency installation", () => {
     expect(createDependencyInstallPagePath("/app")).toBe(
       join("/app", "apps", "desktop", "src", "dependency-install.html"),
     );
-    expect(createDependencyInstallWindowOptions()).toEqual({
-      title: "DeepSeek Harness Code",
-      width: 420,
-      height: 180,
-      show: false,
-      modal: true,
-      resizable: false,
-      minimizable: false,
-      maximizable: false,
-      fullscreenable: false,
-      closable: false,
-      autoHideMenuBar: true,
-    });
   });
 
   it("uses the packaged branded tray resource and the generated development asset", () => {

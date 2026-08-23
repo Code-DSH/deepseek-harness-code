@@ -11,14 +11,24 @@
     <title>DeepSeek Harness Code</title>
     <style>
       :root {
-        color: #171717;
-        background: #fff;
+        color: #172033;
+        background: #eef3fb;
         font-family:
           system-ui,
           -apple-system,
           BlinkMacSystemFont,
           "Segoe UI",
           sans-serif;
+        --surface: rgba(255, 255, 255, 0.82);
+        --surface-border: rgba(111, 133, 175, 0.2);
+        --muted: #64708a;
+        --track: rgba(80, 102, 145, 0.14);
+        --accent: #4f7cff;
+        --accent-secondary: #7b5cff;
+      }
+
+      * {
+        box-sizing: border-box;
       }
 
       html,
@@ -26,44 +36,221 @@
         width: 100%;
         height: 100%;
         margin: 0;
-        background: inherit;
+        overflow: hidden;
+      }
+
+      body {
+        background:
+          radial-gradient(
+            circle at 16% 12%,
+            rgba(80, 133, 255, 0.22),
+            transparent 34%
+          ),
+          radial-gradient(
+            circle at 86% 84%,
+            rgba(130, 87, 255, 0.18),
+            transparent 36%
+          ),
+          linear-gradient(145deg, #f8faff 0%, #eaf0fa 100%);
+      }
+
+      .titlebar {
+        position: fixed;
+        z-index: 2;
+        inset: 0 0 auto;
+        height: 36px;
+        -webkit-app-region: drag;
       }
 
       main {
+        position: relative;
+        width: 100%;
         height: 100%;
         display: grid;
-        place-content: center;
-        gap: 18px;
-        padding: 24px 36px;
+        place-items: center;
+        padding: clamp(32px, 6vw, 72px);
       }
 
-      p {
+      .panel {
+        width: min(560px, 100%);
+        padding: 42px 44px 38px;
+        border: 1px solid var(--surface-border);
+        border-radius: 28px;
+        background: var(--surface);
+        box-shadow:
+          0 28px 80px rgba(45, 60, 96, 0.16),
+          0 2px 8px rgba(45, 60, 96, 0.08);
+        backdrop-filter: blur(24px);
+      }
+
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 11px;
+        margin-bottom: 38px;
+        color: var(--muted);
+        font-size: 14px;
+        font-weight: 650;
+        letter-spacing: 0.01em;
+      }
+
+      .mark {
+        width: 32px;
+        height: 32px;
+        display: grid;
+        place-items: center;
+        border-radius: 10px;
+        color: #fff;
+        background: linear-gradient(
+          135deg,
+          var(--accent),
+          var(--accent-secondary)
+        );
+        box-shadow: 0 8px 20px rgba(79, 124, 255, 0.28);
+        font-size: 10px;
+        font-weight: 800;
+        letter-spacing: -0.02em;
+      }
+
+      h1 {
         margin: 0;
-        text-align: center;
-        font-size: 15px;
+        font-size: clamp(28px, 4vw, 36px);
+        line-height: 1.15;
+        letter-spacing: -0.04em;
+      }
+
+      .description,
+      .estimate,
+      .hint {
+        color: var(--muted);
+      }
+
+      .description {
+        margin: 16px 0 0;
+        font-size: 16px;
+        line-height: 1.65;
+      }
+
+      .estimate {
+        margin: 5px 0 30px;
+        font-size: 14px;
+        line-height: 1.6;
+      }
+
+      .progress {
+        width: 100%;
+        height: 8px;
+        overflow: hidden;
+        border-radius: 999px;
+        background: var(--track);
+      }
+
+      .progress span {
+        display: block;
+        width: 38%;
+        height: 100%;
+        border-radius: inherit;
+        background: linear-gradient(
+          90deg,
+          var(--accent),
+          var(--accent-secondary)
+        );
+        animation: progress 1.6s cubic-bezier(0.65, 0, 0.35, 1) infinite;
+      }
+
+      .hint {
+        margin: 16px 0 0;
+        font-size: 13px;
         line-height: 1.5;
       }
 
-      progress {
-        width: 320px;
-        height: 8px;
+      @keyframes progress {
+        from {
+          transform: translateX(-120%);
+        }
+
+        to {
+          transform: translateX(365%);
+        }
       }
 
       @media (prefers-color-scheme: dark) {
         :root {
-          color: #f4f4f4;
-          background: #171717;
+          color: #f4f7ff;
+          background: #0a1020;
+          --surface: rgba(17, 24, 42, 0.8);
+          --surface-border: rgba(156, 178, 226, 0.16);
+          --muted: #aab5cd;
+          --track: rgba(174, 193, 232, 0.14);
+          --accent: #6f98ff;
+          --accent-secondary: #9a7cff;
+        }
+
+        body {
+          background:
+            radial-gradient(
+              circle at 16% 12%,
+              rgba(63, 111, 226, 0.26),
+              transparent 36%
+            ),
+            radial-gradient(
+              circle at 86% 84%,
+              rgba(116, 78, 210, 0.22),
+              transparent 38%
+            ),
+            linear-gradient(145deg, #0d1425 0%, #080d19 100%);
+        }
+
+        .panel {
+          box-shadow:
+            0 30px 90px rgba(0, 0, 0, 0.38),
+            0 2px 8px rgba(0, 0, 0, 0.24);
+        }
+      }
+
+      @media (max-width: 640px) {
+        main {
+          padding: 24px;
+        }
+
+        .panel {
+          padding: 32px 28px 30px;
+          border-radius: 22px;
+        }
+
+        .brand {
+          margin-bottom: 30px;
+        }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        .progress span {
+          animation-duration: 3.2s;
         }
       }
     </style>
   </head>
   <body>
+    <header class="titlebar" aria-hidden="true"></header>
     <main aria-live="polite" aria-busy="true">
-      <p>
-        首次启动需要安装依赖，请稍候。<br />
-        预计需要 5–10 分钟，具体取决于网络速度。
-      </p>
-      <progress aria-label="正在安装依赖"></progress>
+      <section class="panel">
+        <div class="brand">
+          <span class="mark" aria-hidden="true">DS</span>
+          <span>DeepSeek Harness Code</span>
+        </div>
+        <h1>正在准备首次启动</h1>
+        <p class="description">首次启动需要安装依赖，请稍候。</p>
+        <p class="estimate">预计需要 5–10 分钟，具体取决于网络速度。</p>
+        <div
+          class="progress"
+          role="progressbar"
+          aria-label="正在安装依赖"
+          aria-valuetext="安装中"
+        >
+          <span></span>
+        </div>
+        <p class="hint">请保持应用开启，完成后将自动进入工作区。</p>
+      </section>
     </main>
   </body>
 </html>

@@ -18,7 +18,6 @@ import {
 
 import {
   createDependencyInstallPagePath,
-  createDependencyInstallWindowOptions,
   createHarnessLaunchSpec,
   resolveHarnessDataPaths,
   createSecureWebPreferences,
@@ -112,7 +111,6 @@ import {
 } from "./application-menu.js";
 
 let mainWindow: BrowserWindow | undefined;
-let dependencyInstallWindow: BrowserWindow | undefined;
 let controller: HarnessRuntimeController | undefined;
 let harnessOrigin = "";
 let healthTimer: ReturnType<typeof setInterval> | undefined;
@@ -296,38 +294,10 @@ function createWindow(showStartupPage = true): BrowserWindow {
 }
 
 function showDependencyInstallProgress(): void {
-  if (
-    dependencyInstallWindow !== undefined &&
-    !dependencyInstallWindow.isDestroyed()
-  ) {
-    return;
-  }
   if (mainWindow === undefined || mainWindow.isDestroyed()) return;
-
-  const pagePath = createDependencyInstallPagePath(app.getAppPath());
-  const progressWindow = new BrowserWindow({
-    ...createDependencyInstallWindowOptions(),
-    parent: mainWindow,
-    webPreferences: createSecureWebPreferences(),
-  });
-  dependencyInstallWindow = progressWindow;
-  configureWindowNavigation(progressWindow, pagePath);
-  progressWindow.once("ready-to-show", () => {
-    if (!progressWindow.isDestroyed()) progressWindow.show();
-  });
-  progressWindow.on("closed", () => {
-    if (dependencyInstallWindow === progressWindow)
-      dependencyInstallWindow = undefined;
-  });
-  void progressWindow.loadFile(pagePath).catch(reportRuntimeFailure);
-}
-
-function closeDependencyInstallProgress(): void {
-  const progressWindow = dependencyInstallWindow;
-  dependencyInstallWindow = undefined;
-  if (progressWindow !== undefined && !progressWindow.isDestroyed()) {
-    progressWindow.destroy();
-  }
+  void mainWindow
+    .loadFile(createDependencyInstallPagePath(app.getAppPath()))
+    .catch(reportRuntimeFailure);
 }
 
 async function handleWindowClose(window: BrowserWindow): Promise<void> {
@@ -523,10 +493,8 @@ async function prepareSystemNodeRuntime(
       ) {
         process.stderr.write(`Global dsh CLI: ${globalCli.message}\n`);
       }
-      closeDependencyInstallProgress();
       return;
     } catch (error) {
-      closeDependencyInstallProgress();
       const failedError =
         error instanceof Error ? error : new Error("Unknown runtime error");
       const choice = await showNodeRequiredDialog(failedError);
