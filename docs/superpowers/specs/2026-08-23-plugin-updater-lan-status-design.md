@@ -126,7 +126,7 @@ the values are available.
 
 ## Related documents
 
-- Parent: [Superpowers specs](../index.md)
+- Parent: [Documentation index](../../index.md)
 - Existing updater design: [Auto-updater design](./2026-08-18-auto-updater-design.md)
 - LAN design: [LAN access design](./2026-08-21-beta2-2-lan-access-design.md)
 
