@@ -67,6 +67,7 @@
     "@deepseek-ai/dsh-subagent-in-process-driver": "link:deps/deepseek-harness/packages/subagent/subagent-in-process-driver",
     "@deepseek-ai/dsh-subprocess": "link:deps/deepseek-harness/packages/subprocess/subprocess",
     "@deepseek-ai/dsh-timeout": "link:deps/deepseek-harness/packages/util/timeout",
+    "@deepseek-ai/dsh-tools": "link:deps/deepseek-harness/packages/core/tools",
     "@deepseek-ai/dsh-workflow": "link:deps/deepseek-harness/packages/workflow/workflow",
     "@hono/node-server": "2.1.1",
     "ajv": "8.20.0",

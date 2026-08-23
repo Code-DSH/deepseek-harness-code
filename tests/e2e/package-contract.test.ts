@@ -27,6 +27,9 @@ describe("DeepSeek Harness Code distribution contract", () => {
     expect(manifest.dependencies["@deepseek-ai/dsh"]).toBe(
       "link:deps/deepseek-harness/apps/cli",
     );
+    expect(manifest.dependencies["@deepseek-ai/dsh-tools"]).toBe(
+      "link:deps/deepseek-harness/packages/core/tools",
+    );
   });
 
   test("declares the renamed Universal macOS product with ad-hoc signing", async () => {

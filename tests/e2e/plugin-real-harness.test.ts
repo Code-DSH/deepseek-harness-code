@@ -15,6 +15,7 @@ import {
   ensureAnchoredStandardPreset,
   ensureMaintainedHarnessInstall,
 } from "../../apps/desktop/src/lifecycle/desktop-plugin-link.js";
+import { redactStartupDiagnostic } from "../../apps/desktop/src/lifecycle/startup-diagnostics.js";
 
 const repositoryRoot = process.cwd();
 const require = createRequire(join(repositoryRoot, "package.json"));
@@ -51,6 +52,19 @@ const children = new Set<ChildProcess>();
 const mockServers = new Set<Server>();
 const temporaryRoots = new Set<string>();
 
+function captureChildDiagnostics(child: ChildProcess): () => string {
+  let diagnostics = "";
+  const capture = (source: "stdout" | "stderr", chunk: Buffer | string) => {
+    const diagnostic = redactStartupDiagnostic(String(chunk));
+    if (diagnostic !== "") {
+      diagnostics = `${diagnostics}\n[${source}] ${diagnostic}`.slice(-2_000);
+    }
+  };
+  child.stdout?.on("data", (chunk) => capture("stdout", chunk));
+  child.stderr?.on("data", (chunk) => capture("stderr", chunk));
+  return () => diagnostics;
+}
+
 afterEach(async () => {
   await Promise.all(
     [...children].map(
@@ -80,21 +94,31 @@ afterEach(async () => {
   temporaryRoots.clear();
 });
 
-async function waitForIndex(
-  origin: string,
+async function waitForHttpText(
+  url: string,
+  description: string,
+  child: ChildProcess,
+  readDiagnostics: () => string,
   timeoutMs = 15_000,
 ): Promise<string> {
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
+    if (child.exitCode !== null || child.signalCode !== null) {
+      throw new Error(
+        `Harness exited before ${description} became ready (code=${String(child.exitCode)}, signal=${String(child.signalCode)}):${readDiagnostics()}`,
+      );
+    }
     try {
-      const response = await fetch(origin);
+      const response = await fetch(url);
       if (response.ok) return response.text();
     } catch {
       // The loopback listener is not ready yet.
     }
     await new Promise((resolve) => setTimeout(resolve, 100));
   }
-  throw new Error(`Harness index did not become ready at ${origin}`);
+  throw new Error(
+    `${description} did not become ready at ${url}:${readDiagnostics()}`,
+  );
 }
 
 async function callHarnessApi(
@@ -395,7 +419,8 @@ describe("desktop plugin with the real pinned Harness", () => {
       },
     );
     children.add(child);
-    await waitForIndex(origin);
+    const readDiagnostics = captureChildDiagnostics(child);
+    await waitForHttpText(origin, "the Harness index", child, readDiagnostics);
 
     // The Web root is registered slightly before Cordis finishes publishing
     // domain routes. Wait for the specific roster route instead of guessing a
@@ -529,14 +554,21 @@ describe("desktop plugin with the real pinned Harness", () => {
       },
     );
     children.add(child);
+    const readDiagnostics = captureChildDiagnostics(child);
 
-    const index = await waitForIndex(origin);
-    expect(index).toContain("deepseek-harness-desktop-plugin");
-    const bundle = await fetch(
-      `${origin}/plugins/deepseek-harness-desktop-plugin/client.js`,
+    const index = await waitForHttpText(
+      origin,
+      "the Harness index",
+      child,
+      readDiagnostics,
     );
-    expect(bundle.status).toBe(200);
-    const source = await bundle.text();
+    expect(index).toContain("deepseek-harness-desktop-plugin");
+    const source = await waitForHttpText(
+      `${origin}/plugins/deepseek-harness-desktop-plugin/client.js`,
+      "the desktop plugin client bundle",
+      child,
+      readDiagnostics,
+    );
     expect(source).toContain("window.__ModuleLoader__.load");
 
     let registration:

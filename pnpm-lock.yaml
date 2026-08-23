@@ -71,6 +71,9 @@ importers:
       '@deepseek-ai/dsh-timeout':
         specifier: link:deps/deepseek-harness/packages/util/timeout
         version: link:deps/deepseek-harness/packages/util/timeout
+      '@deepseek-ai/dsh-tools':
+        specifier: link:deps/deepseek-harness/packages/core/tools
+        version: link:deps/deepseek-harness/packages/core/tools
       '@deepseek-ai/dsh-workflow':
         specifier: link:deps/deepseek-harness/packages/workflow/workflow
         version: link:deps/deepseek-harness/packages/workflow/workflow
@@ -97,7 +100,7 @@ importers:
         version: link:packages/desktop-plugin
       dsh-find-plugin:
         specifier: 0.3.6
-        version: 0.3.6(@deepseek-ai/cordis@4.0.1)
+        version: 0.3.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-tools@deps+deepseek-harness+packages+core+tools)
       eventsource:
         specifier: 3.0.7
         version: 3.0.7
@@ -6092,9 +6095,10 @@ snapshots:
 
   dotenv@16.6.1: {}
 
-  dsh-find-plugin@0.3.6(@deepseek-ai/cordis@4.0.1):
+  dsh-find-plugin@0.3.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-tools@deps+deepseek-harness+packages+core+tools):
     dependencies:
       '@deepseek-ai/cordis': 4.0.1
+      '@deepseek-ai/dsh-tools': link:deps/deepseek-harness/packages/core/tools
 
   dts-resolver@3.0.0: {}
 
