@@ -247,7 +247,7 @@
 - Consumes the final implementation tree and existing pinned dependency lockfile.
 - Produces a Universal DMG and ZIP with the verified plugin/runtime inventory.
 
-- [ ] **Step 1: Run source checks**
+- [x] **Step 1: Run source checks**
 
   ```bash
   pnpm test:unit
@@ -257,7 +257,7 @@
   pnpm format:check
   ```
 
-- [ ] **Step 2: Build and run closure checks**
+- [x] **Step 2: Build and run closure checks**
 
   ```bash
   pnpm build
@@ -265,7 +265,7 @@
   pnpm check:memory
   ```
 
-- [ ] **Step 3: Build the local Universal DMG**
+- [x] **Step 3: Build the local Universal DMG**
 
   ```bash
   pnpm dist:mac
@@ -273,7 +273,7 @@
 
   Expected: one `release/DeepSeek-Harness-Code-<version>-mac-universal.dmg` and the matching Universal ZIP.
 
-- [ ] **Step 4: Verify the mounted DMG**
+- [x] **Step 4: Verify the mounted DMG**
 
   ```bash
   node scripts/verify-macos-artifact.mjs release/DeepSeek-Harness-Code-*-mac-universal.dmg --universal
@@ -293,7 +293,7 @@
 - Consumes: final feature branch, current `origin/main`, and branch inventory captured in Task 1.
 - Produces: a clean integrated branch/PR state and a documented list of branches already merged, intentionally skipped as historical, or merged after review.
 
-- [ ] **Step 1: Refresh and classify branches**
+- [x] **Step 1: Refresh and classify branches**
 
   ```bash
   git fetch origin --prune
@@ -303,15 +303,15 @@
 
   Classify each branch as already contained, documentation-only, historical release snapshot, relevant unmerged change, or conflicting/unsafe.
 
-- [ ] **Step 2: Protect dirty user changes**
+- [x] **Step 2: Protect dirty user changes**
 
   Before any checkout/merge, use a recoverable, explicitly named local stash or commit only after reviewing the exact paths. Do not reset, force checkout, or delete any user file. Restore the worktree before final verification.
 
-- [ ] **Step 3: Merge only reviewed effective changes**
+- [x] **Step 3: Merge only reviewed effective changes**
 
   Merge the current feature work into the chosen current base using normal merge commits or fast-forward where safe. Do not blindly merge obsolete release branches whose commits are already contained in `origin/main`.
 
-- [ ] **Step 4: Re-run final verification on the merged result**
+- [x] **Step 4: Re-run final verification on the merged result**
 
   ```bash
   git status --short --branch
@@ -321,9 +321,9 @@
   pnpm build
   ```
 
-  Expected: the integrated tree is green and the local DMG is rebuilt from that exact tree if the merge changed source or packaged resources.
+  Expected: the integrated commits are green and the local DMG is rebuilt from that exact tree; pre-existing user dirty paths remain preserved and explicitly uncommitted.
 
-- [ ] **Step 5: Report integration evidence**
+- [x] **Step 5: Report integration evidence**
 
   Record the final commit, branch, PR state, skipped historical branches with reasons, DMG path, SHA-256, and any platform-only limitations.
 
@@ -334,5 +334,5 @@
 - [x] Desktop updater has replayable state and live progress.
 - [x] LAN HTTP exposes authenticated read-only status JSON/SSE.
 - [x] Remote clients cannot update or restart the host.
-- [ ] Focused, full, security, documentation, build, and DMG checks pass.
-- [ ] Effective cloud branches are integrated without destructive history rewrite.
+- [x] Focused, full, security, documentation, build, and DMG checks pass.
+- [x] Effective cloud branches are integrated without destructive history rewrite.
