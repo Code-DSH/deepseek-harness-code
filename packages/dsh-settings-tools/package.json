@@ -1,0 +1,25 @@
+{
+  "name": "dsh-settings-tools",
+  "description": "通用设置增强：重启 Harness 行、局域网访问行左右开边重构，整页 16px 节奏与右对齐归一化。",
+  "version": "1.0.0",
+  "private": true,
+  "main": "lib/index.js",
+  "exports": {
+    ".": "./lib/index.js",
+    "./client": "./lib/client.js",
+    "./package.json": "./package.json"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "inject": [
+        "@deepseek-ai/dsh-client-runtime",
+        "@deepseek-ai/dsh-client-ui-slots"
+      ],
+      "platform": "web"
+    }
+  },
+  "license": "MIT"
+}

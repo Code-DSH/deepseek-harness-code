@@ -145,6 +145,7 @@ V4 Pro 是该整合基础增强的重要能力之一，而非唯一中心。固�
 - **Skills** — Superpowers 6.2.0 安装至 `<DSH_HOME>/skills`，用户同名目录永不覆盖。
 - **全局 Agent 协议** — `<DSH_HOME>/AGENTS.md`：无则安装、未改则随版升级、永不覆盖用户自有，菜单 `Use Bundled Global Prompt…` 带时间戳备份切换。
 - **全局 `dsh`** — 首次启动经 `npm install -g` 安装固定 `@deepseek-ai/dsh`，不覆用户全局，失败不阻塞。
+- **用户确认更新** — 仅接受 SHA-256 校验通过的包；Windows 保留当前 NSIS 安装目录，Linux AppImage 替换持久化的 `$APPIMAGE` 文件，Debian 包仍需手动更新。
 - **本地化预设** — `anchored-standard` / `router-standard` / `router-spec` 中英双语名，不改 ID。
 - **安全实验** — Anchored Standard 为独立 Bundle，在 Harness 0.1.1-rc.2 上失败回退 Standard。
 
@@ -162,7 +163,7 @@ V4 Pro 是该整合基础增强的重要能力之一，而非唯一中心。固�
 | 预设     | Standard 默认，可选 anchored / router                   |
 | 恢复     | 健康探测、重启、渲染器替换、端口重试                    |
 | Watchdog | 独立 IPC，有界重启与熔断                                |
-| 插件     | 桌面、UI Motion、Model2、Find、Routing 等               |
+| 插件     | 桌面、UI Motion、Model2、Find、Routing、Settings Tools、插件市场等 |
 | 诊断     | 启动证据、运行态、脱敏轮转日志                          |
 | 安全     | 沙箱渲染器、无 Node 集成、校验 IPC                      |
 | 打包     | macOS Universal DMG；Windows NSIS；Linux AppImage/deb   |
@@ -173,7 +174,7 @@ V4 Pro 是该整合基础增强的重要能力之一，而非唯一中心。固�
 
 - **离线快照** — 安装包内置三组件（`@dsh-external/dsh-super-injector` Bundle 层、`@dsh-external/dsh-mode-boost` 宿主增强、`router-standard` + `router-spec` 预设）。
 - **固定基线** — `injector 0.3.3` / `mode-boost 0.1.0` / `router-preset 0.2.0@eff787e`，SHA-256 存于 `build/routing-suite/versions.json`。
-- **官方安装** — 经系统 Node + 内置 pnpm 执行 `dsh plugin --profile web add`（desktop、ui-motion、model2、prompt-principles、vision-router、better-sidebar、LAN access、composition、Super Injector、Mode Boost、find-plugin）。正常 manifest 协调由 Harness 掌管；桌面宿主唯一的兼容性例外，是成功执行官方 CLI 后仅移除 0.1.1-rc.2 两个 `linkOnly` 子 Agent bundle 名，不改无关条目。受校验的应用自有 marker 仅在受管清单、包路径/身份、profile 依赖与 pnpm store 均未变化时跳过重复 CLI；缺失或不匹配则重新协调。损坏的 `node_modules` 自引用等失败会一次性重建后重试。
+- **官方安装** — 经系统 Node + 内置 pnpm 执行 `dsh plugin --profile web add`（desktop、ui-motion、model2、prompt-principles、vision-router、better-sidebar、LAN access、composition、Super Injector、Mode Boost、find-plugin、settings-tools、plugin-market）。正常 manifest 协调由 Harness 掌管；桌面宿主唯一的兼容性例外，是成功执行官方 CLI 后仅移除 0.1.1-rc.2 两个 `linkOnly` 子 Agent bundle 名，不改无关条目。受校验的应用自有 marker 仅在受管清单、包路径/身份、profile 依赖与 pnpm store 均未变化时跳过重复 CLI；缺失或不匹配则重新协调。损坏的 `node_modules` 自引用等失败会一次性重建后重试。
 - **审核更新** — 仅随 App 发版更新，构建前校验 SHA-256，安装后永不后台下载可变代码。
 - **所有权安全** — 不覆盖无关插件与用户自有预设，旧 Home 仅复制迁移。
 

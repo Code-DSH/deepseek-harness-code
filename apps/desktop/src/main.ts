@@ -591,6 +591,12 @@ async function startHarness(): Promise<HarnessChild> {
   const lanAccessPluginRoot = app.isPackaged
     ? join(process.resourcesPath, "dsh-lan-access")
     : join(app.getAppPath(), "packages", "dsh-lan-access");
+  const settingsToolsPluginRoot = app.isPackaged
+    ? join(process.resourcesPath, "dsh-settings-tools")
+    : join(app.getAppPath(), "packages", "dsh-settings-tools");
+  const marketPluginRoot = app.isPackaged
+    ? join(process.resourcesPath, "dsh-plugin-market")
+    : join(app.getAppPath(), "packages", "dsh-plugin-market");
   const promptPrinciplesRoot = app.isPackaged
     ? join(process.resourcesPath, "prompt-principles-plugin")
     : join(app.getAppPath(), "packages", "prompt-principles-plugin");
@@ -693,6 +699,14 @@ async function startHarness(): Promise<HarnessChild> {
       {
         packageName: "dsh-vision-router",
         packageRoot: runtime.dshVisionRouterRoot,
+      },
+      {
+        packageName: "dsh-settings-tools",
+        packageRoot: settingsToolsPluginRoot,
+      },
+      {
+        packageName: "@dsh-external/deepseek-harness-plugin-market",
+        packageRoot: marketPluginRoot,
       },
     ],
     legacyPluginSpecs: migration.legacyPluginSpecs,

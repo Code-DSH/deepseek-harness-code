@@ -145,6 +145,7 @@ Long sessions rarely crash dramatically — pressure accumulates: renderer stall
 - **Skills** — Superpowers 6.2.0 installed to `<DSH_HOME>/skills`, never overwriting user-owned directories.
 - **Global Agent Protocol** — `<DSH_HOME>/AGENTS.md`: auto-installed when absent, upgraded only while still app-managed, never overwriting user-owned, with timestamped backup switch via `Use Bundled Global Prompt…`.
 - **Global `dsh`** — `npm install -g` of pinned `@deepseek-ai/dsh` on first launch, never overwriting user global, fail-open.
+- **User-confirmed updates** — SHA-256-verified assets only; Windows preserves the current NSIS directory, Linux AppImage replaces the persistent `$APPIMAGE` file, and Debian packages remain manual.
 - **Localized presets** — `anchored-standard` / `router-standard` / `router-spec` with bilingual names, IDs unchanged.
 - **Safe experiment** — Anchored Standard as separate bundle, fails closed to Standard on Harness 0.1.1-rc.2.
 
@@ -162,7 +163,7 @@ Long sessions rarely crash dramatically — pressure accumulates: renderer stall
 | Presets       | Standard default, optional anchored / router                |
 | Recovery      | Health probes, restart, renderer replacement, port retry    |
 | Watchdog      | Independent IPC, bounded restart and circuit breaker        |
-| Plugins       | Desktop, UI Motion, Model2, Find, Routing, etc.             |
+| Plugins       | Desktop, UI Motion, Model2, Find, Routing, Settings Tools, Plugin Market, etc. |
 | Diagnostics   | Startup evidence, runtime state, redacted rotated logs      |
 | Security      | Sandboxed renderer, no Node integration, validated IPC      |
 | Packaging     | macOS Universal DMG; Windows NSIS; Linux AppImage/deb       |
@@ -173,7 +174,7 @@ Bundled community [dsh-routing-suite](https://github.com/yjh051108/dsh-routing-s
 
 - **Offline snapshot** — three pinned components (`@dsh-external/dsh-super-injector`, `@dsh-external/dsh-mode-boost`, `router-standard` + `router-spec`) inside app resources.
 - **Pinned baseline** — `injector 0.3.3` / `mode-boost 0.1.0` / `router-preset 0.2.0@eff787e`, SHA-256 in `build/routing-suite/versions.json`.
-- **Official install** — via system Node + bundled pnpm `dsh plugin --profile web add` (desktop, ui-motion, model2, prompt-principles, vision-router, better-sidebar, LAN access, composition, Super Injector, Mode Boost, find-plugin). Harness owns normal manifest reconciliation; the desktop host's only compatibility edit removes the two 0.1.1-rc.2 `linkOnly` subagent bundle names after a successful CLI reconcile and never alters unrelated entries. A validated app-owned reconciliation marker skips repeated CLI additions only for an unchanged managed roster; a missing or mismatched marker, changed package root/identity, missing profile dependency, or foreign store runs the official reconciliation again. Corrupted `node_modules` self-reference is rebuilt once.
+- **Official install** — via system Node + bundled pnpm `dsh plugin --profile web add` (desktop, ui-motion, model2, prompt-principles, vision-router, better-sidebar, LAN access, composition, Super Injector, Mode Boost, find-plugin, settings-tools, plugin-market). Harness owns normal manifest reconciliation; the desktop host's only compatibility edit removes the two 0.1.1-rc.2 `linkOnly` subagent bundle names after a successful CLI reconcile and never alters unrelated entries. A validated app-owned reconciliation marker skips repeated CLI additions only for an unchanged managed roster; a missing or mismatched marker, changed package root/identity, missing profile dependency, or foreign store runs the official reconciliation again. Corrupted `node_modules` self-reference is rebuilt once.
 - **Reviewed updates** — only with new app release, SHA-256 verified before extraction, never downloading mutable code in background.
 - **Ownership-safe** — never overwrites unrelated plugins or user-owned presets, legacy Home copy-only migrated.
 
