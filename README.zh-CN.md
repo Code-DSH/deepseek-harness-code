@@ -160,7 +160,7 @@ V4 Pro 是该整合基础增强的重要能力之一，而非唯一中心。固�
 | 能力栈   | Skills、Goal / Plan / Workflow / Todo / Jobs / 提问                |
 | Skills   | Superpowers 6.2.0，不覆盖用户                                      |
 | 全局协议 | `AGENTS.md` 所有权安全安装与备份切换                               |
-| 全局 CLI | 用户自行管理，应用不安装、不修改                                    |
+| 全局 CLI | 用户自行管理，应用不安装、不修改                                   |
 | 预设     | Standard 默认，可选 anchored / router                              |
 | 恢复     | 健康探测、重启、渲染器替换、端口重试                               |
 | Watchdog | 独立 IPC，有界重启与熔断                                           |
