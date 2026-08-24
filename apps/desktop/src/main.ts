@@ -405,6 +405,18 @@ async function waitForHarnessReady(
   return false;
 }
 
+async function writeHarnessStartupFailureLog(
+  diagnostics: string,
+): Promise<void> {
+  const logsRoot = app.getPath("logs");
+  await mkdir(logsRoot, { recursive: true, mode: 0o700 });
+  await writeFile(
+    join(logsRoot, "harness-startup.log"),
+    `${new Date().toISOString()}\n${redactStartupDiagnostic(diagnostics)}\n`,
+    { encoding: "utf8", mode: 0o600 },
+  );
+}
+
 function captureStartupDiagnostics(child: ChildProcess): {
   read: () => string;
   dispose: () => void;
@@ -545,7 +557,7 @@ async function prepareSystemNodeRuntime(
 
 function managedNodeRuntimePaths(): NodeRuntimePaths {
   if (nodeRuntimePaths === undefined) {
-    throw new Error("Managed Node.js runtime is not prepared");
+    throw new Error("Maintained Harness package runtime is not prepared");
   }
   return nodeRuntimePaths;
 }
@@ -689,6 +701,15 @@ async function startHarness(): Promise<HarnessChild> {
         packageRoot: marketPluginRoot,
       },
     ],
+    // Older desktop releases installed these official providers as standalone
+    // profile bundles. The current app composition owns the same loader rows;
+    // retaining both makes Harness abort on duplicate entry ids during an
+    // in-place upgrade. Remove only the now-subsumed bundles through the
+    // official plugin CLI, leaving every unrelated user bundle untouched.
+    retiredPluginPackages: [
+      "@deepseek-ai/dsh-subagent-claude-code",
+      "@deepseek-ai/dsh-subagent-codex",
+    ],
     legacyPluginSpecs: migration.legacyPluginSpecs,
   });
   const anchoredPreset = await installAnchoredStandardPresetForStartup(
@@ -812,12 +833,19 @@ async function startHarness(): Promise<HarnessChild> {
         }),
       ]);
       if (startupResult.type === "error") {
+        await writeHarnessStartupFailureLog(
+          `${diagnostics.read()}\n${startupResult.error.message}`,
+        ).catch(() => undefined);
         await retireFailedStartupChild(child);
         throw startupResult.error;
       }
       if (!startupResult.ready) {
+        const capturedDiagnostics = diagnostics.read();
+        await writeHarnessStartupFailureLog(capturedDiagnostics).catch(
+          () => undefined,
+        );
         await retireFailedStartupChild(child);
-        throw startupFailureFromDiagnostics(diagnostics.read());
+        throw startupFailureFromDiagnostics(capturedDiagnostics);
       }
     } finally {
       diagnostics.dispose();

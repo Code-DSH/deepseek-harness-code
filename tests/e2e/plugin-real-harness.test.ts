@@ -302,6 +302,7 @@ describe("desktop plugin with the real pinned Harness", () => {
     }
 
     const userPlugin = await createBundle("user-owned-plugin");
+    const retiredPlugin = await createBundle("composition-subsumed-plugin");
     const managedPlugin = await createBundle("managed-desktop-plugin");
     const baseInput = {
       dshEntry,
@@ -316,6 +317,10 @@ describe("desktop plugin with the real pinned Harness", () => {
       ...baseInput,
       integratedPlugins: [
         { packageName: "user-owned-plugin", packageRoot: userPlugin },
+        {
+          packageName: "composition-subsumed-plugin",
+          packageRoot: retiredPlugin,
+        },
       ],
     });
     await ensureMaintainedHarnessInstall({
@@ -323,12 +328,14 @@ describe("desktop plugin with the real pinned Harness", () => {
       integratedPlugins: [
         { packageName: "managed-desktop-plugin", packageRoot: managedPlugin },
       ],
+      retiredPluginPackages: ["composition-subsumed-plugin"],
     });
     await ensureMaintainedHarnessInstall({
       ...baseInput,
       integratedPlugins: [
         { packageName: "managed-desktop-plugin", packageRoot: managedPlugin },
       ],
+      retiredPluginPackages: ["composition-subsumed-plugin"],
     });
 
     const manifest = JSON.parse(

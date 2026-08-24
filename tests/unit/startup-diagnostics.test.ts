@@ -80,4 +80,18 @@ describe("Harness startup diagnostics", () => {
       code: "EADDRINUSE",
     });
   });
+
+  it("surfaces the redacted root Harness error instead of a generic exit", () => {
+    const failure = startupFailureFromDiagnostics(
+      [
+        "file:///runtime/app-boot.js:1187",
+        "Error: dsh: plugin tree failed to load: duplicate loader entry id: subagent-claude-code",
+        "    at boot (file:///runtime/app-boot.js:1187:9)",
+      ].join("\n"),
+    );
+
+    expect(failure.message).toBe(
+      "Harness startup failed: dsh: plugin tree failed to load: duplicate loader entry id: subagent-claude-code",
+    );
+  });
 });

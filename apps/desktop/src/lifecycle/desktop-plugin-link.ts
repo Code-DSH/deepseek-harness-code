@@ -75,6 +75,7 @@ export type MaintainedHarnessInstallInput = {
   serverEverythingRoot?: string;
   integratedPlugins: readonly IntegratedHarnessPlugin[];
   legacyPluginSpecs?: readonly LegacyPluginSpec[];
+  retiredPluginPackages?: readonly string[];
   env?: Record<string, string | undefined>;
   runCommand?: MaintainedCommandRunner;
 };
@@ -262,7 +263,7 @@ type ResolvedIntegratedHarnessPlugin = {
 };
 
 type MaintainedPluginMarker = {
-  schemaVersion: 3;
+  schemaVersion: 4;
   owner: "deepseek-harness-code";
   releaseIdentity: string;
   storeDir: string;
@@ -272,6 +273,7 @@ type MaintainedPluginMarker = {
     manifestVersion: string;
     manifestDigest: string;
   }>;
+  retiredPackages: string[];
   digest: string;
 };
 
@@ -279,9 +281,10 @@ function maintainedPluginMarkerPayload(
   releaseIdentity: string,
   storeDir: string,
   plugins: readonly ResolvedIntegratedHarnessPlugin[],
+  retiredPluginPackages: readonly string[],
 ): string {
   return JSON.stringify({
-    schemaVersion: 3,
+    schemaVersion: 4,
     owner: "deepseek-harness-code",
     releaseIdentity,
     storeDir: resolve(storeDir),
@@ -293,6 +296,9 @@ function maintainedPluginMarkerPayload(
         manifestDigest,
       }))
       .sort((left, right) => left.packageName.localeCompare(right.packageName)),
+    retiredPackages: [...retiredPluginPackages].sort((left, right) =>
+      left.localeCompare(right),
+    ),
   });
 }
 
@@ -323,17 +329,19 @@ async function readMaintainedPluginMarker(
     }
     const marker = parsed as Partial<MaintainedPluginMarker>;
     if (
-      marker.schemaVersion !== 3 ||
+      marker.schemaVersion !== 4 ||
       marker.owner !== "deepseek-harness-code" ||
       typeof marker.releaseIdentity !== "string" ||
       typeof marker.storeDir !== "string" ||
       !Array.isArray(marker.packages) ||
+      !Array.isArray(marker.retiredPackages) ||
       typeof marker.digest !== "string" ||
       !/^[a-f0-9]{64}$/u.test(marker.digest)
     ) {
       return { status: "invalid" };
     }
     const packages = marker.packages;
+    const retiredPackages = marker.retiredPackages;
     if (
       packages.some(
         (plugin) =>
@@ -344,6 +352,10 @@ async function readMaintainedPluginMarker(
           typeof plugin.manifestVersion !== "string" ||
           typeof plugin.manifestDigest !== "string" ||
           !/^[a-f0-9]{64}$/u.test(plugin.manifestDigest),
+      ) ||
+      retiredPackages.some(
+        (packageName) =>
+          typeof packageName !== "string" || packageName.trim() === "",
       )
     ) {
       return { status: "invalid" };
@@ -354,6 +366,7 @@ async function readMaintainedPluginMarker(
       releaseIdentity: marker.releaseIdentity,
       storeDir: marker.storeDir,
       packages,
+      retiredPackages,
     });
     if (maintainedPluginMarkerDigest(payload) !== marker.digest) {
       return { status: "invalid" };
@@ -434,6 +447,7 @@ async function inspectMaintainedPluginInstall(input: {
   pnpmStoreDir: string;
   releaseIdentity: string;
   plugins: readonly ResolvedIntegratedHarnessPlugin[];
+  retiredPluginPackages: readonly string[];
 }): Promise<MaintainedPluginInstallState | undefined> {
   const markerRead = await readMaintainedPluginMarker(
     join(input.dshHome, MAINTAINED_PLUGIN_MARKER),
@@ -445,6 +459,7 @@ async function inspectMaintainedPluginInstall(input: {
       input.releaseIdentity,
       input.pnpmStoreDir,
       input.plugins,
+      input.retiredPluginPackages,
     );
     if (
       marker.releaseIdentity !== input.releaseIdentity ||
@@ -469,6 +484,9 @@ async function inspectMaintainedPluginInstall(input: {
           dependencies[plugin.packageName],
           plugin.packageRoot,
         ),
+    ) ||
+    input.retiredPluginPackages.some(
+      (packageName) => dependencies[packageName] !== undefined,
     )
   ) {
     return undefined;
@@ -489,19 +507,25 @@ async function writeMaintainedPluginMarker(input: {
   pnpmStoreDir: string;
   releaseIdentity: string;
   plugins: readonly ResolvedIntegratedHarnessPlugin[];
+  retiredPluginPackages: readonly string[];
 }): Promise<void> {
   const markerPayload = maintainedPluginMarkerPayload(
     input.releaseIdentity,
     input.pnpmStoreDir,
     input.plugins,
+    input.retiredPluginPackages,
   );
+  const parsedMarkerPayload = JSON.parse(markerPayload) as Pick<
+    MaintainedPluginMarker,
+    "packages" | "retiredPackages"
+  >;
   const marker: MaintainedPluginMarker = {
-    schemaVersion: 3,
+    schemaVersion: 4,
     owner: "deepseek-harness-code",
     releaseIdentity: input.releaseIdentity,
     storeDir: resolve(input.pnpmStoreDir),
-    packages: JSON.parse(markerPayload)
-      .packages as MaintainedPluginMarker["packages"],
+    packages: parsedMarkerPayload.packages,
+    retiredPackages: parsedMarkerPayload.retiredPackages,
     digest: maintainedPluginMarkerDigest(markerPayload),
   };
   await mkdir(input.dshHome, { recursive: true });
@@ -548,6 +572,22 @@ export async function ensureMaintainedHarnessInstall(
   }
 
   const integratedNames = new Set(plugins.map((plugin) => plugin.packageName));
+  const retiredPluginPackages = [...new Set(input.retiredPluginPackages ?? [])];
+  if (
+    retiredPluginPackages.some(
+      (packageName) => packageName.trim() === "" || packageName.includes("\0"),
+    )
+  ) {
+    throw new Error("Retired plugin package name is invalid");
+  }
+  if (
+    retiredPluginPackages.some((packageName) =>
+      integratedNames.has(packageName),
+    )
+  ) {
+    throw new Error("A plugin package cannot be both integrated and retired");
+  }
+  const retiredNames = new Set(retiredPluginPackages);
   const legacyPluginSpecs = (input.legacyPluginSpecs ?? []).filter((plugin) => {
     if (
       plugin.packageName.trim() === "" ||
@@ -557,7 +597,10 @@ export async function ensureMaintainedHarnessInstall(
     ) {
       throw new Error("Legacy plugin specification is invalid");
     }
-    return !integratedNames.has(plugin.packageName);
+    return (
+      !integratedNames.has(plugin.packageName) &&
+      !retiredNames.has(plugin.packageName)
+    );
   });
   const installRequests = [
     ...legacyPluginSpecs.map((plugin) => ({
@@ -569,7 +612,7 @@ export async function ensureMaintainedHarnessInstall(
       installSpec: plugin.packageRoot,
     })),
   ];
-  if (installRequests.length === 0) {
+  if (installRequests.length === 0 && retiredPluginPackages.length === 0) {
     return { status: "unchanged", packages: [] };
   }
 
@@ -580,6 +623,7 @@ export async function ensureMaintainedHarnessInstall(
           pnpmStoreDir: input.pnpmStoreDir,
           releaseIdentity: input.releaseIdentity ?? "unknown",
           plugins,
+          retiredPluginPackages,
         })
       : undefined;
   if (installState !== undefined) {
@@ -589,6 +633,7 @@ export async function ensureMaintainedHarnessInstall(
         pnpmStoreDir: input.pnpmStoreDir,
         releaseIdentity: input.releaseIdentity ?? "unknown",
         plugins,
+        retiredPluginPackages,
       });
     }
     return {
@@ -623,7 +668,12 @@ export async function ensureMaintainedHarnessInstall(
       .join(delimiter),
   };
   const runCommand = input.runCommand ?? defaultMaintainedCommandRunner;
-  const installAll = async (): Promise<void> => {
+  const runPluginCommand = (
+    action: "add" | "remove",
+    commandArguments: readonly string[],
+    diagnosticPackageNames: readonly string[] = commandArguments,
+  ): void => {
+    if (commandArguments.length === 0) return;
     const result = runCommand(
       input.nodeExecutable,
       [
@@ -631,8 +681,8 @@ export async function ensureMaintainedHarnessInstall(
         "plugin",
         "--profile",
         "web",
-        "add",
-        ...installRequests.map((request) => request.installSpec),
+        action,
+        ...commandArguments,
       ],
       {
         encoding: "utf8",
@@ -646,13 +696,33 @@ export async function ensureMaintainedHarnessInstall(
       const diagnostic = redactStartupDiagnostic(
         result.error?.message ?? String(result.stderr ?? ""),
       ).slice(0, 2_000);
+      const operation =
+        action === "add"
+          ? "maintained Harness plugin installation"
+          : "maintained Harness retired plugin removal";
       throw new Error(
-        `maintained Harness plugin installation failed for ${installRequests.map((request) => request.packageName).join(", ")} (exit ${exit}): ${diagnostic}`,
+        `${operation} failed for ${diagnosticPackageNames.join(", ")} (exit ${exit}): ${diagnostic}`,
       );
     }
   };
+  const reconcileAll = async (): Promise<void> => {
+    const dependencies = await readManifestDependencies(
+      join(profileRoot, "package.json"),
+    ).catch((): Record<string, string> => ({}));
+    runPluginCommand(
+      "remove",
+      retiredPluginPackages.filter(
+        (packageName) => dependencies[packageName] !== undefined,
+      ),
+    );
+    runPluginCommand(
+      "add",
+      installRequests.map((request) => request.installSpec),
+      installRequests.map((request) => request.packageName),
+    );
+  };
   try {
-    await installAll();
+    await reconcileAll();
   } catch (error) {
     // A corrupted derived node_modules — for example a self-referential
     // symlink left by an interrupted concurrent pnpm install — fails every
@@ -662,7 +732,7 @@ export async function ensureMaintainedHarnessInstall(
       recursive: true,
       force: true,
     }).catch(() => undefined);
-    await installAll();
+    await reconcileAll();
     void error;
   }
   await writeMaintainedPluginMarker({
@@ -670,6 +740,7 @@ export async function ensureMaintainedHarnessInstall(
     pnpmStoreDir: input.pnpmStoreDir,
     releaseIdentity: input.releaseIdentity ?? "unknown",
     plugins,
+    retiredPluginPackages,
   });
   return {
     status: "installed",

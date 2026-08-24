@@ -283,9 +283,7 @@ export const installRuntimePackages: InstallRuntimePackages = async ({
           ? `installer exited with status ${String(result.status)}`
           : output),
     );
-    throw new Error(
-      `Node.js runtime package installation failed: ${diagnostic}`,
-    );
+    throw new Error(`Harness package installation failed: ${diagnostic}`);
   }
 };
 

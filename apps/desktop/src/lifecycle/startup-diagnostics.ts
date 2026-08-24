@@ -20,10 +20,23 @@ export function redactStartupDiagnostic(value: string): string {
 }
 
 export function startupFailureFromDiagnostics(diagnostics: string): Error {
-  if (/\bEADDRINUSE\b/i.test(diagnostics)) {
+  const redacted = redactStartupDiagnostic(diagnostics);
+  if (/\bEADDRINUSE\b/i.test(redacted)) {
     return Object.assign(new Error("Harness loopback port is already in use"), {
       code: "EADDRINUSE",
     });
   }
-  return new Error("Harness exited before becoming ready");
+  const lines = redacted
+    .split(/\r?\n/u)
+    .map((line) => line.trim())
+    .filter((line) => line !== "");
+  const diagnostic =
+    lines.find((line) => /^(?:Error|TypeError|RangeError):\s+/u.test(line)) ??
+    lines.find((line) => /duplicate loader entry id:/iu.test(line));
+  if (diagnostic === undefined) {
+    return new Error("Harness exited before becoming ready");
+  }
+  return new Error(
+    `Harness startup failed: ${diagnostic.replace(/^(?:Error|TypeError|RangeError):\s*/u, "").slice(0, 500)}`,
+  );
 }

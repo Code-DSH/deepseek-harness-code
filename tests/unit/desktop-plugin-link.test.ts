@@ -73,7 +73,7 @@ describe("maintained Harness plugin installation", () => {
       "utf8",
     );
     const markerPayload = JSON.stringify({
-      schemaVersion: 3,
+      schemaVersion: 4,
       owner: "deepseek-harness-code",
       releaseIdentity: "unknown",
       storeDir: resolve(inputStoreDir),
@@ -87,6 +87,7 @@ describe("maintained Harness plugin installation", () => {
             .digest("hex"),
         },
       ],
+      retiredPackages: [],
     });
     await writeFile(
       join(dshHome, ".deepseek-harness-code-plugin-reconciliation.json"),
@@ -149,6 +150,94 @@ describe("maintained Harness plugin installation", () => {
     ).resolves.toEqual({ status: "unchanged", packages: [] });
 
     expect(runCommand).not.toHaveBeenCalled();
+  });
+
+  it("removes only retired bundles that the app composition now subsumes", async () => {
+    const root = await mkdtemp(join(tmpdir(), "dsh-plugin-retired-"));
+    const dshHome = join(root, "home");
+    const profileRoot = join(dshHome, "profiles", "web");
+    const runtimeBinRoot = join(root, "app-data", "runtime-bin");
+    const managedPlugin = await createPlugin(
+      root,
+      "desktop-plugin",
+      "deepseek-harness-desktop-plugin",
+    );
+    await mkdir(join(profileRoot, "node_modules"), { recursive: true });
+    await writeFile(
+      join(profileRoot, "package.json"),
+      `${JSON.stringify({
+        dependencies: {
+          "@deepseek-ai/dsh-subagent-claude-code": "0.1.1-rc.2",
+          "user-owned-plugin": "1.2.3",
+        },
+      })}\n`,
+    );
+    await writeFile(
+      join(profileRoot, "node_modules", ".modules.yaml"),
+      `${JSON.stringify({ storeDir: "/managed/pnpm-store" })}\n`,
+    );
+    const runCommand = vi.fn<MaintainedCommandRunner>(() => ({
+      status: 0,
+      stdout: "",
+      stderr: "",
+    }));
+
+    await expect(
+      ensureMaintainedHarnessInstall({
+        dshEntry: "/packages/node_modules/@deepseek-ai/dsh/lib/bin.js",
+        dshHome,
+        nodeExecutable: "/usr/bin/node",
+        pnpmEntry: "/resources/node-runtime/pnpm.mjs",
+        pnpmStoreDir: "/managed/pnpm-store",
+        runtimeBinRoot,
+        integratedPlugins: [
+          {
+            packageName: "deepseek-harness-desktop-plugin",
+            packageRoot: managedPlugin,
+          },
+        ],
+        retiredPluginPackages: [
+          "@deepseek-ai/dsh-subagent-codex",
+          "@deepseek-ai/dsh-subagent-claude-code",
+        ],
+        runCommand,
+      }),
+    ).resolves.toMatchObject({ status: "installed" });
+
+    expect(runCommand.mock.calls.map(([, args]) => args)).toEqual([
+      [
+        "/packages/node_modules/@deepseek-ai/dsh/lib/bin.js",
+        "plugin",
+        "--profile",
+        "web",
+        "remove",
+        "@deepseek-ai/dsh-subagent-claude-code",
+      ],
+      [
+        "/packages/node_modules/@deepseek-ai/dsh/lib/bin.js",
+        "plugin",
+        "--profile",
+        "web",
+        "add",
+        await realpath(managedPlugin),
+      ],
+    ]);
+    expect(JSON.stringify(runCommand.mock.calls)).not.toContain(
+      "user-owned-plugin",
+    );
+    const marker = JSON.parse(
+      await readFile(
+        join(dshHome, ".deepseek-harness-code-plugin-reconciliation.json"),
+        "utf8",
+      ),
+    ) as { schemaVersion: number; retiredPackages: string[] };
+    expect(marker).toMatchObject({
+      schemaVersion: 4,
+      retiredPackages: [
+        "@deepseek-ai/dsh-subagent-claude-code",
+        "@deepseek-ai/dsh-subagent-codex",
+      ],
+    });
   });
 
   it("adopts a complete legacy profile without rerunning the plugin CLI", async () => {
@@ -391,7 +480,7 @@ describe("maintained Harness plugin installation", () => {
       }>;
     };
     expect(marker).toMatchObject({
-      schemaVersion: 3,
+      schemaVersion: 4,
       releaseIdentity: "0.1.0-test.1",
       packages: [
         {
