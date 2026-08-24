@@ -123,7 +123,7 @@ describe("pinned runtime packages driven by the system Node", () => {
     const resource = await createRuntimeResource(root);
     const paths = resolveNodeRuntimePaths(join(root, "user-data"));
     await writeFile(join(resource, "pnpm-workspace.yaml"), "packages: []\n");
-    const runCommand = vi.fn(async () => ({
+    const runCommand = vi.fn<typeof runAsyncCommand>(async () => ({
       status: 1,
       stdout: "ERR_PNPM_TARBALL_INTEGRITY token=must-not-leak",
       stderr: "",
@@ -145,6 +145,9 @@ describe("pinned runtime packages driven by the system Node", () => {
       expect(message).toContain("ERR_PNPM_TARBALL_INTEGRITY");
       expect(message).toContain("token=[REDACTED]");
       expect(message).not.toContain("must-not-leak");
+      expect(runCommand.mock.calls[0]?.[0].args).toContain(
+        "--config.confirmModulesPurge=false",
+      );
     } finally {
       await rm(root, { recursive: true, force: true });
     }

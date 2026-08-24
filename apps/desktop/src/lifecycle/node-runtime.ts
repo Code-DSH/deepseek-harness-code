@@ -261,6 +261,10 @@ export const installRuntimePackages: InstallRuntimePackages = async ({
     args: [
       pnpmEntry,
       "install",
+      // The desktop child has no TTY. On an in-place upgrade pnpm may need to
+      // replace an incompatible modules directory; make that deterministic
+      // instead of aborting while waiting for an impossible confirmation.
+      "--config.confirmModulesPurge=false",
       "--dir",
       paths.packagesDir,
       "--frozen-lockfile",

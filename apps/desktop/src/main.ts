@@ -80,7 +80,6 @@ import {
 } from "./lifecycle/global-agent-prompt-link.js";
 import {
   MINIMUM_NODE_VERSION,
-  NODE_DOWNLOAD_PAGE_URL,
   resolveSystemNode,
   type ResolvedSystemNode,
 } from "./lifecycle/system-node.js";
@@ -405,13 +404,11 @@ async function waitForHarnessReady(
   return false;
 }
 
-async function writeHarnessStartupFailureLog(
-  diagnostics: string,
-): Promise<void> {
+async function writeStartupFailureLog(diagnostics: string): Promise<void> {
   const logsRoot = app.getPath("logs");
   await mkdir(logsRoot, { recursive: true, mode: 0o700 });
   await writeFile(
-    join(logsRoot, "harness-startup.log"),
+    join(logsRoot, "startup-failure.log"),
     `${new Date().toISOString()}\n${redactStartupDiagnostic(diagnostics)}\n`,
     { encoding: "utf8", mode: 0o600 },
   );
@@ -457,35 +454,46 @@ function nodeRuntimeResourcePath(): string {
     : join(app.getAppPath(), "build", "node-runtime");
 }
 
-async function showNodeRequiredDialog(
-  failedError?: Error,
-): Promise<"manual" | "retry" | "quit"> {
-  const isMissing = failedError === undefined;
-  const buttons = isMissing
-    ? ["Show Installer Link", "Retry detection", "Quit"]
-    : ["Retry detection", "Show Installer Link", "Quit"];
+async function showNodeRequiredDialog(): Promise<"manual" | "retry" | "quit"> {
   const options: Electron.MessageBoxOptions = {
-    type: isMissing ? "question" : "error",
-    buttons,
+    type: "question",
+    buttons: ["Show Installer Link", "Retry detection", "Quit"],
     defaultId: 0,
-    cancelId: buttons.length - 1,
+    cancelId: 2,
     title: "Node.js required",
-    message: isMissing
-      ? "DeepSeek Harness Code needs an official system Node.js installation to run the local Harness."
-      : "The maintained Harness packages could not be installed.",
-    detail: isMissing
-      ? `No usable Node.js installation was detected. Install Node.js from the official installer, then retry detection. Node.js ^${MINIMUM_NODE_VERSION} or >=24.0.0 is required; Node.js 23 is unsupported.`
-      : `${failedError.message.slice(0, 2_000)}\n\nOfficial Node.js download: ${NODE_DOWNLOAD_PAGE_URL}`,
+    message:
+      "DeepSeek Harness Code needs an official system Node.js installation to run the local Harness.",
+    detail: `No usable Node.js installation was detected. Install Node.js from the official installer, then retry detection. Node.js ^${MINIMUM_NODE_VERSION} or >=24.0.0 is required; Node.js 23 is unsupported.`,
   };
   const result =
     mainWindow === undefined || mainWindow.isDestroyed()
       ? await dialog.showMessageBox(options)
       : await dialog.showMessageBox(mainWindow, options);
-  const response = result.response;
-  if (isMissing) {
-    return (["manual", "retry", "quit"] as const)[response] ?? "quit";
+  return (["manual", "retry", "quit"] as const)[result.response] ?? "quit";
+}
+
+async function showHarnessPackageInstallFailureDialog(
+  failedError: Error,
+): Promise<"retry" | "quit"> {
+  const options: Electron.MessageBoxOptions = {
+    type: "error",
+    buttons: ["Retry installation", "Open Logs", "Quit"],
+    defaultId: 0,
+    cancelId: 2,
+    title: "Harness dependency installation failed",
+    message: "The maintained Harness packages could not be installed.",
+    detail: failedError.message.slice(0, 2_000),
+  };
+  for (;;) {
+    const result =
+      mainWindow === undefined || mainWindow.isDestroyed()
+        ? await dialog.showMessageBox(options)
+        : await dialog.showMessageBox(mainWindow, options);
+    if (result.response !== 1) {
+      return result.response === 0 ? "retry" : "quit";
+    }
+    await shell.openPath(app.getPath("logs"));
   }
-  return (["retry", "manual", "quit"] as const)[response] ?? "quit";
 }
 
 async function prepareSystemNodeRuntime(
@@ -544,12 +552,8 @@ async function prepareSystemNodeRuntime(
     } catch (error) {
       const failedError =
         error instanceof Error ? error : new Error("Unknown runtime error");
-      const choice = await showNodeRequiredDialog(failedError);
-      if (choice === "manual") {
-        const urls = getNodeDownloadUrls(process.platform, process.arch);
-        await shell.openExternal(urls.installerUrl);
-        throw failedError;
-      }
+      await writeStartupFailureLog(failedError.message).catch(() => undefined);
+      const choice = await showHarnessPackageInstallFailureDialog(failedError);
       if (choice === "quit") throw failedError;
     }
   }
@@ -833,7 +837,7 @@ async function startHarness(): Promise<HarnessChild> {
         }),
       ]);
       if (startupResult.type === "error") {
-        await writeHarnessStartupFailureLog(
+        await writeStartupFailureLog(
           `${diagnostics.read()}\n${startupResult.error.message}`,
         ).catch(() => undefined);
         await retireFailedStartupChild(child);
@@ -841,7 +845,7 @@ async function startHarness(): Promise<HarnessChild> {
       }
       if (!startupResult.ready) {
         const capturedDiagnostics = diagnostics.read();
-        await writeHarnessStartupFailureLog(capturedDiagnostics).catch(
+        await writeStartupFailureLog(capturedDiagnostics).catch(
           () => undefined,
         );
         await retireFailedStartupChild(child);
