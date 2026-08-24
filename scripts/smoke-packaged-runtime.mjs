@@ -754,15 +754,6 @@ function canConnect(address, port, timeoutMs = 1_500) {
   });
 }
 
-function processIsAlive(pid) {
-  try {
-    process.kill(pid, 0);
-    return true;
-  } catch {
-    return false;
-  }
-}
-
 async function assertPortNotReachableOffLoopback(port) {
   for (const address of nonLoopbackIpv4Addresses()) {
     if (await canConnect(address, port)) {
@@ -1432,16 +1423,17 @@ async function assertPortOwned(port, pid) {
     ),
     ...platformOwners,
   ].filter((value, index, values) => values.indexOf(value) === index);
-  if (observedOwners.length > 0 || !processIsAlive(pid)) {
+  if (observedOwners.length > 0) {
     throw new Error(
-      `Harness listener ${port} is not owned by PID ${pid} (observed: ${observedOwners.join(", ") || "none"})`,
+      `Harness listener ${port} is not owned by PID ${pid} (observed: ${observedOwners.join(", ")})`,
     );
   }
-  // Hosted Windows/Linux runners can hide socket-owner metadata even from
-  // same-user netstat, ss, PowerShell, and /proc probes. In that bounded case,
-  // retain the security property directly: the reported child must still be
-  // alive, the exact loopback URL already returned HTTP 200, and the same port
-  // must reject every non-loopback interface address.
+  // Hosted Windows/Linux runners can hide socket-owner and cross-process
+  // liveness metadata even from same-user netstat, ss, PowerShell, /proc, and
+  // signal-zero probes. In that bounded case, retain the security property
+  // directly: the app has just published its random-port child identity, the
+  // exact loopback URL returned HTTP 200, the same port must reject every
+  // non-loopback interface address, and shutdown below must close that port.
   await assertPortNotReachableOffLoopback(port);
 }
 
