@@ -1,0 +1,31 @@
+{
+  "name": "@dsh-external/deepseek-harness-plugin-market",
+  "version": "0.1.0",
+  "description": "DSHC 插件市场：设置 → 插件市场，浏览/搜索/分类/详情/安装 DSH 插件（连接 DSHC-Hub API；安装走官方 dsh plugin CLI）。",
+  "private": true,
+  "type": "module",
+  "main": "./lib/index.js",
+  "exports": {
+    ".": "./lib/index.js",
+    "./client": "./lib/client.js",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "lib",
+    "cordis.patch.yml",
+    "LICENSE"
+  ],
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "inject": [
+        "@deepseek-ai/dsh-client-runtime",
+        "@deepseek-ai/dsh-client-ui-slots"
+      ]
+    }
+  },
+  "license": "MIT"
+}

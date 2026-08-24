@@ -71,11 +71,13 @@ describe("desktop bridge contracts", () => {
     expect(
       lanAccessStateSchema.parse({
         enabled: true,
+        passwordConfigured: false,
         port: 43210,
         addresses: ["192.168.1.12", "10.0.0.4"],
       }),
     ).toEqual({
       enabled: true,
+      passwordConfigured: false,
       port: 43210,
       addresses: ["192.168.1.12", "10.0.0.4"],
     });

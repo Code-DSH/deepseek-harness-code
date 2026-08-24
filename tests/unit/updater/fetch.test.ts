@@ -152,14 +152,23 @@ describe("updater/fetch", () => {
 
   it("downloadInstaller streams the bytes to disk", async () => {
     const dest = join(dir, "out.bin");
-    await downloadInstaller(`${base}/file`, dest, {
-      validateUrl: testValidateUrl,
-    });
+    const progress: Array<{ downloadedBytes: number; totalBytes?: number }> =
+      [];
+    await downloadInstaller(
+      `${base}/file`,
+      dest,
+      {
+        validateUrl: testValidateUrl,
+      },
+      undefined,
+      (value) => progress.push(value),
+    );
     const buf = await readFile(dest);
     const expected = createHash("sha256")
       .update(Buffer.from("data"))
       .digest("hex");
     expect(createHash("sha256").update(buf).digest("hex")).toBe(expected);
+    expect(progress.at(-1)).toMatchObject({ downloadedBytes: 4 });
   });
 
   it("downloads a GitHub-sized asset through range requests", async () => {

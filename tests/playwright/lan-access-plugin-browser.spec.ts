@@ -87,6 +87,12 @@ test("shows every address and copies only the selected address payload", async (
       },
     };
     target.deepseekDesktop = {
+      app: {
+        getInfo: async () => ({
+          name: "DeepSeek Harness Code",
+          version: "0.1.0-BETA3",
+        }),
+      },
       preferences: {
         get: async () => ({
           closeBehavior: "minimize",
@@ -97,6 +103,7 @@ test("shows every address and copies only the selected address payload", async (
       lanAccess: {
         get: async () => ({
           enabled: true,
+          passwordConfigured: false,
           port: 43210,
           addresses: ["10.0.0.4", "192.168.1.12"],
         }),
@@ -104,10 +111,11 @@ test("shows every address and copies only the selected address payload", async (
           value.enabled
             ? {
                 enabled: true,
+                passwordConfigured: false,
                 port: 43210,
                 addresses: ["10.0.0.4", "192.168.1.12"],
               }
-            : { enabled: false, addresses: [] },
+            : { enabled: false, passwordConfigured: false, addresses: [] },
         copyUrl: async (selection?: { address?: string }) => {
           target.copiedLanSelections!.push(selection);
         },
@@ -118,7 +126,13 @@ test("shows every address and copies only the selected address payload", async (
         openLogs: async () => undefined,
         subscribe: () => () => undefined,
       },
-      updater: { check: async () => ({ available: false }) },
+      updater: {
+        getStatus: async () => ({ phase: "idle" as const }),
+        check: async () => ({ available: false }),
+        apply: async () => ({ available: false }),
+        restart: async () => undefined,
+        subscribe: () => () => undefined,
+      },
       bundledPlugins: { list: async () => [] },
     };
   });

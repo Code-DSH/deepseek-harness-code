@@ -142,31 +142,32 @@ V4 Pro 是该整合基础增强的重要能力之一，而非唯一中心。固�
 - **系统外观** — 浅/深色启动页、平台标题栏、官方单色资产与减动支持。
 - **平滑导航** — View Transitions 优先，CSS 回退次之，无强制布局。
 - **工作区韧性** — 已验证 Standard 切换与官方会话恢复。
-- **可选局域网访问** — 默认关闭；启用后由 Electron 自有 HTTP 代理在每次原生“复制”时签发新的单次链接令牌，并将其兑换为 HttpOnly Cookie，再向可信局域网提供访问；Harness 与桌面渲染器仍保持回环。新复制且未使用的链接会使之前未使用的链接失效。
+- **可选局域网访问** — 默认关闭；启用后由 Electron 自有 HTTP 代理监听本地网卡，Harness 仍只监听回环地址。密码为空时，同一内网可直接访问；设置密码后，浏览器会对 HTTP 和 WebSocket 连接弹出 Basic Auth 密码框。
 - **Skills** — Superpowers 6.2.0 安装至 `<DSH_HOME>/skills`，用户同名目录永不覆盖。
 - **全局 Agent 协议** — `<DSH_HOME>/AGENTS.md`：无则安装、未改则随版升级、永不覆盖用户自有，菜单 `Use Bundled Global Prompt…` 带时间戳备份切换。
 - **不修改全局 `dsh`** — 启动过程不执行 `npm install -g`，也不会改动用户已有的全局 CLI。
+- **用户确认更新** — 仅接受 SHA-256 校验通过的包；Windows 保留当前 NSIS 安装目录，Linux AppImage 替换持久化的 `$APPIMAGE` 文件，Debian 包仍需手动更新。
 - **本地化预设** — `anchored-standard` / `router-standard` / `router-spec` 中英双语名，不改 ID。
 - **安全实验** — Anchored Standard 为独立 Bundle，在维护版 Harness 0.1.1-rc.2.code.1 上失败回退 Standard。
 
 ## 功能矩阵
 
-| 领域     | 已包含                                                 |
-| -------- | ------------------------------------------------------ |
-| 桌面宿主 | 强化窗口、启动页、原生菜单、托盘、关闭偏好             |
-| Harness  | Code-DSH family 0.1.1-rc.2.code.1，回环服务，单一 Home |
-| V4 模型  | 官方目录与 `off` / `high` / `max` 控制                 |
-| 能力栈   | Skills、Goal / Plan / Workflow / Todo / Jobs / 提问    |
-| Skills   | Superpowers 6.2.0，不覆盖用户                          |
-| 全局协议 | `AGENTS.md` 所有权安全安装与备份切换                   |
-| 全局 CLI | 用户自行管理，应用不安装、不修改                       |
-| 预设     | Standard 默认，可选 anchored / router                  |
-| 恢复     | 健康探测、重启、渲染器替换、端口重试                   |
-| Watchdog | 独立 IPC，有界重启与熔断                               |
-| 插件     | 桌面、UI Motion、Model2、Find、Routing 等              |
-| 诊断     | 启动证据、运行态、脱敏轮转日志                         |
-| 安全     | 沙箱渲染器、无 Node 集成、校验 IPC                     |
-| 打包     | macOS Universal DMG；Windows NSIS；Linux AppImage/deb  |
+| 领域     | 已包含                                                             |
+| -------- | ------------------------------------------------------------------ |
+| 桌面宿主 | 强化窗口、启动页、原生菜单、托盘、关闭偏好                         |
+| Harness  | Code-DSH family 0.1.1-rc.2.code.1，回环服务，单一 Home             |
+| V4 模型  | 官方目录与 `off` / `high` / `max` 控制                             |
+| 能力栈   | Skills、Goal / Plan / Workflow / Todo / Jobs / 提问                |
+| Skills   | Superpowers 6.2.0，不覆盖用户                                      |
+| 全局协议 | `AGENTS.md` 所有权安全安装与备份切换                               |
+| 全局 CLI | 用户自行管理，应用不安装、不修改                                    |
+| 预设     | Standard 默认，可选 anchored / router                              |
+| 恢复     | 健康探测、重启、渲染器替换、端口重试                               |
+| Watchdog | 独立 IPC，有界重启与熔断                                           |
+| 插件     | 桌面、UI Motion、Model2、Find、Routing、Settings Tools、插件市场等 |
+| 诊断     | 启动证据、运行态、脱敏轮转日志                                     |
+| 安全     | 沙箱渲染器、无 Node 集成、校验 IPC                                 |
+| 打包     | macOS Universal DMG；Windows NSIS；Linux AppImage/deb              |
 
 ## 路由套件
 
@@ -174,7 +175,7 @@ V4 Pro 是该整合基础增强的重要能力之一，而非唯一中心。固�
 
 - **离线快照** — 安装包内置三组件（`@dsh-external/dsh-super-injector` Bundle 层、`@dsh-external/dsh-mode-boost` 宿主增强、`router-standard` + `router-spec` 预设）。
 - **固定基线** — `injector 0.3.3` / `mode-boost 0.1.0` / `router-preset 0.2.0@eff787e`，SHA-256 存于 `build/routing-suite/versions.json`。
-- **公开 CLI 协调** — 经系统 Node + 内置 pnpm 执行 `dsh plugin --profile web add`（desktop、ui-motion、model2、prompt-principles、vision-router、better-sidebar、LAN access、composition、Super Injector、Mode Boost、find-plugin）。正常 manifest 协调由维护版 Harness 掌管；完整 runtime 已提供子 Agent 包，不再做 `linkOnly` 后处理。受校验的应用自有 marker 仅在受管清单、包路径/身份、profile 依赖与 pnpm store 均未变化时跳过重复 CLI；缺失或不匹配则重新协调。
+- **公开 CLI 协调** — 经系统 Node + 内置 pnpm 执行 `dsh plugin --profile web add`（desktop、ui-motion、model2、prompt-principles、vision-router、better-sidebar、LAN access、composition、Super Injector、Mode Boost、find-plugin、settings-tools、plugin-market）。正常 manifest 协调由维护版 Harness 掌管；完整 runtime 已提供子 Agent 包，不再做 `linkOnly` 后处理。受校验的应用自有 marker 仅在受管清单、包路径/身份、profile 依赖与 pnpm store 均未变化时跳过重复 CLI；缺失或不匹配则重新协调。
 - **审核更新** — 仅随 App 发版更新，构建前校验 SHA-256，安装后永不后台下载可变代码。
 - **所有权安全** — 不覆盖无关插件与用户自有预设，旧 Home 仅复制迁移。
 
@@ -195,7 +196,7 @@ V4 Pro 是该整合基础增强的重要能力之一，而非唯一中心。固�
 - 沙箱渲染器，禁用 Node 集成。
 - 仅 `preferences`、`lanAccess`、`runtime`、`updater`、`bundledPlugins` 五组固定 preload 能力。
 - IPC 载荷校验后才触发桌面动作。
-- Harness 始终仅绑定回环。局域网访问默认关闭；用户启用后，独立 Electron 代理才监听 `0.0.0.0`。每次原生“复制”都会签发新的单次链接令牌、使之前未兑换的链接失效，并把当前链接兑换为 HttpOnly Cookie，然后仅向回环 Harness 转发已认证流量。这是可信局域网 HTTP，不承诺公网暴露或 TLS。
+- Harness 始终仅绑定回环。局域网访问默认关闭；用户启用后，独立 Electron 代理才监听 `0.0.0.0`。密码为空时直接转发，设置密码后使用浏览器 Basic Auth 保护 HTTP 和 WebSocket。这是可信局域网 HTTP，不承诺公网暴露或 TLS。
 - 凭据仅留官方 Harness 设置，不入应用包。
 - 日志排除凭据、Authorization、Cookie、Prompt 与响应。
 - 外部导航 `allow` / `open-external` 策略。

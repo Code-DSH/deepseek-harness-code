@@ -96,6 +96,7 @@ describe("LAN access controller", () => {
 
     await expect(harness.controller.set({ enabled: true })).resolves.toEqual({
       enabled: true,
+      passwordConfigured: false,
       port: 43210,
       addresses: ["10.0.0.4", "192.168.1.12"],
     });
@@ -118,6 +119,7 @@ describe("LAN access controller", () => {
     );
     expect(harness.controller.get()).toEqual({
       enabled: false,
+      passwordConfigured: false,
       addresses: [],
     });
     expect(harness.persistEnabled).not.toHaveBeenCalled();
@@ -131,6 +133,7 @@ describe("LAN access controller", () => {
 
     await expect(harness.controller.set({ enabled: false })).resolves.toEqual({
       enabled: false,
+      passwordConfigured: false,
       addresses: [],
     });
     expect(harness.steps).toEqual(["stop", "persist:false"]);
@@ -145,7 +148,11 @@ describe("LAN access controller", () => {
     await expect(harness.controller.set({ enabled: false })).rejects.toThrow(
       "stop failed",
     );
-    expect(harness.controller.get()).toEqual({ enabled: false, addresses: [] });
+    expect(harness.controller.get()).toEqual({
+      enabled: false,
+      passwordConfigured: false,
+      addresses: [],
+    });
   });
 
   it("serializes a disable requested while enablement is starting", async () => {
@@ -164,10 +171,19 @@ describe("LAN access controller", () => {
     const disable = harness.controller.set({ enabled: false });
     releaseStart.resolve({ port: 43210 });
 
-    await expect(enable).resolves.toEqual({ enabled: false, addresses: [] });
-    await expect(disable).resolves.toEqual({ enabled: false, addresses: [] });
+    await expect(enable).resolves.toEqual({
+      enabled: false,
+      passwordConfigured: false,
+      addresses: [],
+    });
+    await expect(disable).resolves.toEqual({
+      enabled: false,
+      passwordConfigured: false,
+      addresses: [],
+    });
     expect(harness.controller.get()).toEqual({
       enabled: false,
+      passwordConfigured: false,
       addresses: [],
     });
     expect(harness.getPersistedEnabled()).toBe(false);
@@ -194,7 +210,11 @@ describe("LAN access controller", () => {
     releaseStop.resolve();
 
     await recovery;
-    await expect(disable).resolves.toEqual({ enabled: false, addresses: [] });
+    await expect(disable).resolves.toEqual({
+      enabled: false,
+      passwordConfigured: false,
+      addresses: [],
+    });
     expect(harness.proxy.start).toHaveBeenCalledTimes(1);
     expect(harness.proxy.start).toHaveBeenCalledWith("http://127.0.0.1:41001");
     expect(harness.getPersistedEnabled()).toBe(false);
@@ -216,7 +236,7 @@ describe("LAN access controller", () => {
     expect(harness.persistEnabled).not.toHaveBeenCalled();
     harness.controller.copyUrl({ address: "192.168.1.12" });
     expect(harness.writeClipboard).toHaveBeenCalledWith(
-      "http://192.168.1.12:43211/?lanToken=second-secret",
+      "http://192.168.1.12:43211/",
     );
   });
 
@@ -229,7 +249,11 @@ describe("LAN access controller", () => {
     await expect(
       harness.controller.onHarnessReady("http://127.0.0.1:41002"),
     ).rejects.toThrow("stop failed");
-    expect(harness.controller.get()).toEqual({ enabled: false, addresses: [] });
+    expect(harness.controller.get()).toEqual({
+      enabled: false,
+      passwordConfigured: false,
+      addresses: [],
+    });
   });
 
   it("stops and clears a started listener when no address exists", async () => {
@@ -247,6 +271,7 @@ describe("LAN access controller", () => {
     );
     expect(controller.get()).toEqual({
       enabled: false,
+      passwordConfigured: false,
       addresses: [],
     });
     expect(harness.proxy.stop).toHaveBeenCalledOnce();
@@ -261,7 +286,7 @@ describe("LAN access controller", () => {
 
     harness.controller.copyUrl({ address: "192.168.1.12" });
     expect(harness.writeClipboard).toHaveBeenLastCalledWith(
-      "http://192.168.1.12:43210/?lanToken=first-secret",
+      "http://192.168.1.12:43210/",
     );
     expect(() =>
       harness.controller.copyUrl({ address: "172.16.0.99" }),
@@ -284,8 +309,8 @@ describe("LAN access controller", () => {
     harness.controller.copyUrl({ address: "192.168.1.12" });
 
     expect(harness.writeClipboard.mock.calls).toEqual([
-      ["http://192.168.1.12:43210/?lanToken=copy-one"],
-      ["http://192.168.1.12:43210/?lanToken=copy-two"],
+      ["http://192.168.1.12:43210/"],
+      ["http://192.168.1.12:43210/"],
     ]);
     expect(harness.proxy.issueAccessUrl).toHaveBeenCalledTimes(
       issuesBeforeCopy + 2,
@@ -308,7 +333,11 @@ describe("LAN access controller", () => {
       "address resolution failed",
     );
     expect(harness.proxy.stop).toHaveBeenCalledOnce();
-    expect(controller.get()).toEqual({ enabled: false, addresses: [] });
+    expect(controller.get()).toEqual({
+      enabled: false,
+      passwordConfigured: false,
+      addresses: [],
+    });
     expect(harness.persistEnabled).not.toHaveBeenCalled();
   });
 
@@ -321,6 +350,7 @@ describe("LAN access controller", () => {
     expect(harness.proxy.stop).toHaveBeenCalledOnce();
     expect(harness.controller.get()).toEqual({
       enabled: false,
+      passwordConfigured: false,
       addresses: [],
     });
     expect(harness.persistEnabled).not.toHaveBeenCalled();
@@ -333,7 +363,11 @@ describe("LAN access controller", () => {
     harness.proxy.stop.mockRejectedValueOnce(new Error("rollback stop failed"));
 
     await expect(harness.controller.set({ enabled: true })).rejects.toThrow();
-    expect(harness.controller.get()).toEqual({ enabled: false, addresses: [] });
+    expect(harness.controller.get()).toEqual({
+      enabled: false,
+      passwordConfigured: false,
+      addresses: [],
+    });
   });
 
   it("rejects copy while disabled", () => {

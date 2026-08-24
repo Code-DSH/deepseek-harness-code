@@ -1,4 +1,4 @@
-import { randomBytes, timingSafeEqual } from "node:crypto";
+import { randomBytes, scryptSync, timingSafeEqual } from "node:crypto";
 import {
   createServer,
   request as requestHttp,
@@ -12,9 +12,13 @@ import {
 import type { AddressInfo } from "node:net";
 import type { Duplex } from "node:stream";
 
+import type { UpdaterStatus } from "../shared/contracts.js";
+
 const LISTEN_HOST = "0.0.0.0";
 const SESSION_COOKIE = "dsh_lan_session";
 const TOKEN_QUERY = "lanToken";
+const UPDATE_STATUS_PATH = "/__dsh/update/status";
+const UPDATE_EVENTS_PATH = "/__dsh/update/events";
 const HOP_BY_HOP_HEADERS = new Set([
   "connection",
   "keep-alive",
@@ -25,9 +29,18 @@ const HOP_BY_HOP_HEADERS = new Set([
   "transfer-encoding",
   "upgrade",
 ]);
+const PASSWORD_HASH_PREFIX = "scrypt-v1";
+const PASSWORD_KEY_BYTES = 32;
 
 export interface LanProxyStartResult {
   port: number;
+}
+
+export interface LanProxyHostOptions {
+  getUpdaterStatus?: () => UpdaterStatus;
+  subscribeUpdaterStatus?: (
+    listener: (status: UpdaterStatus) => void,
+  ) => () => void;
 }
 
 type AuthenticationResult =
@@ -92,14 +105,41 @@ function forwardingHeaders(
   return forwarded;
 }
 
-function responseHeaders(headers: IncomingHttpHeaders): OutgoingHttpHeaders {
+function responseHeaders(
+  headers: IncomingHttpHeaders,
+  upstream: URL,
+  clientOrigin: string,
+): OutgoingHttpHeaders {
   const removed = connectionHeaderNames(headers);
   const forwarded: OutgoingHttpHeaders = {};
   for (const [name, value] of Object.entries(headers)) {
     if (removed.has(name.toLowerCase()) || value === undefined) continue;
+    if (name.toLowerCase() === "location") {
+      const location = Array.isArray(value) ? value[0] : value;
+      if (location !== undefined) {
+        try {
+          const parsed = new URL(location, upstream);
+          if (parsed.origin === upstream.origin) {
+            forwarded[name] =
+              `${clientOrigin}${parsed.pathname}${parsed.search}${parsed.hash}`;
+            continue;
+          }
+        } catch {
+          // Preserve malformed/relative values for the browser to handle.
+        }
+      }
+    }
     forwarded[name] = value;
   }
   return forwarded;
+}
+
+function clientOrigin(incoming: IncomingMessage): string {
+  const host = incoming.headers.host;
+  if (host === undefined || host.length === 0) {
+    throw new Error("LAN proxy request is missing a Host header");
+  }
+  return `http://${host}`;
 }
 
 function writeSocketResponse(
@@ -109,6 +149,14 @@ function writeSocketResponse(
   headers: readonly string[],
 ): void {
   socket.end([`HTTP/1.1 ${status} ${reason}`, ...headers, "", ""].join("\r\n"));
+}
+
+function writeUpdaterEvent(
+  response: ServerResponse,
+  status: UpdaterStatus,
+): void {
+  if (response.destroyed) return;
+  response.write(`event: update\ndata: ${JSON.stringify(status)}\n\n`);
 }
 
 function waitForSocketClose(socket: Duplex): Promise<void> {
@@ -128,13 +176,53 @@ function isLoopbackOrigin(value: string): URL {
   return new URL(origin.origin);
 }
 
+export function hashLanPassword(password: string): string {
+  const salt = randomBytes(16);
+  const derived = scryptSync(password, salt, PASSWORD_KEY_BYTES);
+  return `${PASSWORD_HASH_PREFIX}$${salt.toString("hex")}$${derived.toString("hex")}`;
+}
+
+function verifyLanPassword(password: string, encoded: string): boolean {
+  const parts = encoded.split("$");
+  if (parts.length !== 3 || parts[0] !== PASSWORD_HASH_PREFIX) return false;
+  const salt = Buffer.from(parts[1] ?? "", "hex");
+  const expected = Buffer.from(parts[2] ?? "", "hex");
+  if (salt.length !== 16 || expected.length !== PASSWORD_KEY_BYTES) {
+    return false;
+  }
+  const actual = scryptSync(password, salt, PASSWORD_KEY_BYTES);
+  return timingSafeEqual(actual, expected);
+}
+
 export class LanProxyHost {
   private server: Server | undefined;
   private exchangeTokenBytes: Buffer | undefined;
   private sessionTokenBytes: Buffer | undefined;
+  private passwordHash: string | undefined;
   private readonly sockets = new Set<Duplex>();
   private readonly outboundRequests = new Set<ClientRequest>();
   private readonly outboundResponses = new Set<IncomingMessage>();
+  private readonly statusStreams = new Set<{
+    response: ServerResponse;
+    unsubscribe: () => void;
+    heartbeat: ReturnType<typeof setInterval>;
+  }>();
+
+  constructor(private readonly options: LanProxyHostOptions = {}) {}
+
+  setPassword(password: string): string | undefined {
+    this.passwordHash =
+      password.length === 0 ? undefined : hashLanPassword(password);
+    return this.passwordHash;
+  }
+
+  setPasswordHash(passwordHash: string | undefined): void {
+    this.passwordHash = passwordHash;
+  }
+
+  isPasswordConfigured(): boolean {
+    return this.passwordHash !== undefined;
+  }
 
   async start(loopbackOrigin: string): Promise<LanProxyStartResult> {
     if (this.server !== undefined) throw new Error("LAN proxy already started");
@@ -211,6 +299,11 @@ export class LanProxyHost {
     for (const response of this.outboundResponses) response.destroy();
     for (const request of this.outboundRequests) request.destroy();
     for (const socket of this.sockets) socket.destroy();
+    for (const stream of [...this.statusStreams]) {
+      stream.unsubscribe();
+      clearInterval(stream.heartbeat);
+      stream.response.end();
+    }
     const serverClosed =
       server === undefined
         ? Promise.resolve()
@@ -225,6 +318,7 @@ export class LanProxyHost {
     this.sockets.clear();
     this.outboundRequests.clear();
     this.outboundResponses.clear();
+    this.statusStreams.clear();
   }
 
   private trackSocket(socket: Duplex): void {
@@ -285,6 +379,25 @@ export class LanProxyHost {
 
   private authenticate(incoming: IncomingMessage): AuthenticationResult {
     const url = parseRequestPath(incoming.url);
+    if (this.passwordHash !== undefined) {
+      const authorization = incoming.headers.authorization;
+      if (authorization?.startsWith("Basic ")) {
+        const decoded = Buffer.from(authorization.slice(6), "base64").toString(
+          "utf8",
+        );
+        const separator = decoded.indexOf(":");
+        if (
+          separator !== -1 &&
+          verifyLanPassword(decoded.slice(separator + 1), this.passwordHash)
+        ) {
+          return {
+            status: "authenticated",
+            path: `${url.pathname}${url.search}`,
+          };
+        }
+      }
+      return { status: "rejected" };
+    }
     const queryToken = url.searchParams.get(TOKEN_QUERY);
     if (queryToken !== null) {
       url.searchParams.delete(TOKEN_QUERY);
@@ -319,7 +432,7 @@ export class LanProxyHost {
         };
       }
     }
-    return { status: "rejected" };
+    return { status: "authenticated", path: `${url.pathname}${url.search}` };
   }
 
   private handleHttp(
@@ -332,6 +445,7 @@ export class LanProxyHost {
       response.writeHead(401, {
         "cache-control": "no-store",
         "content-type": "text/plain; charset=utf-8",
+        "www-authenticate": 'Basic realm="DeepSeek Harness Code"',
       });
       response.end("Unauthorized");
       return;
@@ -344,6 +458,15 @@ export class LanProxyHost {
         "set-cookie": authentication.cookie,
       });
       response.end();
+      return;
+    }
+
+    const authenticatedPath = parseRequestPath(authentication.path).pathname;
+    if (
+      authenticatedPath === UPDATE_STATUS_PATH ||
+      authenticatedPath === UPDATE_EVENTS_PATH
+    ) {
+      this.handleUpdaterStatus(incoming, response, authenticatedPath);
       return;
     }
 
@@ -364,7 +487,11 @@ export class LanProxyHost {
         response.writeHead(
           upstreamResponse.statusCode ?? 502,
           upstreamResponse.statusMessage,
-          responseHeaders(upstreamResponse.headers),
+          responseHeaders(
+            upstreamResponse.headers,
+            upstream,
+            clientOrigin(incoming),
+          ),
         );
         response.once("close", () => upstreamResponse.destroy());
         upstreamResponse.pipe(response);
@@ -384,6 +511,71 @@ export class LanProxyHost {
     incoming.pipe(outbound);
   }
 
+  private handleUpdaterStatus(
+    incoming: IncomingMessage,
+    response: ServerResponse,
+    path: string,
+  ): void {
+    if (incoming.method !== "GET") {
+      response.writeHead(405, {
+        allow: "GET",
+        "cache-control": "no-store",
+        "content-type": "text/plain; charset=utf-8",
+      });
+      response.end("Method Not Allowed");
+      return;
+    }
+
+    if (path === UPDATE_STATUS_PATH) {
+      const body = JSON.stringify(
+        this.options.getUpdaterStatus?.() ?? { phase: "idle" },
+      );
+      response.writeHead(200, {
+        "cache-control": "no-store",
+        "content-length": Buffer.byteLength(body),
+        "content-type": "application/json; charset=utf-8",
+        "x-content-type-options": "nosniff",
+      });
+      response.end(body);
+      return;
+    }
+
+    response.writeHead(200, {
+      "cache-control": "no-store",
+      connection: "keep-alive",
+      "content-type": "text/event-stream; charset=utf-8",
+      "x-content-type-options": "nosniff",
+    });
+    response.flushHeaders();
+
+    const stream: {
+      response: ServerResponse;
+      unsubscribe: () => void;
+      heartbeat: ReturnType<typeof setInterval>;
+    } = {
+      response,
+      unsubscribe: () => undefined,
+      heartbeat: setInterval(() => {
+        if (!response.destroyed) response.write(": keep-alive\n\n");
+      }, 15_000),
+    };
+    const cleanup = (): void => {
+      if (!this.statusStreams.delete(stream)) return;
+      stream.unsubscribe();
+      clearInterval(stream.heartbeat);
+    };
+    response.once("close", cleanup);
+    this.statusStreams.add(stream);
+    writeUpdaterEvent(
+      response,
+      this.options.getUpdaterStatus?.() ?? { phase: "idle" },
+    );
+    const listener = (status: UpdaterStatus): void =>
+      writeUpdaterEvent(response, status);
+    stream.unsubscribe =
+      this.options.subscribeUpdaterStatus?.(listener) ?? (() => undefined);
+  }
+
   private handleUpgrade(
     incoming: IncomingMessage,
     socket: Duplex,
@@ -395,6 +587,7 @@ export class LanProxyHost {
       writeSocketResponse(socket, 401, "Unauthorized", [
         "Cache-Control: no-store",
         "Content-Type: text/plain; charset=utf-8",
+        'WWW-Authenticate: Basic realm="DeepSeek Harness Code"',
         "Content-Length: 0",
       ]);
       return;

@@ -66,6 +66,9 @@ window.__ModuleLoader__.load({
         const [busy, setBusy] = React.useState(false);
         const [addresses, setAddresses] = React.useState([]);
         const [selectedAddress, setSelectedAddress] = React.useState("");
+        const [password, setPassword] = React.useState("");
+        const [passwordConfigured, setPasswordConfigured] =
+          React.useState(false);
         const [message, setMessage] = React.useState("已关闭（正在读取设置…）");
 
         const applyState = (state) => {
@@ -74,6 +77,7 @@ window.__ModuleLoader__.load({
             ? state.addresses.filter((address) => typeof address === "string")
             : [];
           setEnabled(nextEnabled);
+          setPasswordConfigured(state.passwordConfigured === true);
           setAddresses(nextAddresses);
           setSelectedAddress((current) =>
             nextAddresses.includes(current)
@@ -148,6 +152,26 @@ window.__ModuleLoader__.load({
           }
         };
 
+        const savePassword = async () => {
+          if (busy) return;
+          const bridge = getBridge();
+          if (!bridge) return;
+          setBusy(true);
+          setMessage(password.length === 0 ? "正在清除密码…" : "正在保存密码…");
+          try {
+            const state = await bridge.set({ enabled, password });
+            applyState(state);
+            setPassword("");
+            setMessage(
+              password.length === 0 ? "密码鉴权已关闭" : "密码鉴权已开启",
+            );
+          } catch {
+            setMessage("保存密码失败");
+          } finally {
+            setBusy(false);
+          }
+        };
+
         return React.createElement(
           "div",
           { style: ROW_STYLE },
@@ -178,6 +202,39 @@ window.__ModuleLoader__.load({
                     { key: address, value: address },
                     address,
                   ),
+                ),
+              )
+            : null,
+          enabled
+            ? React.createElement(
+                "div",
+                { style: { ...ROW_STYLE, flex: "1 1 100%" } },
+                React.createElement(
+                  "span",
+                  { style: LABEL_STYLE },
+                  passwordConfigured
+                    ? "访问密码（已设置）"
+                    : "访问密码（可选）",
+                ),
+                React.createElement("input", {
+                  type: "password",
+                  value: password,
+                  placeholder: passwordConfigured
+                    ? "输入新密码或留空清除"
+                    : "留空表示无需密码",
+                  onChange: (event) => setPassword(event.target.value),
+                  disabled: busy,
+                  style: { ...BUTTON_STYLE, minWidth: 220 },
+                }),
+                React.createElement(
+                  "button",
+                  {
+                    type: "button",
+                    onClick: savePassword,
+                    disabled: busy,
+                    style: BUTTON_STYLE,
+                  },
+                  "保存密码",
                 ),
               )
             : null,
@@ -214,7 +271,9 @@ window.__ModuleLoader__.load({
             ? React.createElement(
                 "p",
                 { style: WARNING_STYLE },
-                "连接使用未加密 HTTP。仅在可信局域网中开启；获得访问链接的任何人都可访问此会话，离开后请立即关闭。",
+                passwordConfigured
+                  ? "连接使用未加密 HTTP，已启用浏览器密码鉴权。仅在可信局域网中开启。"
+                  : "连接使用未加密 HTTP，当前未设置密码。仅在可信局域网中开启；其他设备可直接访问。",
               )
             : null,
         );

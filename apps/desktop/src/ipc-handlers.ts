@@ -1,10 +1,12 @@
 import {
+  appInfoSchema,
   desktopPreferencesSchema,
   desktopPreferencesStateSchema,
   lanAccessCopySchema,
   lanAccessSetSchema,
   lanAccessStateSchema,
   runtimeStateSchema,
+  updaterStatusSchema,
   type BundledPluginEntry,
   type DesktopPreferences,
   type DesktopPreferencesState,
@@ -13,6 +15,7 @@ import {
   type LanAccessState,
   type RuntimeState,
   type UpdaterCheckOutcome,
+  type UpdaterStatus,
 } from "./shared/contracts.js";
 
 export interface MainIpc {
@@ -31,6 +34,7 @@ export interface PasteTarget {
 }
 
 export interface DesktopIpcActions {
+  getAppInfo(): { name: string; version: string };
   getRuntimeState(): RuntimeState;
   restartHarness(): Promise<void>;
   openLogs(): Promise<void>;
@@ -40,7 +44,10 @@ export interface DesktopIpcActions {
   setLanAccess(value: LanAccessSet): Promise<LanAccessState>;
   copyLanAccessUrl(value: LanAccessCopy): Promise<void>;
   paste(target: PasteTarget): void;
+  getUpdaterStatus(): UpdaterStatus;
   checkForUpdates(): Promise<UpdaterCheckOutcome>;
+  applyUpdate(): Promise<UpdaterCheckOutcome>;
+  restartForUpdate(): Promise<void>;
   listBundledPlugins(): BundledPluginEntry[];
 }
 
@@ -60,8 +67,14 @@ export function registerDesktopIpc(
   ipc.handle("runtime:get", () =>
     runtimeStateSchema.parse(actions.getRuntimeState()),
   );
+  ipc.handle("app:info", () => appInfoSchema.parse(actions.getAppInfo()));
   ipc.handle("runtime:restart", () => actions.restartHarness());
+  ipc.handle("updater:status", () =>
+    updaterStatusSchema.parse(actions.getUpdaterStatus()),
+  );
   ipc.handle("updater:check", () => actions.checkForUpdates());
+  ipc.handle("updater:apply", () => actions.applyUpdate());
+  ipc.handle("updater:restart", () => actions.restartForUpdate());
   ipc.handle("bundled-plugins:list", () => actions.listBundledPlugins());
   ipc.handle("logs:open", () => actions.openLogs());
   ipc.handle("preferences:get", () =>
