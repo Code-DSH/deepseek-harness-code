@@ -33,7 +33,7 @@ function synchronizeGeneratedRuntimeLockfile() {
       targetRoot,
       "--lockfile-only",
       "--no-frozen-lockfile",
-      "--offline",
+      "--prefer-offline",
       "--ignore-scripts",
       "--prod",
       "--reporter=append-only",
@@ -138,8 +138,8 @@ await cp(join(sourceRoot, "vendor"), join(targetRoot, "vendor"), {
 // portable runtime installs packages exactly like the development tree.
 await cp(pnpmStandaloneRoot, targetRoot, { recursive: true });
 // `pnpm pack` produces new tarball bytes for the maintained family. Rebuild
-// only the staged lockfile, offline, so its file-integrity records describe
-// these exact artifacts while preserving the reviewed dependency resolution.
+// only the staged lockfile, so its file-integrity records describe these exact
+// artifacts while preserving the reviewed dependency resolution.
 synchronizeGeneratedRuntimeLockfile();
 const stagedWorkspace = await readFile(
   join(targetRoot, "pnpm-workspace.yaml"),
