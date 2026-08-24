@@ -144,6 +144,7 @@ const smokeConfig = parseSmokeConfig(process.env, {
   isPackaged: app.isPackaged,
 });
 const smokeStartedAt = smokeConfig?.startedAt ?? new Date().toISOString();
+const SMOKE_ACKNOWLEDGEMENT_TIMEOUT_MS = 120_000;
 let smokeReadyEvidence: SmokeReadyEvidence | undefined;
 let smokeFailureWritten = false;
 let nodeRequiredSmokeActive = false;
@@ -1001,7 +1002,7 @@ async function launch(): Promise<void> {
           acknowledgementPath: smokeConfig.acknowledgementPath ?? "",
           runId: smokeConfig.runId,
           appPid: process.pid,
-          timeoutMs: 30_000,
+          timeoutMs: SMOKE_ACKNOWLEDGEMENT_TIMEOUT_MS,
           pollIntervalMs: 100,
         },
         {
@@ -1095,7 +1096,7 @@ async function launch(): Promise<void> {
           acknowledgementPath: smokeConfig.acknowledgementPath ?? "",
           runId: smokeConfig.runId,
           appPid: process.pid,
-          timeoutMs: 30_000,
+          timeoutMs: SMOKE_ACKNOWLEDGEMENT_TIMEOUT_MS,
           pollIntervalMs: 100,
         },
         {

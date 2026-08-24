@@ -634,11 +634,23 @@ async function listLoopbackListeners() {
 }
 
 function parseLinuxListeningSocketInodes(output, port) {
-  const expected = `0100007F:${port.toString(16).toUpperCase().padStart(4, "0")}`;
+  const expectedPort = port.toString(16).toUpperCase().padStart(4, "0");
+  const loopbackAddresses = new Set([
+    "0100007F",
+    "00000000000000000000000001000000",
+    "0000000000000000FFFF00000100007F",
+  ]);
   const inodes = [];
   for (const line of output.split("\n")) {
     const fields = line.trim().split(/\s+/u);
-    if (fields[1] !== expected || fields[3] !== "0A") continue;
+    const [address, localPort] = fields[1]?.split(":") ?? [];
+    if (
+      !loopbackAddresses.has(address ?? "") ||
+      localPort !== expectedPort ||
+      fields[3] !== "0A"
+    ) {
+      continue;
+    }
     const inode = fields[9];
     if (inode !== undefined && /^\d+$/u.test(inode)) inodes.push(inode);
   }
@@ -652,13 +664,18 @@ function parseWindowsListenerOwnerPids(output) {
     .filter((value) => Number.isInteger(value) && value > 0);
 }
 
-async function linuxPidOwnsLoopbackPort(port, pid) {
-  const inodes = new Set(
-    parseLinuxListeningSocketInodes(
-      await readFile("/proc/net/tcp", "utf8").catch(() => ""),
-      port,
-    ),
-  );
+async function linuxListeningSocketInodes(port) {
+  const [tcp, tcp6] = await Promise.all([
+    readFile("/proc/net/tcp", "utf8").catch(() => ""),
+    readFile("/proc/net/tcp6", "utf8").catch(() => ""),
+  ]);
+  return new Set([
+    ...parseLinuxListeningSocketInodes(tcp, port),
+    ...parseLinuxListeningSocketInodes(tcp6, port),
+  ]);
+}
+
+async function linuxPidOwnsSocket(pid, inodes) {
   if (inodes.size === 0) return false;
   const fdRoot = `/proc/${pid}/fd`;
   const descriptors = await readdir(fdRoot).catch(() => []);
@@ -668,6 +685,21 @@ async function linuxPidOwnsLoopbackPort(port, pid) {
     if (match !== null && inodes.has(match[1])) return true;
   }
   return false;
+}
+
+async function linuxLoopbackPortOwnerPids(port) {
+  const inodes = await linuxListeningSocketInodes(port);
+  if (inodes.size === 0) return [];
+  const entries = await readdir("/proc", { withFileTypes: true }).catch(
+    () => [],
+  );
+  const owners = [];
+  for (const entry of entries) {
+    if (!entry.isDirectory() || !/^\d+$/u.test(entry.name)) continue;
+    const pid = Number(entry.name);
+    if (await linuxPidOwnsSocket(pid, inodes)) owners.push(pid);
+  }
+  return owners;
 }
 
 async function windowsListenerOwnerPids(port) {
@@ -1337,20 +1369,18 @@ async function assertPortOwned(port, pid) {
   const listeners = await listLoopbackListeners();
   const matching = listeners.filter((candidate) => candidate.port === port);
   if (matching.some((listener) => listener.pid === pid)) return;
-  if (
-    process.platform === "linux" &&
-    (await linuxPidOwnsLoopbackPort(port, pid))
-  ) {
-    return;
+  let platformOwners = [];
+  if (process.platform === "linux") {
+    platformOwners = await linuxLoopbackPortOwnerPids(port);
+  } else if (process.platform === "win32") {
+    platformOwners = await windowsListenerOwnerPids(port);
   }
-  if (
-    process.platform === "win32" &&
-    (await windowsListenerOwnerPids(port)).includes(pid)
-  ) {
-    return;
-  }
-  const observed = matching
-    .map((listener) => listener.pid ?? "unknown")
+  if (platformOwners.includes(pid)) return;
+  const observed = [
+    ...matching.map((listener) => listener.pid ?? "unknown"),
+    ...platformOwners,
+  ]
+    .filter((value, index, values) => values.indexOf(value) === index)
     .join(", ");
   throw new Error(
     `Harness listener ${port} is not owned by PID ${pid} (observed: ${observed || "none"})`,
