@@ -18,6 +18,7 @@ import {
   parseLoopbackListeners,
   parseLinuxListeningSocketInodes,
   parseWindowsListenerOwnerPids,
+  nonLoopbackIpv4Addresses,
   verifySmokeEvidence,
   assertKnownRunnerArchitecture,
   validateArtifactContract,
@@ -540,6 +541,22 @@ describe("packaged runtime listener selection", () => {
     expect(parseWindowsListenerOwnerPids("7002\r\n7003\r\n")).toEqual([
       7002, 7003,
     ]);
+  });
+
+  test("selects only unique non-loopback IPv4 addresses", () => {
+    expect(
+      nonLoopbackIpv4Addresses({
+        lo: [
+          { address: "127.0.0.1", family: "IPv4", internal: true },
+          { address: "::1", family: "IPv6", internal: true },
+        ],
+        ethernet: [
+          { address: "10.0.0.8", family: "IPv4", internal: false },
+          { address: "10.0.0.8", family: 4, internal: false },
+          { address: "fe80::1", family: "IPv6", internal: false },
+        ],
+      }),
+    ).toEqual(["10.0.0.8"]);
   });
 
   test("parses the exact Linux IPv4 loopback listening socket inode", () => {

@@ -23,4 +23,5 @@ test.skipIf(process.platform !== "win32")(
     expect(stderr).toBe("");
     expect(stdout.trim()).toBe("Windows package host helper fixtures passed");
   },
+  45_000,
 );

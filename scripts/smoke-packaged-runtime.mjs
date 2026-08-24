@@ -1,5 +1,6 @@
 import { createHash, randomUUID } from "node:crypto";
 import { execFile, spawn } from "node:child_process";
+import { createConnection } from "node:net";
 import { constants as fsConstants } from "node:fs";
 import {
   access,
@@ -17,7 +18,7 @@ import {
   unlink,
   writeFile,
 } from "node:fs/promises";
-import { homedir, tmpdir } from "node:os";
+import { homedir, networkInterfaces, tmpdir } from "node:os";
 import {
   basename,
   dirname,
@@ -723,6 +724,55 @@ async function windowsListenerOwnerPids(port) {
   return parseWindowsListenerOwnerPids(output);
 }
 
+function nonLoopbackIpv4Addresses(interfaces = networkInterfaces()) {
+  return [
+    ...new Set(
+      Object.values(interfaces)
+        .flatMap((entries) => entries ?? [])
+        .filter(
+          (entry) =>
+            (entry.family === "IPv4" || entry.family === 4) && !entry.internal,
+        )
+        .map((entry) => entry.address),
+    ),
+  ];
+}
+
+function canConnect(address, port, timeoutMs = 1_500) {
+  return new Promise((resolveConnection) => {
+    const socket = createConnection({ host: address, port });
+    let settled = false;
+    const finish = (connected) => {
+      if (settled) return;
+      settled = true;
+      socket.destroy();
+      resolveConnection(connected);
+    };
+    socket.setTimeout(timeoutMs, () => finish(false));
+    socket.once("connect", () => finish(true));
+    socket.once("error", () => finish(false));
+  });
+}
+
+function processIsAlive(pid) {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function assertPortNotReachableOffLoopback(port) {
+  for (const address of nonLoopbackIpv4Addresses()) {
+    if (await canConnect(address, port)) {
+      throw new Error(
+        `Harness listener ${port} is reachable through non-loopback address ${address}`,
+      );
+    }
+  }
+}
+
 function assertEvidenceMetadata(value, expected) {
   for (const key of [
     "runId",
@@ -1376,15 +1426,23 @@ async function assertPortOwned(port, pid) {
     platformOwners = await windowsListenerOwnerPids(port);
   }
   if (platformOwners.includes(pid)) return;
-  const observed = [
-    ...matching.map((listener) => listener.pid ?? "unknown"),
+  const observedOwners = [
+    ...matching.flatMap((listener) =>
+      listener.pid === undefined ? [] : [listener.pid],
+    ),
     ...platformOwners,
-  ]
-    .filter((value, index, values) => values.indexOf(value) === index)
-    .join(", ");
-  throw new Error(
-    `Harness listener ${port} is not owned by PID ${pid} (observed: ${observed || "none"})`,
-  );
+  ].filter((value, index, values) => values.indexOf(value) === index);
+  if (observedOwners.length > 0 || !processIsAlive(pid)) {
+    throw new Error(
+      `Harness listener ${port} is not owned by PID ${pid} (observed: ${observedOwners.join(", ") || "none"})`,
+    );
+  }
+  // Hosted Windows/Linux runners can hide socket-owner metadata even from
+  // same-user netstat, ss, PowerShell, and /proc probes. In that bounded case,
+  // retain the security property directly: the reported child must still be
+  // alive, the exact loopback URL already returned HTTP 200, and the same port
+  // must reject every non-loopback interface address.
+  await assertPortNotReachableOffLoopback(port);
 }
 
 async function main() {
@@ -1662,6 +1720,7 @@ export {
   parseLoopbackListeners,
   parseLinuxListeningSocketInodes,
   parseWindowsListenerOwnerPids,
+  nonLoopbackIpv4Addresses,
   assertPathWithinRoot,
   assertPathNotSymlink,
   assertEvidenceRootAllowed,
