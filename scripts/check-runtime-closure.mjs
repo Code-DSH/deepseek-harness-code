@@ -132,6 +132,12 @@ async function sha256(path) {
   return digest.digest("hex");
 }
 
+async function sha512Integrity(path) {
+  const digest = createHash("sha512");
+  for await (const chunk of createReadStream(path)) digest.update(chunk);
+  return `sha512-${digest.digest("base64")}`;
+}
+
 function tarballName(name, version) {
   const unscoped = name.startsWith("@")
     ? name.slice(1).replace("/", "-")
@@ -212,6 +218,21 @@ const configPnpmWorkspace = await readFile(
   join(configRuntimeRoot, "pnpm-workspace.yaml"),
   "utf8",
 );
+const requiredRuntimeBuildPolicies = [
+  '"@deepseek-ai/dsh-subprocess-local@file:vendor/dsh/deepseek-ai-dsh-subprocess-local-0.1.1-rc.2.code.1.tgz": true',
+  "esbuild: true",
+];
+for (const [label, workspace] of [
+  ["config", configPnpmWorkspace],
+  ["build", packagedPnpmWorkspace],
+]) {
+  if (
+    workspace.includes("set this to true or false") ||
+    requiredRuntimeBuildPolicies.some((policy) => !workspace.includes(policy))
+  ) {
+    throw new Error(`${label} runtime build policy is incomplete`);
+  }
+}
 
 if (
   maintainedHarness.schemaVersion !== 1 ||
@@ -320,6 +341,12 @@ for (const entry of maintainedHarness.packages) {
   if ((await sha256(tarballPath)) !== entry.sha256) {
     throw new Error(
       `maintained Harness tarball digest mismatch: ${entry.file}`,
+    );
+  }
+  const expectedResolution = `resolution: {integrity: ${await sha512Integrity(tarballPath)}, tarball: ${specifier}}`;
+  if (!packagedPnpmLock.includes(expectedResolution)) {
+    throw new Error(
+      `maintained Harness lockfile integrity mismatch: ${entry.file}`,
     );
   }
 }

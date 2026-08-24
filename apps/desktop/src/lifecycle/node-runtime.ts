@@ -13,6 +13,7 @@ import {
 import { basename, delimiter, dirname, join } from "node:path";
 import type { ResolvedSystemNode } from "./system-node.js";
 import { runAsyncCommand } from "./async-command.js";
+import { redactStartupDiagnostic } from "./startup-diagnostics.js";
 
 const MARKER_SCHEMA_VERSION = 2;
 
@@ -272,8 +273,16 @@ export const installRuntimePackages: InstallRuntimePackages = async ({
     timeoutMs: 15 * 60_000,
   });
   if (result.error !== undefined || result.status !== 0) {
-    const diagnostic =
-      result.error?.message ?? String(result.stderr ?? "").slice(0, 2_000);
+    const output = [result.stderr, result.stdout]
+      .filter((value) => value.trim() !== "")
+      .join("\n")
+      .slice(-2_000);
+    const diagnostic = redactStartupDiagnostic(
+      result.error?.message ??
+        (output === ""
+          ? `installer exited with status ${String(result.status)}`
+          : output),
+    );
     throw new Error(
       `Node.js runtime package installation failed: ${diagnostic}`,
     );

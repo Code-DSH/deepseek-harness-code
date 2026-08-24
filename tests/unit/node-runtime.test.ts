@@ -118,6 +118,38 @@ describe("pinned runtime packages driven by the system Node", () => {
     ).rejects.toThrow();
   });
 
+  it("surfaces redacted installer stdout when a package install fails", async () => {
+    const root = await mkdtemp(join(tmpdir(), "dhc-node-diagnostic-"));
+    const resource = await createRuntimeResource(root);
+    const paths = resolveNodeRuntimePaths(join(root, "user-data"));
+    await writeFile(join(resource, "pnpm-workspace.yaml"), "packages: []\n");
+    const runCommand = vi.fn(async () => ({
+      status: 1,
+      stdout: "ERR_PNPM_TARBALL_INTEGRITY token=must-not-leak",
+      stderr: "",
+    }));
+
+    try {
+      const failure = await installRuntimePackages({
+        nodeExecutable: process.execPath,
+        pnpmEntry: join(resource, "pnpm.mjs"),
+        paths,
+        runCommand,
+      }).then(
+        () => new Error("expected package installation to fail"),
+        (error: unknown) => error,
+      );
+
+      expect(failure).toBeInstanceOf(Error);
+      const message = (failure as Error).message;
+      expect(message).toContain("ERR_PNPM_TARBALL_INTEGRITY");
+      expect(message).toContain("token=[REDACTED]");
+      expect(message).not.toContain("must-not-leak");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   it("resolves the packages layout under user data", () => {
     const paths = resolveNodeRuntimePaths("/user-data");
     expect(paths.rootDir).toBe(join("/user-data", "node-runtime"));
