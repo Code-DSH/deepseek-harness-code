@@ -39,6 +39,10 @@ const bootPluginRoot =
   packagedResourcesRoot === undefined
     ? pluginRoot
     : join(packagedResourcesRoot, "desktop-plugin");
+const bootPluginMarketRoot =
+  packagedResourcesRoot === undefined
+    ? join(repositoryRoot, "packages", "dsh-plugin-market")
+    : join(packagedResourcesRoot, "dsh-plugin-market");
 const bootRoutingSuiteRoot =
   packagedResourcesRoot === undefined
     ? join(repositoryRoot, "build", "routing-suite")
@@ -504,6 +508,10 @@ describe("desktop plugin with the real pinned Harness", () => {
         {
           packageName: "deepseek-harness-desktop-plugin",
           packageRoot: bootPluginRoot,
+        },
+        {
+          packageName: "@dsh-external/deepseek-harness-plugin-market",
+          packageRoot: bootPluginMarketRoot,
         },
         {
           packageName: "@dsh-external/dsh-super-injector",

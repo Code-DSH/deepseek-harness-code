@@ -1,6 +1,6 @@
 # dsh-plugin-market bundle layer: one bare package loader row for the Web client.
 # 与 package.json name / lib/client.js 的 ModuleLoader.load id 保持一致（全名）。
 - insert:
-    - id: @dsh-external/deepseek-harness-plugin-market
+    - id: "@dsh-external/deepseek-harness-plugin-market"
       name: "@dsh-external/deepseek-harness-plugin-market"
       config: {}
