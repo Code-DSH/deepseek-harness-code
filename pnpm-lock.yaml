@@ -473,6 +473,10 @@ importers:
 
   packages/dsh-model-two-level-selector: {}
 
+  packages/dsh-plugin-market: {}
+
+  packages/dsh-settings-tools: {}
+
   packages/dsh-superpowers:
     dependencies:
       '@deepseek-ai/schemastery':
