@@ -93,7 +93,7 @@ Retain `@deepseek-ai/dsh-tool-ask-user`, `@deepseek-ai/dsh-user-questions`, and 
 | Prompt Principles  | `dsh-prompt-principles`           | 1.0.0+  | layered prompt injection for Standard-like sessions | `client.js` + host `system-prompt/assemble` |
 | Vision Router      | `dsh-vision-router`               | 1.7.1   | vision chain + 11 pixel tools                       | host + client                               |
 | Better Sidebar     | `dsh-better-sidebar`              | 0.12.3  | file/browser/terminal/git workbench + service API   | lazy chunks                                 |
-| Composition        | `deepseek-harness-composition`    | 1.0.0   | Local MCP everything + opt-in Context7 + subagents  | `cordis.patch.yml` only                     |
+| Composition        | `deepseek-harness-composition`    | 1.0.0   | Opt-in MCP everything/Context7 + subagent providers | `cordis.patch.yml` only                     |
 | Superpowers        | `dsh-superpowers`                 | 1.0.0+  | coding-mode gate + prompt injection                 | `lib/*`                                     |
 | Anchored Standard  | `anchored-standard-plugin`        | 0.2.0   | progressive preset (`anchored-standard`)            | preset `agent.cordis.yml`                   |
 | Superpowers Skills | `superpowers`                     | 6.2.0   | offline skill collection                            | `skills/**`                                 |

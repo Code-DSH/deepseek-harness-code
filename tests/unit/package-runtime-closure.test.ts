@@ -178,6 +178,9 @@ describe("packaged runtime dependency closure", () => {
       'name: "@deepseek-ai/dsh-subagent-claude-code"',
     );
     expect(compositionPatch).toMatch(
+      /- id: mcp-everything[\s\S]*?disabled: true[\s\S]*?serverName: everything/u,
+    );
+    expect(compositionPatch).toMatch(
       /- id: mcp-context7[\s\S]*?disabled: true[\s\S]*?serverName: context7/u,
     );
     expect(lifecycle).not.toContain("linkOnly");

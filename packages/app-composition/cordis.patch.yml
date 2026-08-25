@@ -2,16 +2,12 @@
 # entries, applied through the public plugin patch path at `dsh plugin add`
 # time. The user's own profile patch layer is never read or modified here.
 - insert:
-    # Maintained DSH MCP client bridge, connected to the bundled everything
-    # test server for link validation. `dsh-mcp-everything` is the
-    # app-provided launcher shim (runtime-bin/dsh-mcp-everything,
-    # dsh-mcp-everything.cmd) that starts the pinned local copy of the
-    # server from the runtime package store — no registry resolution or
-    # download happens at startup. The desktop host puts the runtime-bin
-    # and Node directories on the harness PATH so stdio spawn resolves it
-    # on macOS and Windows alike.
+    # The bundled everything server validates the MCP bridge but is not a
+    # production capability. Keep it available for an explicit user profile
+    # override without adding a test-server process to desktop startup.
     - id: mcp-everything
       name: "@deepseek-ai/dsh-mcp-client"
+      disabled: true
       config:
         serverName: everything
         transport: stdio
