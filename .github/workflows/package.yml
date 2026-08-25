@@ -255,7 +255,10 @@ jobs:
           hide_system_node_candidates "${node_candidates[@]}"
           xvfb-run -a pnpm smoke:package -- --scenario node-required --matrix-label "$MATRIX_LABEL" --package-kind "$PACKAGE_KIND" --expected-architecture "$EXPECTED_ARCHITECTURE" --runner-architecture "$EXPECTED_ARCHITECTURE" --artifact-filename "$(basename "$appimage")" --executable "$executable" --resources "$squashfs_root/resources" --inventory "$squashfs_root" --artifact "$appimage" --artifact-sha256 "$hash" --evidence-root "$EVIDENCE_ROOT" --evidence "$EVIDENCE_ROOT/smoke-evidence-linux-appimage-node-required.json"
       - name: Install and smoke test Linux deb package
-        if: matrix.label == 'linux-x64' || matrix.label == 'linux-arm64'
+        # arm64 deb runs on its own clean native runner below. Running two full
+        # package installs serially exhausted its 600-second acceptance budget,
+        # while users install either AppImage or deb rather than both.
+        if: matrix.label == 'linux-x64'
         shell: bash
         env:
           PACKAGE_KIND: deb
@@ -389,6 +392,42 @@ jobs:
           path: release/evidence/${{ matrix.label }}/**/*.json
           if-no-files-found: warn
 
+  linux-arm64-deb-smoke:
+    name: Smoke linux-arm64 deb
+    needs: package
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 30
+    env:
+      MATRIX_LABEL: linux-arm64
+      PACKAGE_KIND: deb
+      EXPECTED_ARCHITECTURE: arm64
+      EVIDENCE_ROOT: ${{ github.workspace }}/release/evidence/linux-arm64-deb
+      SMOKE_TIMEOUT_MS: 600000
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.19.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24.18.0
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - uses: actions/download-artifact@v4
+        with:
+          name: linux-arm64
+          path: release
+      - name: Install and smoke test Linux arm64 deb package
+        shell: bash
+        run: bash scripts/package-smoke-linux-deb.sh
+      - name: Upload sanitized deb smoke evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-arm64-deb-evidence
+          path: release/evidence/linux-arm64-deb/**/*.json
+          if-no-files-found: warn
+
   macos-smoke:
     name: Smoke ${{ matrix.label }}
     needs: package
@@ -519,7 +558,7 @@ jobs:
 
   release:
     name: Publish GitHub release
-    needs: [package, macos-smoke]
+    needs: [package, linux-arm64-deb-smoke, macos-smoke]
     if: startsWith(github.ref, 'refs/tags/')
     runs-on: ubuntu-latest
     timeout-minutes: 15
