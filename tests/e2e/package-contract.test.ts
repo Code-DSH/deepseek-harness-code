@@ -17,13 +17,13 @@ async function readProjectFile(relativePath: string): Promise<string> {
 }
 
 describe("DeepSeek Harness Code distribution contract", () => {
-  test("pins the BETA3 desktop and maintained Harness submodule", async () => {
+  test("pins the BETA4 desktop and maintained Harness submodule", async () => {
     const manifest = JSON.parse(await readProjectFile("package.json")) as {
       version: string;
       dependencies: Record<string, string>;
     };
 
-    expect(manifest.version).toBe("0.1.0-BETA3");
+    expect(manifest.version).toBe("0.1.0-BETA4");
     expect(manifest.dependencies["@deepseek-ai/dsh"]).toBe(
       "link:deps/deepseek-harness/apps/cli",
     );
