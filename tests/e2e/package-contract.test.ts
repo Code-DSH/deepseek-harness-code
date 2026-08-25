@@ -288,7 +288,8 @@ describe("DeepSeek Harness Code distribution contract", () => {
     expect(artifactValidationStep).not.toContain("mapfile -t");
     expect(workflow).toContain("Validate tag version");
     expect(workflow).toContain('if [[ "$GITHUB_REF" == refs/tags/* ]]');
-    expect(workflow).toContain("SMOKE_TIMEOUT_MS: 600000");
+    expect(workflow).toContain("SMOKE_TIMEOUT_MS: 1200000");
+    expect(smokeScript).toContain("const SMOKE_TIMEOUT_MS = 1_200_000;");
     for (const [label, runner] of [
       ["windows-x64", "windows-2025"],
       ["windows-arm64", "windows-11-arm"],

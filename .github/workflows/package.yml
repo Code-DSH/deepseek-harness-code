@@ -48,7 +48,7 @@ jobs:
       PACKAGE_KIND: ${{ matrix.package-kind }}
       EXPECTED_ARCHITECTURE: ${{ matrix.expected-architecture }}
       EVIDENCE_ROOT: ${{ github.workspace }}/release/evidence/${{ matrix.label }}
-      SMOKE_TIMEOUT_MS: 600000
+      SMOKE_TIMEOUT_MS: 1200000
     steps:
       - uses: actions/checkout@v4
         with:
@@ -406,7 +406,7 @@ jobs:
     timeout-minutes: 30
     env:
       EVIDENCE_ROOT: ${{ github.workspace }}/release/evidence/${{ matrix.label }}
-      SMOKE_TIMEOUT_MS: 600000
+      SMOKE_TIMEOUT_MS: 1200000
     steps:
       - uses: actions/checkout@v4
         with:

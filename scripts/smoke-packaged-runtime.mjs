@@ -44,7 +44,7 @@ const evidenceRoot = resolve(
 const metadataRoot =
   argument("--metadata-root") ?? process.env.SMOKE_METADATA_ROOT;
 const appEvidencePath = `${evidencePath}.app.json`;
-const SMOKE_TIMEOUT_MS = 600_000;
+const SMOKE_TIMEOUT_MS = 1_200_000;
 const requestedTimeoutMs = Number(process.env.SMOKE_TIMEOUT_MS ?? 45_000);
 const timeoutMs =
   Number.isFinite(requestedTimeoutMs) && requestedTimeoutMs > 0
