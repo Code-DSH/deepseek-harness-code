@@ -1,0 +1,564 @@
+{
+  "schemaVersion": "1",
+  "categories": [
+    {
+      "id": "official",
+      "name": "官方集成",
+      "nameEn": "Official",
+      "order": 0
+    },
+    {
+      "id": "ui",
+      "name": "界面与体验",
+      "nameEn": "UI & UX",
+      "order": 10
+    },
+    {
+      "id": "vision",
+      "name": "视觉与图像",
+      "nameEn": "Vision & Image",
+      "order": 20
+    },
+    {
+      "id": "tooling",
+      "name": "开发工具",
+      "nameEn": "Tooling",
+      "order": 30
+    },
+    {
+      "id": "preset",
+      "name": "预设与提示",
+      "nameEn": "Presets & Prompts",
+      "order": 40
+    },
+    {
+      "id": "desktop",
+      "name": "桌面集成",
+      "nameEn": "Desktop",
+      "order": 50
+    }
+  ],
+  "sources": [
+    {
+      "id": "official",
+      "name": "DSHC 官方",
+      "nameEn": "DSHC Official",
+      "description": {
+        "zh": "由 DSHC 团队维护、随 DeepSeek Harness Code 发行或通过官方流程审核的插件。",
+        "en": "Plugins maintained by the DSHC team, shipped with DeepSeek Harness Code or reviewed through the official process."
+      },
+      "submissionUrl": "https://github.com/Code-DSH/deepseek-harness-code/issues/new",
+      "lastSyncedAt": "2026-08-23T04:00:00.000Z"
+    },
+    {
+      "id": "community",
+      "name": "社区投稿",
+      "nameEn": "Community",
+      "description": {
+        "zh": "由社区开发者投稿的插件，经 DSHC-Hub 元数据审核后收录；源码托管在各自 GitHub 仓库。",
+        "en": "Community-submitted plugins, indexed after DSHC-Hub metadata review; source lives in each author's GitHub repository."
+      },
+      "submissionUrl": "https://github.com/Code-DSH/deepseek-harness-code/issues/new?template=plugin_submission.md",
+      "lastSyncedAt": "2026-08-23T04:00:00.000Z"
+    },
+    {
+      "id": "github",
+      "name": "GitHub 插件专区",
+      "nameEn": "GitHub (dsh-plugin)",
+      "description": {
+        "zh": "GitHub `dsh-plugin` topic 自动发现的插件目录：元数据与 README 以超链接/转发方式交付，用户本地读取；不下载、不落盘到服务器。",
+        "en": "Auto-discovered from the GitHub `dsh-plugin` topic: metadata and README are delivered as links/forwarded reads on the user's side; nothing is downloaded or persisted on the server."
+      },
+      "submissionUrl": "https://github.com/search?q=topic%3Adsh-plugin&type=repositories",
+      "lastSyncedAt": "2026-08-23T04:00:00.000Z"
+    }
+  ],
+  "plugins": [
+    {
+      "id": "dsh-ui-polish",
+      "name": "DSH UI Polish",
+      "nameEn": "DSH UI Polish",
+      "description": {
+        "zh": "界面焕新：设置弹窗整体重排（导航侧栏/统一栏宽/官方令牌化卡片·输入·按钮）、全局平滑动画、模型二级菜单防抖飞出。纯注入式改造，不修改官方文件。",
+        "en": "UI refresh: settings panel rearrangement (nav sidebar / unified column width / tokenized cards, inputs, buttons), smooth animations, debounced model submenu. Pure injection, no official file changes."
+      },
+      "version": "1.1.0",
+      "authorName": "DSHC Community",
+      "categories": [
+        "ui"
+      ],
+      "sourceIds": [
+        "community"
+      ],
+      "repositoryUrl": "https://github.com/Code-DSH/deepseek-harness-code",
+      "repoPath": null,
+      "license": "MIT",
+      "verified": true,
+      "verifiedAt": "2026-08-23T04:00:00.000Z",
+      "installSpec": {
+        "package": "dsh-ui-polish",
+        "version": "1.1.0",
+        "kind": "npm"
+      },
+      "featured": true,
+      "readme": {
+        "zh": "通过官方格式 client bundle 注入：设置面板视觉重排 + 全局动效平滑。安装前请查看源码目录与 license。",
+        "en": "Injected via official-format client bundle: settings panel visual rearrangement + smooth global motion. Review the source and license before installing."
+      }
+    },
+    {
+      "id": "dsh-super-injector",
+      "name": "DSH Super Injector",
+      "nameEn": "DSH Super Injector",
+      "description": {
+        "zh": "任意本地插件包运行时注入：工具包/守护循环/UI 面板/混合形态同一通道，注入即完整生效（host+UI）、可热重载与自重载、卸载即净。",
+        "en": "Runtime injection for any local plugin package: toolkit / daemon-loop / UI panel / hybrid share one channel; injected = fully live (host+UI), hot-reloadable, clean uninstall."
+      },
+      "version": "0.3.3",
+      "authorName": "DSHC Community",
+      "categories": [
+        "tooling",
+        "ui"
+      ],
+      "sourceIds": [
+        "community"
+      ],
+      "repositoryUrl": "https://github.com/Code-DSH/deepseek-harness-code",
+      "repoPath": null,
+      "license": "MIT",
+      "verified": true,
+      "verifiedAt": "2026-08-23T04:00:00.000Z",
+      "installSpec": {
+        "package": "dsh-super-injector-fix",
+        "version": "0.3.3",
+        "kind": "npm"
+      },
+      "featured": true,
+      "readme": {
+        "zh": "提供 dev_* 工具族：插件生产线、注入/卸载/热重载/自愈/故障演练。",
+        "en": "Provides the dev_* tool family: plugin pipeline, inject / uninstall / hot reload / self-heal / failure drill."
+      }
+    },
+    {
+      "id": "dsh-better-sidebar",
+      "name": "DSH Better Sidebar",
+      "nameEn": "DSH Better Sidebar",
+      "description": {
+        "zh": "VSCode 风格右侧边栏（explorer / editor / terminal / git / browser），按会话隔离。",
+        "en": "VSCode-like right sidebar (explorer / editor / terminal / git / browser), isolated per conversation session."
+      },
+      "version": "0.12.3",
+      "authorName": "DSHC Team",
+      "categories": [
+        "ui",
+        "tooling"
+      ],
+      "sourceIds": [
+        "official"
+      ],
+      "repositoryUrl": "https://github.com/Code-DSH/deepseek-harness-code",
+      "repoPath": "packages/better-sidebar",
+      "license": "MIT",
+      "verified": true,
+      "verifiedAt": "2026-08-23T04:00:00.000Z",
+      "installSpec": {
+        "package": "dsh-better-sidebar",
+        "version": "0.12.3",
+        "kind": "npm"
+      },
+      "featured": false,
+      "readme": {
+        "zh": "DeepSeek Harness Code 官方集成插件之一，随 0.1.0-BETA3 发行。",
+        "en": "One of the official integrated plugins shipped with DeepSeek Harness Code 0.1.0-BETA3."
+      }
+    },
+    {
+      "id": "dsh-vision-router",
+      "name": "DSH Vision Router",
+      "nameEn": "DSH Vision Router",
+      "description": {
+        "zh": "文本模型的视觉能力：内置免费视觉链 + 像素级视觉工具（问答、定位、裁切、像素对比、长截图 OCR）。",
+        "en": "Eyes for text-only agents: built-in free vision chain + pixel-level vision tools (Q&A, grounding, crop, pixel diff, long-screenshot OCR)."
+      },
+      "version": "1.4.4",
+      "authorName": "DSHC Community",
+      "categories": [
+        "vision",
+        "tooling"
+      ],
+      "sourceIds": [
+        "community"
+      ],
+      "repositoryUrl": "https://github.com/Code-DSH/deepseek-harness-code",
+      "repoPath": null,
+      "license": "MIT",
+      "verified": true,
+      "verifiedAt": "2026-08-23T04:00:00.000Z",
+      "installSpec": {
+        "package": "dsh-vision-router",
+        "version": "1.4.4",
+        "kind": "npm"
+      },
+      "featured": true,
+      "readme": {
+        "zh": "含视觉工具集与 Vision Router 设置面板。",
+        "en": "Includes the vision toolchain and the Vision Router settings panel."
+      }
+    },
+    {
+      "id": "dsh-model2-selector",
+      "name": "DSH Model Two-Level Selector",
+      "nameEn": "DSH Model Two-Level Selector",
+      "description": {
+        "zh": "模型/推理等级二级选择：一级菜单两行固定，二级悬浮框右侧锚定行内箭头向上展开，互斥切换，双向动画。",
+        "en": "Two-level model selection: fixed two-row primary menu, submenu anchored to the row arrow expanding upward, mutually exclusive switching, bidirectional animation."
+      },
+      "version": "1.1.0",
+      "authorName": "DSHC Team",
+      "categories": [
+        "ui"
+      ],
+      "sourceIds": [
+        "official"
+      ],
+      "repositoryUrl": "https://github.com/Code-DSH/deepseek-harness-code",
+      "repoPath": "packages/dsh-model-two-level-selector",
+      "license": "MIT",
+      "verified": true,
+      "verifiedAt": "2026-08-23T04:00:00.000Z",
+      "installSpec": {
+        "package": "dsh-model2-selector",
+        "version": "1.1.0",
+        "kind": "npm"
+      },
+      "featured": false,
+      "readme": {
+        "zh": "DeepSeek Harness Code 官方集成插件之一。",
+        "en": "One of the official integrated plugins."
+      }
+    },
+    {
+      "id": "dsh-settings-tools",
+      "name": "DSH Settings Tools",
+      "nameEn": "DSH Settings Tools",
+      "description": {
+        "zh": "通用设置增强：重启 Harness 行、局域网访问行左右开边重构、整页 16px 节奏与右对齐归一化。",
+        "en": "General settings enhancements: restart-harness row, LAN-access row restructure, page-wide 16px rhythm and right-alignment normalization."
+      },
+      "version": "1.0.0",
+      "authorName": "DSHC Community",
+      "categories": [
+        "ui",
+        "desktop"
+      ],
+      "sourceIds": [
+        "community"
+      ],
+      "repositoryUrl": "https://github.com/Code-DSH/deepseek-harness-code",
+      "repoPath": null,
+      "license": "MIT",
+      "verified": true,
+      "verifiedAt": "2026-08-23T04:00:00.000Z",
+      "installSpec": {
+        "package": "dsh-settings-tools",
+        "version": "1.0.0",
+        "kind": "npm"
+      },
+      "featured": false,
+      "readme": {
+        "zh": "含重启 Harness 与局域网访问两行官方设置增强。",
+        "en": "Adds restart-harness and LAN-access rows to General settings."
+      }
+    },
+    {
+      "id": "dsh-code-brand",
+      "name": "DSH Code Brand Badge",
+      "nameEn": "DSH Code Brand Badge",
+      "description": {
+        "zh": "品牌角标：在左侧面板品牌行 HARNESS 徽标右侧显示蓝色圆角 code 徽标（Code 整合包标识）。",
+        "en": "Brand badge: a blue rounded 'code' badge beside the HARNESS mark (Code-pack identity). Pure UI injection."
+      },
+      "version": "1.0.0",
+      "authorName": "DSHC Community",
+      "categories": [
+        "ui"
+      ],
+      "sourceIds": [
+        "community"
+      ],
+      "repositoryUrl": "https://github.com/Code-DSH/deepseek-harness-code",
+      "repoPath": null,
+      "license": "MIT",
+      "verified": true,
+      "verifiedAt": "2026-08-23T04:00:00.000Z",
+      "installSpec": {
+        "package": "dsh-code-brand",
+        "version": "1.0.0",
+        "kind": "npm"
+      },
+      "featured": false,
+      "readme": {
+        "zh": "纯注入式 UI 插件，不修改任何官方文件。",
+        "en": "Pure injection UI plugin; no official file modified."
+      }
+    },
+    {
+      "id": "dsh-prompt-principles",
+      "name": "DSH Prompt Principles",
+      "nameEn": "DSH Prompt Principles",
+      "description": {
+        "zh": "分层提示词原则注入：向 Standard 会话的系统提示追加有序行为章节。",
+        "en": "Layered prompt-principles injection: appends ordered behavioral sections to the system prompt of Standard sessions."
+      },
+      "version": "0.1.0",
+      "authorName": "DSHC Community",
+      "categories": [
+        "preset"
+      ],
+      "sourceIds": [
+        "community"
+      ],
+      "repositoryUrl": "https://github.com/Code-DSH/deepseek-harness-code",
+      "repoPath": null,
+      "license": "MIT",
+      "verified": true,
+      "verifiedAt": "2026-08-23T04:00:00.000Z",
+      "installSpec": {
+        "package": "dsh-prompt-principles",
+        "version": "0.1.0",
+        "kind": "npm"
+      },
+      "featured": false,
+      "readme": {
+        "zh": "实验性：明确区分设计意图与提示注入副作用。",
+        "en": "Experimental: clearly separates design intent from prompt-injection side effects."
+      }
+    },
+    {
+      "id": "dsh-superpowers",
+      "name": "DSH Superpowers Mode",
+      "nameEn": "DSH Superpowers Mode",
+      "description": {
+        "zh": "重型编码模式开关：挂载 subagent / workflow / ralph 等重型工具并注入 Coding Focus 提示；轻度模式不挂载。",
+        "en": "Superpowers → heavy coding-mode switch: mounts subagent / workflow / ralph heavy tools with Coding Focus prompts; light mode mounts none."
+      },
+      "version": "0.1.0",
+      "authorName": "DSHC Community",
+      "categories": [
+        "preset",
+        "tooling"
+      ],
+      "sourceIds": [
+        "community"
+      ],
+      "repositoryUrl": "https://github.com/Code-DSH/deepseek-harness-code",
+      "repoPath": null,
+      "license": "MIT",
+      "verified": true,
+      "verifiedAt": "2026-08-23T04:00:00.000Z",
+      "installSpec": {
+        "package": "dsh-superpowers",
+        "version": "0.1.0",
+        "kind": "npm"
+      },
+      "featured": false,
+      "readme": {
+        "zh": "与 Skills 系统配合使用。",
+        "en": "Works with the Skills system."
+      }
+    },
+    {
+      "id": "dsh-ui-motion",
+      "name": "DSH UI Motion",
+      "nameEn": "DSH UI Motion",
+      "description": {
+        "zh": "全局 UI 动效：平滑曲线动画、浮层入场动画、页面切换淡白过渡。不改任何 UI 位置。",
+        "en": "Global UI motion: smooth curve animations, overlay entrance, page-switch fade. No UI position changes."
+      },
+      "version": "1.0.0",
+      "authorName": "DSHC Team",
+      "categories": [
+        "ui"
+      ],
+      "sourceIds": [
+        "official"
+      ],
+      "repositoryUrl": "https://github.com/Code-DSH/deepseek-harness-code",
+      "repoPath": "packages/dsh-ui-motion",
+      "license": "MIT",
+      "verified": true,
+      "verifiedAt": "2026-08-23T04:00:00.000Z",
+      "installSpec": {
+        "package": "dsh-ui-motion",
+        "version": "1.0.0",
+        "kind": "npm"
+      },
+      "featured": false,
+      "readme": {
+        "zh": "DeepSeek Harness Code 官方集成插件之一。",
+        "en": "One of the official integrated plugins."
+      }
+    },
+    {
+      "id": "deepseek-harness-desktop-plugin",
+      "name": "DeepSeek Harness Code Desktop Plugin",
+      "nameEn": "DeepSeek Harness Code Desktop Plugin",
+      "description": {
+        "zh": "官方格式桌面集成 bundle：Electron 宿主状态、设置入口与生命周期桥。",
+        "en": "Official-format desktop integration bundle: Electron host status, settings entries and lifecycle bridge."
+      },
+      "version": "0.1.0",
+      "authorName": "DSHC Team",
+      "categories": [
+        "desktop"
+      ],
+      "sourceIds": [
+        "official"
+      ],
+      "repositoryUrl": "https://github.com/Code-DSH/deepseek-harness-code",
+      "repoPath": "packages/desktop-plugin",
+      "license": "MIT",
+      "verified": true,
+      "verifiedAt": "2026-08-23T04:00:00.000Z",
+      "installSpec": {
+        "package": "deepseek-harness-desktop-plugin",
+        "version": "0.1.0",
+        "kind": "npm"
+      },
+      "featured": false,
+      "readme": {
+        "zh": "随 DeepSeek Harness Code 发行。",
+        "en": "Shipped with DeepSeek Harness Code."
+      }
+    },
+    {
+      "id": "dsh-lan-access",
+      "name": "DSH LAN Access",
+      "nameEn": "DSH LAN Access",
+      "description": {
+        "zh": "局域网访问设置入口：在可信局域网内打开此会话的访问链接。",
+        "en": "LAN access settings entry: open this session from another device on your trusted LAN."
+      },
+      "version": "1.0.0",
+      "authorName": "DSHC Team",
+      "categories": [
+        "desktop",
+        "tooling"
+      ],
+      "sourceIds": [
+        "official"
+      ],
+      "repositoryUrl": "https://github.com/Code-DSH/deepseek-harness-code",
+      "repoPath": "packages/dsh-lan-access",
+      "license": "MIT",
+      "verified": true,
+      "verifiedAt": "2026-08-23T04:00:00.000Z",
+      "installSpec": {
+        "package": "dsh-lan-access",
+        "version": "1.0.0",
+        "kind": "npm"
+      },
+      "featured": false,
+      "readme": {
+        "zh": "DeepSeek Harness Code 官方集成插件之一。",
+        "en": "One of the official integrated plugins."
+      }
+    },
+    {
+      "id": "dsh-updater-check",
+      "name": "DSH Updater Check",
+      "nameEn": "DSH Updater Check",
+      "description": {
+        "zh": "检查更新入口：在设置→通用最下方加一行，点击触发自动更新检查。",
+        "en": "Update check entry: a row at the bottom of General settings that triggers the auto-update check."
+      },
+      "version": "1.0.0",
+      "authorName": "DSHC Team",
+      "categories": [
+        "desktop"
+      ],
+      "sourceIds": [
+        "official"
+      ],
+      "repositoryUrl": "https://github.com/Code-DSH/deepseek-harness-code",
+      "repoPath": "packages/dsh-updater-check",
+      "license": "MIT",
+      "verified": true,
+      "verifiedAt": "2026-08-23T04:00:00.000Z",
+      "installSpec": {
+        "package": "dsh-updater-check",
+        "version": "1.0.0",
+        "kind": "npm"
+      },
+      "featured": false,
+      "readme": {
+        "zh": "DeepSeek Harness Code 官方集成插件之一。",
+        "en": "One of the official integrated plugins."
+      }
+    },
+    {
+      "id": "dsh-anchored-standard",
+      "name": "DSH Anchored Standard Preset",
+      "nameEn": "DSH Anchored Standard Preset",
+      "description": {
+        "zh": "渐进式 Anchored Standard 代理预设：锚定会话边界与任务上下文。",
+        "en": "Pinned progressive Anchored Standard agent preset: anchored session boundaries and task context."
+      },
+      "version": "0.2.0",
+      "authorName": "DSHC Team",
+      "categories": [
+        "preset"
+      ],
+      "sourceIds": [
+        "official"
+      ],
+      "repositoryUrl": "https://github.com/Code-DSH/deepseek-harness-code",
+      "repoPath": "packages/anchored-standard-plugin",
+      "license": "MIT",
+      "verified": true,
+      "verifiedAt": "2026-08-23T04:00:00.000Z",
+      "installSpec": {
+        "package": "dsh-anchored-standard",
+        "version": "0.2.0",
+        "kind": "npm"
+      },
+      "featured": false,
+      "readme": {
+        "zh": "预设类插件：安装后在 Agent Presets 中选择。",
+        "en": "Preset plugin: select it under Agent Presets after install."
+      }
+    },
+    {
+      "id": "dsh-super-injector-fix",
+      "name": "DSH Super Injector Fix",
+      "nameEn": "DSH Super Injector Fix",
+      "description": {
+        "zh": "超级注入器 rc.6 slot API 阴影修复：重新注册 settings.section 'super-injector-plugins' 管理区。",
+        "en": "Shadow-fix for the super-injector Plugins-management settings section on the rc.6 slot API."
+      },
+      "version": "0.1.0",
+      "authorName": "DSHC Community",
+      "categories": [
+        "tooling"
+      ],
+      "sourceIds": [
+        "community"
+      ],
+      "repositoryUrl": "https://github.com/Code-DSH/deepseek-harness-code",
+      "repoPath": null,
+      "license": "MIT",
+      "verified": true,
+      "verifiedAt": "2026-08-23T04:00:00.000Z",
+      "installSpec": {
+        "package": "dsh-super-injector-fix",
+        "version": "0.1.0",
+        "kind": "npm"
+      },
+      "featured": false,
+      "readme": {
+        "zh": "与 dsh-super-injector 配合使用。",
+        "en": "Companion to dsh-super-injector."
+      }
+    }
+  ]
+}

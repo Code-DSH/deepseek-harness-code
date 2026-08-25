@@ -19,12 +19,15 @@
  */
 
 import http from "node:http";
+import path from "node:path";
 import { execFile } from "node:child_process";
 import fs from "node:fs";
+import { fileURLToPath } from "node:url";
 
 // 生产 Hub：远程服务器（systemd 常驻，ufw 已放行 8741）；
 // 开发期可用 DSHC_HUB_BASE 覆盖为本地 mock（http://127.0.0.1:8741）。
 const HUB_BASE = process.env.DSHC_HUB_BASE || "http://38.76.196.236:8741";
+const SCHEMA_VERSION = "1";
 const BASE_PORT = Number(process.env.DSHC_HOST_PORT || 8742);
 const MAX_PORT_TRY = 8;
 const PROXY_TIMEOUT_MS = 8000;
@@ -35,6 +38,14 @@ export const name = "@dsh-external/deepseek-harness-plugin-market";
 export const inject = [];
 
 const SHORT = "dsh-plugin-market";
+
+// 离线目录兜底：远程 Hub 不可达时改用随包携带的本地种子目录，保证市场页
+// 不依赖公网也可浏览/搜索/查看详情（安装仍走同一 host 窄权限通道）。
+const OFFLINE_PATH = path.join(path.dirname(fileURLToPath(import.meta.url)), "offline.json");
+let OFFLINE = null;
+try {
+  OFFLINE = JSON.parse(fs.readFileSync(OFFLINE_PATH, "utf8"));
+} catch {}
 
 /* ─────────────── 结构化安装规格校验（§8.3） ─────────────── */
 
@@ -135,6 +146,168 @@ function trimOutput(raw) {
   return tail.length > 600 ? tail.slice(-600) : tail;
 }
 
+/* ─────────────── 离线目录兜底（Hub 不可达时） ─────────────── */
+
+function offlineSummary(p) {
+  return {
+    id: p.id,
+    name: p.name,
+    nameEn: p.nameEn,
+    description: p.description || { zh: "", en: "" },
+    authorName: p.authorName,
+    categories: p.categories || [],
+    version: p.version,
+    repositoryUrl: p.repositoryUrl,
+    sourceIds: p.sourceIds || [],
+    featured: !!p.featured,
+    stars: p.stars || null,
+  };
+}
+
+function offlineDetail(p) {
+  const src = (OFFLINE.sources || []).find((s) => s.id === (p.sourceIds || [])[0]);
+  return {
+    ...offlineSummary(p),
+    license: p.license || null,
+    verified: !!p.verified,
+    verifiedAt: p.verifiedAt || null,
+    repoPath: p.repoPath || null,
+    readme: p.readme || null,
+    readmeUrl: p.readmeUrl || null,
+    installSpec: p.installSpec || null,
+    lastSyncedAt: src?.lastSyncedAt || null,
+  };
+}
+
+function offlineDecodeCursor(cursor) {
+  if (!cursor || typeof cursor !== "string") return 0;
+  try {
+    const raw = Buffer.from(cursor, "base64url").toString("utf8");
+    const m = /^offset:(\d+)$/.exec(raw);
+    return m ? Number(m[1]) : 0;
+  } catch {
+    return 0;
+  }
+}
+
+function offlineEncodeCursor(offset) {
+  return Buffer.from(`offset:${offset}`, "utf8").toString("base64url");
+}
+
+function offlineList(url) {
+  if (!OFFLINE) return null;
+  const qs = Object.fromEntries(url.searchParams.entries());
+  const { q = "", category = "", source = "", sort = "featured", cursor = "", limit = "24" } = qs;
+  const limitN = Math.min(100, Math.max(1, Number.parseInt(limit, 10) || 24));
+  const offset = offlineDecodeCursor(cursor);
+  const query = q.trim().toLowerCase();
+  const cats = category.split(",").filter(Boolean);
+  const sources = source.split(",").filter(Boolean);
+
+  const rows = (OFFLINE.plugins || []).filter((p) => {
+    if (query) {
+      const hay = [p.name, p.nameEn, p.authorName, p.description?.zh, p.description?.en]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase();
+      if (!hay.includes(query)) return false;
+    }
+    if (cats.length && !cats.every((c) => (p.categories || []).includes(c))) return false;
+    if (sources.length && !sources.some((s) => (p.sourceIds || []).includes(s))) return false;
+    return true;
+  });
+
+  const relevance = new Map();
+  rows.forEach((p) => {
+    let score = 0;
+    if (query) {
+      if ((p.name || "").toLowerCase().includes(query)) score += 100;
+      if ((p.nameEn || "").toLowerCase().includes(query)) score += 80;
+      if ((p.description?.zh || "").toLowerCase().includes(query)) score += 40;
+      if ((p.description?.en || "").toLowerCase().includes(query)) score += 30;
+      if ((p.authorName || "").toLowerCase().includes(query)) score += 10;
+    }
+    relevance.set(p.id, score);
+  });
+
+  rows.sort((a, b) => {
+    switch (sort) {
+      case "relevance":
+        return (relevance.get(b.id) || 0) - (relevance.get(a.id) || 0) || String(a.name || "").localeCompare(String(b.name || ""));
+      case "updated":
+        return String(b.verifiedAt || "").localeCompare(String(a.verifiedAt || ""));
+      case "name":
+        return String(a.name || "").localeCompare(String(b.name || ""));
+      case "featured":
+      default:
+        return Number(b.featured) - Number(a.featured) || (b.stars || 0) - (a.stars || 0) || String(a.name || "").localeCompare(String(b.name || ""));
+    }
+  });
+
+  const page = rows.slice(offset, offset + limitN);
+  return {
+    data: page.map(offlineSummary),
+    nextCursor: offset + limitN < rows.length ? offlineEncodeCursor(offset + limitN) : null,
+    total: rows.length,
+    schemaVersion: SCHEMA_VERSION,
+  };
+}
+
+function offlineSendJson(res, status, body, cors) {
+  const payload = Buffer.from(JSON.stringify(body), "utf8");
+  res.writeHead(status, {
+    "Content-Type": "application/json; charset=utf-8",
+    "Content-Length": payload.length,
+    ...cors,
+  });
+  res.end(payload);
+}
+
+function serveOffline(req, res, url, cors) {
+  if (!OFFLINE) {
+    offlineSendJson(res, 503, { error: { code: "hub_unavailable", message: "市场服务暂不可达" } }, cors);
+    return;
+  }
+  if (url.pathname === "/api/v1/plugins") {
+    const body = offlineList(url);
+    return body
+      ? offlineSendJson(res, 200, body, cors)
+      : offlineSendJson(res, 503, { error: { code: "hub_unavailable", message: "市场服务暂不可达" } }, cors);
+  }
+  if (url.pathname === "/api/v1/categories") {
+    return offlineSendJson(res, 200, { data: OFFLINE.categories || [], schemaVersion: SCHEMA_VERSION }, cors);
+  }
+  if (url.pathname === "/api/v1/sources") {
+    return offlineSendJson(res, 200, { data: OFFLINE.sources || [], schemaVersion: SCHEMA_VERSION }, cors);
+  }
+  const readmeMatch = /^\/api\/v1\/plugins\/([^/]+)\/readme$/.exec(url.pathname);
+  if (readmeMatch) {
+    let id;
+    try {
+      id = decodeURIComponent(readmeMatch[1]);
+    } catch {
+      return offlineSendJson(res, 400, { error: { code: "bad_request" } }, cors);
+    }
+    const p = (OFFLINE.plugins || []).find((x) => x.id === id);
+    if (!p) return offlineSendJson(res, 404, { error: { code: "not_found" } }, cors);
+    if (!p.readme) return offlineSendJson(res, 404, { error: { code: "readme_unavailable" } }, cors);
+    return offlineSendJson(res, 200, { data: p.readme, schemaVersion: SCHEMA_VERSION }, cors);
+  }
+  const detailMatch = /^\/api\/v1\/plugins\/([^/]+)$/.exec(url.pathname);
+  if (detailMatch) {
+    let id;
+    try {
+      id = decodeURIComponent(detailMatch[1]);
+    } catch {
+      return offlineSendJson(res, 400, { error: { code: "bad_request" } }, cors);
+    }
+    const p = (OFFLINE.plugins || []).find((x) => x.id === id);
+    if (!p) return offlineSendJson(res, 404, { error: { code: "not_found" } }, cors);
+    return offlineSendJson(res, 200, { data: offlineDetail(p), schemaVersion: SCHEMA_VERSION }, cors);
+  }
+  return offlineSendJson(res, 404, { error: { code: "not_found" } }, cors);
+}
+
 /* ─────────────── Hub 只读代理 ─────────────── */
 
 async function proxyHub(req, res, url, cors) {
@@ -150,11 +323,13 @@ async function proxyHub(req, res, url, cors) {
     });
   } catch (e) {
     clearTimeout(timer);
-    res.writeHead(503, { "Content-Type": "application/json; charset=utf-8", ...cors });
-    res.end(JSON.stringify({ error: { code: "hub_unavailable", message: "市场服务暂不可达" } }));
-    return;
+    return serveOffline(req, res, url, cors);
   }
   clearTimeout(timer);
+  if (hubRes.status >= 500 || hubRes.status === 304) {
+    try { await hubRes.arrayBuffer(); } catch {}
+    return serveOffline(req, res, url, cors);
+  }
   const body = Buffer.from(await hubRes.arrayBuffer());
   const headers = { "Content-Type": "application/json; charset=utf-8", ...cors };
   const etag = hubRes.headers.get("etag");

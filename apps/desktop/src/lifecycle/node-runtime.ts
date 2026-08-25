@@ -351,6 +351,13 @@ export async function ensureRuntimePackages(
   await mkdir(paths.rootDir, { recursive: true, mode: 0o700 });
   const install = input.installRuntimePackages ?? installRuntimePackages;
   await input.onInstallStart?.();
+  // `node_modules` is package-manager output owned by this app. Remove it
+  // before any reinstall so a changed Node ABI, lockfile, store, or interrupted
+  // install cannot leave stale native modules or self-referential links behind.
+  await rm(join(paths.packagesDir, "node_modules"), {
+    recursive: true,
+    force: true,
+  });
   await install({
     nodeExecutable: input.systemNode.executable,
     pnpmEntry: join(input.runtimeResourcePath, "pnpm.mjs"),

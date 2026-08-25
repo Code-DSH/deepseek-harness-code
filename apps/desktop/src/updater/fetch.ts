@@ -127,6 +127,14 @@ export async function downloadInstaller(
   expectedSize?: number,
   onProgress?: (progress: DownloadProgress) => void,
 ): Promise<void> {
+  if (
+    expectedSize !== undefined &&
+    (!Number.isSafeInteger(expectedSize) || expectedSize > MAX_INSTALLER_BYTES)
+  ) {
+    throw new Error(
+      `updater/fetch: installer exceeds ${MAX_INSTALLER_BYTES} byte limit`,
+    );
+  }
   const resolved = resolveDeps(deps);
   await mkdir(dirname(destPath), { recursive: true });
 
@@ -183,6 +191,15 @@ export async function downloadInstaller(
     const contentLengthHeader = firstResponse.headers.get("content-length");
     const contentLength =
       contentLengthHeader === null ? undefined : Number(contentLengthHeader);
+    if (
+      contentLength !== undefined &&
+      Number.isFinite(contentLength) &&
+      contentLength > MAX_INSTALLER_BYTES
+    ) {
+      throw new Error(
+        `updater/fetch: installer exceeds ${MAX_INSTALLER_BYTES} byte limit`,
+      );
+    }
     const totalBytes =
       expectedSize ??
       (contentLength !== undefined && Number.isFinite(contentLength)
@@ -209,11 +226,29 @@ export async function downloadInstaller(
         "updater/fetch: ranged response has invalid content-range",
       );
     }
-    return {
+    const range = {
       start: Number(match[1]),
       end: Number(match[2]),
       total: Number(match[3]),
     };
+    if (
+      !Number.isSafeInteger(range.start) ||
+      !Number.isSafeInteger(range.end) ||
+      !Number.isSafeInteger(range.total) ||
+      range.start < 0 ||
+      range.end < range.start ||
+      range.total <= 0 ||
+      range.start >= range.total ||
+      range.end >= range.total
+    ) {
+      throw new Error("updater/fetch: ranged response has invalid bounds");
+    }
+    if (range.total > MAX_INSTALLER_BYTES) {
+      throw new Error(
+        `updater/fetch: installer exceeds ${MAX_INSTALLER_BYTES} byte limit`,
+      );
+    }
+    return range;
   };
 
   let nextStart = 0;
@@ -249,10 +284,16 @@ export async function downloadInstaller(
           if (response.status !== 206) {
             throw new Error("updater/fetch: retry did not return a range");
           }
-          range = parseContentRange(response.headers.get("content-range"));
-          if (range.start !== nextStart || range.total !== totalSize) {
+          const retryRange = parseContentRange(
+            response.headers.get("content-range"),
+          );
+          if (
+            retryRange.start !== nextStart ||
+            retryRange.total !== totalSize
+          ) {
             throw new Error("updater/fetch: retry range changed");
           }
+          range = retryRange;
         }
         onProgress?.({ downloadedBytes: nextStart, totalBytes: totalSize });
         await streamResponseToFile(

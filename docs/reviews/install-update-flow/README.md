@@ -127,3 +127,14 @@
 - 未发现“完全不可用”的安装逻辑，但**更新环节存在三个平台级问题**：Linux AppImage 替换目标错误、Windows 不保留自定义安装目录、macOS 过早删除回滚副本。
 - Node 版本感知和 runtime 重装清理是需要优先修复的中风险点，否则用户从版本管理器切换到官方安装、或大版本升级后可能出现 native 模块不兼容。
 - 建议在下个 release 前优先修复高风险更新替换逻辑，并补充对应平台的真实 CI 验证。
+
+## 6. 后续审计（`30c12b9` 现场）
+
+本节追加于历史报告之后，不覆盖当时的发现。该现场已完成以下局部整改：
+
+- Linux AppImage replacement now prefers the absolute `APPIMAGE` path, avoiding replacement of Electron's temporary mounted executable; a focused unit test covers the persistent target and relaunch.
+- Windows NSIS replacement now passes the running executable directory as the final `/D=...` argument; a focused path/argument test covers custom install directories.
+- Ranged and non-ranged installer downloads reject manifest/content-range/content-length declarations above the 512 MiB bound before verified replacement; focused tests cover both oversized declarations.
+- Runtime reinstall now removes app-owned `node_modules` before invoking pnpm, with a regression covering stale output after a Node-major change.
+
+Still unresolved and intentionally not guessed: the updater host is assigned only after the launch promise returns, so a renderer action during the narrow first-navigation window can still resolve to a no-op; macOS retains no post-launch rollback health handshake after a successful swap; Node detection does not execute `node --version` for path-only candidates; and native Windows/Linux/macOS replacement behavior has not been run on their target runners. These require platform or lifecycle decisions and remain release-gate items.

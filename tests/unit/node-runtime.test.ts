@@ -333,6 +333,39 @@ describe("pinned runtime packages driven by the system Node", () => {
     expect(install).toHaveBeenCalledTimes(2);
   });
 
+  it("clears stale package-manager output before reinstalling", async () => {
+    const root = await mkdtemp(join(tmpdir(), "dhc-node-reinstall-"));
+    const userData = join(root, "user-data");
+    const resource = await createRuntimeResource(root);
+    const paths = resolveNodeRuntimePaths(userData);
+    const install = vi.fn(async () => {
+      await createInstalledPackages(paths);
+    });
+    const base = {
+      userDataPath: userData,
+      runtimeResourcePath: resource,
+      platform: "darwin" as const,
+      arch: "x64",
+      installRuntimePackages: install,
+    };
+
+    await ensureRuntimePackages({ ...base, systemNode: systemNode() });
+    const stalePath = join(paths.packagesDir, "node_modules", "stale.txt");
+    await writeFile(stalePath, "stale\n");
+    const reinstall = vi.fn(async () => {
+      await expect(access(stalePath)).rejects.toThrow();
+      await createInstalledPackages(paths);
+    });
+
+    await ensureRuntimePackages({
+      ...base,
+      systemNode: systemNode({ major: 26, version: "26.7.0" }),
+      installRuntimePackages: reinstall,
+    });
+
+    expect(reinstall).toHaveBeenCalledOnce();
+  });
+
   it("removes legacy portable-runtime artifacts after install", async () => {
     const root = await mkdtemp(join(tmpdir(), "dhc-node-cleanup-"));
     const userData = join(root, "user-data");

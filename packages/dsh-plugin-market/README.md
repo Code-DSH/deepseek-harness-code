@@ -7,7 +7,9 @@ DeepSeek Harness Code 插件市场插件：在 **设置 → 插件市场** 提�
 - 页面宿主：`settings.section`（id=`plugin-market`，官方 additive slot，不伪造页面）
 - 数据：Client 优先直连 DSHC-Hub **生产地址 `http://38.76.196.236:8741`**
   （GitHub `dsh-plugin` topic 聚合目录，761+ 插件），受 CSP 拦截时自动
-  降级到 host loopback 代理（`http://127.0.0.1:8742` → `/api/v1/*` 只读转发）
+  降级到 host loopback 代理（`http://127.0.0.1:8742` → `/api/v1/*` 只读转发）；
+  远程 Hub 不可达/5xx 时，host 自动改用随包离线目录 `lib/offline.json`，
+  市场页仍可浏览、搜索、查看详情与发起安装
 - **出网披露**：打开市场页会向 `38.76.196.236:8741` 发出目录请求；GitHub 插件
   详情 README 由用户本地直读 `raw.githubusercontent.com`（可被 CSP 拦截后
   改经服务器转发，服务器不落盘）
@@ -22,6 +24,7 @@ DeepSeek Harness Code 插件市场插件：在 **设置 → 插件市场** 提�
 
 ```text
 lib/index.js    host half（ESM）：loopback HTTP（/health、/api/v1/* 代理、/install）
+lib/offline.json  随包离线目录（远程 Hub 不可达时的只读兜底数据）
 lib/client.js   client half（Web bundle，ModuleLoader.load；React 组件 + 内联 CSS）
 cordis.patch.yml   client bundle 装配行（id/name = 包全名）
 ```
@@ -51,4 +54,4 @@ node -e 'new Function(require("fs").readFileSync("lib/client.js","utf8"))'
 - Hub 只回结构化 JSON；host 拒绝任何 `command/script/args` 等可执行字段
 - `package` 必须是合法本地目录或包名形状（禁止控制字符/shell 元字符）
 - 安装超时 120s、输出脱敏截断；安装失败 ≠ 市场 API 失败
-- Hub 宕机不影响 Harness 启动/会话/其他插件（页面显示「市场暂时不可用 + 重试」）
+- Hub 宕机不影响 Harness 启动/会话/其他插件（页面自动降级到随包离线目录；仅当离线目录也不存在时才显示「市场暂时不可用 + 重试」）

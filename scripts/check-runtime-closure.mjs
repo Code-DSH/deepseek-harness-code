@@ -73,6 +73,7 @@ const runtimeArtifacts = [
   "packages/dsh-settings-tools/cordis.patch.yml",
   "packages/dsh-plugin-market/package.json",
   "packages/dsh-plugin-market/lib/index.js",
+  "packages/dsh-plugin-market/lib/offline.json",
   "packages/dsh-plugin-market/lib/client.js",
   "packages/dsh-plugin-market/cordis.patch.yml",
   "packages/dsh-superpowers/package.json",
