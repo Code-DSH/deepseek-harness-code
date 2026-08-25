@@ -281,7 +281,7 @@
   <text class="small" x="1226" y="438">Workspace files · Workbench (better-sidebar)</text>
   <text class="small" x="1226" y="454">Editor / Terminal / Browser / Git panels</text>
   <text class="small" x="1226" y="470">Subagents: codex / claude-code (composition)</text>
-  <text class="small" x="1226" y="486">MCP: everything + Context7 docs</text>
+  <text class="small" x="1226" y="486">MCP: local everything · Context7 opt-in</text>
   <text class="tiny" x="1226" y="504">ctx.betterSidebar.registerTab / registerFileViewer</text>
 
   <rect class="intelligence" x="1210" y="544" width="346" height="110" rx="10"/>

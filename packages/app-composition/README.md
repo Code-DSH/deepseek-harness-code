@@ -10,8 +10,9 @@ Contents:
 
 - `mcp-everything` — `@deepseek-ai/dsh-mcp-client` bridge to the official
   everything test server (stdio via `npx`), for link validation.
-- `mcp-context7` — `@deepseek-ai/dsh-mcp-client` bridge to Context7
-  (streamable-http), up-to-date library and framework documentation.
+- `mcp-context7` — dormant `@deepseek-ai/dsh-mcp-client` bridge to Context7
+  (streamable-http). A user profile may enable it explicitly; desktop startup
+  never waits for a remote MCP endpoint.
 - `subagent-codex` — `@deepseek-ai/dsh-subagent-codex` one-shot provider
   (authentication via the user's local `~/.codex/auth.json`).
 - `subagent-claude-code` — `@deepseek-ai/dsh-subagent-claude-code` one-shot

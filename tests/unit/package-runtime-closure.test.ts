@@ -177,6 +177,9 @@ describe("packaged runtime dependency closure", () => {
     expect(compositionPatch).toContain(
       'name: "@deepseek-ai/dsh-subagent-claude-code"',
     );
+    expect(compositionPatch).toMatch(
+      /- id: mcp-context7[\s\S]*?disabled: true[\s\S]*?serverName: context7/u,
+    );
     expect(lifecycle).not.toContain("linkOnly");
     expect(main).not.toContain("ensureGlobalDshCli");
     expect(main).not.toContain("npm install -g");

@@ -16,12 +16,12 @@
         serverName: everything
         transport: stdio
         command: dsh-mcp-everything
-    # Context7 MCP: up-to-date library/framework docs via resolve-library-id
-    # and query-docs. Uses the hosted streamable-http endpoint: the local
-    # npx server's backend api.context7.com may be blocked on some networks,
-    # while mcp.context7.com stays reachable.
+    # Context7 MCP remains available as an explicit profile override, but a
+    # remote connection must never sit on the desktop's startup critical path.
+    # Set this row to `disabled: false` in a user patch to opt in.
     - id: mcp-context7
       name: "@deepseek-ai/dsh-mcp-client"
+      disabled: true
       config:
         serverName: context7
         transport: streamable-http
