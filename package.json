@@ -1,6 +1,6 @@
 {
   "name": "deepseek-harness-code",
-  "version": "0.1.0-BETA3",
+  "version": "0.1.0-BETA4",
   "private": true,
   "description": "Community DeepSeek Harness coding desktop with integrated plugins",
   "license": "MIT",

@@ -1,7 +1,7 @@
 # Project Status
 
-- Phase: **maintained DSH submodule migration implemented locally; release validation pending**. BETA3 remains the verified GitHub Latest release.
-- Current milestone: desktop/runtime consumption of Code-DSH maintained family `0.1.1-rc.2.code.1` at submodule commit `6f3bf64735b00754d843ff31ae645b62a32414c8`.
+- Phase: **BETA4 release candidate; native release validation pending**. BETA3 remains the verified GitHub Latest release until the tag workflow publishes BETA4.
+- Current milestone: **DeepSeek Harness Code (DHSC) 0.1.0-BETA4** — desktop/runtime consumption of Code-DSH maintained family `0.1.1-rc.2.code.1` at submodule commit `6f3bf64735b00754d843ff31ae645b62a32414c8`.
 - Current Latest: **0.1.0-BETA3**, published by native package Run [32550253496](https://github.com/Code-DSH/deepseek-harness-code/actions/runs/32550253496) from `9762f8efe1e761ff6b175b209972103bff88e091`. The previous BETA2-1 package/publish Run [32389858728](https://github.com/Code-DSH/deepseek-harness-code/actions/runs/32389858728) remains a green historical build, but its Release/assets are retired because its fresh-install/plugin-reconciliation path and Node prerequisite messaging caused severe user impact.
 - Historical milestones: BETA2 final package Run [32363049370](https://github.com/Code-DSH/deepseek-harness-code/actions/runs/32363049370) succeeded. `v0.1.0-BETA1` source remains at `e1c917dbe68d8da46d80d0e1746e4afc907596f7`, while its GitHub Release/assets were deleted. No formal `BETA1-1` tag or Release exists.
 - Repository: `https://github.com/Code-DSH/deepseek-harness-code` (public)
