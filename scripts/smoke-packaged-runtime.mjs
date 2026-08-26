@@ -1278,7 +1278,9 @@ async function assertPortOwned(port, pid) {
   const listeners = await listLoopbackListeners();
   const listener = listeners.find((candidate) => candidate.port === port);
   if (listener?.pid !== pid)
-    throw new Error(`Harness listener ${port} is not owned by PID ${pid}`);
+    throw new Error(
+      `Harness listener ${port} is not owned by PID ${pid}; observed ${JSON.stringify(listeners)}`,
+    );
 }
 
 async function main() {
