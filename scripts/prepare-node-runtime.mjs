@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { spawnSync } from "node:child_process";
 import { createReadStream } from "node:fs";
 import { chmod, copyFile, cp, mkdir, readFile } from "node:fs/promises";
 import { createRequire } from "node:module";
@@ -16,10 +17,10 @@ const isRuntimeResourcePath = (source) =>
   basename(source) !== ".mimosa" &&
   source !== join(sourceRoot, "vendor", "dsh");
 
-async function sha256(path) {
-  const digest = createHash("sha256");
-  for await (const chunk of createReadStream(path)) digest.update(chunk);
-  return digest.digest("hex");
+async function digest(path, algorithm, encoding) {
+  const hash = createHash(algorithm);
+  for await (const chunk of createReadStream(path)) hash.update(chunk);
+  return hash.digest(encoding);
 }
 
 const pnpmPackagePath = requireFromProject.resolve("pnpm");
@@ -58,7 +59,7 @@ for (const entry of maintainedHarness.packages) {
     throw new Error(`${entry.name} is not pinned to ${specifier}`);
   }
   const tarballPath = join(maintainedFamilyRoot, entry.file);
-  if ((await sha256(tarballPath)) !== entry.sha256) {
+  if ((await digest(tarballPath, "sha256", "hex")) !== entry.sha256) {
     throw new Error(
       `Maintained Harness tarball digest mismatch: ${entry.file}`,
     );
@@ -69,8 +70,6 @@ if (runtimeManifest.dependencies?.["dsh-find-plugin"] !== "0.3.6") {
     "node-runtime package.json does not pin dsh-find-plugin@0.3.6",
   );
 }
-await readFile(join(sourceRoot, "pnpm-lock.yaml"), "utf8");
-
 await mkdir(targetRoot, { recursive: true });
 await copyFile(
   join(sourceRoot, "package.json"),
@@ -102,6 +101,34 @@ await cp(pnpmStandaloneRoot, targetRoot, { recursive: true });
 await chmod(join(targetRoot, "node-gyp-bin", "node-gyp"), 0o755).catch(
   () => undefined,
 );
+
+const lockResult = spawnSync(
+  process.execPath,
+  [
+    join(targetRoot, "pnpm.mjs"),
+    "install",
+    "--dir",
+    targetRoot,
+    "--lockfile-only",
+    "--update-checksums",
+    "--ignore-scripts",
+    "--reporter=append-only",
+  ],
+  { encoding: "utf8", windowsHide: true, env: process.env },
+);
+if (lockResult.error !== undefined || lockResult.status !== 0) {
+  throw new Error(
+    `Runtime lockfile generation failed: ${lockResult.error?.message ?? lockResult.stderr.slice(-2_000)}`,
+  );
+}
+const runtimeLock = await readFile(join(targetRoot, "pnpm-lock.yaml"), "utf8");
+for (const entry of maintainedHarness.packages) {
+  const tarballPath = join(maintainedFamilyRoot, entry.file);
+  const integrity = `sha512-${await digest(tarballPath, "sha512", "base64")}`;
+  if (!runtimeLock.includes(`integrity: ${integrity}`)) {
+    throw new Error(`Runtime lockfile integrity mismatch: ${entry.file}`);
+  }
+}
 
 process.stdout.write(
   `${JSON.stringify({

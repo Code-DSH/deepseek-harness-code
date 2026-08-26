@@ -32,6 +32,20 @@ describe("DeepSeek Harness Code distribution contract", () => {
     );
   });
 
+  test("verifies generated Harness tarballs against the runtime lockfile", async () => {
+    const prepareRuntime = await readProjectFile(
+      "scripts/prepare-node-runtime.mjs",
+    );
+    const runtimeWorkspace = await readProjectFile(
+      "config/node-runtime/pnpm-workspace.yaml",
+    );
+
+    expect(prepareRuntime).toContain('"--update-checksums"');
+    expect(prepareRuntime).toContain('digest(tarballPath, "sha512", "base64")');
+    expect(prepareRuntime).toContain("Runtime lockfile integrity mismatch");
+    expect(runtimeWorkspace).toContain("esbuild: true");
+  });
+
   test("declares the renamed Universal macOS product with ad-hoc signing", async () => {
     const config = await readProjectFile("electron-builder.yml");
 
