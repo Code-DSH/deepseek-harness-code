@@ -262,11 +262,11 @@
     "@vscode/ripgrep-linux-x64": "1.18.0",
     "@vscode/ripgrep-win32-arm64": "1.18.0",
     "@vscode/ripgrep-win32-x64": "1.18.0",
-    "node-addon-require-builtin-darwin-arm64": "0.1.4",
-    "node-addon-require-builtin-darwin-x64": "0.1.4",
-    "node-addon-require-builtin-linux-arm64-gnu": "0.1.4",
-    "node-addon-require-builtin-linux-x64-gnu": "0.1.4",
-    "node-addon-require-builtin-win32-arm64-msvc": "0.1.4",
-    "node-addon-require-builtin-win32-x64-msvc": "0.1.4"
+    "node-addon-require-builtin-darwin-arm64": "0.1.5",
+    "node-addon-require-builtin-darwin-x64": "0.1.5",
+    "node-addon-require-builtin-linux-arm64-gnu": "0.1.5",
+    "node-addon-require-builtin-linux-x64-gnu": "0.1.5",
+    "node-addon-require-builtin-win32-arm64-msvc": "0.1.5",
+    "node-addon-require-builtin-win32-x64-msvc": "0.1.5"
   }
 }
