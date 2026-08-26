@@ -32,6 +32,23 @@ describe("DeepSeek Harness Code distribution contract", () => {
     );
   });
 
+  test("verifies generated Harness tarballs against the runtime lockfile", async () => {
+    const prepareRuntime = await readProjectFile(
+      "scripts/prepare-node-runtime.mjs",
+    );
+    const runtimeWorkspace = await readProjectFile(
+      "config/node-runtime/pnpm-workspace.yaml",
+    );
+
+    expect(prepareRuntime).toContain('"--update-checksums"');
+    expect(prepareRuntime).toContain('digest(tarballPath, "sha512", "base64")');
+    expect(prepareRuntime).toContain("Runtime lockfile integrity mismatch");
+    expect(runtimeWorkspace).toContain("esbuild: true");
+    expect(runtimeWorkspace).toContain(
+      '"@deepseek-ai/dsh-subprocess-local@file:vendor/dsh/deepseek-ai-dsh-subprocess-local-0.1.1-rc.2.code.1.tgz": true',
+    );
+  });
+
   test("declares the renamed Universal macOS product with ad-hoc signing", async () => {
     const config = await readProjectFile("electron-builder.yml");
 
@@ -288,7 +305,8 @@ describe("DeepSeek Harness Code distribution contract", () => {
     expect(artifactValidationStep).not.toContain("mapfile -t");
     expect(workflow).toContain("Validate tag version");
     expect(workflow).toContain('if [[ "$GITHUB_REF" == refs/tags/* ]]');
-    expect(workflow).toContain("SMOKE_TIMEOUT_MS: 600000");
+    expect(workflow).toContain("SMOKE_TIMEOUT_MS: 1200000");
+    expect(smokeScript).toContain("const SMOKE_TIMEOUT_MS = 1_200_000;");
     for (const [label, runner] of [
       ["windows-x64", "windows-2025"],
       ["windows-arm64", "windows-11-arm"],
