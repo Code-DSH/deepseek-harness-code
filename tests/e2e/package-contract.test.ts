@@ -42,8 +42,18 @@ describe("DeepSeek Harness Code distribution contract", () => {
       optionalDependencies?: Record<string, string>;
     };
 
+    const expectedOptionalDependencies = {
+      ...rootManifest.optionalDependencies,
+      "node-addon-require-builtin-darwin-arm64": "0.1.5",
+      "node-addon-require-builtin-darwin-x64": "0.1.5",
+      "node-addon-require-builtin-linux-arm64-gnu": "0.1.5",
+      "node-addon-require-builtin-linux-x64-gnu": "0.1.5",
+      "node-addon-require-builtin-win32-arm64-msvc": "0.1.5",
+      "node-addon-require-builtin-win32-x64-msvc": "0.1.5",
+    };
+
     expect(runtimeManifest.optionalDependencies).toEqual(
-      rootManifest.optionalDependencies,
+      expectedOptionalDependencies,
     );
   });
 
