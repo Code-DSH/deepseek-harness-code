@@ -936,6 +936,91 @@ importers:
       dsh-vision-router:
         specifier: file:vendor/dsh-vision-router-1.7.1.tgz
         version: file:vendor/dsh-vision-router-1.7.1.tgz(@deepseek-ai/dsh-anonymous-user-id@file:vendor/dsh/deepseek-ai-dsh-anonymous-user-id-0.1.1-rc.2.code.1.tgz(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-brand@file:vendor/dsh/deepseek-ai-dsh-brand-0.1.1-rc.2.code.1.tgz(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@file:vendor/dsh/deepseek-ai-dsh-invariants-0.1.1-rc.2.code.1.tgz(@deepseek-ai/cordis@4.0.1)))(@deepseek-ai/dsh-home-paths@file:vendor/dsh/deepseek-ai-dsh-home-paths-0.1.1-rc.2.code.1.tgz(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@file:vendor/dsh/deepseek-ai-dsh-invariants-0.1.1-rc.2.code.1.tgz(@deepseek-ai/cordis@4.0.1)))(@deepseek-ai/dsh-invariants@file:vendor/dsh/deepseek-ai-dsh-invariants-0.1.1-rc.2.code.1.tgz(@deepseek-ai/cordis@4.0.1)))(@deepseek-ai/dsh-llm-deepseek@file:vendor/dsh/deepseek-ai-dsh-llm-deepseek-0.1.1-rc.2.code.1.tgz(5d2cc7f2d169fcf31bd68f3c196728e2))(debug@4.4.3(supports-color@7.1.0))(sharp@0.35.3(@types/node@26.2.0))
+    optionalDependencies:
+      '@img/sharp-darwin-arm64':
+        specifier: 0.35.3
+        version: 0.35.3
+      '@img/sharp-darwin-x64':
+        specifier: 0.35.3
+        version: 0.35.3
+      '@img/sharp-libvips-darwin-arm64':
+        specifier: 1.3.2
+        version: 1.3.2
+      '@img/sharp-libvips-darwin-x64':
+        specifier: 1.3.2
+        version: 1.3.2
+      '@img/sharp-libvips-linux-arm64':
+        specifier: 1.3.2
+        version: 1.3.2
+      '@img/sharp-libvips-linux-x64':
+        specifier: 1.3.2
+        version: 1.3.2
+      '@img/sharp-linux-arm64':
+        specifier: 0.35.3
+        version: 0.35.3
+      '@img/sharp-linux-x64':
+        specifier: 0.35.3
+        version: 0.35.3
+      '@img/sharp-win32-arm64':
+        specifier: 0.35.3
+        version: 0.35.3
+      '@img/sharp-win32-x64':
+        specifier: 0.35.3
+        version: 0.35.3
+      '@koromix/koffi-darwin-arm64':
+        specifier: 3.1.5
+        version: 3.1.5
+      '@koromix/koffi-darwin-x64':
+        specifier: 3.1.5
+        version: 3.1.5
+      '@koromix/koffi-linux-arm64':
+        specifier: 3.1.5
+        version: 3.1.5
+      '@koromix/koffi-linux-x64':
+        specifier: 3.1.5
+        version: 3.1.5
+      '@koromix/koffi-win32-arm64':
+        specifier: 3.1.5
+        version: 3.1.5
+      '@koromix/koffi-win32-x64':
+        specifier: 3.1.5
+        version: 3.1.5
+      '@vscode/ripgrep-darwin-arm64':
+        specifier: 1.18.0
+        version: 1.18.0
+      '@vscode/ripgrep-darwin-x64':
+        specifier: 1.18.0
+        version: 1.18.0
+      '@vscode/ripgrep-linux-arm64':
+        specifier: 1.18.0
+        version: 1.18.0
+      '@vscode/ripgrep-linux-x64':
+        specifier: 1.18.0
+        version: 1.18.0
+      '@vscode/ripgrep-win32-arm64':
+        specifier: 1.18.0
+        version: 1.18.0
+      '@vscode/ripgrep-win32-x64':
+        specifier: 1.18.0
+        version: 1.18.0
+      node-addon-require-builtin-darwin-arm64:
+        specifier: 0.1.4
+        version: 0.1.4
+      node-addon-require-builtin-darwin-x64:
+        specifier: 0.1.4
+        version: 0.1.4
+      node-addon-require-builtin-linux-arm64-gnu:
+        specifier: 0.1.4
+        version: 0.1.4
+      node-addon-require-builtin-linux-x64-gnu:
+        specifier: 0.1.4
+        version: 0.1.4
+      node-addon-require-builtin-win32-arm64-msvc:
+        specifier: 0.1.4
+        version: 0.1.4
+      node-addon-require-builtin-win32-x64-msvc:
+        specifier: 0.1.4
+        version: 0.1.4
 
 packages:
 
@@ -6025,9 +6110,24 @@ packages:
   node-addon-api@7.1.1:
     resolution: {integrity: sha512-5m3bsyrjFWE1xf7nz7YXdN4udnVtXK6/Yfgn5qnahL6bCkf2yKt4k3nuTKAtT4r3IG8JNR2ncsIMdZuAzJjHQQ==}
 
+  node-addon-native-custom-loader@0.1.4:
+    resolution: {integrity: sha512-DreegO6EoC1JHWYBv3j8Miwp2Zl/CyBeNyoeyCbnEdjyYFEulR4Gcb3wj9fXF7KMDY0ZJ5MWwHcXP8GVNyScnA==}
+    engines: {node: '>=20'}
+
   node-addon-native-custom-loader@0.1.5:
     resolution: {integrity: sha512-rL0XXRytayIChYf1xaG9/1NzGBRTyFkQTIpn+MDz/hpr0PZw1a9PZIoH9HlYfagNawhXU+jfN650EvoSIvR7Vw==}
     engines: {node: '>=20'}
+
+  node-addon-require-builtin-darwin-arm64@0.1.4:
+    resolution: {integrity: sha512-pqiTPbqlDKRIo8YKoWMjuFge4kyHbsdYkAcGW5MAVcJSCyU0M1hhpiLdWlvX753XKL3xlGeuPmv2NqTNRV0/hw==}
+    engines: {node: '>=20'}
+    cpu: [arm64]
+    os: [darwin]
+
+  node-addon-require-builtin-darwin-arm64@0.1.4:
+    dependencies:
+      node-addon-native-custom-loader: 0.1.4
+    optional: true
 
   node-addon-require-builtin-darwin-arm64@0.1.5:
     resolution: {integrity: sha512-MZ5RyGhuU7DTbwuNpOQW81/ep8n5Yd5YlZa6dWiEfJEh+01Dl4cCKGmMCWNgb0VtqAImRtAOtmZIPtwngiemKQ==}
@@ -6035,11 +6135,34 @@ packages:
     cpu: [arm64]
     os: [darwin]
 
+  node-addon-require-builtin-darwin-x64@0.1.4:
+    resolution: {integrity: sha512-i9oThh+w6d+H79YQuc3d3MZCx4YZ6aMWlQ0HYMgOTWvSRzppXmksa/xPV8O20G1gjpq5do/9/hgImixj3XIcjQ==}
+    engines: {node: '>=20'}
+    cpu: [x64]
+    os: [darwin]
+
+  node-addon-require-builtin-darwin-x64@0.1.4:
+    dependencies:
+      node-addon-native-custom-loader: 0.1.4
+    optional: true
+
   node-addon-require-builtin-darwin-x64@0.1.5:
     resolution: {integrity: sha512-wdCSPn49AdNZ2EXHQqswiXk1cROFe9zSRaAX8PwQLxmjdLt+xZF7vZP6VlqgXm+VAOHv98q8kp9m7mO9jY3OgQ==}
     engines: {node: '>=20'}
     cpu: [x64]
     os: [darwin]
+
+  node-addon-require-builtin-linux-arm64-gnu@0.1.4:
+    resolution: {integrity: sha512-qbmYtkiIFp7h1ZvYYHH0MGFQbc03OyvplkeS90j+t3VMomkRc/YwZ140WzVM3eYJYZ7XHq+s1GL5ZdFQFPUXBQ==}
+    engines: {node: '>=20'}
+    cpu: [arm64]
+    os: [linux]
+    libc: [glibc]
+
+  node-addon-require-builtin-linux-arm64-gnu@0.1.4:
+    dependencies:
+      node-addon-native-custom-loader: 0.1.4
+    optional: true
 
   node-addon-require-builtin-linux-arm64-gnu@0.1.5:
     resolution: {integrity: sha512-hCqzKpQiknDDv6rUdZqrxCBXROg/uUruO0geUuZsdM9M/Lds45gSb4bDE958HlPaCvrDyR0wTHl3II8A7yQeew==}
@@ -6048,12 +6171,35 @@ packages:
     os: [linux]
     libc: [glibc]
 
+  node-addon-require-builtin-linux-x64-gnu@0.1.4:
+    resolution: {integrity: sha512-4jC617+yOrYYuKgNmN2KMD722G6BICpjEzAcmzA3j5tt+zmey5M/c/z9JxqdjnNmU9CQWseBaJu/fGdbHZXSOg==}
+    engines: {node: '>=20'}
+    cpu: [x64]
+    os: [linux]
+    libc: [glibc]
+
+  node-addon-require-builtin-linux-x64-gnu@0.1.4:
+    dependencies:
+      node-addon-native-custom-loader: 0.1.4
+    optional: true
+
   node-addon-require-builtin-linux-x64-gnu@0.1.5:
     resolution: {integrity: sha512-lgP+ruwWXbcXDslhp5uIc+dFgzITEGPZ4E50WdHGt/OzcoVhN6y5z72pRRvxy8DE661//QxqmCLe72rS3SVg+w==}
     engines: {node: '>=20'}
     cpu: [x64]
     os: [linux]
     libc: [glibc]
+
+  node-addon-require-builtin-win32-arm64-msvc@0.1.4:
+    resolution: {integrity: sha512-4TW96aPR108R3RxJbUNLXU6FLTZ7n8fWtSpPbPtvYWXa9cXojvCMdH4BvrHM6W2M+Iu42nqMxRyylP3PeTjOmA==}
+    engines: {node: '>=20'}
+    cpu: [arm64]
+    os: [win32]
+
+  node-addon-require-builtin-win32-arm64-msvc@0.1.4:
+    dependencies:
+      node-addon-native-custom-loader: 0.1.4
+    optional: true
 
   node-addon-require-builtin-win32-arm64-msvc@0.1.5:
     resolution: {integrity: sha512-KEO2eWS4lvZg6JmPPz04OdI4Ojrc7YzOs++4r6VnvwsqYN2r6mjGSGpouQkk8J2eLXBzC7X/D9wYTbUuQS8u1Q==}
@@ -6066,6 +6212,17 @@ packages:
     engines: {node: '>=20 <23'}
     cpu: [ia32]
     os: [win32]
+
+  node-addon-require-builtin-win32-x64-msvc@0.1.4:
+    resolution: {integrity: sha512-EGx7AcJKB7fNxo/YHV32JTUg1Hetbdnh6uPaqPhklhyRSMM13/7hZK1pTACqMS9dwnR3Lakxl9HKG9/eAoIyyg==}
+    engines: {node: '>=20'}
+    cpu: [x64]
+    os: [win32]
+
+  node-addon-require-builtin-win32-x64-msvc@0.1.4:
+    dependencies:
+      node-addon-native-custom-loader: 0.1.4
+    optional: true
 
   node-addon-require-builtin-win32-x64-msvc@0.1.5:
     resolution: {integrity: sha512-pjuco/ESU3ChIp7WwacWfY2ENu2K5rGAgqjcXedoiFcTrjTf5Ln/miKSuNfE6IiuJ7tfMTJH6VH5hq+C1Y8JMQ==}
@@ -12464,6 +12621,9 @@ snapshots:
       content-type: 2.1.0
 
   node-addon-api@7.1.1: {}
+
+  node-addon-native-custom-loader@0.1.4:
+    optional: true
 
   node-addon-native-custom-loader@0.1.5: {}
 

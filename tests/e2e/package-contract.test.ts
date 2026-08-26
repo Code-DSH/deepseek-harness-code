@@ -32,6 +32,21 @@ describe("DeepSeek Harness Code distribution contract", () => {
     );
   });
 
+  test("keeps packaged runtime platform-native dependencies explicit", async () => {
+    const rootManifest = JSON.parse(await readProjectFile("package.json")) as {
+      optionalDependencies?: Record<string, string>;
+    };
+    const runtimeManifest = JSON.parse(
+      await readProjectFile("config/node-runtime/package.json"),
+    ) as {
+      optionalDependencies?: Record<string, string>;
+    };
+
+    expect(runtimeManifest.optionalDependencies).toEqual(
+      rootManifest.optionalDependencies,
+    );
+  });
+
   test("verifies generated Harness tarballs against the runtime lockfile", async () => {
     const prepareRuntime = await readProjectFile(
       "scripts/prepare-node-runtime.mjs",
