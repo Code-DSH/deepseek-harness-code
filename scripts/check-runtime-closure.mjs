@@ -66,6 +66,16 @@ const runtimeArtifacts = [
   "packages/dsh-lan-access/lib/index.js",
   "packages/dsh-lan-access/lib/client.js",
   "packages/dsh-lan-access/cordis.patch.yml",
+  "packages/dsh-settings-tools/package.json",
+  "packages/dsh-settings-tools/index.js",
+  "packages/dsh-settings-tools/lib/index.js",
+  "packages/dsh-settings-tools/lib/client.js",
+  "packages/dsh-settings-tools/cordis.patch.yml",
+  "packages/dsh-plugin-market/package.json",
+  "packages/dsh-plugin-market/lib/index.js",
+  "packages/dsh-plugin-market/lib/offline.json",
+  "packages/dsh-plugin-market/lib/client.js",
+  "packages/dsh-plugin-market/cordis.patch.yml",
   "packages/dsh-superpowers/package.json",
   "packages/dsh-superpowers/lib/index.js",
   "packages/dsh-superpowers/lib/client.js",
@@ -121,6 +131,12 @@ async function sha256(path) {
   const digest = createHash("sha256");
   for await (const chunk of createReadStream(path)) digest.update(chunk);
   return digest.digest("hex");
+}
+
+async function sha512Integrity(path) {
+  const digest = createHash("sha512");
+  for await (const chunk of createReadStream(path)) digest.update(chunk);
+  return `sha512-${digest.digest("base64")}`;
 }
 
 function tarballName(name, version) {
@@ -203,6 +219,21 @@ const configPnpmWorkspace = await readFile(
   join(configRuntimeRoot, "pnpm-workspace.yaml"),
   "utf8",
 );
+const requiredRuntimeBuildPolicies = [
+  '"@deepseek-ai/dsh-subprocess-local@file:vendor/dsh/deepseek-ai-dsh-subprocess-local-0.1.1-rc.2.code.1.tgz": true',
+  "esbuild: true",
+];
+for (const [label, workspace] of [
+  ["config", configPnpmWorkspace],
+  ["build", packagedPnpmWorkspace],
+]) {
+  if (
+    workspace.includes("set this to true or false") ||
+    requiredRuntimeBuildPolicies.some((policy) => !workspace.includes(policy))
+  ) {
+    throw new Error(`${label} runtime build policy is incomplete`);
+  }
+}
 
 if (
   maintainedHarness.schemaVersion !== 1 ||
@@ -313,6 +344,12 @@ for (const entry of maintainedHarness.packages) {
       `maintained Harness tarball digest mismatch: ${entry.file}`,
     );
   }
+  const expectedResolution = `resolution: {integrity: ${await sha512Integrity(tarballPath)}, tarball: ${specifier}}`;
+  if (!packagedPnpmLock.includes(expectedResolution)) {
+    throw new Error(
+      `maintained Harness lockfile integrity mismatch: ${entry.file}`,
+    );
+  }
 }
 const stagedTarballs = (
   await readdir(join(nodeRuntimeResourceRoot, "vendor", "dsh"))
@@ -393,6 +430,12 @@ for (const [directory, packageName, version] of [
   ["dsh-ui-polish", "dsh-ui-polish", "1.1.0"],
   ["dsh-updater-check", "dsh-updater-check", "1.0.0"],
   ["dsh-lan-access", "dsh-lan-access", "1.0.0"],
+  ["dsh-settings-tools", "dsh-settings-tools", "1.0.0"],
+  [
+    "dsh-plugin-market",
+    "@dsh-external/deepseek-harness-plugin-market",
+    "0.1.0",
+  ],
   ["dsh-superpowers", "dsh-superpowers", "0.1.0"],
 ]) {
   const pluginRoot = join(projectRoot, "packages", directory);

@@ -1,5 +1,5 @@
-import { createHash } from "node:crypto";
 import { spawnSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import { createReadStream } from "node:fs";
 import { chmod, copyFile, cp, mkdir, readFile } from "node:fs/promises";
 import { createRequire } from "node:module";
@@ -21,6 +21,45 @@ async function digest(path, algorithm, encoding) {
   const hash = createHash(algorithm);
   for await (const chunk of createReadStream(path)) hash.update(chunk);
   return hash.digest(encoding);
+}
+
+function synchronizeGeneratedRuntimeLockfile() {
+  const result = spawnSync(
+    process.execPath,
+    [
+      join(targetRoot, "pnpm.mjs"),
+      "install",
+      "--dir",
+      targetRoot,
+      "--lockfile-only",
+      "--no-frozen-lockfile",
+      "--prefer-offline",
+      "--ignore-scripts",
+      "--prod",
+      "--reporter=append-only",
+    ],
+    {
+      cwd: targetRoot,
+      encoding: "utf8",
+      windowsHide: true,
+      env: {
+        ...process.env,
+        CI: "false",
+        INIT_CWD: targetRoot,
+        npm_config_local_prefix: targetRoot,
+        npm_config_manage_package_manager_versions: "false",
+      },
+    },
+  );
+  if (result.error !== undefined) throw result.error;
+  if (result.status !== 0) {
+    const diagnostic = `${result.stdout}\n${result.stderr}`
+      .trim()
+      .slice(-4_000);
+    throw new Error(
+      `Could not synchronize generated Harness tarball integrities: ${diagnostic}`,
+    );
+  }
 }
 
 const pnpmPackagePath = requireFromProject.resolve("pnpm");
@@ -96,6 +135,17 @@ await cp(join(sourceRoot, "vendor"), join(targetRoot, "vendor"), {
 // vendor assets from the same directory. Copy the whole dist tree so the
 // portable runtime installs packages exactly like the development tree.
 await cp(pnpmStandaloneRoot, targetRoot, { recursive: true });
+// `pnpm pack` produces new tarball bytes for the maintained family. Rebuild
+// only the staged lockfile, so its file-integrity records describe these exact
+// artifacts while preserving the reviewed dependency resolution.
+synchronizeGeneratedRuntimeLockfile();
+const stagedWorkspace = await readFile(
+  join(targetRoot, "pnpm-workspace.yaml"),
+  "utf8",
+);
+if (stagedWorkspace.includes("set this to true or false")) {
+  throw new Error("node-runtime build policy contains unresolved pnpm prompts");
+}
 // fs.cp does not preserve the executable bit on script shims; native-module
 // fallback builds execute node-gyp directly, so restore the mode explicitly.
 await chmod(join(targetRoot, "node-gyp-bin", "node-gyp"), 0o755).catch(

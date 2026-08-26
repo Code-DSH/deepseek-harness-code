@@ -10,6 +10,8 @@ import {
   writeFile,
 } from "node:fs/promises";
 import { dirname, join } from "node:path";
+
+import { resolveNpmInvocation } from "./npm-invocation.mjs";
 import { fileURLToPath } from "node:url";
 
 const repositoryUrl = "https://github.com/Code-DSH/deepseek-harness.git";
@@ -119,23 +121,12 @@ async function main() {
   if (match === null) {
     throw new Error(`Unsupported Harness packageManager: ${packageManager}`);
   }
-  const nodeBinRoot = dirname(process.execPath);
-  const npmCli =
-    process.platform === "win32"
-      ? join(nodeBinRoot, "node_modules", "npm", "bin", "npm-cli.js")
-      : join(
-          dirname(nodeBinRoot),
-          "lib",
-          "node_modules",
-          "npm",
-          "bin",
-          "npm-cli.js",
-        );
+  const npm = resolveNpmInvocation();
   const pnpm = (...args) => {
     const result = spawnSync(
-      process.execPath,
+      npm.command,
       [
-        npmCli,
+        ...npm.args,
         "exec",
         "--yes",
         `--package=pnpm@${match[1]}`,
@@ -148,6 +139,7 @@ async function main() {
         encoding: "utf8",
         stdio: "inherit",
         windowsHide: true,
+        shell: npm.shell,
         env: {
           ...process.env,
           CI: process.env.CI ?? "true",

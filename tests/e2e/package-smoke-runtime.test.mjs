@@ -16,6 +16,9 @@ import * as smokeRuntime from "../../scripts/smoke-packaged-runtime.mjs";
 
 import {
   parseLoopbackListeners,
+  parseLinuxListeningSocketInodes,
+  parseWindowsListenerOwnerPids,
+  nonLoopbackIpv4Addresses,
   verifySmokeEvidence,
   assertKnownRunnerArchitecture,
   validateArtifactContract,
@@ -532,6 +535,43 @@ describe("packaged runtime listener selection", () => {
     );
 
     expect(listeners).toEqual([{ port: 41002, pid: 7002 }]);
+  });
+
+  test("parses the PowerShell listener-owner fallback", () => {
+    expect(parseWindowsListenerOwnerPids("7002\r\n7003\r\n")).toEqual([
+      7002, 7003,
+    ]);
+  });
+
+  test("selects only unique non-loopback IPv4 addresses", () => {
+    expect(
+      nonLoopbackIpv4Addresses({
+        lo: [
+          { address: "127.0.0.1", family: "IPv4", internal: true },
+          { address: "::1", family: "IPv6", internal: true },
+        ],
+        ethernet: [
+          { address: "10.0.0.8", family: "IPv4", internal: false },
+          { address: "10.0.0.8", family: 4, internal: false },
+          { address: "fe80::1", family: "IPv6", internal: false },
+        ],
+      }),
+    ).toEqual(["10.0.0.8"]);
+  });
+
+  test("parses the exact Linux IPv4 loopback listening socket inode", () => {
+    const inodes = parseLinuxListeningSocketInodes(
+      [
+        "  sl  local_address rem_address   st tx_queue rx_queue tr tm->when retrnsmt uid timeout inode",
+        "   0: 0100007F:A02A 00000000:0000 0A 00000000:00000000 00:00000000 00000000 1000 0 123456 1",
+        "   1: 00000000:A02A 00000000:0000 0A 00000000:00000000 00:00000000 00000000 1000 0 654321 1",
+        "   2: 0100007F:A02A 00000000:0000 01 00000000:00000000 00:00000000 00000000 1000 0 111111 1",
+        "   3: 00000000000000000000000001000000:A02A 00000000000000000000000000000000:0000 0A 00000000:00000000 00:00000000 00000000 1000 0 222222 1",
+      ].join("\n"),
+      41002,
+    );
+
+    expect(inodes).toEqual(["123456", "222222"]);
   });
 
   test("selects the native listener command for Windows, Linux, and macOS", () => {

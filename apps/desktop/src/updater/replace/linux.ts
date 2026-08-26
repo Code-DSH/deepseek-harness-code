@@ -1,11 +1,30 @@
 import { spawn, type ChildProcess } from "node:child_process";
 import { chmodSync, renameSync, rmSync } from "node:fs";
+import { isAbsolute } from "node:path";
 
 import type { ReplaceFn } from "../updater.js";
 
 export interface LinuxReplaceOptions {
   exit: () => void;
   spawn?: typeof spawn;
+  /** Test seam; production uses the Electron executable path. */
+  execPath?: string;
+  /** Test seam; production uses the process environment. */
+  env?: NodeJS.ProcessEnv;
+}
+
+/**
+ * AppImage launches expose the persistent image through APPIMAGE while
+ * process.execPath points into the temporary mounted image. Prefer the
+ * persistent path when it is absolute; retain the executable fallback for
+ * development runs and non-AppImage Linux launches.
+ */
+export function resolveLinuxAppImageTarget(
+  execPath = process.execPath,
+  env: NodeJS.ProcessEnv = process.env,
+): string {
+  const appImage = env.APPIMAGE;
+  return appImage !== undefined && isAbsolute(appImage) ? appImage : execPath;
 }
 
 /**
@@ -23,7 +42,7 @@ export function createLinuxReplace(options: LinuxReplaceOptions): ReplaceFn {
       );
     }
     chmodSync(downloadedPath, 0o755);
-    const target = process.execPath;
+    const target = resolveLinuxAppImageTarget(options.execPath, options.env);
     const staging = `${target}.new`;
     const old = `${target}.old`;
     rmSync(staging, { force: true });

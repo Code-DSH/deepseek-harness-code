@@ -142,31 +142,32 @@ Long sessions rarely crash dramatically — pressure accumulates: renderer stall
 - **System appearance** — light/dark startup UI, platform title bar, official monochrome assets, reduced-motion support.
 - **Smooth navigation** — View Transitions when available, CSS fallback otherwise, no forced layout.
 - **Workspace resilience** — validated Standard switching and official session restoration.
-- **Opt-in LAN access** — disabled by default; when enabled, an Electron-owned HTTP proxy issues a fresh one-time link token for each native Copy action, exchanges it for an HttpOnly cookie, and serves a trusted LAN while Harness and the desktop renderer stay on loopback. A newer unused copied link invalidates the prior one.
+- **Opt-in LAN access** — disabled by default; when enabled, an Electron-owned HTTP proxy listens on local interfaces while Harness stays on loopback. Empty password allows direct access from a reachable LAN device; a configured password triggers browser Basic Auth for HTTP and WebSocket traffic.
 - **Skills** — Superpowers 6.2.0 installed to `<DSH_HOME>/skills`, never overwriting user-owned directories.
 - **Global Agent Protocol** — `<DSH_HOME>/AGENTS.md`: auto-installed when absent, upgraded only while still app-managed, never overwriting user-owned, with timestamped backup switch via `Use Bundled Global Prompt…`.
 - **Global `dsh` untouched** — startup never runs `npm install -g` and never changes an existing user-managed global CLI.
+- **User-confirmed updates** — SHA-256-verified assets only; Windows preserves the current NSIS directory, Linux AppImage replaces the persistent `$APPIMAGE` file, and Debian packages remain manual.
 - **Localized presets** — `anchored-standard` / `router-standard` / `router-spec` with bilingual names, IDs unchanged.
 - **Safe experiment** — Anchored Standard as a separate bundle, fails closed to Standard on maintained Harness 0.1.1-rc.2.code.1.
 
 ## Feature matrix
 
-| Area          | Included                                                 |
-| ------------- | -------------------------------------------------------- |
-| Desktop host  | Hardened window, startup page, native menus, tray        |
-| Harness       | Code-DSH family 0.1.1-rc.2.code.1, loopback, single Home |
-| V4 models     | Official catalog and `off` / `high` / `max`              |
-| Stack         | Skills, Goal / Plan / Workflow / Todo / Jobs / questions |
-| Skills        | Superpowers 6.2.0, never overwriting user                |
-| Global prompt | `AGENTS.md` ownership-safe install and backup switch     |
-| Global CLI    | User-managed; never installed or modified by the app     |
-| Presets       | Standard default, optional anchored / router             |
-| Recovery      | Health probes, restart, renderer replacement, port retry |
-| Watchdog      | Independent IPC, bounded restart and circuit breaker     |
-| Plugins       | Desktop, UI Motion, Model2, Find, Routing, etc.          |
-| Diagnostics   | Startup evidence, runtime state, redacted rotated logs   |
-| Security      | Sandboxed renderer, no Node integration, validated IPC   |
-| Packaging     | macOS Universal DMG; Windows NSIS; Linux AppImage/deb    |
+| Area          | Included                                                                       |
+| ------------- | ------------------------------------------------------------------------------ |
+| Desktop host  | Hardened window, startup page, native menus, tray                              |
+| Harness       | Code-DSH family 0.1.1-rc.2.code.1, loopback, single Home                       |
+| V4 models     | Official catalog and `off` / `high` / `max`                                    |
+| Stack         | Skills, Goal / Plan / Workflow / Todo / Jobs / questions                       |
+| Skills        | Superpowers 6.2.0, never overwriting user                                      |
+| Global prompt | `AGENTS.md` ownership-safe install and backup switch                           |
+| Global CLI    | User-managed; never installed or modified by the app                           |
+| Presets       | Standard default, optional anchored / router                                   |
+| Recovery      | Health probes, restart, renderer replacement, port retry                       |
+| Watchdog      | Independent IPC, bounded restart and circuit breaker                           |
+| Plugins       | Desktop, UI Motion, Model2, Find, Routing, Settings Tools, Plugin Market, etc. |
+| Diagnostics   | Startup evidence, runtime state, redacted rotated logs                         |
+| Security      | Sandboxed renderer, no Node integration, validated IPC                         |
+| Packaging     | macOS Universal DMG; Windows NSIS; Linux AppImage/deb                          |
 
 ## Routing suite
 
@@ -174,7 +175,7 @@ Bundled community [dsh-routing-suite](https://github.com/yjh051108/dsh-routing-s
 
 - **Offline snapshot** — three pinned components (`@dsh-external/dsh-super-injector`, `@dsh-external/dsh-mode-boost`, `router-standard` + `router-spec`) inside app resources.
 - **Pinned baseline** — `injector 0.3.3` / `mode-boost 0.1.0` / `router-preset 0.2.0@eff787e`, SHA-256 in `build/routing-suite/versions.json`.
-- **Public CLI reconciliation** — via system Node + bundled pnpm `dsh plugin --profile web add` (desktop, ui-motion, model2, prompt-principles, vision-router, better-sidebar, LAN access, composition, Super Injector, Mode Boost, find-plugin). The maintained Harness owns manifest reconciliation. A validated app-owned marker skips repeated CLI additions only for an unchanged managed roster; a missing or mismatched marker, changed package root/identity, missing profile dependency, or foreign store runs reconciliation again. The complete maintained runtime provides the subagent packages; no `linkOnly` post-processing remains.
+- **Public CLI reconciliation** — via system Node + bundled pnpm `dsh plugin --profile web add` (desktop, ui-motion, model2, prompt-principles, vision-router, better-sidebar, LAN access, composition, Super Injector, Mode Boost, find-plugin, settings-tools, plugin-market). The maintained Harness owns manifest reconciliation. A validated app-owned marker skips repeated CLI additions only for an unchanged managed roster; a missing or mismatched marker, changed package root/identity, missing profile dependency, or foreign store runs reconciliation again. The complete maintained runtime provides the subagent packages; no `linkOnly` post-processing remains.
 - **Reviewed updates** — only with new app release, SHA-256 verified before extraction, never downloading mutable code in background.
 - **Ownership-safe** — never overwrites unrelated plugins or user-owned presets, legacy Home copy-only migrated.
 
@@ -195,7 +196,7 @@ Full boundaries in [overview](./docs/architecture/overview.md) and [lifecycle](.
 - Sandboxed renderer, no Node integration.
 - Only the fixed `preferences`, `lanAccess`, `runtime`, `updater`, and `bundledPlugins` preload groups.
 - IPC payloads validated before desktop actions.
-- Harness itself binds only to loopback. LAN access is disabled by default; an opt-in Electron reverse proxy may listen on `0.0.0.0`. Each native Copy action issues a fresh one-time link token, replaces any earlier unredeemed link, exchanges the selected link for an HttpOnly cookie, and forwards authenticated traffic to loopback. It is trusted-LAN HTTP only, with no Internet-exposure or TLS claim.
+- Harness itself binds only to loopback. LAN access is disabled by default; an opt-in Electron reverse proxy may listen on `0.0.0.0`. Empty password permits direct trusted-LAN access; a configured password uses browser Basic Auth for HTTP and WebSocket traffic. It is trusted-LAN HTTP only, with no Internet-exposure or TLS claim.
 - Credentials stay in official Harness settings, never in bundle.
 - Logs exclude credentials, Authorization, Cookie, prompts, and responses.
 - External navigation `allow` / `open-external` policy.

@@ -2,26 +2,22 @@
 # entries, applied through the public plugin patch path at `dsh plugin add`
 # time. The user's own profile patch layer is never read or modified here.
 - insert:
-    # Maintained DSH MCP client bridge, connected to the bundled everything
-    # test server for link validation. `dsh-mcp-everything` is the
-    # app-provided launcher shim (runtime-bin/dsh-mcp-everything,
-    # dsh-mcp-everything.cmd) that starts the pinned local copy of the
-    # server from the runtime package store — no registry resolution or
-    # download happens at startup. The desktop host puts the runtime-bin
-    # and Node directories on the harness PATH so stdio spawn resolves it
-    # on macOS and Windows alike.
+    # The bundled everything server validates the MCP bridge but is not a
+    # production capability. Keep it available for an explicit user profile
+    # override without adding a test-server process to desktop startup.
     - id: mcp-everything
       name: "@deepseek-ai/dsh-mcp-client"
+      disabled: true
       config:
         serverName: everything
         transport: stdio
         command: dsh-mcp-everything
-    # Context7 MCP: up-to-date library/framework docs via resolve-library-id
-    # and query-docs. Uses the hosted streamable-http endpoint: the local
-    # npx server's backend api.context7.com may be blocked on some networks,
-    # while mcp.context7.com stays reachable.
+    # Context7 MCP remains available as an explicit profile override, but a
+    # remote connection must never sit on the desktop's startup critical path.
+    # Set this row to `disabled: false` in a user patch to opt in.
     - id: mcp-context7
       name: "@deepseek-ai/dsh-mcp-client"
+      disabled: true
       config:
         serverName: context7
         transport: streamable-http

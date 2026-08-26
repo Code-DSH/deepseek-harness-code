@@ -46,7 +46,7 @@ The Superpowers Coding Mode (`dsh-superpowers`) gates heavy tools (`subagent`, `
 
 ## Implemented Host Contract
 
-- IPC channels are fixed to `runtime:get`, `runtime:restart`, `runtime:changed`, `logs:open`, `preferences:get`, `preferences:set`, `lan-access:get`, `lan-access:set`, `lan-access:copy-url`, `updater:check`, `bundled-plugins:list`, and the send-only `clipboard:paste` alias. The alias accepts only trusted macOS `Control+V` keyboard events, pastes into its originating WebContents, rejects page-script synthetic events, and is not exposed in the public bridge.
+- IPC channels are fixed to `runtime:get`, `runtime:restart`, `runtime:changed`, `logs:open`, `preferences:get`, `preferences:set`, `lan-access:get`, `lan-access:set`, `lan-access:copy-url`, `updater:status`, `updater:check`, `updater:apply`, `updater:restart`, `bundled-plugins:list`, and the send-only `clipboard:paste` alias. The alias accepts only trusted macOS `Control+V` keyboard events, pastes into its originating WebContents, rejects page-script synthetic events, and is not exposed in the public bridge.
 - BrowserWindow uses `contextIsolation: true`, `sandbox: true`, and `nodeIntegration: false`.
 - The packaged `apps/desktop/src/startup.html` is the only file navigation exception. After startup, only the exact current HTTP loopback origin is allowed in-app; external HTTPS opens through the system browser and redirects use the same policy.
 - Harness readiness requires a live child and a 2xx Web-root response with a five-second request timeout. The host reloads the newly allocated origin after recovery.
@@ -57,7 +57,7 @@ The Superpowers Coding Mode (`dsh-superpowers`) gates heavy tools (`subagent`, `
 
 ## Public Bridge
 
-The public types are defined in `apps/desktop/src/shared/contracts.ts`. `window.deepseekDesktop.preferences` reads the persisted close/LAN state and only accepts validated close-behavior writes. `lanAccess` exposes validated redacted state, enable/disable, and a main-process-only Copy action; it never returns the token-bearing URL. `runtime` reads/subscribes runtime state and invokes restart/open-logs, `updater` exposes the fixed update check, and `bundledPlugins` lists the fixed packaged inventory surface. The sandbox preload is self-contained: `zod` is bundled and the only runtime external is Electron.
+The public types are defined in `apps/desktop/src/shared/contracts.ts`. `window.deepseekDesktop.preferences` reads the persisted close/LAN state and only accepts validated close-behavior writes. `lanAccess` exposes validated redacted state, enable/disable, and a main-process-only Copy action; it never returns the token-bearing URL. `runtime` reads/subscribes runtime state and invokes restart/open-logs, `updater` exposes replayable status plus fixed host-only update actions, and `bundledPlugins` lists the fixed packaged inventory surface. The `dsh-updater-check` plugin owns the visible update UI; the sandbox preload is self-contained: `zod` is bundled and the only runtime external is Electron.
 
 ## Frontend Layering Boundary
 

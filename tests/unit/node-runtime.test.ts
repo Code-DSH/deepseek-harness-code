@@ -118,6 +118,41 @@ describe("pinned runtime packages driven by the system Node", () => {
     ).rejects.toThrow();
   });
 
+  it("surfaces redacted installer stdout when a package install fails", async () => {
+    const root = await mkdtemp(join(tmpdir(), "dhc-node-diagnostic-"));
+    const resource = await createRuntimeResource(root);
+    const paths = resolveNodeRuntimePaths(join(root, "user-data"));
+    await writeFile(join(resource, "pnpm-workspace.yaml"), "packages: []\n");
+    const runCommand = vi.fn<typeof runAsyncCommand>(async () => ({
+      status: 1,
+      stdout: "ERR_PNPM_TARBALL_INTEGRITY token=must-not-leak",
+      stderr: "",
+    }));
+
+    try {
+      const failure = await installRuntimePackages({
+        nodeExecutable: process.execPath,
+        pnpmEntry: join(resource, "pnpm.mjs"),
+        paths,
+        runCommand,
+      }).then(
+        () => new Error("expected package installation to fail"),
+        (error: unknown) => error,
+      );
+
+      expect(failure).toBeInstanceOf(Error);
+      const message = (failure as Error).message;
+      expect(message).toContain("ERR_PNPM_TARBALL_INTEGRITY");
+      expect(message).toContain("token=[REDACTED]");
+      expect(message).not.toContain("must-not-leak");
+      expect(runCommand.mock.calls[0]?.[0].args).toContain(
+        "--config.confirmModulesPurge=false",
+      );
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   it("resolves the packages layout under user data", () => {
     const paths = resolveNodeRuntimePaths("/user-data");
     expect(paths.rootDir).toBe(join("/user-data", "node-runtime"));
@@ -296,6 +331,39 @@ describe("pinned runtime packages driven by the system Node", () => {
     });
     expect(afterUpgrade.installed).toBe(true);
     expect(install).toHaveBeenCalledTimes(2);
+  });
+
+  it("clears stale package-manager output before reinstalling", async () => {
+    const root = await mkdtemp(join(tmpdir(), "dhc-node-reinstall-"));
+    const userData = join(root, "user-data");
+    const resource = await createRuntimeResource(root);
+    const paths = resolveNodeRuntimePaths(userData);
+    const install = vi.fn(async () => {
+      await createInstalledPackages(paths);
+    });
+    const base = {
+      userDataPath: userData,
+      runtimeResourcePath: resource,
+      platform: "darwin" as const,
+      arch: "x64",
+      installRuntimePackages: install,
+    };
+
+    await ensureRuntimePackages({ ...base, systemNode: systemNode() });
+    const stalePath = join(paths.packagesDir, "node_modules", "stale.txt");
+    await writeFile(stalePath, "stale\n");
+    const reinstall = vi.fn(async () => {
+      await expect(access(stalePath)).rejects.toThrow();
+      await createInstalledPackages(paths);
+    });
+
+    await ensureRuntimePackages({
+      ...base,
+      systemNode: systemNode({ major: 26, version: "26.7.0" }),
+      installRuntimePackages: reinstall,
+    });
+
+    expect(reinstall).toHaveBeenCalledOnce();
   });
 
   it("removes legacy portable-runtime artifacts after install", async () => {

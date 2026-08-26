@@ -63,6 +63,7 @@ import {
   type SmokeReadyEvidence,
 } from "./lifecycle/smoke-contract.js";
 import { UpdaterHost } from "./lifecycle/updater-host.js";
+import { createUpdaterStatusStore } from "./lifecycle/updater-status.js";
 import { LanProxyHost } from "./lifecycle/lan-proxy.js";
 import {
   LanAccessController,
@@ -79,7 +80,6 @@ import {
 } from "./lifecycle/global-agent-prompt-link.js";
 import {
   MINIMUM_NODE_VERSION,
-  NODE_DOWNLOAD_PAGE_URL,
   resolveSystemNode,
   type ResolvedSystemNode,
 } from "./lifecycle/system-node.js";
@@ -99,6 +99,7 @@ import { classifyNavigation } from "./security/navigation-policy.js";
 import type {
   DesktopPreferencesState,
   RuntimeNotice,
+  UpdaterStatus,
 } from "./shared/contracts.js";
 import {
   DEFAULT_DESKTOP_PREFERENCES,
@@ -115,7 +116,12 @@ let harnessOrigin = "";
 let healthTimer: ReturnType<typeof setInterval> | undefined;
 let watchdogHost: WatchdogHost | undefined;
 let updaterHost: UpdaterHost | undefined;
-const lanProxyHost = new LanProxyHost();
+const updaterStatusStore = createUpdaterStatusStore();
+const lanProxyHost = new LanProxyHost({
+  getUpdaterStatus: () => updaterStatusStore.get(),
+  subscribeUpdaterStatus: (listener) =>
+    updaterStatusStore.subscribe(listener, { replay: false }),
+});
 let tray: Tray | undefined;
 const preferencesStore = new DesktopPreferencesStore(
   DEFAULT_DESKTOP_PREFERENCES,
@@ -126,6 +132,7 @@ const lanAccessController = new LanAccessController({
   persistEnabled: async (enabled) => {
     await preferencesStore.update({ lanAccessEnabled: enabled });
   },
+  persistPasswordHash: persistLanAccessPasswordHash,
   resolveAddresses: () => resolveLanIpv4Addresses(networkInterfaces()),
   writeClipboard: (value) => clipboard.writeText(value),
 });
@@ -137,6 +144,7 @@ const smokeConfig = parseSmokeConfig(process.env, {
   isPackaged: app.isPackaged,
 });
 const smokeStartedAt = smokeConfig?.startedAt ?? new Date().toISOString();
+const SMOKE_ACKNOWLEDGEMENT_TIMEOUT_MS = 120_000;
 let smokeReadyEvidence: SmokeReadyEvidence | undefined;
 let smokeFailureWritten = false;
 let nodeRequiredSmokeActive = false;
@@ -199,7 +207,53 @@ async function getPreferences(): Promise<DesktopPreferencesState> {
 async function setPreferences(value: DesktopPreferencesState): Promise<void> {
   const target = settingsPath();
   await mkdir(dirname(target), { recursive: true });
-  await writeFile(target, JSON.stringify(value), {
+  let existing: Record<string, unknown> = {};
+  try {
+    const parsed: unknown = JSON.parse(await readFile(target, "utf8"));
+    if (typeof parsed === "object" && parsed !== null) {
+      existing = parsed as Record<string, unknown>;
+    }
+  } catch {
+    // Missing or malformed settings are replaced with the validated state.
+  }
+  await writeFile(target, JSON.stringify({ ...existing, ...value }), {
+    encoding: "utf8",
+    mode: 0o600,
+  });
+}
+
+async function getLanAccessPasswordHash(): Promise<string | undefined> {
+  try {
+    const parsed: unknown = JSON.parse(await readFile(settingsPath(), "utf8"));
+    const hash =
+      typeof parsed === "object" && parsed !== null
+        ? (parsed as Record<string, unknown>).lanAccessPasswordHash
+        : undefined;
+    return typeof hash === "string" && hash.startsWith("scrypt-v1$")
+      ? hash
+      : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+async function persistLanAccessPasswordHash(
+  passwordHash: string | undefined,
+): Promise<void> {
+  const target = settingsPath();
+  await mkdir(dirname(target), { recursive: true });
+  let existing: Record<string, unknown> = {};
+  try {
+    const parsed: unknown = JSON.parse(await readFile(target, "utf8"));
+    if (typeof parsed === "object" && parsed !== null) {
+      existing = parsed as Record<string, unknown>;
+    }
+  } catch {
+    // The preferences writer will fill the remaining fields later.
+  }
+  if (passwordHash === undefined) delete existing.lanAccessPasswordHash;
+  else existing.lanAccessPasswordHash = passwordHash;
+  await writeFile(target, JSON.stringify(existing), {
     encoding: "utf8",
     mode: 0o600,
   });
@@ -351,6 +405,16 @@ async function waitForHarnessReady(
   return false;
 }
 
+async function writeStartupFailureLog(diagnostics: string): Promise<void> {
+  const logsRoot = app.getPath("logs");
+  await mkdir(logsRoot, { recursive: true, mode: 0o700 });
+  await writeFile(
+    join(logsRoot, "startup-failure.log"),
+    `${new Date().toISOString()}\n${redactStartupDiagnostic(diagnostics)}\n`,
+    { encoding: "utf8", mode: 0o600 },
+  );
+}
+
 function captureStartupDiagnostics(child: ChildProcess): {
   read: () => string;
   dispose: () => void;
@@ -391,35 +455,46 @@ function nodeRuntimeResourcePath(): string {
     : join(app.getAppPath(), "build", "node-runtime");
 }
 
-async function showNodeRequiredDialog(
-  failedError?: Error,
-): Promise<"manual" | "retry" | "quit"> {
-  const isMissing = failedError === undefined;
-  const buttons = isMissing
-    ? ["Show Installer Link", "Retry detection", "Quit"]
-    : ["Retry detection", "Show Installer Link", "Quit"];
+async function showNodeRequiredDialog(): Promise<"manual" | "retry" | "quit"> {
   const options: Electron.MessageBoxOptions = {
-    type: isMissing ? "question" : "error",
-    buttons,
+    type: "question",
+    buttons: ["Show Installer Link", "Retry detection", "Quit"],
     defaultId: 0,
-    cancelId: buttons.length - 1,
+    cancelId: 2,
     title: "Node.js required",
-    message: isMissing
-      ? "DeepSeek Harness Code needs an official system Node.js installation to run the local Harness."
-      : "The maintained Harness packages could not be installed.",
-    detail: isMissing
-      ? `No usable Node.js installation was detected. Install Node.js from the official installer, then retry detection. Node.js ^${MINIMUM_NODE_VERSION} or >=24.0.0 is required; Node.js 23 is unsupported.`
-      : `${failedError.message.slice(0, 2_000)}\n\nOfficial Node.js download: ${NODE_DOWNLOAD_PAGE_URL}`,
+    message:
+      "DeepSeek Harness Code needs an official system Node.js installation to run the local Harness.",
+    detail: `No usable Node.js installation was detected. Install Node.js from the official installer, then retry detection. Node.js ^${MINIMUM_NODE_VERSION} or >=24.0.0 is required; Node.js 23 is unsupported.`,
   };
   const result =
     mainWindow === undefined || mainWindow.isDestroyed()
       ? await dialog.showMessageBox(options)
       : await dialog.showMessageBox(mainWindow, options);
-  const response = result.response;
-  if (isMissing) {
-    return (["manual", "retry", "quit"] as const)[response] ?? "quit";
+  return (["manual", "retry", "quit"] as const)[result.response] ?? "quit";
+}
+
+async function showHarnessPackageInstallFailureDialog(
+  failedError: Error,
+): Promise<"retry" | "quit"> {
+  const options: Electron.MessageBoxOptions = {
+    type: "error",
+    buttons: ["Retry installation", "Open Logs", "Quit"],
+    defaultId: 0,
+    cancelId: 2,
+    title: "Harness dependency installation failed",
+    message: "The maintained Harness packages could not be installed.",
+    detail: failedError.message.slice(0, 2_000),
+  };
+  for (;;) {
+    const result =
+      mainWindow === undefined || mainWindow.isDestroyed()
+        ? await dialog.showMessageBox(options)
+        : await dialog.showMessageBox(mainWindow, options);
+    if (result.response !== 1) {
+      return result.response === 0 ? "retry" : "quit";
+    }
+    await shell.openPath(app.getPath("logs"));
   }
-  return (["retry", "manual", "quit"] as const)[response] ?? "quit";
 }
 
 async function prepareSystemNodeRuntime(
@@ -478,12 +553,8 @@ async function prepareSystemNodeRuntime(
     } catch (error) {
       const failedError =
         error instanceof Error ? error : new Error("Unknown runtime error");
-      const choice = await showNodeRequiredDialog(failedError);
-      if (choice === "manual") {
-        const urls = getNodeDownloadUrls(process.platform, process.arch);
-        await shell.openExternal(urls.installerUrl);
-        throw failedError;
-      }
+      await writeStartupFailureLog(failedError.message).catch(() => undefined);
+      const choice = await showHarnessPackageInstallFailureDialog(failedError);
       if (choice === "quit") throw failedError;
     }
   }
@@ -491,7 +562,7 @@ async function prepareSystemNodeRuntime(
 
 function managedNodeRuntimePaths(): NodeRuntimePaths {
   if (nodeRuntimePaths === undefined) {
-    throw new Error("Managed Node.js runtime is not prepared");
+    throw new Error("Maintained Harness package runtime is not prepared");
   }
   return nodeRuntimePaths;
 }
@@ -527,6 +598,12 @@ async function startHarness(): Promise<HarnessChild> {
   const lanAccessPluginRoot = app.isPackaged
     ? join(process.resourcesPath, "dsh-lan-access")
     : join(app.getAppPath(), "packages", "dsh-lan-access");
+  const settingsToolsPluginRoot = app.isPackaged
+    ? join(process.resourcesPath, "dsh-settings-tools")
+    : join(app.getAppPath(), "packages", "dsh-settings-tools");
+  const marketPluginRoot = app.isPackaged
+    ? join(process.resourcesPath, "dsh-plugin-market")
+    : join(app.getAppPath(), "packages", "dsh-plugin-market");
   const promptPrinciplesRoot = app.isPackaged
     ? join(process.resourcesPath, "prompt-principles-plugin")
     : join(app.getAppPath(), "packages", "prompt-principles-plugin");
@@ -620,6 +697,23 @@ async function startHarness(): Promise<HarnessChild> {
         packageName: "dsh-vision-router",
         packageRoot: runtime.dshVisionRouterRoot,
       },
+      {
+        packageName: "dsh-settings-tools",
+        packageRoot: settingsToolsPluginRoot,
+      },
+      {
+        packageName: "@dsh-external/deepseek-harness-plugin-market",
+        packageRoot: marketPluginRoot,
+      },
+    ],
+    // Older desktop releases installed these official providers as standalone
+    // profile bundles. The current app composition owns the same loader rows;
+    // retaining both makes Harness abort on duplicate entry ids during an
+    // in-place upgrade. Remove only the now-subsumed bundles through the
+    // official plugin CLI, leaving every unrelated user bundle untouched.
+    retiredPluginPackages: [
+      "@deepseek-ai/dsh-subagent-claude-code",
+      "@deepseek-ai/dsh-subagent-codex",
     ],
     legacyPluginSpecs: migration.legacyPluginSpecs,
   });
@@ -744,12 +838,19 @@ async function startHarness(): Promise<HarnessChild> {
         }),
       ]);
       if (startupResult.type === "error") {
+        await writeStartupFailureLog(
+          `${diagnostics.read()}\n${startupResult.error.message}`,
+        ).catch(() => undefined);
         await retireFailedStartupChild(child);
         throw startupResult.error;
       }
       if (!startupResult.ready) {
+        const capturedDiagnostics = diagnostics.read();
+        await writeStartupFailureLog(capturedDiagnostics).catch(
+          () => undefined,
+        );
         await retireFailedStartupChild(child);
-        throw startupFailureFromDiagnostics(diagnostics.read());
+        throw startupFailureFromDiagnostics(capturedDiagnostics);
       }
     } finally {
       diagnostics.dispose();
@@ -839,6 +940,13 @@ function buildMenu(): void {
   );
 }
 
+function publishUpdaterStatus(status: UpdaterStatus): void {
+  updaterStatusStore.publish(status);
+  if (mainWindow === undefined || mainWindow.isDestroyed()) return;
+  if (mainWindow.webContents.isDestroyed()) return;
+  mainWindow.webContents.send("updater:changed", status);
+}
+
 function createTray(): void {
   if (tray !== undefined) return;
   const image = nativeImage
@@ -894,7 +1002,7 @@ async function launch(): Promise<void> {
           acknowledgementPath: smokeConfig.acknowledgementPath ?? "",
           runId: smokeConfig.runId,
           appPid: process.pid,
-          timeoutMs: 30_000,
+          timeoutMs: SMOKE_ACKNOWLEDGEMENT_TIMEOUT_MS,
           pollIntervalMs: 100,
         },
         {
@@ -988,7 +1096,7 @@ async function launch(): Promise<void> {
           acknowledgementPath: smokeConfig.acknowledgementPath ?? "",
           runId: smokeConfig.runId,
           appPid: process.pid,
-          timeoutMs: 30_000,
+          timeoutMs: SMOKE_ACKNOWLEDGEMENT_TIMEOUT_MS,
           pollIntervalMs: 100,
         },
         {
@@ -1016,6 +1124,10 @@ async function launch(): Promise<void> {
     waitForExit: waitForChildExit,
   });
   registerDesktopIpc(ipcMain, {
+    getAppInfo: () => ({
+      name: "DeepSeek Harness Code",
+      version: app.getVersion(),
+    }),
     getRuntimeState: () => controller!.getState(),
     restartHarness: () => controller!.restart(),
     openLogs: async () => {
@@ -1029,9 +1141,12 @@ async function launch(): Promise<void> {
     setLanAccess: (value) => lanAccessController.set(value),
     copyLanAccessUrl: async (value) => lanAccessController.copyUrl(value),
     paste: (target) => target.paste(),
+    getUpdaterStatus: () => updaterStatusStore.get(),
     checkForUpdates: () =>
-      updaterHost?.check({ silent: false }) ??
-      Promise.resolve({ available: false }),
+      updaterHost?.check() ?? Promise.resolve({ available: false }),
+    applyUpdate: () =>
+      updaterHost?.apply() ?? Promise.resolve({ available: false }),
+    restartForUpdate: () => updaterHost?.restart() ?? Promise.resolve(),
     listBundledPlugins: () => [],
   });
   buildMenu();
@@ -1041,6 +1156,7 @@ async function launch(): Promise<void> {
   lanAccessController.loadPersistedEnabled(
     preferencesStore.get().lanAccessEnabled,
   );
+  lanAccessController.loadPersistedPassword(await getLanAccessPasswordHash());
   await controller.start();
   healthTimer = setInterval(
     () => void controller?.checkHealth().catch(reportRuntimeFailure),
@@ -1082,7 +1198,7 @@ if (hasSingleInstanceLock) {
 
 const launchOnce = createSingleFlightAction(async () => {
   await launch();
-  updaterHost = new UpdaterHost({ parentWindow: () => mainWindow });
+  updaterHost = new UpdaterHost({ publishStatus: publishUpdaterStatus });
 });
 
 const lifecycle = hasSingleInstanceLock

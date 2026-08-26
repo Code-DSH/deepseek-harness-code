@@ -66,7 +66,7 @@ The app installs these packages through the public `dsh plugin add` mechanism us
 - `@dsh-external/dsh-super-injector@0.3.3`
 - `@dsh-external/dsh-mode-boost@0.1.0`
 - `dsh-find-plugin@0.3.6`
-- `deepseek-harness-composition` (MCP everything + Context7, subagent codex/claude)
+- `deepseek-harness-composition` (opt-in MCP everything/Context7, subagent codex/claude)
 - `anchored-standard` preset (synchronized as Agent Preset, not a Web bundle)
 
 The generated `pnpm`/`pnpm.cmd` launcher points to the pnpm runtime inside the application and is prepended to the child command's private `PATH` with the detected Node bin. It does not change the user's shell or require system pnpm. Startup never installs a global `dsh`; plugin patches retain bare package names under `--expose-internals`.

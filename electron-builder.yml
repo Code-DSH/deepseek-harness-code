@@ -73,6 +73,20 @@ extraResources:
       - index.js
       - lib/**/*
       - cordis.patch.yml
+  - from: packages/dsh-settings-tools
+    to: dsh-settings-tools
+    filter:
+      - package.json
+      - index.js
+      - lib/**/*
+      - cordis.patch.yml
+  - from: packages/dsh-plugin-market
+    to: dsh-plugin-market
+    filter:
+      - package.json
+      - lib/**/*
+      - cordis.patch.yml
+      - README.md
   - from: packages/prompt-principles-plugin
     to: prompt-principles-plugin
     filter:

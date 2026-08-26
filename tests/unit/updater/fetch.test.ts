@@ -152,14 +152,23 @@ describe("updater/fetch", () => {
 
   it("downloadInstaller streams the bytes to disk", async () => {
     const dest = join(dir, "out.bin");
-    await downloadInstaller(`${base}/file`, dest, {
-      validateUrl: testValidateUrl,
-    });
+    const progress: Array<{ downloadedBytes: number; totalBytes?: number }> =
+      [];
+    await downloadInstaller(
+      `${base}/file`,
+      dest,
+      {
+        validateUrl: testValidateUrl,
+      },
+      undefined,
+      (value) => progress.push(value),
+    );
     const buf = await readFile(dest);
     const expected = createHash("sha256")
       .update(Buffer.from("data"))
       .digest("hex");
     expect(createHash("sha256").update(buf).digest("hex")).toBe(expected);
+    expect(progress.at(-1)).toMatchObject({ downloadedBytes: 4 });
   });
 
   it("downloads a GitHub-sized asset through range requests", async () => {
@@ -173,5 +182,55 @@ describe("updater/fetch", () => {
       10,
     );
     await expect(readFile(dest, "utf8")).resolves.toBe("abcdefghij");
+  });
+
+  it("rejects an installer whose declared size exceeds the global limit", async () => {
+    const dest = join(dir, "oversized.bin");
+    await expect(
+      downloadInstaller(
+        `${base}/file`,
+        dest,
+        { validateUrl: testValidateUrl },
+        512 * 1024 * 1024 + 1,
+      ),
+    ).rejects.toThrow(/exceeds 536870912 byte limit/);
+  });
+
+  it("rejects an oversized ranged response before writing any chunk", async () => {
+    const dest = join(dir, "oversized-range.bin");
+    const fetch = async () =>
+      new Response(new Uint8Array([0]), {
+        status: 206,
+        headers: {
+          "content-range": `bytes 0-0/${512 * 1024 * 1024 + 1}`,
+          "content-length": "1",
+        },
+      });
+    await expect(
+      downloadInstaller("http://127.0.0.1/oversized-range", dest, {
+        fetch,
+        validateUrl: testValidateUrl,
+      }),
+    ).rejects.toThrow(/exceeds 536870912 byte limit/);
+    await expect(readFile(dest)).rejects.toThrow();
+  });
+
+  it("rejects ranged bounds that extend past the declared total", async () => {
+    const dest = join(dir, "invalid-range.bin");
+    const fetch = async () =>
+      new Response(new Uint8Array([0, 1]), {
+        status: 206,
+        headers: {
+          "content-range": "bytes 0-1/1",
+          "content-length": "2",
+        },
+      });
+    await expect(
+      downloadInstaller("http://127.0.0.1/invalid-range", dest, {
+        fetch,
+        validateUrl: testValidateUrl,
+      }),
+    ).rejects.toThrow(/invalid bounds/);
+    await expect(readFile(dest)).rejects.toThrow();
   });
 });

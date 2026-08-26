@@ -380,6 +380,9 @@ describe("DeepSeek Harness Code distribution contract", () => {
 
   test("launches every package on its native runner before release", async () => {
     const workflow = await readProjectFile(".github/workflows/package.yml");
+    const debSmokeScript = await readProjectFile(
+      "scripts/package-smoke-linux-deb.sh",
+    );
     const windowsStep = workflow.slice(
       workflow.indexOf("      - name: Smoke test Windows package"),
       workflow.indexOf("      - name: Verify macOS Universal DMG"),
@@ -398,6 +401,10 @@ describe("DeepSeek Harness Code distribution contract", () => {
       ),
       workflow.indexOf("      - name: Upload installer artifacts"),
     );
+    const linuxArmDebJob = workflow.slice(
+      workflow.indexOf("  linux-arm64-deb-smoke:"),
+      workflow.indexOf("  macos-smoke:"),
+    );
     const macosSmokeJob = workflow.slice(
       workflow.indexOf("  macos-smoke:"),
       workflow.indexOf("  release:"),
@@ -410,9 +417,13 @@ describe("DeepSeek Harness Code distribution contract", () => {
     expect(appImageStep).toContain(
       "if: matrix.label == 'linux-x64' || matrix.label == 'linux-arm64'",
     );
-    expect(debStep).toContain(
-      "if: matrix.label == 'linux-x64' || matrix.label == 'linux-arm64'",
-    );
+    expect(debStep).toContain("if: matrix.label == 'linux-x64'");
+    expect(linuxArmDebJob).toContain("runs-on: ubuntu-24.04-arm");
+    expect(linuxArmDebJob).toContain("name: linux-arm64");
+    expect(linuxArmDebJob).toContain("bash scripts/package-smoke-linux-deb.sh");
+    expect(debSmokeScript).toContain("sudo apt-get install -y");
+    expect(debSmokeScript).toContain("--scenario runtime");
+    expect(debSmokeScript).toContain("--scenario node-required");
     expect(macosSmokeJob).toContain("runs-on: ${{ matrix.os }}");
     expect(macosSmokeJob).toContain("os: macos-15");
     expect(macosSmokeJob).toContain("os: macos-15-intel");
@@ -424,7 +435,9 @@ describe("DeepSeek Harness Code distribution contract", () => {
     expect(macosSmokeJob).toContain(
       "--runner-architecture ${{ matrix.runner-architecture }}",
     );
-    expect(releaseJob).toContain("needs: [package, macos-smoke]");
+    expect(releaseJob).toContain(
+      "needs: [package, linux-arm64-deb-smoke, macos-smoke]",
+    );
   });
 
   test("parses the package workflow as YAML", async () => {

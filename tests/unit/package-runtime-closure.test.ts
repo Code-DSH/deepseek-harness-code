@@ -14,6 +14,12 @@ async function sha256(path: string): Promise<string> {
   return digest.digest("hex");
 }
 
+async function sha512Integrity(path: string): Promise<string> {
+  const digest = createHash("sha512");
+  for await (const chunk of createReadStream(path)) digest.update(chunk);
+  return `sha512-${digest.digest("base64")}`;
+}
+
 describe("packaged runtime dependency closure", () => {
   it("pins the maintained Harness submodule without a floating branch", async () => {
     const [gitmodules, provenance] = await Promise.all([
@@ -81,16 +87,40 @@ describe("packaged runtime dependency closure", () => {
       expect(entry.version).toBe(familyVersion);
       expect(configManifest.dependencies[entry.name]).toBe(specifier);
       expect(buildManifest.dependencies[entry.name]).toBe(specifier);
+      const tarballPath = join(runtimeRoot, "vendor", "dsh", entry.file);
       expect(configLock).toContain(specifier);
       expect(buildLock).toContain(specifier);
-      await expect(
-        sha256(join(runtimeRoot, "vendor", "dsh", entry.file)),
-      ).resolves.toBe(entry.sha256);
+      await expect(sha256(tarballPath)).resolves.toBe(entry.sha256);
+      const integrity = await sha512Integrity(tarballPath);
+      expect(buildLock).toContain(
+        `resolution: {integrity: ${integrity}, tarball: ${specifier}}`,
+      );
     }
     const tarballs = (await readdir(join(runtimeRoot, "vendor", "dsh"))).filter(
       (entry) => entry.endsWith(".tgz"),
     );
     expect(tarballs).toHaveLength(provenance.packages.length);
+  });
+
+  it("approves the exact local native builds needed by the maintained family", async () => {
+    const [configWorkspace, buildWorkspace] = await Promise.all([
+      readFile(
+        join(projectRoot, "config", "node-runtime", "pnpm-workspace.yaml"),
+        "utf8",
+      ),
+      readFile(
+        join(projectRoot, "build", "node-runtime", "pnpm-workspace.yaml"),
+        "utf8",
+      ),
+    ]);
+    const localSubprocessBuild =
+      '"@deepseek-ai/dsh-subprocess-local@file:vendor/dsh/deepseek-ai-dsh-subprocess-local-0.1.1-rc.2.code.1.tgz": true';
+
+    for (const workspace of [configWorkspace, buildWorkspace]) {
+      expect(workspace).toContain(localSubprocessBuild);
+      expect(workspace).toContain("esbuild: true");
+      expect(workspace).not.toContain("set this to true or false");
+    }
   });
 
   it("resolves development DSH packages only from the submodule", async () => {
@@ -146,6 +176,12 @@ describe("packaged runtime dependency closure", () => {
     );
     expect(compositionPatch).toContain(
       'name: "@deepseek-ai/dsh-subagent-claude-code"',
+    );
+    expect(compositionPatch).toMatch(
+      /- id: mcp-everything[\s\S]*?disabled: true[\s\S]*?serverName: everything/u,
+    );
+    expect(compositionPatch).toMatch(
+      /- id: mcp-context7[\s\S]*?disabled: true[\s\S]*?serverName: context7/u,
     );
     expect(lifecycle).not.toContain("linkOnly");
     expect(main).not.toContain("ensureGlobalDshCli");

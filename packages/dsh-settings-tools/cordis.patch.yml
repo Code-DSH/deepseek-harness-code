@@ -1,0 +1,5 @@
+# dsh-settings-tools bundle layer: one bare package loader row for the Web client.
+- insert:
+    - id: dsh-settings-tools
+      name: "dsh-settings-tools"
+      config: {}

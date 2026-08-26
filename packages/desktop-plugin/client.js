@@ -549,6 +549,7 @@ var DESKTOP_LOCALES = {
   zh: {
     "runtime.title": "\u684C\u9762\u8FD0\u884C\u72B6\u6001",
     "runtime.status": "Harness {phase}\uFF1B\u91CD\u542F\u6B21\u6570\uFF1A{count}",
+    "app.version": "\u7248\u672C {version}",
     "phase.starting": "\u6B63\u5728\u542F\u52A8",
     "phase.ready": "\u5DF2\u5C31\u7EEA",
     "phase.recovering": "\u6B63\u5728\u6062\u590D",
@@ -566,6 +567,7 @@ var DESKTOP_LOCALES = {
   en: {
     "runtime.title": "Desktop runtime",
     "runtime.status": "Harness {phase}; restarts: {count}",
+    "app.version": "Version {version}",
     "phase.starting": "starting",
     "phase.ready": "ready",
     "phase.recovering": "recovering",
@@ -599,19 +601,24 @@ function createDesktopSettingsModel(bridge, onChange = () => {
   };
   const model = {
     state: void 0,
+    appInfo: void 0,
     closeBehavior: void 0,
     preferencesSupported: groupedCapabilities,
     error: void 0,
     async start() {
       try {
-        const [state, preferences] = groupedCapabilities ? await Promise.all([
+        const appInfoPromise = groupedCapabilities && bridge.app && typeof bridge.app.getInfo === "function" ? bridge.app.getInfo() : Promise.resolve(void 0);
+        const [state, preferences, appInfo] = groupedCapabilities ? await Promise.all([
           bridge.runtime.getState(),
-          bridge.preferences.get()
+          bridge.preferences.get(),
+          appInfoPromise
         ]) : await Promise.all([
           bridge.getRuntimeState(),
-          bridge.getCloseBehavior().then((closeBehavior) => ({ closeBehavior }))
+          bridge.getCloseBehavior().then((closeBehavior) => ({ closeBehavior })),
+          Promise.resolve(void 0)
         ]);
         model.state = state;
+        model.appInfo = appInfo;
         model.closeBehavior = preferences.closeBehavior;
         const subscribe = groupedCapabilities ? bridge.runtime.subscribe : bridge.subscribeRuntime;
         stopSubscription = subscribe.call(
@@ -780,6 +787,11 @@ function DesktopSettingsRow({ t }) {
         phase: t(`phase.${phase}`),
         count: restarts
       })
+    ),
+    model.appInfo?.version && React.createElement(
+      "p",
+      { className: "dshDesktopSettingsVersion" },
+      t("app.version", { version: model.appInfo.version })
     ),
     React.createElement(
       "div",

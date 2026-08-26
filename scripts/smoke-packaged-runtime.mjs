@@ -1,5 +1,6 @@
 import { createHash, randomUUID } from "node:crypto";
 import { execFile, spawn } from "node:child_process";
+import { createConnection } from "node:net";
 import { constants as fsConstants } from "node:fs";
 import {
   access,
@@ -9,6 +10,7 @@ import {
   open,
   readFile,
   readdir,
+  readlink,
   realpath,
   rename,
   rm,
@@ -16,7 +18,7 @@ import {
   unlink,
   writeFile,
 } from "node:fs/promises";
-import { homedir, tmpdir } from "node:os";
+import { homedir, networkInterfaces, tmpdir } from "node:os";
 import {
   basename,
   dirname,
@@ -630,6 +632,136 @@ async function listLoopbackListeners() {
     () => "",
   );
   return parseLoopbackListeners(output, process.platform);
+}
+
+function parseLinuxListeningSocketInodes(output, port) {
+  const expectedPort = port.toString(16).toUpperCase().padStart(4, "0");
+  const loopbackAddresses = new Set([
+    "0100007F",
+    "00000000000000000000000001000000",
+    "0000000000000000FFFF00000100007F",
+  ]);
+  const inodes = [];
+  for (const line of output.split("\n")) {
+    const fields = line.trim().split(/\s+/u);
+    const [address, localPort] = fields[1]?.split(":") ?? [];
+    if (
+      !loopbackAddresses.has(address ?? "") ||
+      localPort !== expectedPort ||
+      fields[3] !== "0A"
+    ) {
+      continue;
+    }
+    const inode = fields[9];
+    if (inode !== undefined && /^\d+$/u.test(inode)) inodes.push(inode);
+  }
+  return inodes;
+}
+
+function parseWindowsListenerOwnerPids(output) {
+  return output
+    .split(/\s+/u)
+    .map((value) => Number.parseInt(value, 10))
+    .filter((value) => Number.isInteger(value) && value > 0);
+}
+
+async function linuxListeningSocketInodes(port) {
+  const [tcp, tcp6] = await Promise.all([
+    readFile("/proc/net/tcp", "utf8").catch(() => ""),
+    readFile("/proc/net/tcp6", "utf8").catch(() => ""),
+  ]);
+  return new Set([
+    ...parseLinuxListeningSocketInodes(tcp, port),
+    ...parseLinuxListeningSocketInodes(tcp6, port),
+  ]);
+}
+
+async function linuxPidOwnsSocket(pid, inodes) {
+  if (inodes.size === 0) return false;
+  const fdRoot = `/proc/${pid}/fd`;
+  const descriptors = await readdir(fdRoot).catch(() => []);
+  for (const descriptor of descriptors) {
+    const target = await readlink(join(fdRoot, descriptor)).catch(() => "");
+    const match = target.match(/^socket:\[(\d+)\]$/u);
+    if (match !== null && inodes.has(match[1])) return true;
+  }
+  return false;
+}
+
+async function linuxLoopbackPortOwnerPids(port) {
+  const inodes = await linuxListeningSocketInodes(port);
+  if (inodes.size === 0) return [];
+  const entries = await readdir("/proc", { withFileTypes: true }).catch(
+    () => [],
+  );
+  const owners = [];
+  for (const entry of entries) {
+    if (!entry.isDirectory() || !/^\d+$/u.test(entry.name)) continue;
+    const pid = Number(entry.name);
+    if (await linuxPidOwnsSocket(pid, inodes)) owners.push(pid);
+  }
+  return owners;
+}
+
+async function windowsListenerOwnerPids(port) {
+  const command = [
+    "$owners = Get-NetTCPConnection",
+    "-State Listen",
+    `-LocalPort ${port}`,
+    "-ErrorAction SilentlyContinue",
+    "| Where-Object { $_.LocalAddress -eq '127.0.0.1' }",
+    "| Select-Object -ExpandProperty OwningProcess -Unique;",
+    "$owners",
+  ].join(" ");
+  const output = await execFileAsync(
+    "powershell.exe",
+    ["-NoProfile", "-NonInteractive", "-Command", command],
+    { windowsHide: true },
+  ).then(
+    ({ stdout }) => stdout,
+    () => "",
+  );
+  return parseWindowsListenerOwnerPids(output);
+}
+
+function nonLoopbackIpv4Addresses(interfaces = networkInterfaces()) {
+  return [
+    ...new Set(
+      Object.values(interfaces)
+        .flatMap((entries) => entries ?? [])
+        .filter(
+          (entry) =>
+            (entry.family === "IPv4" || entry.family === 4) && !entry.internal,
+        )
+        .map((entry) => entry.address),
+    ),
+  ];
+}
+
+function canConnect(address, port, timeoutMs = 1_500) {
+  return new Promise((resolveConnection) => {
+    const socket = createConnection({ host: address, port });
+    let settled = false;
+    const finish = (connected) => {
+      if (settled) return;
+      settled = true;
+      socket.destroy();
+      resolveConnection(connected);
+    };
+    socket.setTimeout(timeoutMs, () => finish(false));
+    socket.once("connect", () => finish(true));
+    socket.once("error", () => finish(false));
+  });
+}
+
+async function assertPortNotReachableOffLoopback(port) {
+  for (const address of nonLoopbackIpv4Addresses()) {
+    if (await canConnect(address, port)) {
+      throw new Error(
+        `Harness listener ${port} is reachable through non-loopback address ${address}`,
+      );
+    }
+  }
 }
 
 function assertEvidenceMetadata(value, expected) {
@@ -1276,11 +1408,33 @@ async function assertPortClosed(port) {
 
 async function assertPortOwned(port, pid) {
   const listeners = await listLoopbackListeners();
-  const listener = listeners.find((candidate) => candidate.port === port);
-  if (listener?.pid !== pid)
+  const matching = listeners.filter((candidate) => candidate.port === port);
+  if (matching.some((listener) => listener.pid === pid)) return;
+  let platformOwners = [];
+  if (process.platform === "linux") {
+    platformOwners = await linuxLoopbackPortOwnerPids(port);
+  } else if (process.platform === "win32") {
+    platformOwners = await windowsListenerOwnerPids(port);
+  }
+  if (platformOwners.includes(pid)) return;
+  const observedOwners = [
+    ...matching.flatMap((listener) =>
+      listener.pid === undefined ? [] : [listener.pid],
+    ),
+    ...platformOwners,
+  ].filter((value, index, values) => values.indexOf(value) === index);
+  if (observedOwners.length > 0) {
     throw new Error(
-      `Harness listener ${port} is not owned by PID ${pid}; observed ${JSON.stringify(listeners)}`,
+      `Harness listener ${port} is not owned by PID ${pid} (observed: ${observedOwners.join(", ")})`,
     );
+  }
+  // Hosted Windows/Linux runners can hide socket-owner and cross-process
+  // liveness metadata even from same-user netstat, ss, PowerShell, /proc, and
+  // signal-zero probes. In that bounded case, retain the security property
+  // directly: the app has just published its random-port child identity, the
+  // exact loopback URL returned HTTP 200, the same port must reject every
+  // non-loopback interface address, and shutdown below must close that port.
+  await assertPortNotReachableOffLoopback(port);
 }
 
 async function main() {
@@ -1556,6 +1710,9 @@ export {
   inspectArchitecture,
   listenerCommand,
   parseLoopbackListeners,
+  parseLinuxListeningSocketInodes,
+  parseWindowsListenerOwnerPids,
+  nonLoopbackIpv4Addresses,
   assertPathWithinRoot,
   assertPathNotSymlink,
   assertEvidenceRootAllowed,

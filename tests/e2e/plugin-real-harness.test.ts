@@ -39,6 +39,10 @@ const bootPluginRoot =
   packagedResourcesRoot === undefined
     ? pluginRoot
     : join(packagedResourcesRoot, "desktop-plugin");
+const bootPluginMarketRoot =
+  packagedResourcesRoot === undefined
+    ? join(repositoryRoot, "packages", "dsh-plugin-market")
+    : join(packagedResourcesRoot, "dsh-plugin-market");
 const bootRoutingSuiteRoot =
   packagedResourcesRoot === undefined
     ? join(repositoryRoot, "build", "routing-suite")
@@ -298,6 +302,7 @@ describe("desktop plugin with the real pinned Harness", () => {
     }
 
     const userPlugin = await createBundle("user-owned-plugin");
+    const retiredPlugin = await createBundle("composition-subsumed-plugin");
     const managedPlugin = await createBundle("managed-desktop-plugin");
     const baseInput = {
       dshEntry,
@@ -312,6 +317,10 @@ describe("desktop plugin with the real pinned Harness", () => {
       ...baseInput,
       integratedPlugins: [
         { packageName: "user-owned-plugin", packageRoot: userPlugin },
+        {
+          packageName: "composition-subsumed-plugin",
+          packageRoot: retiredPlugin,
+        },
       ],
     });
     await ensureMaintainedHarnessInstall({
@@ -319,12 +328,14 @@ describe("desktop plugin with the real pinned Harness", () => {
       integratedPlugins: [
         { packageName: "managed-desktop-plugin", packageRoot: managedPlugin },
       ],
+      retiredPluginPackages: ["composition-subsumed-plugin"],
     });
     await ensureMaintainedHarnessInstall({
       ...baseInput,
       integratedPlugins: [
         { packageName: "managed-desktop-plugin", packageRoot: managedPlugin },
       ],
+      retiredPluginPackages: ["composition-subsumed-plugin"],
     });
 
     const manifest = JSON.parse(
@@ -504,6 +515,10 @@ describe("desktop plugin with the real pinned Harness", () => {
         {
           packageName: "deepseek-harness-desktop-plugin",
           packageRoot: bootPluginRoot,
+        },
+        {
+          packageName: "@dsh-external/deepseek-harness-plugin-market",
+          packageRoot: bootPluginMarketRoot,
         },
         {
           packageName: "@dsh-external/dsh-super-injector",

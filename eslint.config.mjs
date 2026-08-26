@@ -25,6 +25,8 @@ export default [
       "packages/dsh-superpowers/**",
       "packages/dsh-ui-polish/**",
       "packages/dsh-updater-check/**",
+      "packages/dsh-settings-tools/**",
+      "packages/dsh-plugin-market/**",
     ],
   },
   eslint.configs.recommended,

@@ -29,7 +29,7 @@ tags: [intent, confirmed]
 
 ## Goal
 
-Deliver an all-in-one coding desktop distribution around the Code-DSH maintained Harness family while preserving public DSH protocols, shared Home semantics, and provider boundaries. The desktop owns packaging, lifecycle, plugins, and verification; core DSH changes belong in the maintained submodule.
+Deliver an all-in-one, modernized DeepSeek Harness Code desktop distribution that embeds the complete official Harness Web experience, plugin and Skills foundation, agent tools, a fixed capability-group Electron host bridge, and an independent watchdog. V4 Pro is one improved capability within this wider Harness modernization, not the product's center.
 
 ## Required Deliverables
 

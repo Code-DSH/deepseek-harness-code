@@ -58,6 +58,7 @@ export function parsePersistedDesktopPreferences(
 export const lanAccessSetSchema = z
   .object({
     enabled: z.boolean(),
+    password: z.string().max(256).optional(),
   })
   .strict();
 
@@ -70,6 +71,7 @@ export const lanAccessCopySchema = z
 export const lanAccessStateSchema = z
   .object({
     enabled: z.boolean(),
+    passwordConfigured: z.boolean(),
     port: z.number().int().min(1).max(65_535).optional(),
     addresses: z.array(z.ipv4()),
   })
@@ -107,11 +109,43 @@ export const runtimeStateSchema = z
 
 export type RuntimeState = z.infer<typeof runtimeStateSchema>;
 
+export const appInfoSchema = z
+  .object({
+    name: z.string().min(1).max(200),
+    version: z.string().min(1).max(100),
+  })
+  .strict();
+export type AppInfo = z.infer<typeof appInfoSchema>;
+
 export interface UpdaterCheckOutcome {
   available: boolean;
   version?: string;
   applied?: boolean;
 }
+
+export const updaterPhaseSchema = z.enum([
+  "idle",
+  "checking",
+  "up-to-date",
+  "available",
+  "downloading",
+  "verifying",
+  "ready-to-restart",
+  "failed",
+]);
+export type UpdaterPhase = z.infer<typeof updaterPhaseSchema>;
+
+export const updaterStatusSchema = z
+  .object({
+    phase: updaterPhaseSchema,
+    version: z.string().optional(),
+    notes: z.string().max(20_000).optional(),
+    downloadedBytes: z.number().int().nonnegative().optional(),
+    totalBytes: z.number().int().positive().optional(),
+    error: z.string().max(2_000).optional(),
+  })
+  .strict();
+export type UpdaterStatus = z.infer<typeof updaterStatusSchema>;
 
 export interface BundledPluginEntry {
   name: string;
@@ -120,6 +154,9 @@ export interface BundledPluginEntry {
 }
 
 export interface DeepSeekDesktopBridge {
+  app: {
+    getInfo(): Promise<AppInfo>;
+  };
   preferences: {
     get(): Promise<DesktopPreferencesState>;
     set(value: DesktopPreferences): Promise<void>;
@@ -136,7 +173,11 @@ export interface DeepSeekDesktopBridge {
     subscribe(listener: (state: RuntimeState) => void): () => void;
   };
   updater: {
+    getStatus(): Promise<UpdaterStatus>;
     check(): Promise<UpdaterCheckOutcome>;
+    apply(): Promise<UpdaterCheckOutcome>;
+    restart(): Promise<void>;
+    subscribe(listener: (status: UpdaterStatus) => void): () => void;
   };
   bundledPlugins: {
     list(): Promise<BundledPluginEntry[]>;
