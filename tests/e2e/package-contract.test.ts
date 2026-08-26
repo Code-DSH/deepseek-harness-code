@@ -44,6 +44,9 @@ describe("DeepSeek Harness Code distribution contract", () => {
     expect(prepareRuntime).toContain('digest(tarballPath, "sha512", "base64")');
     expect(prepareRuntime).toContain("Runtime lockfile integrity mismatch");
     expect(runtimeWorkspace).toContain("esbuild: true");
+    expect(runtimeWorkspace).toContain(
+      '"@deepseek-ai/dsh-subprocess-local@file:vendor/dsh/deepseek-ai-dsh-subprocess-local-0.1.1-rc.2.code.1.tgz": true',
+    );
   });
 
   test("declares the renamed Universal macOS product with ad-hoc signing", async () => {
