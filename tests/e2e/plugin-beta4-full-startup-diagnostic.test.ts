@@ -1,7 +1,8 @@
-import { spawn, type ChildProcess } from "node:child_process";
-import { mkdtemp, rm } from "node:fs/promises";
+import { execFile, spawn, type ChildProcess } from "node:child_process";
+import { access, mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
+import { promisify } from "node:util";
 
 import { afterEach, expect, it } from "vitest";
 
@@ -12,6 +13,7 @@ const root = process.cwd();
 const resource = join(root, "build", "node-runtime");
 const runtime = join(resource, "node_modules");
 const packageRoot = (name: string) => join(runtime, ...name.split("/"));
+const execFileAsync = promisify(execFile);
 const children: ChildProcess[] = [];
 const roots: string[] = [];
 
@@ -91,6 +93,28 @@ it("diagnoses the complete packaged startup plugin graph", async () => {
   }));
 
   const dshEntry = join(runtime, "@deepseek-ai", "dsh", "lib", "bin.js");
+  try {
+    await access(dshEntry);
+  } catch {
+    await execFileAsync(
+      process.execPath,
+      [
+        join(resource, "pnpm.mjs"),
+        "install",
+        "--dir",
+        resource,
+        "--frozen-lockfile",
+        "--ignore-scripts",
+        "--prod",
+        "--reporter=append-only",
+      ],
+      {
+        cwd: resource,
+        env: { ...process.env, CI: "true" },
+        maxBuffer: 4 * 1024 * 1024,
+      },
+    );
+  }
   await ensureMaintainedHarnessInstall({
     dshEntry,
     dshHome,
