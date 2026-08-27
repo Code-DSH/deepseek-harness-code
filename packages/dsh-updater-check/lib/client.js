@@ -68,15 +68,25 @@ window.__ModuleLoader__.load({
 
       const root = document.createElement("section");
       root.id = PANEL_ID;
+      root.setAttribute("role", "dialog");
+      root.setAttribute("aria-modal", "false");
+      root.setAttribute("aria-labelledby", "dsh-updater-check-title");
       root.setAttribute("aria-live", "polite");
       root.style.cssText = [
         "display:none",
         "position:fixed",
         "z-index:2147483647",
-        "top:52px",
-        "right:24px",
-        "width:360px",
-        "padding:18px",
+        "top:50%",
+        "left:50%",
+        "transform:translate(-50%,-50%)",
+        "box-sizing:border-box",
+        "width:min(520px,calc(100vw - 32px))",
+        "max-width:calc(100vw - 32px)",
+        "height:min(640px,calc(100vh - 32px))",
+        "max-height:calc(100vh - 32px)",
+        "padding:0",
+        "flex-direction:column",
+        "overflow:hidden",
         "border:1px solid rgba(0,0,0,.12)",
         "border-radius:14px",
         "background:var(--dsw-surface, rgba(255,255,255,.97))",
@@ -84,23 +94,47 @@ window.__ModuleLoader__.load({
         "font:14px -apple-system,BlinkMacSystemFont,Segoe UI,sans-serif",
         "color:inherit",
       ].join(";");
+      const header = document.createElement("div");
+      header.style.cssText = "flex:0 0 auto;padding:18px 20px 12px;min-width:0";
       const title = document.createElement("strong");
+      title.id = "dsh-updater-check-title";
+      title.style.cssText =
+        "display:block;line-height:1.35;overflow-wrap:anywhere;word-break:break-word";
+      header.append(title);
+      const scrollRegion = document.createElement("div");
+      scrollRegion.setAttribute("data-dsh-update-scroll-region", "true");
+      scrollRegion.style.cssText = [
+        "flex:1 1 auto",
+        "min-height:0",
+        "overflow-y:auto",
+        "overflow-x:hidden",
+        "overscroll-behavior:contain",
+        "padding:0 20px 4px",
+        "box-sizing:border-box",
+      ].join(";");
       const message = document.createElement("div");
       message.style.cssText =
-        "margin-top:8px;line-height:1.5;white-space:pre-wrap";
+        "line-height:1.5;white-space:pre-wrap;overflow-wrap:anywhere;word-break:break-word";
+      scrollRegion.append(message);
+      const statusRegion = document.createElement("div");
+      statusRegion.setAttribute("data-dsh-update-status", "true");
+      statusRegion.style.cssText =
+        "display:none;flex:0 0 auto;padding:0 20px;box-sizing:border-box";
       const progress = document.createElement("progress");
       progress.max = 100;
       progress.value = 0;
-      progress.style.cssText = "width:100%;margin-top:14px;display:none";
+      progress.style.cssText = "width:100%;display:block";
+      statusRegion.append(progress);
       const actions = document.createElement("div");
+      actions.setAttribute("data-dsh-update-actions", "true");
       actions.style.cssText =
-        "display:flex;gap:8px;justify-content:flex-end;margin-top:14px";
+        "display:flex;flex:0 0 auto;flex-wrap:wrap;align-items:center;gap:8px;justify-content:flex-end;padding:12px 20px 18px;border-top:1px solid rgba(0,0,0,.08);box-sizing:border-box";
       const primary = document.createElement("button");
       const secondary = document.createElement("button");
       primary.style.cssText = BUTTON_STYLE;
       secondary.style.cssText = BUTTON_STYLE;
       actions.append(primary, secondary);
-      root.append(title, message, progress, actions);
+      root.append(header, scrollRegion, statusRegion, actions);
       (document.body || document.documentElement).append(root);
 
       let disposed = false;
@@ -114,7 +148,7 @@ window.__ModuleLoader__.load({
         root.style.display = "none";
       };
       const show = () => {
-        if (!disposed) root.style.display = "block";
+        if (!disposed) root.style.display = "flex";
       };
       const failure = (error) => {
         show();
@@ -134,7 +168,7 @@ window.__ModuleLoader__.load({
         show();
         primary.disabled = false;
         primary.style.display = "inline-block";
-        progress.style.display = "none";
+        statusRegion.style.display = "none";
         secondary.textContent = "稍后";
         if (phase === "checking") {
           title.textContent = "正在检查更新";
@@ -164,7 +198,7 @@ window.__ModuleLoader__.load({
           message.textContent = hasTotal
             ? `${Math.round(percent)}% · ${formatBytes(downloaded)} / ${formatBytes(total)}\n${desktop ? "更新完成后可重启应用" : "请在主机桌面等待更新完成"}`
             : `已下载 ${formatBytes(downloaded)}\n${desktop ? "更新完成后可重启应用" : "请在主机桌面等待更新完成"}`;
-          progress.style.display = hasTotal ? "block" : "none";
+          statusRegion.style.display = hasTotal ? "block" : "none";
           progress.value = percent;
           primary.style.display = "none";
           secondary.textContent = desktop ? "后台下载" : "关闭";
