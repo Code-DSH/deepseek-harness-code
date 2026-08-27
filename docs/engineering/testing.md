@@ -4,11 +4,11 @@ Use TDD for runtime behavior. Required layers are unit tests for state and secur
 
 The maintained Harness 0.1.1-rc.2.code.1 exposes no verified `/api/health` route. Integration tests therefore assert child liveness and an HTTP 2xx Web-root response; they also assert that Harness itself binds only to `127.0.0.1`. Runtime gates additionally verify the submodule gitlink, complete local family, provenance hashes, token-gated LAN proxy, IPC redaction, and Windows sandbox/workdir behavior.
 
-BETA3 native package Run [32550253496](https://github.com/Code-DSH/deepseek-harness-code/actions/runs/32550253496) passed Windows and Linux x64/arm64 plus macOS Intel/Apple Silicon runtime and packaged no-Node scenarios before publishing GitHub Latest. The same run produced the nine release assets and updater manifest.
+BETA5 native package Run [33044310566](https://github.com/Code-DSH/deepseek-harness-code/actions/runs/33044310566) passed the five package targets, Linux arm64 deb, and macOS Intel/Apple Silicon runtime/no-Node scenarios before publishing GitHub Latest. The same run produced the nine release assets and updater manifest.
 
 ## Current checkout audit snapshot
 
-The audited checkout is `review/install-update-flow`, with package baseline `0.1.0-BETA3` / Harness `0.1.1-rc.2.code.1`. Focused updater coverage includes replayable status snapshots, plugin-owned desktop/LAN status UI, authenticated LAN JSON/SSE routes, persistent AppImage targeting, Windows custom NSIS directory forwarding, ranged installer bounds, app-owned runtime-tree cleanup, stale pending-update invalidation, and the existing macOS helper contract. Native Windows/Linux replacement and macOS post-update launch validation remain platform-runner gates.
+The audited checkout is `main`, with package baseline `0.1.0-BETA5` / Harness `0.1.1-rc.2.code.1`. Focused updater coverage includes replayable status snapshots, plugin-owned desktop/LAN status UI, authenticated LAN JSON/SSE routes, persistent AppImage targeting, Windows custom NSIS directory forwarding, ranged installer bounds, app-owned runtime-tree cleanup, stale pending-update invalidation, and the existing macOS helper contract. Native Windows/Linux replacement and macOS post-update launch validation remain platform-runner gates.
 
 Live acceptance is separate: credentials are entered in the Harness UI by the user and are never inspected by automation. The planned 45-minute V4 Flash observation and 20 interactions are recorded only when configured.
 

@@ -1,6 +1,6 @@
 # AGENTS.md
 
-Electron 43 desktop host for Code-DSH maintained DeepSeek Harness (`deepseek-harness-code@0.1.0-BETA3`, DSH family `0.1.1-rc.2.code.1` from the pinned `deps/deepseek-harness` submodule). BETA3 is the verified GitHub Latest release, published from `9762f8e` by native package Run `32550253496`; BETA2-2 is the previous release. The broken BETA2-1 GitHub Release/assets were removed while its source tag was preserved. Community distribution — not official DeepSeek. Harness and desktop renderer stay loopback-only; disabled-by-default trusted-LAN access is an Electron-owned token-gated proxy. macOS distribution remains unsigned/ad-hoc.
+Electron 43 desktop host for Code-DSH maintained DeepSeek Harness (`deepseek-harness-code@0.1.0-BETA5`, DSH family `0.1.1-rc.2.code.1` from the pinned `deps/deepseek-harness` submodule). BETA5 is the verified GitHub Latest release, published from `80a1138` by native package Run `33044310566`; BETA4 is the previous release. The broken BETA2-1 GitHub Release/assets were removed while its source tag was preserved. Community distribution — not official DeepSeek. Harness and desktop renderer stay loopback-only; disabled-by-default trusted-LAN access is an Electron-owned token-gated proxy. macOS distribution remains unsigned/ad-hoc.
 
 ## 长期工程记忆 / DHC Forge operating memory
 
@@ -74,4 +74,4 @@ pnpm typecheck && pnpm lint && pnpm format:check  # structure slices (CI runs th
 - Preserve the public Harness question protocol (`@deepseek-ai/dsh-tool-ask-user` etc.) — do not create a parallel wire format.
 - Never log credentials, auth headers, cookies, prompt bodies, or response bodies.
 - Runtime behavior changes are test-first; verify before claiming completion.
-- Cross-build is never native execution. BETA3 claims are bound to tag Run `32550253496` and the published asset/manifest evidence; all six native OS/architecture runners passed install/runtime/no-Node gates before Release creation. BETA2-1 downloads are retired; retain its source tag and archive.
+- Cross-build is never native execution. BETA5 claims are bound to tag Run `33044310566` and the published asset/manifest evidence; all five package runners plus Linux arm64 deb and dual-native macOS smoke runners passed before Release creation. BETA2-1 downloads are retired; retain its source tag and archive.
