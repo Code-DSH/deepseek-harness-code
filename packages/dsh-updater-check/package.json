@@ -1,6 +1,6 @@
 {
   "name": "dsh-updater-check",
-  "description": "DeepSeek Harness Code 检查更新入口：在设置→通用最下方加一行，点击触发自动更新检查。",
+  "description": "DeepSeek Harness Code 检查更新入口：在设置→通用加入检查更新按钮，并提供有界可滚动的更新状态面板。",
   "version": "1.0.0",
   "private": true,
   "main": "lib/index.js",
