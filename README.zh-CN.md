@@ -209,7 +209,7 @@ V4 Pro 是该整合基础增强的重要能力之一，而非唯一中心。固�
 | Windows | Windows 10+，x64 + arm64         | 原生 NSIS 安装/运行验证通过 |
 | Linux   | x64 + arm64                      | 原生 AppImage/deb 验证通过  |
 
-BETA3 已内置官方 Harness `0.1.1-rc.2`，并成为 GitHub Latest。Windows/Linux x64+arm64 与 macOS Intel/Apple Silicon 的原生安装、运行和无 Node 门禁已在 [Run 32550253496](https://github.com/Code-DSH/deepseek-harness-code/actions/runs/32550253496) 全部通过。旧版 DHSC 可在 **设置 → 通用 → 检查更新** 中通过带大小与 SHA-256 校验的更新清单升级到 BETA3。
+BETA5 现已成为 GitHub Latest。Windows/Linux x64+arm64 与 macOS Intel/Apple Silicon 的原生安装、运行和无 Node 门禁已在 [Run 33044310566](https://github.com/Code-DSH/deepseek-harness-code/actions/runs/33044310566) 全部通过。旧版 DHSC 可在 **设置 → 通用 → 检查更新** 中通过带大小与 SHA-256 校验的更新清单升级到 BETA5。
 
 ## 在 macOS 上安装
 

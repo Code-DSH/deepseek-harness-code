@@ -1,7 +1,7 @@
 ---
 id: engineering.acceptance-report
 title: DeepSeek Harness Code Acceptance Report
-summary: BETA3 is published as Latest with native Windows/Linux x64+arm64, dual-native macOS, no-Node, process, and manifest evidence.
+summary: BETA5 is published as Latest with native package, dual-native macOS, no-Node, process, and manifest evidence.
 kind: engineering
 status: canonical
 content_stage: final-verified
@@ -11,7 +11,7 @@ read_when: [reviewing release readiness or reproducing validation]
 skip_when: [isolated source edits before release]
 priority: must
 freshness_class: project
-last_verified: 2026-08-22T12:20:00+08:00
+last_verified: 2026-08-27T00:00:00+08:00
 owners: [primary-agent]
 source_of_truth: [../../apps, ../../packages, ../../tests, ../../release]
 related:
@@ -25,7 +25,13 @@ tags: [acceptance, release, evidence]
 
 ## Evidence state and bug classes
 
-- **Current release state**：BETA3 is GitHub Latest at [v0.1.0-BETA3](https://github.com/Code-DSH/deepseek-harness-code/releases/tag/v0.1.0-BETA3), sourced from `9762f8efe1e761ff6b175b209972103bff88e091`. Tag Run [32550253496](https://github.com/Code-DSH/deepseek-harness-code/actions/runs/32550253496) passed all seven build/native-smoke jobs and published eight installers plus `update-manifest.json`.
+- **Current release state**：BETA5 is GitHub Latest at [v0.1.0-BETA5](https://github.com/Code-DSH/deepseek-harness-code/releases/tag/v0.1.0-BETA5), sourced from merged commit `80a1138993ee8654e95e4bc861313e1bc489e883`. Tag Run [33044310566](https://github.com/Code-DSH/deepseek-harness-code/actions/runs/33044310566) passed five package jobs, Linux arm64 deb smoke, dual-native macOS smoke, and the release job, publishing eight installers plus `update-manifest.json`.
+
+## BETA5 exact validation
+
+- Windows x64/arm64 NSIS, Linux x64/arm64 AppImage/deb, and Universal macOS DMG package jobs passed their build, artifact, and native smoke gates.
+- Linux arm64 deb installation/purge smoke and macOS Intel/Apple Silicon install/runtime/no-Node smoke passed after the package jobs completed.
+- The published Release contains eight installers plus `update-manifest.json`; the manifest reports `0.1.0-BETA5` and selects macOS universal, Windows x64/arm64, and Linux x64/arm64 targets.
 - **产品 bug**影响打包应用行为：BETA1 Watchdog/锁/端口竞争、BETA2 重复 lifecycle/并发 pnpm、BETA2-1 persistent Bash hang，以及 BETA2-2 首次标记中安装后 Windows x64 runtime 未 ready。
 - **CI / 包装门禁 bug**影响发布证据可靠性：tag/ref、资产名、AppImage/deb 命令、清理、超时、用户数据隔离、证据新鲜度和 native architecture binding。
 - **覆盖缺口**表示从未在目标架构安装/解包并启动，或缺少 packaged no-Node 场景。BETA2-2 的可执行安装路径现已覆盖；Cross-build 仍不算 native execution。
