@@ -682,6 +682,14 @@ async function startHarness(): Promise<HarnessChild> {
         packageRoot: runtime.deepseekHarnessCompositionRoot,
       },
       {
+        packageName: "@deepseek-ai/dsh-subagent-codex",
+        packageRoot: runtime.dshSubagentCodexRoot,
+      },
+      {
+        packageName: "@deepseek-ai/dsh-subagent-claude-code",
+        packageRoot: runtime.dshSubagentClaudeCodeRoot,
+      },
+      {
         packageName: "@dsh-external/dsh-super-injector",
         packageRoot: join(bundledRoutingSuiteRoot, "injector"),
       },
@@ -705,15 +713,6 @@ async function startHarness(): Promise<HarnessChild> {
         packageName: "@dsh-external/deepseek-harness-plugin-market",
         packageRoot: marketPluginRoot,
       },
-    ],
-    // Older desktop releases installed these official providers as standalone
-    // profile bundles. The current app composition owns the same loader rows;
-    // retaining both makes Harness abort on duplicate entry ids during an
-    // in-place upgrade. Remove only the now-subsumed bundles through the
-    // official plugin CLI, leaving every unrelated user bundle untouched.
-    retiredPluginPackages: [
-      "@deepseek-ai/dsh-subagent-claude-code",
-      "@deepseek-ai/dsh-subagent-codex",
     ],
     legacyPluginSpecs: migration.legacyPluginSpecs,
   });

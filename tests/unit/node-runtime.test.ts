@@ -170,6 +170,22 @@ describe("pinned runtime packages driven by the system Node", () => {
     expect(paths.dshFindPluginRoot).toBe(
       join(paths.packagesDir, "node_modules", "dsh-find-plugin"),
     );
+    expect(paths.dshSubagentCodexRoot).toBe(
+      join(
+        paths.packagesDir,
+        "node_modules",
+        "@deepseek-ai",
+        "dsh-subagent-codex",
+      ),
+    );
+    expect(paths.dshSubagentClaudeCodeRoot).toBe(
+      join(
+        paths.packagesDir,
+        "node_modules",
+        "@deepseek-ai",
+        "dsh-subagent-claude-code",
+      ),
+    );
     expect(paths.markerPath).toBe(join(paths.rootDir, "runtime.json"));
   });
 

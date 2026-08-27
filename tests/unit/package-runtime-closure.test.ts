@@ -143,39 +143,48 @@ describe("packaged runtime dependency closure", () => {
     }
   });
 
-  it("keeps composition declarative and removes compatibility installers", async () => {
-    const [composition, compositionPatch, lifecycle, main] = await Promise.all([
-      readFile(
-        join(projectRoot, "packages", "app-composition", "package.json"),
-        "utf8",
-      ).then(
-        (value) =>
-          JSON.parse(value) as { dependencies?: Record<string, string> },
-      ),
-      readFile(
-        join(projectRoot, "packages", "app-composition", "cordis.patch.yml"),
-        "utf8",
-      ),
-      readFile(
-        join(
-          projectRoot,
-          "apps",
-          "desktop",
-          "src",
-          "lifecycle",
-          "desktop-plugin-link.ts",
+  it("keeps composition declarative and registers official provider bundles", async () => {
+    const [composition, compositionPatch, lifecycle, main, runtime] =
+      await Promise.all([
+        readFile(
+          join(projectRoot, "packages", "app-composition", "package.json"),
+          "utf8",
+        ).then(
+          (value) =>
+            JSON.parse(value) as { dependencies?: Record<string, string> },
         ),
-        "utf8",
-      ),
-      readFile(join(projectRoot, "apps", "desktop", "src", "main.ts"), "utf8"),
-    ]);
+        readFile(
+          join(projectRoot, "packages", "app-composition", "cordis.patch.yml"),
+          "utf8",
+        ),
+        readFile(
+          join(
+            projectRoot,
+            "apps",
+            "desktop",
+            "src",
+            "lifecycle",
+            "desktop-plugin-link.ts",
+          ),
+          "utf8",
+        ),
+        readFile(
+          join(projectRoot, "apps", "desktop", "src", "main.ts"),
+          "utf8",
+        ),
+        readFile(
+          join(projectRoot, "config", "node-runtime", "package.json"),
+          "utf8",
+        ).then(
+          (value) =>
+            JSON.parse(value) as { dependencies?: Record<string, string> },
+        ),
+      ]);
 
     expect(composition.dependencies).toBeUndefined();
-    expect(compositionPatch).toContain(
-      'name: "@deepseek-ai/dsh-subagent-codex"',
-    );
-    expect(compositionPatch).toContain(
-      'name: "@deepseek-ai/dsh-subagent-claude-code"',
+    expect(compositionPatch).not.toContain("@deepseek-ai/dsh-subagent-codex");
+    expect(compositionPatch).not.toContain(
+      "@deepseek-ai/dsh-subagent-claude-code",
     );
     expect(compositionPatch).toMatch(
       /- id: mcp-everything[\s\S]*?disabled: true[\s\S]*?serverName: everything/u,
@@ -184,6 +193,18 @@ describe("packaged runtime dependency closure", () => {
       /- id: mcp-context7[\s\S]*?disabled: true[\s\S]*?serverName: context7/u,
     );
     expect(lifecycle).not.toContain("linkOnly");
+    expect(runtime.dependencies?.["@deepseek-ai/dsh-subagent-codex"]).toBe(
+      "file:vendor/dsh/deepseek-ai-dsh-subagent-codex-0.1.1-rc.2.code.1.tgz",
+    );
+    expect(
+      runtime.dependencies?.["@deepseek-ai/dsh-subagent-claude-code"],
+    ).toBe(
+      "file:vendor/dsh/deepseek-ai-dsh-subagent-claude-code-0.1.1-rc.2.code.1.tgz",
+    );
+    expect(main).toContain('packageName: "@deepseek-ai/dsh-subagent-codex"');
+    expect(main).toContain(
+      'packageName: "@deepseek-ai/dsh-subagent-claude-code"',
+    );
     expect(main).not.toContain("ensureGlobalDshCli");
     expect(main).not.toContain("npm install -g");
   });

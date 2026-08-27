@@ -22,16 +22,3 @@
         serverName: context7
         transport: streamable-http
         url: https://mcp.context7.com/mcp
-    # Bundled Codex subagent provider (one-shot, app-server protocol).
-    # Needs `codex` on PATH: host PATH lacks the user's install locations,
-    # so they are supplied explicitly; local ~/.codex/auth.json provides
-    # authentication.
-    - id: subagent-codex
-      name: "@deepseek-ai/dsh-subagent-codex"
-      config:
-        env:
-          PATH: /opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin
-    # Bundled Claude Code subagent provider (one-shot, Agent SDK).
-    # Requires the native `claude` executable on PATH to actually run.
-    - id: subagent-claude-code
-      name: "@deepseek-ai/dsh-subagent-claude-code"

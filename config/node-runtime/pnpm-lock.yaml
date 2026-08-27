@@ -923,7 +923,7 @@ importers:
         version: 2026.7.4(supports-color@7.1.0)
       deepseek-harness-composition:
         specifier: file:vendor/deepseek-harness-composition-1.0.0.tgz
-        version: file:vendor/deepseek-harness-composition-1.0.0.tgz(199a6fee205e44c374c4549be6ea133c)
+        version: file:vendor/deepseek-harness-composition-1.0.0.tgz
       dsh-better-sidebar:
         specifier: file:vendor/dsh-better-sidebar-0.12.3.tgz
         version: file:vendor/dsh-better-sidebar-0.12.3.tgz(1f3da56ef54f005e14c462024894eb41)
@@ -5335,7 +5335,7 @@ packages:
     resolution: {integrity: sha512-GtpQYB283KrPp6nRw50q3U9/VfOutZOe103qlN7BPP6Ad27xYnOIWv4lPzo8HCAL+mMZofJ9KEy30fq6MfaK6Q==}
 
   deepseek-harness-composition@file:vendor/deepseek-harness-composition-1.0.0.tgz:
-    resolution: {integrity: sha512-L6vSR0TJoaTK7SFXLWRMddPoXjTnOOgkCBQmL5/PVCn937KpBqWmrJXrFWL0NPZwDMfYm/qltHFvjU/SVCEeMw==, tarball: file:vendor/deepseek-harness-composition-1.0.0.tgz}
+    resolution: {integrity: sha512-PovScPsh0m1fGDEiA9xfJAXXGUsYVNVYJ+gHVRzzisCdl6oNsycLnf99hB+GjBh3PKBmVbbZPbhMLu/x0cSMJg==, tarball: file:vendor/deepseek-harness-composition-1.0.0.tgz}
     version: 1.0.0
 
   default-browser-id@5.0.1:
@@ -11505,23 +11505,7 @@ snapshots:
     dependencies:
       character-entities: 2.0.2
 
-  deepseek-harness-composition@file:vendor/deepseek-harness-composition-1.0.0.tgz(199a6fee205e44c374c4549be6ea133c):
-    dependencies:
-      '@deepseek-ai/dsh-mcp-client': file:vendor/dsh/deepseek-ai-dsh-mcp-client-0.1.1-rc.2.code.1.tgz(75f79360907bc2d654ed7bb83370fe4f)
-      '@deepseek-ai/dsh-subagent-claude-code': file:vendor/dsh/deepseek-ai-dsh-subagent-claude-code-0.1.1-rc.2.code.1.tgz(515c087499e14789b55d5277f5b52cbe)
-      '@deepseek-ai/dsh-subagent-codex': file:vendor/dsh/deepseek-ai-dsh-subagent-codex-0.1.1-rc.2.code.1.tgz(cd4e3a94c9d8b4e3b03f2668512516d7)
-    transitivePeerDependencies:
-      - '@cfworker/json-schema'
-      - '@deepseek-ai/cordis'
-      - '@deepseek-ai/dsh-attachment'
-      - '@deepseek-ai/dsh-invariants'
-      - '@deepseek-ai/dsh-llm'
-      - '@deepseek-ai/dsh-session'
-      - '@deepseek-ai/dsh-subagent'
-      - '@deepseek-ai/dsh-subprocess'
-      - '@deepseek-ai/dsh-timeout'
-      - '@deepseek-ai/dsh-tools'
-      - supports-color
+  deepseek-harness-composition@file:vendor/deepseek-harness-composition-1.0.0.tgz: {}
 
   default-browser-id@5.0.1: {}
 
