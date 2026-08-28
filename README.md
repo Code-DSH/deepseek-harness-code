@@ -209,7 +209,7 @@ Full boundaries in [overview](./docs/architecture/overview.md) and [lifecycle](.
 | Windows  | Windows 10+, x64 and arm64         | Native NSIS install/runtime validation passed |
 | Linux    | x64 and arm64                      | Native AppImage/deb validation passed         |
 
-BETA5 is now GitHub Latest. Native Windows/Linux x64+arm64 and macOS Intel/Apple-Silicon install/runtime/no-Node validation passed in [Run 33044310566](https://github.com/Code-DSH/deepseek-harness-code/actions/runs/33044310566). Older DHSC builds receive BETA5 through **Settings → General → Check for updates** using the size/SHA-256 update manifest contract.
+BETA6 is now GitHub Latest as an updater test release. Native Windows/Linux x64+arm64 and macOS Intel/Apple-Silicon install/runtime/no-Node validation passed in [Run 33140759412](https://github.com/Code-DSH/deepseek-harness-code/actions/runs/33140759412). Older DHSC builds can receive BETA6 through **Settings → General → Check for updates** using the size/SHA-256 update manifest contract.
 
 ## Install on macOS
 
