@@ -1,7 +1,7 @@
 ---
 id: engineering.acceptance-report
 title: DeepSeek Harness Code Acceptance Report
-summary: BETA5 is published as Latest with native package, dual-native macOS, no-Node, process, and manifest evidence.
+summary: BETA6 is published as the Latest updater test release with native package, dual-native macOS, no-Node, process, and manifest evidence.
 kind: engineering
 status: canonical
 content_stage: final-verified
@@ -11,7 +11,7 @@ read_when: [reviewing release readiness or reproducing validation]
 skip_when: [isolated source edits before release]
 priority: must
 freshness_class: project
-last_verified: 2026-08-27T00:00:00+08:00
+last_verified: 2026-08-28T12:33:34+08:00
 owners: [primary-agent]
 source_of_truth: [../../apps, ../../packages, ../../tests, ../../release]
 related:
@@ -25,7 +25,14 @@ tags: [acceptance, release, evidence]
 
 ## Evidence state and bug classes
 
-- **Current release state**：BETA5 is GitHub Latest at [v0.1.0-BETA5](https://github.com/Code-DSH/deepseek-harness-code/releases/tag/v0.1.0-BETA5), sourced from merged commit `80a1138993ee8654e95e4bc861313e1bc489e883`. Tag Run [33044310566](https://github.com/Code-DSH/deepseek-harness-code/actions/runs/33044310566) passed five package jobs, Linux arm64 deb smoke, dual-native macOS smoke, and the release job, publishing eight installers plus `update-manifest.json`.
+- **Current release state**：BETA6 is GitHub Latest at [v0.1.0-BETA6](https://github.com/Code-DSH/deepseek-harness-code/releases/tag/v0.1.0-BETA6), sourced from merged commit `d8ba74ff2ecc1d22a09a448ab50a1a8cabcf495b`. Tag Run [33140759412](https://github.com/Code-DSH/deepseek-harness-code/actions/runs/33140759412) passed five package jobs, Linux arm64 deb smoke, dual-native macOS smoke, and the release job, publishing eight installers plus `update-manifest.json`. BETA6 is explicitly a BETA5→BETA6 updater test release; it changes release metadata and contract expectations, not updater runtime logic.
+
+## BETA6 exact validation
+
+- Windows x64/arm64 NSIS, Linux x64/arm64 AppImage/deb, and Universal macOS DMG package jobs passed their build and exact artifact gates in Run [33140759412](https://github.com/Code-DSH/deepseek-harness-code/actions/runs/33140759412).
+- Linux arm64 deb installation/purge smoke and macOS Intel/Apple Silicon install/runtime/no-Node smoke passed after the package jobs completed.
+- The published Release contains eight installers plus `update-manifest.json`; the manifest reports `0.1.0-BETA6` and selects macOS universal, Windows x64/arm64, and Linux x64/arm64 targets.
+- The release is intended to exercise **Settings → General → Check for updates** from BETA5. The runtime updater implementation is unchanged; no updater behavior claim is inferred solely from publishing this version.
 
 ## BETA5 exact validation
 
@@ -162,7 +169,7 @@ Release 包含 Universal DMG/ZIP、Windows x64/arm64 NSIS、Linux x64/arm64 AppI
 | Runtime preflight | 51 artifacts, 35 production dependencies, 8 critical packages, and 10 bundled plugin packages verified                       |
 | macOS package     | Local `verify:mac --universal` passed; tagged Universal macOS job passed and uploaded DMG + ZIP                              |
 
-Historical BETA2-1 and 0.3.x gate snapshots are retained for traceability; BETA3 is the current verified Latest release and BETA2-2 remains the previous verified release.
+Historical BETA2-1, BETA3, and 0.3.x gate snapshots are retained for traceability; BETA6 is the current verified Latest test release and BETA5 remains the previous verified release.
 
 ## Real renderer and performance evidence
 

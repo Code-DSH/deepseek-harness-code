@@ -1,6 +1,6 @@
 # Installing the Unsigned macOS Build
 
-This is a community distribution and is not an official DeepSeek release. DeepSeek Harness Code `0.1.0-BETA5` is ad-hoc signed, not Apple-notarized. Verify the DMG source and checksum before proceeding.
+This is a community distribution and is not an official DeepSeek release. DeepSeek Harness Code `0.1.0-BETA6` is ad-hoc signed, not Apple-notarized. Verify the DMG source and checksum before proceeding.
 
 ## Prerequisite: official Node.js
 
@@ -8,7 +8,7 @@ The app runs on system-installed Node.js and does not download a portable runtim
 
 The app's private `PATH` prepends the detected Node's bin directory and the bundled pnpm runtime, so native-module postinstall scripts find `node` even when the GUI launch PATH is minimal.
 
-The Universal artifact follows `release/DeepSeek-Harness-Code-<version>-mac-universal.dmg` (for example, `0.1.0-BETA5`). Its checksum is published only after the final package verification succeeds. The same release also publishes a Universal `.zip` consumed by the user-confirmed updater.
+The Universal artifact follows `release/DeepSeek-Harness-Code-<version>-mac-universal.dmg` (for example, `0.1.0-BETA6`). Its checksum is published only after the final package verification succeeds. The same release also publishes a Universal `.zip` consumed by the user-confirmed updater.
 
 After copying the app to Applications, remove quarantine only from this app:
 
